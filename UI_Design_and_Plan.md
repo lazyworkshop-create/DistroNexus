@@ -69,22 +69,24 @@ Adopt a **Go Backend + GUI Frontend** monolithic application architecture.
     *   *Alternative*: Wails (Web tech stack), if you are more proficient in HTML/JS, but Fyne offers faster development for this use case.
 *   **Script Interaction**: `os/exec` (PowerShell Core or Windows PowerShell).
 
-### 3.2 Suggested Directory Structure
+### 3.2 Directory Structure
 ```
 DistroNexus/
-├── cmd/
-│   └── gui/
-│       └── main.go       # Entry point
-├── internal/
-│   ├── config/           # Configuration loading logic
-│   ├── model/            # Data Model struct definitions
-│   ├── logic/            # Business logic for script invocation
-│   └── ui/               # Interface components (Forms, Widgets)
-├── config/               # Existing configuration
-├── scripts/              # Existing scripts
-├── docs/                 # Documentation
-├── go.mod                # Go module definition
-└── go.sum
+├── src/                  # Go Source Code & Module Root
+│   ├── cmd/
+│   │   └── gui/
+│   │       └── main.go   # Entry point
+│   ├── internal/
+│   │   ├── config/       # Configuration loading logic
+│   │   ├── model/        # Data Model struct definitions
+│   │   ├── logic/        # Business logic for script invocation
+│   │   └── ui/           # Interface components (Forms, Widgets)
+│   ├── go.mod            # Go module definition
+│   └── go.sum
+├── config/               # Existing configuration (distros.json, settings.json)
+├── scripts/              # Existing PowerShell scripts
+├── tools/                # Helper tools/scripts
+└── docs/                 # Documentation
 ```
 
 ### 3.3 Data Model Definition (Model)
@@ -108,7 +110,8 @@ type Version struct {
 ## 4. Task List
 
 ### Phase 1: Foundation
-- [ ] **Initialize Project**: Run `go mod init distronexus-gui`, install Fyne (`go get fyne.io/fyne/v2`).
+- [x] **Environment Setup**: Created `tools/setup_go_env.sh` to automate environment checks and module initialization.
+- [x] **Project Structure**: Created `src/` directory layout and moved `go.mod/sum` into it.
 - [ ] **Define Models**: Create configuration Structs in `internal/model`.
 - [ ] **Load Configuration**: Implement functions to read `distros.json` and `settings.json` in `internal/config`.
 
