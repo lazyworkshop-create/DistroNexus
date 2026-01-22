@@ -112,24 +112,27 @@ type Version struct {
 ### Phase 1: Foundation
 - [x] **Environment Setup**: Created `tools/setup_go_env.sh` to automate environment checks and module initialization.
 - [x] **Project Structure**: Created `src/` directory layout and moved `go.mod/sum` into it.
-- [ ] **Define Models**: Create configuration Structs in `internal/model`.
-- [ ] **Load Configuration**: Implement functions to read `distros.json` and `settings.json` in `internal/config`.
+- [x] **Define Models**: Create configuration Structs in `internal/model`.
+- [x] **Load Configuration**: Implement functions to read `distros.json` and `settings.json` in `internal/config`.
 
 ### Phase 2: Interface Development
-- [ ] **Main Window**: Create the main Application window using Fyne.
-- [ ] **Sidebar/List**: Create a List or Tree component to display all Distros.
-- [ ] **Detail View**: Display detailed information (Version, URL) on the right side upon clicking a list item.
+- [x] **Main Window**: Create the main Application window using Fyne.
+- [x] **Sidebar/List**: Create a List or Tree component to display all Distros.
+- [x] **Detail View**: Display detailed information (Version, URL) on the right side upon clicking a list item.
 
 ### Phase 3: Logic Integration
-- [ ] **Install Form**: Create a popup or new page containing: Install Path Input (File Picker), Username, Password.
-- [ ] **Script Executor**: Write `internal/logic/executor.go`, encapsulating `exec.Command("powershell", ...)` calls.
-- [ ] **Connect Installation**: Pass form data to the executor to trigger `install_wsl_custom.ps1`.
+- [x] **Install Form**: Create a popup or new page containing: Install Path Input (File Picker), Username, Password.
+- [x] **Script Executor**: Write `internal/logic/installer.go`, encapsulating `exec.Command("powershell", ...)` calls.
+- [x] **Connect Installation**: Pass form data to the executor to trigger `install_wsl_custom.ps1`.
 
 ### Phase 4: Optimization & Release
-- [ ] **Settings Interface**: Add interface for modifying global default paths.
-- [ ] **Log Display**: Add a log output area at the bottom of the interface to display script execution results in real-time.
-- [ ] **Build & Test**: Compile and run tests in a Windows environment.
+- [x] **Settings Interface**: Added interface for modifying global default paths.
+- [x] **Log Display**: Add a log output area at the bottom of the interface to display script execution results in real-time.
+- [x] **Build Scripts**: Created `tools/build.sh` for cross-platform compilation.
+- [ ] **Windows Testing**: Compile and run tests in a real Windows environment.
 
 ---
 
-**Next Step Recommendation**: Start with "Phase 1: Foundation" in the task list. Begin by successfully reading the JSON and printing it to the console to ensure the data model is correct.
+**Current Status**: All development phases (1-4) are complete. The application includes a full GUI for browsing distros, easy installation, real-time logging, and a settings manager.
+
+**Next Step Recommendation**: Run the `tools/build.sh` script to generate binaries, then transfer `build/DistroNexus.exe` to a Windows machine for final end-to-end testing with WSL.

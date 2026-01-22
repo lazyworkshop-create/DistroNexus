@@ -11,6 +11,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -235,9 +236,18 @@ func (mw *MainWindow) buildUI() {
 
 	// Main Layout: Top Split, Bottom Log
 	// Using SplitVertical for resizable log area
-	
 	mainSplit := container.NewVSplit(split, mw.LogArea)
 	mainSplit.SetOffset(0.7) // 70% top, 30% log
 
-	mw.Window.SetContent(mainSplit)
+	// Toolbar
+	toolbar := widget.NewToolbar(
+		widget.NewToolbarSpacer(),
+		widget.NewToolbarAction(theme.SettingsIcon(), func() {
+			mw.ShowSettingsDialog()
+		}),
+	)
+
+	// Apply Theme/Layout
+	content := container.NewBorder(toolbar, nil, nil, nil, mainSplit)
+	mw.Window.SetContent(content)
 }
