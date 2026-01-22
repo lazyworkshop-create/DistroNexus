@@ -1,0 +1,18 @@
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+
+# Output
+build/
+bin/
+/src/cmd/gui/gui
+
+# Go Workspace
+go.work
+
+# OS specific
+.DS_Store
+Thumbs.db

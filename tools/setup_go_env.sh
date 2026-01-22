@@ -3,8 +3,14 @@
 
 set -e
 
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+PROJECT_ROOT=$(dirname "$SCRIPT_DIR")
+SRC_DIR="$PROJECT_ROOT/src"
+
+echo "=== DistroNexus Environment Setup ==="
+
 # 1. Check Golang installation
-echo "Checking Go installation..."
+echo "[1/4] Checking Go installation..."
 if ! command -v go &> /dev/null; then
     echo "Go is not installed. Attempting automatic installation..."
     
@@ -33,6 +39,7 @@ if ! command -v go &> /dev/null; then
     fi
     
     echo "Installing to /usr/local/go (requires root/sudo)..."
+    # Remove existing install if present
     if [ -w /usr/local ]; then
         rm -rf /usr/local/go && tar -C /usr/local -xzf "/tmp/$TAR_NAME"
     else
@@ -41,10 +48,10 @@ if ! command -v go &> /dev/null; then
     
     rm "/tmp/$TAR_NAME"
     
-    # Add to current PATH
+    # Add to current PATH for this session
     export PATH=$PATH:/usr/local/go/bin
     
-    # Persist in .bashrc
+    # Persist in .bashrc if not already there
     PROFILE_FILE="$HOME/.bashrc"
     if [ -f "$PROFILE_FILE" ] && ! grep -q "/usr/local/go/bin" "$PROFILE_FILE"; then
         echo 'export PATH=$PATH:/usr/local/go/bin' >> "$PROFILE_FILE"
@@ -53,70 +60,72 @@ if ! command -v go &> /dev/null; then
     
     echo "Go installed successfully."
 fi
+
+# Ensure Go is in PATH for this script execution
+export PATH=$PATH:/usr/local/go/bin
+
 GO_VERSION=$(go version)
 echo "Found: $GO_VERSION"
 
 # 2. Check Fyne system dependencies (Linux only)
-# Fyne requires C compiler and graphics libraries on Linux
+echo "[2/4] Checking System Dependencies..."
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    echo "Checking Linux system dependencies for Fyne..."
+    # Standard Fyne deps + Cross compilation deps
+    REQUIRED_PACKAGES="gcc libgl1-mesa-dev xorg-dev gcc-mingw-w64"
+    MISSING_PACKAGES=""
     
-    MISSING_DEPS=()
-    
-    # Check for GCC
-    if ! command -v gcc &> /dev/null; then
-        MISSING_DEPS+=("gcc")
-    fi
-
-    # Quick check for common package managers to suggest commands
     if command -v dpkg &> /dev/null; then
-        # Debian/Ubuntu
-        dpkg -s libgl1-mesa-dev &> /dev/null || MISSING_DEPS+=("libgl1-mesa-dev")
-        dpkg -s xorg-dev &> /dev/null || MISSING_DEPS+=("xorg-dev")
-    elif command -v rpm &> /dev/null; then
-        # Fedora/RHEL (approximate check)
-        echo "Note: On Fedora/RHEL, ensure 'libX11-devel libXcursor-devel libXrandr-devel libXinerama-devel mesa-libGL-devel libXi-devel' are installed."
-    fi
-
-    if [ ${#MISSING_DEPS[@]} -ne 0 ]; then
-        echo "----------------------------------------------------------------"
-        echo "WARNING: Missing system dependencies likely needed for Fyne:"
-        printf " - %s\n" "${MISSING_DEPS[@]}"
-        echo ""
-        if command -v apt-get &> /dev/null; then
-            echo "Try running:"
-            echo "sudo apt-get install gcc libgl1-mesa-dev xorg-dev"
-        fi
-        echo "----------------------------------------------------------------"
-        read -p "Continue anyway? (y/N) " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            exit 1
+        for pkg in $REQUIRED_PACKAGES; do
+            if ! dpkg -s "$pkg" &> /dev/null 2>&1; then
+                MISSING_PACKAGES="$MISSING_PACKAGES $pkg"
+            fi
+        done
+        
+        if [ -n "$MISSING_PACKAGES" ]; then
+            echo "Missing packages:$MISSING_PACKAGES"
+            echo "Installing via apt-get..."
+            
+            if [ -w /etc/apt ]; then
+                 apt-get update && apt-get install -y $MISSING_PACKAGES
+            else
+                 sudo apt-get update && sudo apt-get install -y $MISSING_PACKAGES
+            fi
+        else
+            echo "All system dependencies installed."
         fi
     else
-        echo "System dependencies look OK."
+        echo "Warning: Not a Debian/Ubuntu system. Automatic dependency installation skipped."
+        echo "Please ensure you have: $REQUIRED_PACKAGES"
     fi
+else
+    echo "Not Linux, skipping system dependency check."
 fi
 
-# 3. Initialize Go Module
-echo "Checking Go Module..."
+# 3. Initialize/Update Go Module
+echo "[3/4] Configuring Go Module..."
+# Ensure src directory exists
+mkdir -p "$SRC_DIR"
+cd "$SRC_DIR"
+
 if [ ! -f "go.mod" ]; then
-    echo "Initializing new module 'distronexus-gui'..."
+    echo "Initializing new module 'distronexus-gui' in src/..."
     go mod init distronexus-gui
 else
-    echo "go.mod already exists. Skipping init."
+    echo "go.mod found in src/."
 fi
 
-# 4. Install Fyne Library
-echo "Downloading Fyne toolkit (v2)..."
+# 4. Install Fyne Library & Tools
+echo "[4/4] Installing/Updating Fyne..."
 go get fyne.io/fyne/v2
 go mod tidy
 
-# 5. Install Fyne CLI tool (optional, for bundling)
-echo "Installing Fyne CLI helper..."
-go install fyne.io/fyne/v2/cmd/fyne@latest
+# Install Fyne CLI tool (optional, for bundling)
+if ! command -v fyne &> /dev/null; then
+    echo "Installing Fyne CLI helper..."
+    go install fyne.io/fyne/v2/cmd/fyne@latest
+fi
 
 echo "------------------------------------------------"
 echo "Setup Complete!"
-echo "You can now verify the setup by running a test."
+echo "Run './tools/build.sh' to compile the project."
 echo "------------------------------------------------"
