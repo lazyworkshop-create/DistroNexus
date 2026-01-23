@@ -43,6 +43,11 @@ if command -v x86_64-w64-mingw32-gcc &> /dev/null; then
     echo "Building for Windows (amd64)..."
     CC=x86_64-w64-mingw32-gcc CGO_ENABLED=1 GOOS=windows GOARCH=amd64 \
         go build -ldflags -H=windowsgui -o "$OUTPUT_DIR/DistroNexus.exe" ./cmd/gui/main.go
+    
+    echo "Copying resources..."
+    cp -r "$PROJECT_ROOT/config" "$OUTPUT_DIR/"
+    cp -r "$PROJECT_ROOT/scripts" "$OUTPUT_DIR/"
+    
     echo "Success: $OUTPUT_DIR/DistroNexus.exe"
 else
     echo "Skipping Windows cross-build: x86_64-w64-mingw32-gcc not found."
