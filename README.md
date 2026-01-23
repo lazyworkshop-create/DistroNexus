@@ -6,11 +6,14 @@
 
 ## Features
 
+*   **Modern GUI Dashboard**: A cross-platform graphical interface (built with Fyne) to manage everything visually.
 *   **Centralized Download**: Automatically download the latest offline packages (Appx/AppxBundle) for popular distributions like Ubuntu, Debian, Kali Linux, and Oracle Linux.
 *   **Custom Installation**: Install any WSL distro into a custom directory of your choice, bypassing the default system drive location.
+*   **Instance Management**: View installed distributions, their status, versions, and paths.
+*   **Safety Checks**: Built-in validation prevents overwriting existing instances or installing into valid directories.
 *   **Side-by-Side Versions**: Easily install multiple versions of the same distro (e.g., Ubuntu 20.04 and 22.04) or multiple instances of the same version.
 *   **Offline Support**: Uses a local cache of downloaded packages to speed up re-installations.
-*   **Automation Ready**: Supports command-line arguments for unattended or scripted installations.
+*   **Uninstall Helper**: Easily unregister and remove custom WSL instances with a single click.
 
 ## Configuration
 
@@ -27,6 +30,38 @@ Global settings are stored in `config/settings.json`:
 *   `DefaultInstallPath`: The root directory where distros will be installed if no path is provided.
 *   `DefaultDistro`: The identifier (DefaultName) of the distro to use for Quick Mode.
 *   `DistroCachePath`: Directory to store downloaded offline packages. Can be absolute or relative to `scripts/`.
+
+## Graphical User Interface (GUI)
+
+DistroNexus now comes with a unified Dashboard application (`DistroNexus.exe`) that wraps the powerful PowerShell scripts into a user-friendly experience.
+
+### Main Capabilities
+- **Install Tab**: Select family/version, configure users, and monitor installation logs in real-time.
+- **My Installs Tab**: View all registered WSL distributions, check their running status, and uninstall them (unregister + file cleanup).
+- **Settings**: Configure default paths and cache locations.
+
+![App Icon](tools/icon.png)
+
+## Building from Source
+
+The project includes a comprehensive build system for Windows target.
+
+### Prerequisites
+- **Go**: Version 1.22 or higher.
+- **Fyne CLI**: Automatically installed by setup script.
+- **MinGW-w64**: Required for cross-compiling to Windows from Linux (package `gcc-mingw-w64`).
+- **PowerShell**: Required on the target Windows machine to run the backend scripts.
+
+### Setup & Build
+1.  **Initialize Environment** (Linux/WSL):
+    ```bash
+    ./tools/setup_go_env.sh
+    ```
+2.  **Compile**:
+    ```bash
+    ./tools/build.sh
+    ```
+    This will generate `build/DistroNexus.exe` with the embedded Application Icon.
 
 ## Scripts
 
@@ -88,9 +123,19 @@ Use parameters to skip the interactive menus.
 
 ```
 DistroNexus/
-├── scripts/
+├── build/                        # Compiled executable output
+├── cmd/                          # Go entry points
+├── config/                       # JSON configuration
+│   ├── distros.json              # Distro definitions
+│   └── settings.json             # User settings
+├── internal/                     # Go source code (UI & Logic)
+├── scripts/                      # PowerShell backend
 │   ├── download_all_distros.ps1  # Downloader script
 │   └── install_wsl_custom.ps1    # Installer script
+├── tools/                        # Build scripts & assets
+│   ├── build.sh
+│   ├── icon.png
+│   └── setup_go_env.sh
 ├── README.md                     # Documentation (English)
 └── README_CN.md                  # Documentation (Chinese)
 ```
