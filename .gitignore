@@ -4,15 +4,37 @@
 *.so
 *.dylib
 *.test
+*.syso
 
 # Output
 build/
 bin/
 /src/cmd/gui/gui
 
+# Vendor
+vendor/
+
+# Temporary Icon files in source
+src/icon.png
+src/icon.svg
+
+# User Data / Cache
+distro/
+config/*.json
+!config/distros.json
+!config/settings.json
+
+# Logs
+*.log
+
 # Go Workspace
 go.work
+
+# IDE
+.vscode/
+.idea/
 
 # OS specific
 .DS_Store
 Thumbs.db
+
