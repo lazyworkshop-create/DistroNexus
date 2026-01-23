@@ -57,33 +57,36 @@ func (mw *MainWindow) Init() {
 }
 
 func (mw *MainWindow) buildUI() {
-	// --- Left Sidebar: Distro List ---
+	// --- Data Setup ---
 	var distroNames []string
 	distroMap := make(map[string]model.DistroConfig) // Name -> Config
 
-	// Convert map map to flat list for simplicity or sorted list
 	for _, d := range mw.Distros {
 		distroNames = append(distroNames, d.Name)
 		distroMap[d.Name] = d
 	}
 	sort.Strings(distroNames)
 
+	// Shared State for Logic
+	var currentVMap map[string]string
+	var currentDistroFamily string
+
 	// --- Log Area (Bottom) ---
 	mw.LogArea = widget.NewMultiLineEntry()
 	// mw.LogArea.Disable() // Disabled usually makes text too light. Keep enabled for readability.
 	mw.LogArea.TextStyle = fyne.TextStyle{Monospace: true}
 
-	// --- Right Side: Details & Form ---
-	// Variables for Form
-	selectedDistroLabel := widget.NewLabel("Select a distribution")
-	selectedDistroLabel.TextStyle = fyne.TextStyle{Bold: true}
+	// --- Form Widgets ---
+	distroSelect := widget.NewSelect(distroNames, nil)
+	distroSelect.PlaceHolder = "Select Family"
 
 	versionSelect := widget.NewSelect([]string{}, nil)
 	versionSelect.PlaceHolder = "Select Version"
 
 	nameEntry := widget.NewEntry()
-	nameEntry.SetPlaceHolder("Instance Name (e.g. Ubuntu-Work)")
+	nameEntry.PlaceHolder = "Instance Name (e.g. Ubuntu-Work)"
 
+	// Standard Mode Fields
 	installPathEntry := widget.NewEntry()
 	installPathEntry.SetText(mw.Settings.DefaultInstallPath)
 
@@ -93,66 +96,105 @@ func (mw *MainWindow) buildUI() {
 	passEntry := widget.NewPasswordEntry()
 	passEntry.SetPlaceHolder("password")
 
-	quickModeCheck := widget.NewCheck("Quick Mode (Auto Path, Root User)", nil)
-	quickModeCheck.OnChanged = func(checked bool) {
-		if checked {
-			installPathEntry.Disable()
-			userEntry.Disable()
-			passEntry.Disable()
-		} else {
-			installPathEntry.Enable()
-			userEntry.Enable()
-			passEntry.Enable()
-		}
-	}
-
-	installBtn := widget.NewButton("Install", nil) // Logic defined later
-	installBtn.Importance = widget.HighImportance
-
-	// Form Container
-	form := container.NewVBox(
-		widget.NewLabel("Version:"),
-		versionSelect,
-		quickModeCheck,
-		widget.NewLabel("Instance Name:"),
-		nameEntry,
+	standardFields := container.NewVBox(
 		widget.NewLabel("Install Path:"),
 		installPathEntry,
 		widget.NewLabel("New Username:"),
 		userEntry,
 		widget.NewLabel("New Password:"),
 		passEntry,
-		layout.NewSpacer(),
-		installBtn,
 	)
 
-	detailsContainer := container.NewBorder(
-		container.NewVBox(selectedDistroLabel, widget.NewSeparator()),
-		nil, nil, nil,
-		form,
-	)
+	// Quick Mode Toggle
+	quickModeCheck := widget.NewCheck("Quick Mode (Auto Path, Root Only)", nil)
+	quickModeCheck.OnChanged = func(checked bool) {
+		if checked {
+			standardFields.Hide()
+		} else {
+			standardFields.Show()
+		}
+	}
 
-	// List Handling
-	distroList := widget.NewList(
-		func() int { return len(distroNames) },
-		func() fyne.CanvasObject { return widget.NewLabel("Template") },
-		func(i int, o fyne.CanvasObject) {
-			o.(*widget.Label).SetText(distroNames[i])
-		},
-	)
+	// Install Button
+	installBtn := widget.NewButton("Install", func() {
+		// Validation
+		if distroSelect.Selected == "" {
+			dialog.ShowInformation("Required", "Please select a distribution family.", mw.Window)
+			return
+		}
+		if versionSelect.Selected == "" {
+			dialog.ShowInformation("Required", "Please select a version.", mw.Window)
+			return
+		}
 
-	distroList.OnSelected = func(id widget.ListItemID) {
-		selectedName := distroNames[id]
+		currentVerDisplay := versionSelect.Selected
+		realDistroID := currentVMap[currentVerDisplay]
+
+		// Determine Parameters
+		var finalName, finalPath, finalUser, finalPass string
+
+		finalName = nameEntry.Text
+		if finalName == "" {
+			finalName = realDistroID
+		}
+
+		if quickModeCheck.Checked {
+			// Quick Mode: Auto-Calculate everything
+			finalPath = filepath.Join(mw.Settings.DefaultInstallPath, finalName)
+			finalUser = "" // Skip user creation logic in PS script
+			finalPass = ""
+		} else {
+			// Standard Mode: Validate Inputs
+			if installPathEntry.Text == "" || userEntry.Text == "" || passEntry.Text == "" {
+				dialog.ShowInformation("Required", "Please fill in all fields for Standard Mode.", mw.Window)
+				return
+			}
+			finalPath = installPathEntry.Text
+			finalUser = userEntry.Text
+			finalPass = passEntry.Text
+		}
+
+		mw.LogArea.SetText(fmt.Sprintf("Preparing to install: %s\n", finalName))
+		mw.LogArea.Append(fmt.Sprintf("Source:      %s (%s)\n", currentVerDisplay, currentDistroFamily))
+		if quickModeCheck.Checked {
+			mw.LogArea.Append("Mode:        Quick (Root/No-Password)\n")
+		}
+		mw.LogArea.Append(fmt.Sprintf("Destination: %s\n", finalPath))
+
+		logic.RunInstallScript(
+			mw.ProjectDir,
+			currentDistroFamily,
+			currentVerDisplay,
+			finalName, // Pass custom name as -DistroName
+			finalPath,
+			finalUser,
+			finalPass,
+			func(s string) { mw.LogArea.Append(s) },
+			func(e error) {
+				if e != nil {
+					dialog.ShowError(e, mw.Window)
+				} else {
+					dialog.ShowInformation("Done", "Installation completed.", mw.Window)
+				}
+			},
+		)
+	})
+	installBtn.Importance = widget.HighImportance
+
+	// --- Event Logic ---
+	distroSelect.OnChanged = func(selectedName string) {
+		if selectedName == "" {
+			return
+		}
 		cfg := distroMap[selectedName]
-
-		selectedDistroLabel.SetText(cfg.Name)
+		currentDistroFamily = cfg.Name
 
 		// Update Version Select options
+		currentVMap = make(map[string]string)
 		var versions []string
-		vMap := make(map[string]string) // "Ubuntu 22.04" -> "Ubuntu-22.04"
 
 		for _, v := range cfg.Versions {
-			vMap[v.Name] = v.DefaultName
+			currentVMap[v.Name] = v.DefaultName
 			versions = append(versions, v.Name)
 		}
 		sort.Sort(sort.Reverse(sort.StringSlice(versions)))
@@ -163,88 +205,45 @@ func (mw *MainWindow) buildUI() {
 		} else {
 			versionSelect.Selected = ""
 		}
-		
+
 		// Trigger initial update of Name Entry based on selection
 		if versionSelect.Selected != "" {
-			nameEntry.SetText(vMap[versionSelect.Selected])
+			nameEntry.SetText(currentVMap[versionSelect.Selected])
 		}
 		versionSelect.Refresh()
+	}
 
-		// Update name when version changes
-		versionSelect.OnChanged = func(s string) {
-			if val, ok := vMap[s]; ok {
-				nameEntry.SetText(val)
-			}
-		}
-
-		// Hacky fix for scope: Redefine the install button action or use a closure variable
-		installBtn.OnTapped = func() {
-			currentVerDisplay := versionSelect.Selected
-			if currentVerDisplay == "" {
-				dialog.ShowInformation("Required", "Please select a version.", mw.Window)
-				return
-			}
-
-			// e.g., "Ubuntu-22.04"
-			realDistroID := vMap[currentVerDisplay] 
-
-			// Determine Parameters
-			var finalName, finalPath, finalUser, finalPass string
-
-			finalName = nameEntry.Text
-			if finalName == "" {
-				finalName = realDistroID
-			}
-
-			if quickModeCheck.Checked {
-				// Quick Mode: Auto-Calculate everything
-				finalPath = filepath.Join(mw.Settings.DefaultInstallPath, finalName)
-				finalUser = "" // Skip user creation logic in PS script
-				finalPass = ""
-			} else {
-				// Standard Mode: Validate Inputs
-				if installPathEntry.Text == "" || userEntry.Text == "" || passEntry.Text == "" {
-					dialog.ShowInformation("Required", "Please fill in all fields for Standard Mode.", mw.Window)
-					return
-				}
-				finalPath = installPathEntry.Text
-				finalUser = userEntry.Text
-				finalPass = passEntry.Text
-			}
-
-			mw.LogArea.SetText(fmt.Sprintf("Preparing to install: %s (%s)...\n", currentVerDisplay, realDistroID))
-			mw.LogArea.Append(fmt.Sprintf("Instance Name: %s\n", finalName))
-			mw.LogArea.Append(fmt.Sprintf("Destination:   %s\n", finalPath))
-
-			logic.RunInstallScript(
-				mw.ProjectDir,
-				cfg.Name,
-				currentVerDisplay,
-				finalName, // Pass custom name as -DistroName
-				finalPath,
-				finalUser,
-				finalPass,
-				func(s string) { mw.LogArea.Append(s) },
-				func(e error) {
-					if e != nil {
-						dialog.ShowError(e, mw.Window)
-					} else {
-						dialog.ShowInformation("Done", "Installation completed.", mw.Window)
-					}
-				},
-			)
+	versionSelect.OnChanged = func(s string) {
+		if val, ok := currentVMap[s]; ok {
+			nameEntry.SetText(val)
 		}
 	}
 
-	// Layout Assembly
-	// Split: Left (List 30%), Right (Form 70%)
-	split := container.NewHSplit(distroList, detailsContainer)
-	split.SetOffset(0.3)
+	// --- Layout Assembly ---
+	
+	formContent := container.NewVBox(
+		widget.NewLabelWithStyle("Distribution Selection", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		distroSelect,
+		versionSelect,
+		widget.NewSeparator(),
+		
+		widget.NewLabelWithStyle("Configuration", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		widget.NewLabel("Instance Name:"),
+		nameEntry,
+		
+		quickModeCheck,
+		standardFields, // Contains Path, User, Pass; toggled by check
+		
+		layout.NewSpacer(),
+		installBtn,
+	)
 
-	// Main Layout: Top Split, Bottom Log
-	// Using SplitVertical for resizable log area
-	mainSplit := container.NewVSplit(split, mw.LogArea)
-	mainSplit.SetOffset(0.7) // 70% top, 30% log
+	// Use Scroller for form part to ensure accessibility on small screens
+	formScroll := container.NewVScroll(container.NewPadded(formContent))
+
+	// Main Layout: Top Split (Form), Bottom Log
+	mainSplit := container.NewVSplit(formScroll, mw.LogArea)
+	mainSplit.SetOffset(0.55) // Balance space between form and log
 
 	// Toolbar
 	toolbar := widget.NewToolbar(
