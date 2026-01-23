@@ -221,13 +221,26 @@ func (mw *MainWindow) buildUI() {
 
 	// --- Layout Assembly ---
 	
+	// Row 1: Distro & Version Selection
+	selectionRow := container.NewGridWithColumns(2,
+		container.NewVBox(
+			widget.NewLabelWithStyle("Distribution Family", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+			distroSelect,
+		),
+		container.NewVBox(
+			widget.NewLabelWithStyle("Version", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+			versionSelect,
+		),
+	)
+
+	// Configuration Section
+	configLabel := widget.NewLabelWithStyle("Configuration", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+	
 	formContent := container.NewVBox(
-		widget.NewLabelWithStyle("Distribution Selection", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		distroSelect,
-		versionSelect,
+		selectionRow,
 		widget.NewSeparator(),
 		
-		widget.NewLabelWithStyle("Configuration", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		configLabel,
 		widget.NewLabel("Instance Name:"),
 		nameEntry,
 		
@@ -236,14 +249,25 @@ func (mw *MainWindow) buildUI() {
 		
 		layout.NewSpacer(),
 		installBtn,
+		widget.NewSeparator(),
+		widget.NewLabelWithStyle("Installation Log", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 	)
 
-	// Use Scroller for form part to ensure accessibility on small screens
-	formScroll := container.NewVScroll(container.NewPadded(formContent))
+	// Combine Form and Log into a single scrolling container
+	// We set a minimum size for the log area
+	mw.LogArea.SetMinRowsVisible(10) 
 
-	// Main Layout: Top Split (Form), Bottom Log
-	mainSplit := container.NewVSplit(formScroll, mw.LogArea)
-	mainSplit.SetOffset(0.55) // Balance space between form and log
+	// Main Layout: No Split, just vertical stack with padding
+	mainContent := container.NewVBox(
+		formContent,
+		mw.LogArea,
+	)
+
+	// Use Padded container for "Windows 11-like" feel (breathing room)
+	paddedContent := container.NewPadded(mainContent)
+	
+	// Wrap in Scroll for smaller screens
+	scrollContainer := container.NewVScroll(paddedContent)
 
 	// Toolbar
 	toolbar := widget.NewToolbar(
@@ -254,6 +278,6 @@ func (mw *MainWindow) buildUI() {
 	)
 
 	// Apply Theme/Layout
-	content := container.NewBorder(toolbar, nil, nil, nil, mainSplit)
+	content := container.NewBorder(toolbar, nil, nil, nil, scrollContainer)
 	mw.Window.SetContent(content)
 }
