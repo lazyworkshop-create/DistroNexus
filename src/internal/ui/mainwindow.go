@@ -59,7 +59,7 @@ func (mw *MainWindow) buildUI() {
 	// --- Left Sidebar: Distro List ---
 	var distroNames []string
 	distroMap := make(map[string]model.DistroConfig) // Name -> Config
-	
+
 	// Convert map map to flat list for simplicity or sorted list
 	for _, d := range mw.Distros {
 		distroNames = append(distroNames, d.Name)
@@ -69,23 +69,23 @@ func (mw *MainWindow) buildUI() {
 
 	// --- Log Area (Bottom) ---
 	mw.LogArea = widget.NewMultiLineEntry()
-	mw.LogArea.Disable() // Read-only
+	// mw.LogArea.Disable() // Disabled usually makes text too light. Keep enabled for readability.
 	mw.LogArea.TextStyle = fyne.TextStyle{Monospace: true}
-	
+
 	// --- Right Side: Details & Form ---
 	// Variables for Form
 	selectedDistroLabel := widget.NewLabel("Select a distribution")
 	selectedDistroLabel.TextStyle = fyne.TextStyle{Bold: true}
-	
+
 	versionSelect := widget.NewSelect([]string{}, nil)
 	versionSelect.PlaceHolder = "Select Version"
-	
+
 	installPathEntry := widget.NewEntry()
 	installPathEntry.SetText(mw.Settings.DefaultInstallPath)
-	
+
 	userEntry := widget.NewEntry()
 	userEntry.SetPlaceHolder("username")
-	
+
 	passEntry := widget.NewPasswordEntry()
 	passEntry.SetPlaceHolder("password")
 
@@ -109,9 +109,9 @@ func (mw *MainWindow) buildUI() {
 		// Logic Call
 		logic.RunInstallScript(
 			mw.ProjectDir,
-			"", // Family Name
+			"",                     // Family Name
 			versionSelect.Selected, // Version Name
-			versionSelect.Selected,    // DistroName (fallback)
+			versionSelect.Selected, // DistroName (fallback)
 			installPathEntry.Text,
 			userEntry.Text,
 			passEntry.Text,
@@ -145,8 +145,8 @@ func (mw *MainWindow) buildUI() {
 	)
 
 	detailsContainer := container.NewBorder(
-		container.NewVBox(selectedDistroLabel, widget.NewSeparator()), 
-		nil, nil, nil, 
+		container.NewVBox(selectedDistroLabel, widget.NewSeparator()),
+		nil, nil, nil,
 		form,
 	)
 
@@ -158,34 +158,34 @@ func (mw *MainWindow) buildUI() {
 			o.(*widget.Label).SetText(distroNames[i])
 		},
 	)
-	
+
 	distroList.OnSelected = func(id widget.ListItemID) {
 		selectedName := distroNames[id]
 		cfg := distroMap[selectedName]
-		
+
 		selectedDistroLabel.SetText(cfg.Name)
-		
+
 		// Update Version Select options
 		var versions []string
 		// Also need to map "Display Name" back to actual Distro ID/DefaultName if needed
 		// For now, let's just use the values found in Versions map
-		
+
 		// Note: The json structure is a bit mapped by ID "1", "2".
 		// But here we are iterating.
 		// Let's create a map for selection
-		
+
 		vMap := make(map[string]string) // "Ubuntu 22.04" -> "Ubuntu-22.04"
-		
+
 		for _, v := range cfg.Versions {
 			vMap[v.Name] = v.DefaultName
 			versions = append(versions, v.Name)
 		}
 		sort.Sort(sort.Reverse(sort.StringSlice(versions))) // Newest first usually
-		
+
 		versionSelect.Options = versions
 		versionSelect.Selected = ""
 		versionSelect.Refresh()
-		
+
 		// Update selection logic to pass the 'DefaultName' (ID) to the script
 		versionSelect.OnChanged = func(s string) {
 			// When user picks "Ubuntu 22.04 LTS", we actually want "Ubuntu-22.04"
@@ -195,7 +195,7 @@ func (mw *MainWindow) buildUI() {
 			// For simplicity: Update the install click handler to lookup from `vMap`?
 			// Scope issue.
 		}
-		
+
 		// Hacky fix for scope: Redefine the install button action or use a closure variable
 		installBtn.OnTapped = func() {
 			currentVerDisplay := versionSelect.Selected
@@ -203,16 +203,16 @@ func (mw *MainWindow) buildUI() {
 				dialog.ShowInformation("Required", "Please select a version.", mw.Window)
 				return
 			}
-			
+
 			realDistroID := vMap[currentVerDisplay] // e.g., "Ubuntu-22.04"
-			
+
 			if installPathEntry.Text == "" || userEntry.Text == "" || passEntry.Text == "" {
 				dialog.ShowInformation("Required", "Please fill in all fields.", mw.Window)
 				return
 			}
 
 			mw.LogArea.SetText(fmt.Sprintf("Preparing to install: %s (%s)...\n", currentVerDisplay, realDistroID))
-			
+
 			logic.RunInstallScript(
 				mw.ProjectDir,
 				cfg.Name,
@@ -221,7 +221,7 @@ func (mw *MainWindow) buildUI() {
 				installPathEntry.Text,
 				userEntry.Text,
 				passEntry.Text,
-				func(s string) { mw.LogArea.Append(s) }, 
+				func(s string) { mw.LogArea.Append(s) },
 				func(e error) {
 					if e != nil {
 						dialog.ShowError(e, mw.Window)
