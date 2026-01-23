@@ -35,10 +35,7 @@ jobs:
         env:
           CC: x86_64-w64-mingw32-gcc
         run: |
-          chmod +x tools/setup_go_env.sh tools/build.sh
-          
-          # Run setup script to ensure tools and env (installs fyne cli etc)
-          ./tools/setup_go_env.sh
+          chmod +x tools/build.sh
           
           # Run build script
           ./tools/build.sh
