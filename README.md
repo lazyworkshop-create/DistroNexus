@@ -124,18 +124,24 @@ Use parameters to skip the interactive menus.
 ```
 DistroNexus/
 ├── build/                        # Compiled executable output
-├── cmd/                          # Go entry points
 ├── config/                       # JSON configuration
 │   ├── distros.json              # Distro definitions
 │   └── settings.json             # User settings
-├── internal/                     # Go source code (UI & Logic)
 ├── scripts/                      # PowerShell backend
 │   ├── download_all_distros.ps1  # Downloader script
-│   └── install_wsl_custom.ps1    # Installer script
-├── tools/                        # Build scripts & assets
+│   ├── install_wsl_custom.ps1    # Installer script
+│   ├── list_distros.ps1          # List helper
+│   └── uninstall_wsl_custom.ps1  # Uninstaller script
+├── src/                          # Go Source Code
+│   ├── cmd/                      # Entry points
+│   ├── internal/                 # App logic & UI
+│   ├── go.mod                    # Go dependencies
+│   └── vendor/                   # Vendored dependencies
+├── tools/                        # Build tools & resources
 │   ├── build.sh
-│   ├── icon.png
-│   └── setup_go_env.sh
+│   ├── gen_gear.go               # Icon generator
+│   ├── icon.png                  # App icon
+│   └── setup_go_env.sh           # Environment setup
 ├── README.md                     # Documentation (English)
 └── README_CN.md                  # Documentation (Chinese)
 ```
