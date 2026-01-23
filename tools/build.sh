@@ -30,11 +30,12 @@ echo "Tidying modules..."
 go mod tidy
 
 # --- Linux Build ---
-if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    echo "Building for Linux (amd64)..."
-    go build -o "$OUTPUT_DIR/DistroNexus-Linux" ./cmd/gui/main.go
-    echo "Success: $OUTPUT_DIR/DistroNexus-Linux"
-fi
+# Skipped: WSL2 management is Windows-only
+# if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+#     echo "Building for Linux (amd64)..."
+#     go build -o "$OUTPUT_DIR/DistroNexus-Linux" ./cmd/gui/main.go
+#     echo "Success: $OUTPUT_DIR/DistroNexus-Linux"
+# fi
 
 # --- Windows Build (Cross Compilation) ---
 # Check for MinGW for Fyne Windows cross-compilation
