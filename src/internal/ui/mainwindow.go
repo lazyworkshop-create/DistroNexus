@@ -5,6 +5,7 @@ import (
 	"distronexus-gui/internal/logic"
 	"distronexus-gui/internal/model"
 	"fmt"
+	"path/filepath"
 	"sort"
 
 	"fyne.io/fyne/v2"
@@ -80,6 +81,9 @@ func (mw *MainWindow) buildUI() {
 	versionSelect := widget.NewSelect([]string{}, nil)
 	versionSelect.PlaceHolder = "Select Version"
 
+	nameEntry := widget.NewEntry()
+	nameEntry.SetPlaceHolder("Instance Name (e.g. Ubuntu-Work)")
+
 	installPathEntry := widget.NewEntry()
 	installPathEntry.SetText(mw.Settings.DefaultInstallPath)
 
@@ -89,51 +93,29 @@ func (mw *MainWindow) buildUI() {
 	passEntry := widget.NewPasswordEntry()
 	passEntry.SetPlaceHolder("password")
 
-	installBtn := widget.NewButton("Install", func() {
-		// Validation
-		if versionSelect.Selected == "" {
-			dialog.ShowInformation("Required", "Please select a version.", mw.Window)
-			return
+	quickModeCheck := widget.NewCheck("Quick Mode (Auto Path, Root User)", nil)
+	quickModeCheck.OnChanged = func(checked bool) {
+		if checked {
+			installPathEntry.Disable()
+			userEntry.Disable()
+			passEntry.Disable()
+		} else {
+			installPathEntry.Enable()
+			userEntry.Enable()
+			passEntry.Enable()
 		}
-		if installPathEntry.Text == "" || userEntry.Text == "" || passEntry.Text == "" {
-			dialog.ShowInformation("Required", "Please fill in all fields.", mw.Window)
-			return
-		}
+	}
 
-		// Disable button
-		// (In a real app, use binding or state to disable)
-
-		mw.LogArea.SetText("") // Clear log
-		mw.LogArea.Refresh()
-
-		// Logic Call
-		logic.RunInstallScript(
-			mw.ProjectDir,
-			"",                     // Family Name
-			versionSelect.Selected, // Version Name
-			versionSelect.Selected, // DistroName (fallback)
-			installPathEntry.Text,
-			userEntry.Text,
-			passEntry.Text,
-			func(logMsg string) {
-				mw.LogArea.Append(logMsg)
-				mw.LogArea.Refresh() // Force repaint
-			},
-			func(err error) {
-				if err != nil {
-					mw.LogArea.Append(fmt.Sprintf("\nError: %s\n", err.Error()))
-				} else {
-					dialog.ShowInformation("Success", "Installation Finished!", mw.Window)
-				}
-			},
-		)
-	})
+	installBtn := widget.NewButton("Install", nil) // Logic defined later
 	installBtn.Importance = widget.HighImportance
 
 	// Form Container
 	form := container.NewVBox(
 		widget.NewLabel("Version:"),
 		versionSelect,
+		quickModeCheck,
+		widget.NewLabel("Instance Name:"),
+		nameEntry,
 		widget.NewLabel("Install Path:"),
 		installPathEntry,
 		widget.NewLabel("New Username:"),
@@ -167,33 +149,32 @@ func (mw *MainWindow) buildUI() {
 
 		// Update Version Select options
 		var versions []string
-		// Also need to map "Display Name" back to actual Distro ID/DefaultName if needed
-		// For now, let's just use the values found in Versions map
-
-		// Note: The json structure is a bit mapped by ID "1", "2".
-		// But here we are iterating.
-		// Let's create a map for selection
-
 		vMap := make(map[string]string) // "Ubuntu 22.04" -> "Ubuntu-22.04"
 
 		for _, v := range cfg.Versions {
 			vMap[v.Name] = v.DefaultName
 			versions = append(versions, v.Name)
 		}
-		sort.Sort(sort.Reverse(sort.StringSlice(versions))) // Newest first usually
+		sort.Sort(sort.Reverse(sort.StringSlice(versions)))
 
 		versionSelect.Options = versions
-		versionSelect.Selected = ""
+		if len(versions) > 0 {
+			versionSelect.Selected = versions[0]
+		} else {
+			versionSelect.Selected = ""
+		}
+		
+		// Trigger initial update of Name Entry based on selection
+		if versionSelect.Selected != "" {
+			nameEntry.SetText(vMap[versionSelect.Selected])
+		}
 		versionSelect.Refresh()
 
-		// Update selection logic to pass the 'DefaultName' (ID) to the script
+		// Update name when version changes
 		versionSelect.OnChanged = func(s string) {
-			// When user picks "Ubuntu 22.04 LTS", we actually want "Ubuntu-22.04"
-			// But for now, we just store it in the select widget.
-			// Ideally we store the ID in a separate var.
-			// Let's cheat and create a lookup here or modify the install click handler.
-			// For simplicity: Update the install click handler to lookup from `vMap`?
-			// Scope issue.
+			if val, ok := vMap[s]; ok {
+				nameEntry.SetText(val)
+			}
 		}
 
 		// Hacky fix for scope: Redefine the install button action or use a closure variable
@@ -204,23 +185,45 @@ func (mw *MainWindow) buildUI() {
 				return
 			}
 
-			realDistroID := vMap[currentVerDisplay] // e.g., "Ubuntu-22.04"
+			// e.g., "Ubuntu-22.04"
+			realDistroID := vMap[currentVerDisplay] 
 
-			if installPathEntry.Text == "" || userEntry.Text == "" || passEntry.Text == "" {
-				dialog.ShowInformation("Required", "Please fill in all fields.", mw.Window)
-				return
+			// Determine Parameters
+			var finalName, finalPath, finalUser, finalPass string
+
+			finalName = nameEntry.Text
+			if finalName == "" {
+				finalName = realDistroID
+			}
+
+			if quickModeCheck.Checked {
+				// Quick Mode: Auto-Calculate everything
+				finalPath = filepath.Join(mw.Settings.DefaultInstallPath, finalName)
+				finalUser = "" // Skip user creation logic in PS script
+				finalPass = ""
+			} else {
+				// Standard Mode: Validate Inputs
+				if installPathEntry.Text == "" || userEntry.Text == "" || passEntry.Text == "" {
+					dialog.ShowInformation("Required", "Please fill in all fields for Standard Mode.", mw.Window)
+					return
+				}
+				finalPath = installPathEntry.Text
+				finalUser = userEntry.Text
+				finalPass = passEntry.Text
 			}
 
 			mw.LogArea.SetText(fmt.Sprintf("Preparing to install: %s (%s)...\n", currentVerDisplay, realDistroID))
+			mw.LogArea.Append(fmt.Sprintf("Instance Name: %s\n", finalName))
+			mw.LogArea.Append(fmt.Sprintf("Destination:   %s\n", finalPath))
 
 			logic.RunInstallScript(
 				mw.ProjectDir,
 				cfg.Name,
 				currentVerDisplay,
-				realDistroID,
-				installPathEntry.Text,
-				userEntry.Text,
-				passEntry.Text,
+				finalName, // Pass custom name as -DistroName
+				finalPath,
+				finalUser,
+				finalPass,
 				func(s string) { mw.LogArea.Append(s) },
 				func(e error) {
 					if e != nil {
