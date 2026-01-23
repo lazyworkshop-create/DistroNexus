@@ -122,7 +122,16 @@ go mod tidy
 # Install Fyne CLI tool (optional, for bundling)
 if ! command -v fyne &> /dev/null; then
     echo "Installing Fyne CLI helper..."
-    go install fyne.io/fyne/v2/cmd/fyne@latest
+    # Old path: go install fyne.io/fyne/v2/cmd/fyne@latest
+    # New path per deprecation warning:
+    go install fyne.io/tools/cmd/fyne@latest
+fi
+
+# Suggest PATH update if needed
+if ! command -v fyne &> /dev/null; then
+    GOPATH_BIN="$(go env GOPATH)/bin"
+    echo "WARNING: 'fyne' command installed to $GOPATH_BIN but not found in PATH."
+    echo "Please add it to your PATH: export PATH=\$PATH:$GOPATH_BIN"
 fi
 
 echo "------------------------------------------------"
