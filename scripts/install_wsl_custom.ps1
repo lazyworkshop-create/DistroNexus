@@ -313,8 +313,9 @@ try {
         }
 
         # Add to sudo/wheel groups (Try both to cover Ubuntu/Debian and RHEL/Oracle)
-        wsl -d $DistroName -u root -- exec usermod -aG sudo $user 2>$null
-        wsl -d $DistroName -u root -- exec usermod -aG wheel $user 2>$null
+        # Use sh -c with || true to suppress errors if a group doesn't exist (e.g. wheel on Debian)
+        wsl -d $DistroName -u root -- sh -c "usermod -aG sudo $user 2>/dev/null || true"
+        wsl -d $DistroName -u root -- sh -c "usermod -aG wheel $user 2>/dev/null || true"
 
         # Set default user in /etc/wsl.conf
         $wslConfContent = "[user]`ndefault=$user"
