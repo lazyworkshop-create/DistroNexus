@@ -71,19 +71,21 @@ function Get-WslDistros {
 
         # Attempt to get OS Release info (PRETTY_NAME)
         # Warning: This starts the distro if stopped.
-        # We'll run it quickly.
         $OsName = "Unknown Distro"
         try {
-            # Use wsl -d <Name> -u root -e sh -c "source /etc/os-release && echo $PRETTY_NAME"
-            # We redirect stderr to null.
+            # Use 'cat' directly to avoid shell compatibility issues (e.g., 'source' not found in dash/Ubuntu)
+            # and parse the output in PowerShell.
+            $osReleaseContent = wsl -d $Name -u root -e cat /etc/os-release 2>$null
             
-            # To avoid hanging, strictly we might want to skip if 'Stopped', but user requested the info.
-            # We will try.
-            $cmd = "source /etc/os-release 2>/dev/null && echo `"`$PRETTY_NAME`""
-            # Use specific encoding handling if needed, but simple ASCII text is usually fine
-            $res = wsl -d $Name -u root -e sh -c $cmd 2>$null
-            if ($res -and -not [string]::IsNullOrWhiteSpace($res)) {
-                $OsName = $res.Trim('"')
+            if ($osReleaseContent) {
+                # Look for PRETTY_NAME="..."
+                foreach ($line in $osReleaseContent) {
+                    if ($line -match '^PRETTY_NAME=') {
+                        # Remove key and quotes
+                        $OsName = $line -replace '^PRETTY_NAME=', '' -replace '"', ''
+                        break
+                    }
+                }
             }
         } catch {
             $OsName = "Read Error"
