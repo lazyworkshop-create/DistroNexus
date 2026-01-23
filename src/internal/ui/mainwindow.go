@@ -1,8 +1,8 @@
 package ui
 
 import (
-	"distronexus-gui/internal/config"
 	"context"
+	"distronexus-gui/internal/config"
 	"distronexus-gui/internal/logic"
 	"distronexus-gui/internal/model"
 	"fmt"
@@ -28,12 +28,12 @@ type MainWindow struct {
 
 	// UI Components
 	LogArea *widget.Entry // Kept in memory but hidden
-	
+
 	// Progress Control
-	progress     *widget.ProgressBarInfinite
-	statusLabel  *widget.Label
-	installBtn   *widget.Button
-	
+	progress    *widget.ProgressBarInfinite
+	statusLabel *widget.Label
+	installBtn  *widget.Button
+
 	// Containers
 	mainContainer *fyne.Container // The root container that swaps content
 	installView   fyne.CanvasObject
@@ -87,17 +87,17 @@ func (mw *MainWindow) buildUI() {
 	var currentDistroFamily string
 
 	// --- Components ---
-	
+
 	// Hidden Log Area (still used for accumulating context if needed, or we just drop it)
-	mw.LogArea = widget.NewMultiLineEntry() 
-	
+	mw.LogArea = widget.NewMultiLineEntry()
+
 	// Progress Bar & Status
 	mw.progress = widget.NewProgressBarInfinite()
 	mw.progress.Hide()
-	
+
 	mw.statusLabel = widget.NewLabel("Ready")
 	mw.statusLabel.Alignment = fyne.TextAlignCenter
-	mw.statusLabel.TextStyle = fyne.TextStyle{Italic: true} 
+	mw.statusLabel.TextStyle = fyne.TextStyle{Italic: true}
 	mw.statusLabel.Hide()
 
 	distroSelect := widget.NewSelect(distroNames, nil)
@@ -154,7 +154,7 @@ func (mw *MainWindow) buildUI() {
 			}, mw.Window)
 			return
 		}
-		
+
 		// --- Install Logic ---
 
 		// Validation
@@ -181,7 +181,7 @@ func (mw *MainWindow) buildUI() {
 		if quickModeCheck.Checked {
 			// Quick Mode
 			finalPath = filepath.Join(mw.Settings.DefaultInstallPath, finalName)
-			finalUser = "" 
+			finalUser = ""
 			finalPass = ""
 		} else {
 			// Standard Mode
@@ -198,7 +198,7 @@ func (mw *MainWindow) buildUI() {
 		mw.isInstalling = true
 		mw.installBtn.SetText("Cancel")
 		mw.installBtn.Importance = widget.DangerImportance
-		
+
 		distroSelect.Disable()
 		versionSelect.Disable()
 		nameEntry.Disable()
@@ -206,12 +206,12 @@ func (mw *MainWindow) buildUI() {
 		installPathEntry.Disable()
 		userEntry.Disable()
 		passEntry.Disable()
-		
+
 		mw.progress.Show()
 		mw.progress.Start()
 		mw.statusLabel.SetText("Initializing...")
 		mw.statusLabel.Show()
-		
+
 		// Prepare Context
 		mw.cancelCtx, mw.cancelFunc = context.WithCancel(context.Background())
 
@@ -220,11 +220,11 @@ func (mw *MainWindow) buildUI() {
 			mw.ProjectDir,
 			currentDistroFamily,
 			currentVerDisplay,
-			finalName, 
+			finalName,
 			finalPath,
 			finalUser,
 			finalPass,
-			func(s string) { 
+			func(s string) {
 				// Update Status Label (Trim whitespace)
 				clean := strings.TrimSpace(s)
 				if clean != "" && len(clean) > 3 {
@@ -241,10 +241,11 @@ func (mw *MainWindow) buildUI() {
 				mw.progress.Stop()
 				mw.progress.Hide()
 				mw.statusLabel.Hide()
-				
+
 				mw.installBtn.SetText("Install")
 				mw.installBtn.Importance = widget.HighImportance
-				
+				mw.installBtn.Refresh()
+
 				distroSelect.Enable()
 				versionSelect.Enable()
 				nameEntry.Enable()
@@ -308,7 +309,7 @@ func (mw *MainWindow) buildUI() {
 	}
 
 	// --- Layout Assembly ---
-	
+
 	// Row 1: Distro & Version Selection
 	selectionRow := container.NewGridWithColumns(2,
 		container.NewVBox(
@@ -323,36 +324,35 @@ func (mw *MainWindow) buildUI() {
 
 	// Configuration Section
 	configLabel := widget.NewLabelWithStyle("Configuration", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
-	
+
 	formContent := container.NewVBox(
 		selectionRow,
 		widget.NewSeparator(),
-		
+
 		configLabel,
 		widget.NewLabel("Instance Name:"),
 		nameEntry,
-		
+
 		quickModeCheck,
 		standardFields, // Contains Path, User, Pass; toggled by check
-		
+
 		layout.NewSpacer(),
-		
+
 		// Status Area
 		mw.statusLabel,
 		mw.progress,
 		installBtn,
 	)
 
-
 	// Main Layout: No Split, just vertical stack with padding
 	// We remove LogArea from view
 	// mainContent := container.NewVBox(formContent, mw.LogArea)
-	
+
 	mainContent := container.NewVBox(formContent)
 
 	// Use Padded container for "Windows 11-like" feel (breathing room)
 	paddedContent := container.NewPadded(mainContent)
-	
+
 	// Wrap in Scroll for smaller screens
 	scrollContainer := container.NewVScroll(paddedContent)
 
@@ -372,11 +372,11 @@ func (mw *MainWindow) buildUI() {
 
 	// Keep references for switching
 	mw.installView = scrollContainer
-	
+
 	// Apply Theme/Layout
 	// Initial View
 	mw.mainContainer = container.NewPadded(mw.installView)
-	
+
 	content := container.NewBorder(toolbar, nil, nil, nil, mw.mainContainer)
 	mw.Window.SetContent(content)
 }
@@ -395,7 +395,7 @@ func (mw *MainWindow) SwitchToUninstall() {
 		dialog.ShowInformation("Busy", "Installation in progress. Please wait or cancel.", mw.Window)
 		return
 	}
-	
+
 	// Rebuild uninstall view every time to refresh list
 	mw.uninstallView = mw.buildUninstallUI()
 	mw.mainContainer.Objects = []fyne.CanvasObject{mw.uninstallView}
@@ -413,37 +413,37 @@ func (mw *MainWindow) buildUninstallUI() fyne.CanvasObject {
 
 	// Load Data Async
 	/*
-	go func() {
-		distros, err := logic.ListDistros(mw.ProjectDir)
-		if err != nil {
-			mw.Window.Content().Refresh() 
-		}
-	}()
+		go func() {
+			distros, err := logic.ListDistros(mw.ProjectDir)
+			if err != nil {
+				mw.Window.Content().Refresh()
+			}
+		}()
 	*/
-	
+
 	content := container.NewVBox(
 		header,
 		widget.NewSeparator(),
 		listContainer,
 	)
-	
+
 	// Async fetch
 	go func() {
 		distros, err := logic.ListDistros(mw.ProjectDir)
-		
+
 		// Schedule UI update
 		// Assuming mw.App is available or global
-		// Use fyne.Do() equivalent? 
+		// Use fyne.Do() equivalent?
 		// mw.Window.Canvas().Refresh()
 		// We actually need data on the UI thread.
-		
+
 		// Let's use a dirty trick if we don't have Queue:
 		// We can't safely touch UI from here.
-		
+
 		// But I have mw.Window.
 		// Use the proper logic.LoadDistros is synchronous call in my implementation of logic.ListDistros
 		// It waits for cmd.Output().
-		
+
 		// Let's just make the call.
 		if err != nil {
 			listContainer.Objects = []fyne.CanvasObject{widget.NewLabel("Error loading list: " + err.Error())}
@@ -453,40 +453,40 @@ func (mw *MainWindow) buildUninstallUI() fyne.CanvasObject {
 			listContainer.Objects = nil // Clear loading
 			for _, d := range distros {
 				d := d // Capture loop var
-				
+
 				infoLabel := widget.NewLabel(fmt.Sprintf("%s (WSL%s, %s)", d.Name, d.WslVer, d.State))
 				pathLabel := widget.NewLabelWithStyle(d.BasePath, fyne.TextAlignLeading, fyne.TextStyle{Italic: true})
 				pathLabel.Wrapping = fyne.TextWrapBreak
-				
+
 				details := container.NewVBox(infoLabel, pathLabel)
-				
+
 				delBtn := widget.NewButtonWithIcon("Uninstall", theme.DeleteIcon(), nil)
 				delBtn.Importance = widget.DangerImportance
-				
+
 				delBtn.OnTapped = func() {
-					dialog.ShowConfirm("Uninstall Confirmation", 
-						fmt.Sprintf("Are you sure you want to unregister '%s'?\nThis operation cannot be undone.", d.Name), 
+					dialog.ShowConfirm("Uninstall Confirmation",
+						fmt.Sprintf("Are you sure you want to unregister '%s'?\nThis operation cannot be undone.", d.Name),
 						func(ok bool) {
 							if ok {
 								// Perform Uninstall
 								// progress := widget.NewProgressBarInfinite() // Unused variable
-								// listContainer.Add(progress) 
-								
+								// listContainer.Add(progress)
+
 								// Ideally replace the row or disable button.
 								delBtn.Disable()
 								delBtn.SetText("Removing...")
-								
+
 								go func() {
 									uErr := logic.UnregisterDistro(context.Background(), d.Name)
 									if uErr == nil {
 										// Optional: Delete files
 										// Since we are unregistering, checking if path exists to ask delete
-										// But keeping it simple: just unregister. 
-										// Files are usually kept by unregister if they are not store apps? 
+										// But keeping it simple: just unregister.
+										// Files are usually kept by unregister if they are not store apps?
 										// Actually wsl --unregister usually keeps nothing for custom distros if imported?
 										// Wait, `wsl --import` creates a ext4.vhdx. `wsl --unregister` DELETES that vhdx usually.
 										// So files are gone. Folders might remain.
-										
+
 										logic.DeleteDistroFiles(d.BasePath) // Try cleanup empty folder
 									}
 
@@ -495,10 +495,10 @@ func (mw *MainWindow) buildUninstallUI() fyne.CanvasObject {
 									mw.SwitchToUninstall() // Reload whole page (lazy way)
 								}()
 							}
-						}, 
+						},
 						mw.Window)
 				}
-				
+
 				row := container.NewBorder(nil, nil, nil, delBtn, details)
 				card := container.NewPadded(row)
 				listContainer.Add(card)
@@ -510,4 +510,3 @@ func (mw *MainWindow) buildUninstallUI() fyne.CanvasObject {
 
 	return container.NewVScroll(container.NewPadded(content))
 }
-
