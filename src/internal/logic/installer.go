@@ -2,6 +2,7 @@ package logic
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os/exec"
 	"path/filepath"
@@ -10,10 +11,10 @@ import (
 )
 
 // RunInstallScript executes the PowerShell installation script
-func RunInstallScript(projectRoot string, familyName string, versionName string, distroName string, installPath string, user string, pass string, onLog func(string), onFinish func(error)) {
+func RunInstallScript(ctx context.Context, projectRoot string, familyName string, versionName string, distroName string, installPath string, user string, pass string, onLog func(string), onFinish func(error)) {
 	go func() {
 		scriptPath := filepath.Join(projectRoot, "scripts", "install_wsl_custom.ps1")
-		
+
 		// Construct the PowerShell command
 		// We use -File to run the script file directly with parameters
 		args := []string{
@@ -28,8 +29,9 @@ func RunInstallScript(projectRoot string, familyName string, versionName string,
 			"-pass", pass,
 		}
 
-		cmd := exec.Command("powershell.exe", args...)
-		
+		cmd := exec.CommandContext(ctx, "powershell.exe", args...)
+		prepareCmd(cmd)
+
 		// Setup logging pipes
 		stdout, err := cmd.StdoutPipe()
 		if err != nil {
@@ -45,7 +47,8 @@ func RunInstallScript(projectRoot string, familyName string, versionName string,
 		// Start the process
 		if err := cmd.Start(); err != nil {
 			// Fallback: Try "pwsh" (PowerShell Core) if "powershell" fails
-			cmd = exec.Command("pwsh", args...)
+			cmd = exec.CommandContext(ctx, "pwsh", args...)
+			prepareCmd(cmd)
 			stdout, _ = cmd.StdoutPipe()
 			stderr, _ = cmd.StderrPipe()
 			if err := cmd.Start(); err != nil {
@@ -53,7 +56,7 @@ func RunInstallScript(projectRoot string, familyName string, versionName string,
 				return
 			}
 		}
-		
+
 		onLog(fmt.Sprintf("--- Starting Installation: %s ---\n", distroName))
 		onLog(fmt.Sprintf("Command: %s %s\n", cmd.Path, strings.Join(args, " ")))
 
@@ -63,7 +66,7 @@ func RunInstallScript(projectRoot string, familyName string, versionName string,
 
 		// Wait for completion
 		err = cmd.Wait()
-		
+
 		// Check exit code
 		if err != nil {
 			if exitErr, ok := err.(*exec.ExitError); ok {
@@ -80,7 +83,9 @@ func RunInstallScript(projectRoot string, familyName string, versionName string,
 	}()
 }
 
-func scanOutput(reader interface{ Read(p []byte) (n int, err error) }, logFunc func(string)) {
+func scanOutput(reader interface {
+	Read(p []byte) (n int, err error)
+}, logFunc func(string)) {
 	scanner := bufio.NewScanner(reader.(interface{ Read([]byte) (int, error) }))
 	for scanner.Scan() {
 		text := scanner.Text()

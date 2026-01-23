@@ -2,11 +2,13 @@ package ui
 
 import (
 	"distronexus-gui/internal/config"
+	"context"
 	"distronexus-gui/internal/logic"
 	"distronexus-gui/internal/model"
 	"fmt"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -25,7 +27,15 @@ type MainWindow struct {
 	ProjectDir string
 
 	// UI Components
-	LogArea *widget.Entry
+	LogArea *widget.Entry // Kept in memory but hidden
+	
+	// Progress Control
+	progress     *widget.ProgressBarInfinite
+	statusLabel  *widget.Label
+	installBtn   *widget.Button
+	cancelCtx    context.Context
+	cancelFunc   context.CancelFunc
+	isInstalling bool
 }
 
 func NewMainWindow(app fyne.App, projectDir string) *MainWindow {
@@ -57,7 +67,7 @@ func (mw *MainWindow) Init() {
 }
 
 func (mw *MainWindow) buildUI() {
-	// --- Data Setup ---
+	// --- Parameters & Helper Vars ---
 	var distroNames []string
 	distroMap := make(map[string]model.DistroConfig) // Name -> Config
 
@@ -67,16 +77,23 @@ func (mw *MainWindow) buildUI() {
 	}
 	sort.Strings(distroNames)
 
-	// Shared State for Logic
 	var currentVMap map[string]string
 	var currentDistroFamily string
 
-	// --- Log Area (Bottom) ---
-	mw.LogArea = widget.NewMultiLineEntry()
-	// mw.LogArea.Disable() // Disabled usually makes text too light. Keep enabled for readability.
-	mw.LogArea.TextStyle = fyne.TextStyle{Monospace: true}
+	// --- Components ---
+	
+	// Hidden Log Area (still used for accumulating context if needed, or we just drop it)
+	mw.LogArea = widget.NewMultiLineEntry() 
+	
+	// Progress Bar & Status
+	mw.progress = widget.NewProgressBarInfinite()
+	mw.progress.Hide()
+	
+	mw.statusLabel = widget.NewLabel("Ready")
+	mw.statusLabel.Alignment = fyne.TextAlignCenter
+	mw.statusLabel.TextStyle = fyne.TextStyle{Italic: true} 
+	mw.statusLabel.Hide()
 
-	// --- Form Widgets ---
 	distroSelect := widget.NewSelect(distroNames, nil)
 	distroSelect.PlaceHolder = "Select Family"
 
@@ -115,8 +132,25 @@ func (mw *MainWindow) buildUI() {
 		}
 	}
 
-	// Install Button
-	installBtn := widget.NewButton("Install", func() {
+	// Install Action Logic
+	mw.installBtn = widget.NewButton("Install", nil)
+	mw.installBtn.Importance = widget.HighImportance
+
+	mw.installBtn.OnTapped = func() {
+		// --- Cancel Logic ---
+		if mw.isInstalling {
+			dialog.ShowConfirm("Cancel Installation", "Are you sure you want to cancel the installation?", func(userConfirmed bool) {
+				if userConfirmed {
+					if mw.cancelFunc != nil {
+						mw.cancelFunc()
+					}
+				}
+			}, mw.Window)
+			return
+		}
+		
+		// --- Install Logic ---
+
 		// Validation
 		if distroSelect.Selected == "" {
 			dialog.ShowInformation("Required", "Please select a distribution family.", mw.Window)
@@ -139,12 +173,12 @@ func (mw *MainWindow) buildUI() {
 		}
 
 		if quickModeCheck.Checked {
-			// Quick Mode: Auto-Calculate everything
+			// Quick Mode
 			finalPath = filepath.Join(mw.Settings.DefaultInstallPath, finalName)
-			finalUser = "" // Skip user creation logic in PS script
+			finalUser = "" 
 			finalPass = ""
 		} else {
-			// Standard Mode: Validate Inputs
+			// Standard Mode
 			if installPathEntry.Text == "" || userEntry.Text == "" || passEntry.Text == "" {
 				dialog.ShowInformation("Required", "Please fill in all fields for Standard Mode.", mw.Window)
 				return
@@ -154,34 +188,84 @@ func (mw *MainWindow) buildUI() {
 			finalPass = passEntry.Text
 		}
 
-		mw.LogArea.SetText(fmt.Sprintf("Preparing to install: %s\n", finalName))
-		mw.LogArea.Append(fmt.Sprintf("Source:      %s (%s)\n", currentVerDisplay, currentDistroFamily))
-		if quickModeCheck.Checked {
-			mw.LogArea.Append("Mode:        Quick (Root/No-Password)\n")
-		}
-		mw.LogArea.Append(fmt.Sprintf("Destination: %s\n", finalPath))
+		// --- LOCK UI ---
+		mw.isInstalling = true
+		mw.installBtn.SetText("Cancel")
+		mw.installBtn.Importance = widget.DangerImportance
+		
+		distroSelect.Disable()
+		versionSelect.Disable()
+		nameEntry.Disable()
+		quickModeCheck.Disable()
+		installPathEntry.Disable()
+		userEntry.Disable()
+		passEntry.Disable()
+		
+		mw.progress.Show()
+		mw.progress.Start()
+		mw.statusLabel.SetText("Initializing...")
+		mw.statusLabel.Show()
+		
+		// Prepare Context
+		mw.cancelCtx, mw.cancelFunc = context.WithCancel(context.Background())
 
 		logic.RunInstallScript(
+			mw.cancelCtx,
 			mw.ProjectDir,
 			currentDistroFamily,
 			currentVerDisplay,
-			finalName, // Pass custom name as -DistroName
+			finalName, 
 			finalPath,
 			finalUser,
 			finalPass,
-			func(s string) { mw.LogArea.Append(s) },
+			func(s string) { 
+				// Update Status Label (Trim whitespace)
+				clean := strings.TrimSpace(s)
+				if clean != "" && len(clean) > 3 {
+					// Only update if looks like a real message
+					if len(clean) > 60 {
+						clean = clean[:57] + "..."
+					}
+					mw.statusLabel.SetText(clean)
+				}
+			},
 			func(e error) {
+				// --- UNLOCK UI ---
+				mw.isInstalling = false
+				mw.progress.Stop()
+				mw.progress.Hide()
+				mw.statusLabel.Hide()
+				
+				mw.installBtn.SetText("Install")
+				mw.installBtn.Importance = widget.HighImportance
+				
+				distroSelect.Enable()
+				versionSelect.Enable()
+				nameEntry.Enable()
+				quickModeCheck.Enable()
+				// Only enable fields if quickmode is unchecked
+				if !quickModeCheck.Checked {
+					installPathEntry.Enable()
+					userEntry.Enable()
+					passEntry.Enable()
+				}
+
 				if e != nil {
-					dialog.ShowError(e, mw.Window)
+					if e == context.Canceled {
+						dialog.ShowInformation("Cancelled", "Installation was cancelled by user.", mw.Window)
+					} else {
+						dialog.ShowError(fmt.Errorf("Installation Failed:\n%s", e.Error()), mw.Window)
+					}
 				} else {
-					dialog.ShowInformation("Done", "Installation completed.", mw.Window)
+					dialog.ShowInformation("Success", "Installation Finished Successfully!", mw.Window)
 				}
 			},
 		)
-	})
-	installBtn.Importance = widget.HighImportance
+	}
+	// Used in layout
+	installBtn := mw.installBtn
 
-	// --- Event Logic ---
+	// --- Event Logic (Dropdowns) ---
 	distroSelect.OnChanged = func(selectedName string) {
 		if selectedName == "" {
 			return
@@ -189,7 +273,6 @@ func (mw *MainWindow) buildUI() {
 		cfg := distroMap[selectedName]
 		currentDistroFamily = cfg.Name
 
-		// Update Version Select options
 		currentVMap = make(map[string]string)
 		var versions []string
 
@@ -206,7 +289,6 @@ func (mw *MainWindow) buildUI() {
 			versionSelect.Selected = ""
 		}
 
-		// Trigger initial update of Name Entry based on selection
 		if versionSelect.Selected != "" {
 			nameEntry.SetText(currentVMap[versionSelect.Selected])
 		}
@@ -248,20 +330,19 @@ func (mw *MainWindow) buildUI() {
 		standardFields, // Contains Path, User, Pass; toggled by check
 		
 		layout.NewSpacer(),
+		
+		// Status Area
+		mw.statusLabel,
+		mw.progress,
 		installBtn,
-		widget.NewSeparator(),
-		widget.NewLabelWithStyle("Installation Log", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 	)
 
-	// Combine Form and Log into a single scrolling container
-	// We set a minimum size for the log area
-	mw.LogArea.SetMinRowsVisible(10) 
 
 	// Main Layout: No Split, just vertical stack with padding
-	mainContent := container.NewVBox(
-		formContent,
-		mw.LogArea,
-	)
+	// We remove LogArea from view
+	// mainContent := container.NewVBox(formContent, mw.LogArea)
+	
+	mainContent := container.NewVBox(formContent)
 
 	// Use Padded container for "Windows 11-like" feel (breathing room)
 	paddedContent := container.NewPadded(mainContent)
