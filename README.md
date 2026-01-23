@@ -2,7 +2,7 @@
 
 [中文文档](README_CN.md) | **English**
 
-**DistroNexus** is a powerful PowerShell toolkit designed to simplify the management, downloading, and custom installation of Windows Subsystem for Linux (WSL) distributions. It acts as a central hub for your WSL needs, allowing you to forge your perfect Linux environment on Windows.
+**DistroNexus** is a comprehensive GUI application (powered by PowerShell) designed to simplify the management, downloading, and custom installation of Windows Subsystem for Linux (WSL) distributions. It acts as a central hub for your WSL needs, allowing you to forge your perfect Linux environment on Windows.
 
 ## Features
 
@@ -115,7 +115,7 @@ Use parameters to skip the interactive menus.
     *   `-InstallPath`: Manually specify the installation directory.
     *   `-SelectFamily`: The name of the distro family (e.g., "Ubuntu", "Debian").
     *   `-SelectVersion`: The version string to match (e.g., "24.04").
-    *   `-name`: Quick install mode: sets the distro name (uses default distro type).
+    *   `-name`: Quick install mode: sets the instance name (uses default distro type).
     *   `-user`: Default username to create.
     *   `-pass`: Password for the default user.
 
