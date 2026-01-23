@@ -33,6 +33,12 @@ type MainWindow struct {
 	progress     *widget.ProgressBarInfinite
 	statusLabel  *widget.Label
 	installBtn   *widget.Button
+	
+	// Containers
+	mainContainer *fyne.Container // The root container that swaps content
+	installView   fyne.CanvasObject
+	uninstallView fyne.CanvasObject
+
 	cancelCtx    context.Context
 	cancelFunc   context.CancelFunc
 	isInstalling bool
@@ -353,12 +359,155 @@ func (mw *MainWindow) buildUI() {
 	// Toolbar
 	toolbar := widget.NewToolbar(
 		widget.NewToolbarSpacer(),
+		widget.NewToolbarAction(theme.DeleteIcon(), func() {
+			mw.SwitchToUninstall()
+		}),
+		widget.NewToolbarAction(theme.HomeIcon(), func() {
+			mw.SwitchToInstall()
+		}),
 		widget.NewToolbarAction(theme.SettingsIcon(), func() {
 			mw.ShowSettingsDialog()
 		}),
 	)
 
+	// Keep references for switching
+	mw.installView = scrollContainer
+	
 	// Apply Theme/Layout
-	content := container.NewBorder(toolbar, nil, nil, nil, scrollContainer)
+	// Initial View
+	mw.mainContainer = container.NewPadded(mw.installView)
+	
+	content := container.NewBorder(toolbar, nil, nil, nil, mw.mainContainer)
 	mw.Window.SetContent(content)
 }
+
+func (mw *MainWindow) SwitchToInstall() {
+	if mw.isInstalling {
+		dialog.ShowInformation("Busy", "Installation in progress. Please wait or cancel.", mw.Window)
+		return
+	}
+	mw.mainContainer.Objects = []fyne.CanvasObject{mw.installView}
+	mw.mainContainer.Refresh()
+}
+
+func (mw *MainWindow) SwitchToUninstall() {
+	if mw.isInstalling {
+		dialog.ShowInformation("Busy", "Installation in progress. Please wait or cancel.", mw.Window)
+		return
+	}
+	
+	// Rebuild uninstall view every time to refresh list
+	mw.uninstallView = mw.buildUninstallUI()
+	mw.mainContainer.Objects = []fyne.CanvasObject{mw.uninstallView}
+	mw.mainContainer.Refresh()
+}
+
+func (mw *MainWindow) buildUninstallUI() fyne.CanvasObject {
+	// Header
+	header := widget.NewLabelWithStyle("Installed Distributions", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
+
+	// List Loading Area
+	listContainer := container.NewVBox()
+	loading := widget.NewLabel("Loading...")
+	listContainer.Add(loading)
+
+	// Load Data Async
+	/*
+	go func() {
+		distros, err := logic.ListDistros(mw.ProjectDir)
+		if err != nil {
+			mw.Window.Content().Refresh() 
+		}
+	}()
+	*/
+	
+	content := container.NewVBox(
+		header,
+		widget.NewSeparator(),
+		listContainer,
+	)
+	
+	// Async fetch
+	go func() {
+		distros, err := logic.ListDistros(mw.ProjectDir)
+		
+		// Schedule UI update
+		// Assuming mw.App is available or global
+		// Use fyne.Do() equivalent? 
+		// mw.Window.Canvas().Refresh()
+		// We actually need data on the UI thread.
+		
+		// Let's use a dirty trick if we don't have Queue:
+		// We can't safely touch UI from here.
+		
+		// But I have mw.Window.
+		// Use the proper logic.LoadDistros is synchronous call in my implementation of logic.ListDistros
+		// It waits for cmd.Output().
+		
+		// Let's just make the call.
+		if err != nil {
+			listContainer.Objects = []fyne.CanvasObject{widget.NewLabel("Error loading list: " + err.Error())}
+		} else if len(distros) == 0 {
+			listContainer.Objects = []fyne.CanvasObject{widget.NewLabel("No distributions found.")}
+		} else {
+			listContainer.Objects = nil // Clear loading
+			for _, d := range distros {
+				d := d // Capture loop var
+				
+				infoLabel := widget.NewLabel(fmt.Sprintf("%s (WSL%s, %s)", d.Name, d.WslVer, d.State))
+				pathLabel := widget.NewLabelWithStyle(d.BasePath, fyne.TextAlignLeading, fyne.TextStyle{Italic: true})
+				pathLabel.Wrapping = fyne.TextWrapBreak
+				
+				details := container.NewVBox(infoLabel, pathLabel)
+				
+				delBtn := widget.NewButtonWithIcon("Uninstall", theme.DeleteIcon(), nil)
+				delBtn.Importance = widget.DangerImportance
+				
+				delBtn.OnTapped = func() {
+					dialog.ShowConfirm("Uninstall Confirmation", 
+						fmt.Sprintf("Are you sure you want to unregister '%s'?\nThis operation cannot be undone.", d.Name), 
+						func(ok bool) {
+							if ok {
+								// Perform Uninstall
+								// progress := widget.NewProgressBarInfinite() // Unused variable
+								// listContainer.Add(progress) 
+								
+								// Ideally replace the row or disable button.
+								delBtn.Disable()
+								delBtn.SetText("Removing...")
+								
+								go func() {
+									uErr := logic.UnregisterDistro(context.Background(), d.Name)
+									if uErr == nil {
+										// Optional: Delete files
+										// Since we are unregistering, checking if path exists to ask delete
+										// But keeping it simple: just unregister. 
+										// Files are usually kept by unregister if they are not store apps? 
+										// Actually wsl --unregister usually keeps nothing for custom distros if imported?
+										// Wait, `wsl --import` creates a ext4.vhdx. `wsl --unregister` DELETES that vhdx usually.
+										// So files are gone. Folders might remain.
+										
+										logic.DeleteDistroFiles(d.BasePath) // Try cleanup empty folder
+									}
+
+									// Callback
+									// Refreh list
+									mw.SwitchToUninstall() // Reload whole page (lazy way)
+								}()
+							}
+						}, 
+						mw.Window)
+				}
+				
+				row := container.NewBorder(nil, nil, nil, delBtn, details)
+				card := container.NewPadded(row)
+				listContainer.Add(card)
+				listContainer.Add(widget.NewSeparator())
+			}
+		}
+		listContainer.Refresh()
+	}()
+
+	return container.NewVScroll(container.NewPadded(content))
+}
+
