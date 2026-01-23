@@ -9,6 +9,29 @@ $ErrorActionPreference = "Stop"
 function Get-WslDistros {
     $LxssPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss"
     if (-not (Test-Path $LxssPath)) { return @() }
+    
+    # 1. Get Running State and Version from wsl -l -v
+    # Note: Output encoding of wsl.exe can be tricky. We treat it as string array.
+    $WslStatus = @{}
+    $cliOutput = wsl --list --verbose
+    if ($cliOutput) {
+        foreach ($line in $cliOutput) {
+            # Trim nulls/spaces
+            $line = $line -replace "`0", "" 
+            if ($line -match "NAME") { continue }
+            
+            # parts: [*] Name State Version
+            # Remove leading * if default
+            $cleanArgs = $line.Replace("*", " ").Trim() -split "\s+"
+            if ($cleanArgs.Count -ge 3) {
+                 $n = $cleanArgs[0]
+                 $WslStatus[$n] = @{
+                     State = $cleanArgs[1]
+                     Version = $cleanArgs[2]
+                 }
+            }
+        }
+    }
 
     $Distros = @()
     $Keys = Get-ChildItem -Path $LxssPath
@@ -21,39 +44,65 @@ function Get-WslDistros {
         
         $BasePath = $Props.BasePath
         
-        # Attempt to get real filesystem info
+        # Filesystem Info
         $InstallTime = "Unknown"
         $LastUsedTime = "Unknown"
         
         if ($BasePath -and (Test-Path $BasePath)) {
              try {
                  $DirInfo = Get-Item $BasePath
-                 $InstallTime = $DirInfo.CreationTime.ToString("yyyy-MM-dd HH:mm:ss")
+                 $InstallTime = $DirInfo.CreationTime.ToString("yyyy-MM-dd HH:mm")
                  
                  $VhdxPath = Join-Path $BasePath "ext4.vhdx"
                  if (Test-Path $VhdxPath) {
                      $FileInfo = Get-Item $VhdxPath
-                     $LastUsedTime = $FileInfo.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss")
+                     $LastUsedTime = $FileInfo.LastWriteTime.ToString("yyyy-MM-dd HH:mm")
                  }
-             } catch {
-                 # Ignore permission errors etc
-             }
+             } catch {}
         }
 
-        # Attempt to identify "Distro" type (heuristic based on Name usually, as Registry doesn't strictly store 'Ubuntu' vs 'Debian' metadata cleanly aside from sometimes PackageFamilyName for Store apps)
-        # For our custom distros, we don't store "Distro" type in registry, so we just return the name. 
+        # Status Info
+        $State = "Stopped"
+        $WslVer = "?"
+        if ($WslStatus.Contains($Name)) {
+            $State = $WslStatus[$Name].State
+            $WslVer = $WslStatus[$Name].Version
+        }
+
+        # Attempt to get OS Release info (PRETTY_NAME)
+        # Warning: This starts the distro if stopped.
+        # We'll run it quickly.
+        $OsName = "Unknown Distro"
+        try {
+            # Use wsl -d <Name> -u root -e sh -c "source /etc/os-release && echo $PRETTY_NAME"
+            # We redirect stderr to null.
+            
+            # To avoid hanging, strictly we might want to skip if 'Stopped', but user requested the info.
+            # We will try.
+            $cmd = "source /etc/os-release 2>/dev/null && echo `"`$PRETTY_NAME`""
+            # Use specific encoding handling if needed, but simple ASCII text is usually fine
+            $res = wsl -d $Name -u root -e sh -c $cmd 2>$null
+            if ($res -and -not [string]::IsNullOrWhiteSpace($res)) {
+                $OsName = $res.Trim('"')
+            }
+        } catch {
+            $OsName = "Read Error"
+        }
         
         $Distros += [PSCustomObject]@{
             Name        = $Name
             BasePath    = $BasePath
             InstallTime = $InstallTime
             LastUsed    = $LastUsedTime
+            State       = $State
+            WslVer      = $WslVer
+            OsName      = $OsName
         }
     }
     return $Distros
 }
 
-Write-Host "Scanning for WSL distributions..." -ForegroundColor Gray
+Write-Host "Scanning for WSL distributions (this may wake up stopped instances)..." -ForegroundColor Gray
 $Available = Get-WslDistros
 
 if ($Available.Count -eq 0) {
@@ -65,11 +114,18 @@ if ($Available.Count -eq 0) {
 Write-Host "`n=== Installed WSL Distributions ===" -ForegroundColor Cyan
 for ($i = 0; $i -lt $Available.Count; $i++) {
     $d = $Available[$i]
-    Write-Host "[$($i+1)] $($d.Name)" -ForegroundColor Green
-    Write-Host "    Location:  $($d.BasePath)"
-    Write-Host "    Installed: $($d.InstallTime)"
-    Write-Host "    Last Used: $($d.LastUsed)"
-    Write-Host ""
+    
+    # Line 1: [Index] Name (OsName) | State | WSLvX
+    $StateColor = if ($d.State -eq 'Running') { "Green" } else { "Gray" }
+    
+    Write-Host "[$($i+1)] " -NoNewline -ForegroundColor Cyan
+    Write-Host "$($d.Name) " -NoNewline -ForegroundColor White
+    Write-Host "($($d.OsName)) " -NoNewline -ForegroundColor Yellow
+    Write-Host "| $($d.State) | WSL$($d.WslVer)" -ForegroundColor $StateColor
+    
+    # Line 2: Path, Installed
+    Write-Host "      Path: $($d.BasePath)" -ForegroundColor DarkGray
+    # Write-Host "      Installed: $($d.InstallTime)  Last Used: $($d.LastUsed)" -ForegroundColor DarkGray
 }
 
 # --- 2. Select Instance ---
