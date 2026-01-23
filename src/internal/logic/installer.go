@@ -10,7 +10,7 @@ import (
 )
 
 // RunInstallScript executes the PowerShell installation script
-func RunInstallScript(projectRoot string, distroName string, installPath string, user string, pass string, onLog func(string), onFinish func(error)) {
+func RunInstallScript(projectRoot string, familyName string, versionName string, distroName string, installPath string, user string, pass string, onLog func(string), onFinish func(error)) {
 	go func() {
 		scriptPath := filepath.Join(projectRoot, "scripts", "install_wsl_custom.ps1")
 		
@@ -20,6 +20,8 @@ func RunInstallScript(projectRoot string, distroName string, installPath string,
 			"-NoProfile",
 			"-ExecutionPolicy", "Bypass",
 			"-File", scriptPath,
+			"-SelectFamily", familyName,
+			"-SelectVersion", versionName,
 			"-DistroName", distroName,
 			"-InstallPath", installPath,
 			"-user", user,

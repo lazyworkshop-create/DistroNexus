@@ -109,7 +109,9 @@ func (mw *MainWindow) buildUI() {
 		// Logic Call
 		logic.RunInstallScript(
 			mw.ProjectDir,
-			versionSelect.Selected,    // DistroName (e.g. Ubuntu-22.04) logic needs mapping to correct param
+			"", // Family Name
+			versionSelect.Selected, // Version Name
+			versionSelect.Selected,    // DistroName (fallback)
 			installPathEntry.Text,
 			userEntry.Text,
 			passEntry.Text,
@@ -213,6 +215,8 @@ func (mw *MainWindow) buildUI() {
 			
 			logic.RunInstallScript(
 				mw.ProjectDir,
+				cfg.Name,
+				currentVerDisplay,
 				realDistroID,
 				installPathEntry.Text,
 				userEntry.Text,
