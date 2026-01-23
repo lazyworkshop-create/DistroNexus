@@ -34,11 +34,11 @@ func ListDistros(projectRoot string) ([]WslInstance, error) {
 		return distros, nil
 	}
 
-	// PowerShell might return a single object or array. 
+	// PowerShell might return a single object or array.
 	// If single object, it might fail if we try to unmarshal to slice.
-	// But usually ConvertTo-Json with array input returns array. 
+	// But usually ConvertTo-Json with array input returns array.
 	// If only 1 item, PS sometimes returns object. We can try unmarshal to slice, if fail try unmarshal to single.
-	
+
 	err = json.Unmarshal(output, &distros)
 	if err != nil {
 		// Try single object

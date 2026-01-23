@@ -47,31 +47,17 @@ type MainWindow struct {
 func NewMainWindow(app fyne.App, projectDir string) *MainWindow {
 	mw := &MainWindow{
 		App:        app,
-		Window:     app.NewWindow("DistroNexus Installer"),
+		Window:     app.NewWindow("DistroNexus - The WSL Distro Manager"),
 		ProjectDir: projectDir,
 		Config:     config.NewLoader(projectDir),
 	}
+	mw.Window.Resize(fyne.NewSize(800, 600))
 	return mw
 }
 
 func (mw *MainWindow) Init() {
 	// Load Initial Data
-	
-	// Attempt to set borderless. SetDecorated might not be in the interface definition in all contexts.
-	type decoratable interface {
-		SetDecorated(bool)
-	}
-	if w, ok := mw.Window.(decoratable); ok {
-		w.SetDecorated(false)
-	}
-	// maybe the 'Window' field in struct is just 'fyne.Window' interface and it's missing there in older versions or I am misremembering.
-	// Let's check 'fyne.Window' definition locally? No tools for that.
-	
-	// Workaround: We will comment it out IF it blocks build, but user ASKED for it.
-	// Wait, if it's undefined, I cannot use it.
-	// Maybe `driver.Window`?
-	// mw.Window.SetDecorated(false)
-	mw.Window.Resize(fyne.NewSize(800, 600))
+
 	mw.Window.CenterOnScreen()
 
 	var err error
@@ -372,36 +358,20 @@ func (mw *MainWindow) buildUI() {
 	// Wrap in Scroll for smaller screens
 	scrollContainer := container.NewVScroll(paddedContent)
 
-	// --- Custom Title Bar (Toolbar) ---
-	titleLabel := widget.NewLabelWithStyle("DistroNexus Installer", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
-	
-	// App Actions
+	// --- Custom Toolbar ---
+	// App Actions (Icon only)
 	btnUninstall := widget.NewButtonWithIcon("", theme.DeleteIcon(), func() { mw.SwitchToUninstall() })
 	btnHome := widget.NewButtonWithIcon("", theme.HomeIcon(), func() { mw.SwitchToInstall() })
 	btnSettings := widget.NewButtonWithIcon("", theme.SettingsIcon(), func() { mw.ShowSettingsDialog() })
-	
-	// Style the buttons to look 'flat' if possible, or just standard buttons
-	// Fyne standard buttons have borders. 
-	
-	// Window Controls
-	btnClose := widget.NewButtonWithIcon("", theme.CancelIcon(), func() { mw.Window.Close() })
-	btnClose.Importance = widget.DangerImportance // Red-ish
 
-	// Layout: [Title] [Spacer] [Actions...] [Sep] [Close]
-	titleBar := container.NewHBox(
-		titleLabel,
+	// Layout: [Spacer] [Actions...]
+	toolbar := container.NewHBox(
 		layout.NewSpacer(),
-		btnUninstall,
 		btnHome,
+		btnUninstall,
 		btnSettings,
-		widget.NewSeparator(), // Spacer/Separator
-		widget.NewSeparator(), // Double separator for visibility or use a Label("|")
-		btnClose,
 	)
-	
-	// Enhance TitleBar background if needed? 
-	// For now just standard container.
-	
+
 	// Keep references for switching
 	mw.installView = scrollContainer
 
@@ -409,8 +379,8 @@ func (mw *MainWindow) buildUI() {
 	// Initial View
 	mw.mainContainer = container.NewPadded(mw.installView)
 
-	// Use Border layout: Top=TitleBar, Center=MainContent
-	content := container.NewBorder(titleBar, nil, nil, nil, mw.mainContainer)
+	// Use Border layout: Top=Toolbar, Center=MainContent
+	content := container.NewBorder(toolbar, nil, nil, nil, mw.mainContainer)
 	mw.Window.SetContent(content)
 }
 

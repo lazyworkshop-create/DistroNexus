@@ -14,7 +14,7 @@ func (mw *MainWindow) ShowSettingsDialog() {
 
 	distroCachePathEntry := widget.NewEntry()
 	distroCachePathEntry.SetText(mw.Settings.DistroCachePath)
-	
+
 	defaultDistroEntry := widget.NewEntry()
 	defaultDistroEntry.SetText(mw.Settings.DefaultDistro)
 
@@ -45,7 +45,7 @@ func (mw *MainWindow) ShowSettingsDialog() {
 			}
 		}
 	}, mw.Window)
-	
+
 	d.Resize(fyne.NewSize(400, 300))
 	d.Show()
 }
