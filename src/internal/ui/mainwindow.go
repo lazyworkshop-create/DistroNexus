@@ -196,80 +196,117 @@ func (mw *MainWindow) buildUI() {
 			finalPass = passEntry.Text
 		}
 
-		// --- LOCK UI ---
-		mw.isInstalling = true
-		mw.installBtn.SetText("Cancel")
-		mw.installBtn.Importance = widget.DangerImportance
+		// --- Validation & Robustness ---
+		if err := logic.ValidateDistroName(finalName); err != nil {
+			dialog.ShowError(fmt.Errorf("Invalid Name: %w", err), mw.Window)
+			return
+		}
 
-		distroSelect.Disable()
-		versionSelect.Disable()
-		nameEntry.Disable()
-		quickModeCheck.Disable()
-		installPathEntry.Disable()
-		userEntry.Disable()
-		passEntry.Disable()
+		// Synchronous check (might briefly pause UI)
+		if exists, err := logic.IsDistroRegistered(mw.ProjectDir, finalName); err != nil {
+			dialog.ShowError(fmt.Errorf("Failed to check registration: %w", err), mw.Window)
+			return
+		} else if exists {
+			dialog.ShowError(fmt.Errorf("Instance '%s' already exists.", finalName), mw.Window)
+			return
+		}
 
-		mw.progress.Show()
-		mw.progress.Start()
-		mw.statusLabel.SetText("Initializing...")
-		mw.statusLabel.Show()
+		startInstallFunc := func() {
+			// --- LOCK UI ---
+			mw.isInstalling = true
+			mw.installBtn.SetText("Cancel")
+			mw.installBtn.Importance = widget.DangerImportance
 
-		// Prepare Context
-		mw.cancelCtx, mw.cancelFunc = context.WithCancel(context.Background())
+			distroSelect.Disable()
+			versionSelect.Disable()
+			nameEntry.Disable()
+			quickModeCheck.Disable()
+			installPathEntry.Disable()
+			userEntry.Disable()
+			passEntry.Disable()
 
-		logic.RunInstallScript(
-			mw.cancelCtx,
-			mw.ProjectDir,
-			currentDistroFamily,
-			currentVerDisplay,
-			finalName,
-			finalPath,
-			finalUser,
-			finalPass,
-			func(s string) {
-				// Update Status Label (Trim whitespace)
-				clean := strings.TrimSpace(s)
-				if clean != "" && len(clean) > 3 {
-					// Only update if looks like a real message
-					if len(clean) > 60 {
-						clean = clean[:57] + "..."
+			mw.progress.Show()
+			mw.progress.Start()
+			mw.statusLabel.SetText("Initializing...")
+			mw.statusLabel.Show()
+
+			// Prepare Context
+			mw.cancelCtx, mw.cancelFunc = context.WithCancel(context.Background())
+
+			logic.RunInstallScript(
+				mw.cancelCtx,
+				mw.ProjectDir,
+				currentDistroFamily,
+				currentVerDisplay,
+				finalName,
+				finalPath,
+				finalUser,
+				finalPass,
+				func(s string) {
+					// Update Status Label (Trim whitespace)
+					clean := strings.TrimSpace(s)
+					if clean != "" && len(clean) > 3 {
+						// Only update if looks like a real message
+						if len(clean) > 60 {
+							clean = clean[:57] + "..."
+						}
+						mw.statusLabel.SetText(clean)
 					}
-					mw.statusLabel.SetText(clean)
-				}
-			},
-			func(e error) {
-				// --- UNLOCK UI ---
-				mw.isInstalling = false
-				mw.progress.Stop()
-				mw.progress.Hide()
-				mw.statusLabel.Hide()
+				},
+				func(e error) {
+					// --- UNLOCK UI ---
+					mw.isInstalling = false
+					mw.progress.Stop()
+					mw.progress.Hide()
+					mw.statusLabel.Hide()
 
-				mw.installBtn.SetText("Install")
-				mw.installBtn.Importance = widget.HighImportance
-				mw.installBtn.Refresh()
+					mw.installBtn.SetText("Install")
+					mw.installBtn.Importance = widget.HighImportance
+					mw.installBtn.Refresh()
 
-				distroSelect.Enable()
-				versionSelect.Enable()
-				nameEntry.Enable()
-				quickModeCheck.Enable()
-				// Only enable fields if quickmode is unchecked
-				if !quickModeCheck.Checked {
-					installPathEntry.Enable()
-					userEntry.Enable()
-					passEntry.Enable()
-				}
+					distroSelect.Enable()
+					versionSelect.Enable()
+					nameEntry.Enable()
+					quickModeCheck.Enable()
+					// Only enable fields if quickmode is unchecked
+					if !quickModeCheck.Checked {
+						installPathEntry.Enable()
+						userEntry.Enable()
+						passEntry.Enable()
+					}
 
-				if e != nil {
-					if e == context.Canceled {
-						dialog.ShowInformation("Cancelled", "Installation was cancelled by user.", mw.Window)
+					if e != nil {
+						if e == context.Canceled {
+							dialog.ShowInformation("Cancelled", "Installation was cancelled by user.", mw.Window)
+						} else {
+							dialog.ShowError(fmt.Errorf("Installation Failed:\n%s", e.Error()), mw.Window)
+						}
 					} else {
-						dialog.ShowError(fmt.Errorf("Installation Failed:\n%s", e.Error()), mw.Window)
+						dialog.ShowInformation("Success", "Installation Finished Successfully!", mw.Window)
 					}
-				} else {
-					dialog.ShowInformation("Success", "Installation Finished Successfully!", mw.Window)
-				}
-			},
-		)
+				},
+			)
+		}
+
+		// Check Path
+		if err := logic.ValidateInstallPath(finalPath); err != nil {
+			if err.Error() == "directory is not empty" {
+				dialog.ShowConfirm("Directory Not Empty",
+					fmt.Sprintf("Target: %s\nFolder is not empty. Overwrite/Merge?", finalPath),
+					func(ok bool) {
+						if ok {
+							startInstallFunc()
+						}
+					}, mw.Window)
+				return
+			} else {
+				// Some other error (permission, etc)
+				dialog.ShowError(fmt.Errorf("Path Validation Error: %w", err), mw.Window)
+				return
+			}
+		}
+
+		startInstallFunc()
 	}
 	// Used in layout
 	installBtn := mw.installBtn

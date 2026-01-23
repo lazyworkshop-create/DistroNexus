@@ -4,9 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"strings"
 )
 
 type WslInstance struct {
@@ -14,6 +17,54 @@ type WslInstance struct {
 	BasePath string `json:"BasePath"`
 	State    string `json:"State"`
 	WslVer   string `json:"WslVer"`
+}
+
+// Check if a directory is empty (or doesn't exist which is also 'clean' for us)
+// Returns error if directory exists and is NOT empty
+func ValidateInstallPath(path string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil // Doesn't exist, we can create it
+		}
+		return fmt.Errorf("cannot verify path: %w", err)
+	}
+	defer f.Close()
+
+	_, err = f.Readdirnames(1)
+	if err == io.EOF {
+		return nil // Empty
+	}
+	return fmt.Errorf("directory is not empty")
+}
+
+// ValidateDistroName checks for invalid characters in the name
+func ValidateDistroName(name string) error {
+	// Prohibit chars that are invalid in Windows filenames or might confuse CLI
+	// < > : " / \ | ? * and control chars
+	matched, _ := regexp.MatchString(`[<>:"/\\|?*\x00-\x1f]`, name)
+	if matched {
+		return fmt.Errorf("name contains invalid characters")
+	}
+	if strings.TrimSpace(name) == "" {
+		return fmt.Errorf("name cannot be empty")
+	}
+	return nil
+}
+
+// IsDistroRegistered checks if a distro with the given name already exists
+func IsDistroRegistered(projectRoot string, name string) (bool, error) {
+	// We reuse ListDistros for consistency and safety against encoding issues
+	distros, err := ListDistros(projectRoot)
+	if err != nil {
+		return false, err
+	}
+	for _, d := range distros {
+		if strings.EqualFold(d.Name, name) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // ListDistros calls the PowerShell script to get installed WSL instances

@@ -6,11 +6,13 @@ import (
 	"path/filepath"
 
 	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/theme"
 )
 
 func main() {
 	// Create application instance
 	a := app.New()
+	a.SetIcon(theme.SettingsIcon())
 
 	// Determine Project Root based on Executable location
 	ex, err := os.Executable()
