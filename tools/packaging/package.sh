@@ -67,7 +67,8 @@ rm -rf "$RELEASE_DIR/tmp_zip"
 if command -v iscc &> /dev/null; then
     echo "Compiling Installer with Inno Setup..."
     cd "$PACKAGE_DIR"
-    iscc "/dMyAppVersion=$VERSION" DistroNexus.iss
+    # Use //d to escape MSYS path conversion on Windows Git Bash
+    iscc "//dMyAppVersion=$VERSION" DistroNexus.iss
     echo "Installer created in $RELEASE_DIR"
 else
     echo "Warning: 'iscc' (Inno Setup Compiler) not found in PATH."
