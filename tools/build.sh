@@ -38,9 +38,17 @@ go mod tidy
 # fi
 
 # --- Windows Build (Cross Compilation) ---
-# Check for MinGW for Fyne Windows cross-compilation
+# Check for MinGW/GCC for Windows build
+CC_CMD=""
 if command -v x86_64-w64-mingw32-gcc &> /dev/null; then
-    echo "Building for Windows (amd64)..."
+    CC_CMD="x86_64-w64-mingw32-gcc"
+elif command -v gcc &> /dev/null; then
+    # Fallback to standard gcc (useful on native Windows build)
+    CC_CMD="gcc"
+fi
+
+if [ -n "$CC_CMD" ]; then
+    echo "Building for Windows (amd64) using $CC_CMD..."
     
     # Strip debug symbols (-s) and DWARF table (-w) to reduce binary size
     export GOFLAGS="-ldflags=-s -w"
@@ -64,7 +72,7 @@ if command -v x86_64-w64-mingw32-gcc &> /dev/null; then
         
         # Best approach: Run in src.
         # Use .png path for icon
-        CC=x86_64-w64-mingw32-gcc CGO_ENABLED=1 fyne package -os windows -icon "$PROJECT_ROOT/tools/icon.png" -name DistroNexus --src ./cmd/gui
+        CC=$CC_CMD CGO_ENABLED=1 fyne package -os windows -icon "$PROJECT_ROOT/tools/icon.png" -name DistroNexus --src ./cmd/gui
         
         # It seems fyne package outputs to the src directory if specified with --src?
         # Check where it fell.
@@ -76,7 +84,7 @@ if command -v x86_64-w64-mingw32-gcc &> /dev/null; then
         popd > /dev/null
     else
         echo "Fyne CLI not found, falling back to standard go build (no exe icon)..."
-        CC=x86_64-w64-mingw32-gcc CGO_ENABLED=1 GOOS=windows GOARCH=amd64 \
+        CC=$CC_CMD CGO_ENABLED=1 GOOS=windows GOARCH=amd64 \
             go build -ldflags "-s -w -H=windowsgui" -o "$OUTPUT_DIR/DistroNexus.exe" ./cmd/gui/main.go
     fi
 
@@ -86,7 +94,7 @@ if command -v x86_64-w64-mingw32-gcc &> /dev/null; then
     
     echo "Success: $OUTPUT_DIR/DistroNexus.exe"
 else
-    echo "Skipping Windows cross-build: x86_64-w64-mingw32-gcc not found."
+    echo "Skipping Windows build: No suitable compiler (gcc/mingw) found."
     echo "To enable Windows build on Linux, install mingw-w64."
     echo "  Ubuntu/Debian: sudo apt-get install gcc-mingw-w64"
 fi

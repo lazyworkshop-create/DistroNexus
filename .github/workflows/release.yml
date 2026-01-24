@@ -8,7 +8,7 @@ on:
 jobs:
   build-and-release:
     name: Build and Release
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     
     steps:
     - name: Checkout code
@@ -19,33 +19,28 @@ jobs:
       with:
         go-version: '1.22'
 
-    - name: Setup Environment (Deps & Tools)
+    - name: Install Dependencies
       run: |
-        chmod +x ./tools/setup_go_env.sh
-        ./tools/setup_go_env.sh
-        # Add GOPATH/bin to PATH for subsequent steps (to find 'fyne')
-        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+        choco install innosetup --no-progress
+        choco install zip --no-progress
+      shell: pwsh
 
-    - name: Install Inno Setup
-      uses: minijazz/inno-setup-action@v1.0.1
-      # On Linux, this sets up Wine and ISCC
-
-    - name: Build Binary
-      run: |
-        chmod +x ./tools/build.sh
-        ./tools/build.sh
+    - name: Install Fyne CLI
+      run: go install fyne.io/fyne/v2/cmd/fyne@latest
 
     - name: Update Distro List
-      run: |
-        SHELL=pwsh pwsh ./scripts/update_distros.ps1
+      run: ./scripts/update_distros.ps1
+      shell: pwsh
+      
+    - name: Build Binary
+      run: ./tools/build.sh
       shell: bash
 
     - name: Package (Zip and Installer)
       run: |
-        chmod +x ./tools/packaging/package.sh
-        # Pass the tag version (remove 'v' prefix)
         VERSION=${GITHUB_REF#refs/tags/v}
         ./tools/packaging/package.sh $VERSION
+      shell: bash
 
     # Code Signing Step (Start)
     # This step requires setting up SignPath project and secrets
