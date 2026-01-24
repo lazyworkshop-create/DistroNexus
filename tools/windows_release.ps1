@@ -43,12 +43,13 @@ Push-Location $SrcDir
 
     if (Get-Command fyne -ErrorAction SilentlyContinue) {
         Write-Host "Using Fyne CLI for packaging (with icon)..."
-        # Use relative path for icon
-        $IconPath = "../tools/icon.png"
+        # Use absolute path for icon to avoid resolution issues
+        $IconPath = Join-Path $ProjectRoot "tools\icon.png"
         
         # Run Fyne Package
         # Note: fyne package output path depends on execution, trying to force it
-        cmd /c "fyne package -os windows -icon $IconPath -name DistroNexus --src ./cmd/gui"
+        # We use strict quoting for the path
+        & fyne package -os windows -icon "$IconPath" -name DistroNexus --src ./cmd/gui
         
         if (Test-Path "DistroNexus.exe") {
             Move-Item "DistroNexus.exe" "$OutputDir\DistroNexus.exe" -Force
