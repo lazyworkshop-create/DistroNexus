@@ -18,6 +18,12 @@ if ($ListAlias) { $List = $true }
 
 $ErrorActionPreference = "Stop"
 
+# --- Logging Setup ---
+. "$PSScriptRoot\pwsh_utils.ps1"
+Setup-Logger -LogFileName "install.log"
+
+Log-Message "Starting installation script..."
+
 # --- Distro Definitions ---
 $ConfigPath = Join-Path $PSScriptRoot "..\config\distros.json"
 if (-not (Test-Path $ConfigPath)) { throw "Config file not found at: $ConfigPath" }
@@ -28,13 +34,15 @@ if (Test-Path $SettingsPath) {
     try {
         $GlobalSettings = Get-Content -Raw -Path $SettingsPath | ConvertFrom-Json
     } catch {
-        Write-Warning "Failed to load settings.json"
+        Log-Message "Failed to load settings.json: $_" "WARN"
     }
 }
 
 try {
     $JsonRaw = Get-Content -Raw -Path $ConfigPath | ConvertFrom-Json
 } catch {
+    # Logging failure is critical here
+    Log-Message "Failed to parse distros.json" "ERROR"
     throw "Failed to parse distros.json. Please ensure it is valid JSON."
 }
 
@@ -56,13 +64,14 @@ foreach ($Key in $Keys) {
 }
 
 if ($List) {
+    Log-Message "Listing available distributions..."
     Write-Host "Available Distributions:" -ForegroundColor Cyan
-    foreach ($key in $DistroCatalog.Keys) {
-         $Family = $DistroCatalog[$key]
-         Write-Host "  $($Family.Name)" -ForegroundColor Yellow
-         foreach ($vKey in $Family.Versions.Keys) {
-             $info = $Family.Versions[$vKey]
-             Write-Host "    - $($info.Name)"
+    foreach ($FamKey in $DistroCatalog.Keys) {
+        $Family = $DistroCatalog[$FamKey]
+        Write-Host "  $($Family.Name)" -ForegroundColor Yellow
+        foreach ($VerKey in $Family.Versions.Keys) {
+            $info = $Family.Versions[$VerKey]
+            Write-Host "    - $($info.Name)"
          }
     }
     exit 0
@@ -99,14 +108,16 @@ if ($name) {
     }
 
     if (-not $MatchedVersion) {
-            Write-Error "The configured DefaultDistro '$($GlobalSettings.DefaultDistro)' was not found in distros.json."
+            $errMsg = "The configured DefaultDistro '$($GlobalSettings.DefaultDistro)' was not found in distros.json."
+            Log-Message "ERROR: $errMsg"
+            Write-Error $errMsg
             exit 1
     }
 
     $SelectedVersion = $MatchedVersion
     $SelectedFamily = $MatchedFamily
     
-    Write-Host "Quick Mode: Installing Default Distro [$($SelectedVersion.Name)] as ['$TargetDistroName']" -ForegroundColor Green
+    Log-Message "Quick Mode: Installing Default Distro [$($SelectedVersion.Name)] as ['$TargetDistroName']"
     $DownloadUrl = $SelectedVersion.Url
     
     # Auto-fill missing params if in Quick Mode
@@ -116,7 +127,7 @@ if ($name) {
     if (-not $InstallPath) { 
         $BasePath = if ($GlobalSettings.DefaultInstallPath) { $GlobalSettings.DefaultInstallPath } else { $PWD }
         $InstallPath = Join-Path $BasePath $DistroName 
-        Write-Host "Auto-Path: $InstallPath" -ForegroundColor Gray
+        Log-Message "Auto-Path: $InstallPath"
     }
 }
 
@@ -166,7 +177,9 @@ if ($SelectFamily) {
             }
             
             if (-not $SelectedVersion) {
-                 Write-Warning "Version '$SelectVersion' not found for $($SelectedFamily.Name). Using default."
+                 $warnMsg = "Version '$SelectVersion' not found for $($SelectedFamily.Name). Using default."
+                 Log-Message "WARNING: $warnMsg"
+                 Write-Warning $warnMsg
                  $SelectedVersionKey = "1"
                  $SelectedVersion = $SelectedFamily.Versions["1"]
             }
@@ -175,9 +188,11 @@ if ($SelectFamily) {
             $SelectedVersion = $SelectedFamily.Versions["1"]
         }
         $DownloadUrl = $SelectedVersion.Url
-        Write-Host "Auto-Selected: $($SelectedVersion.Name)" -ForegroundColor Green
+        Log-Message "Auto-Selected: $($SelectedVersion.Name)"
     } else {
-        Write-Warning "Family '$SelectFamily' not found."
+        $warnMsg = "Family '$SelectFamily' not found."
+        Log-Message "WARNING: $warnMsg"
+        Write-Warning $warnMsg
     }
 }
 
@@ -202,7 +217,7 @@ if (-not $DownloadUrl) {
     }
 
     $DownloadUrl = $SelectedVersion.Url
-    Write-Host "`nSelected: $($SelectedVersion.Name)" -ForegroundColor Green
+    Log-Message "Selected: $($SelectedVersion.Name)"
 }
 
 # Interactive Name and Path
@@ -216,6 +231,7 @@ if (-not $DistroName) {
     $DefaultName = if ($SelectedVersion) { $SelectedVersion.DefaultName } else { if ($GlobalSettings.DefaultDistro) { $GlobalSettings.DefaultDistro } else { "CustomDistro" } }
     $InputName = Read-Host "Enter Distro Name [Default: $DefaultName]"
     $DistroName = if ([string]::IsNullOrWhiteSpace($InputName)) { $DefaultName } else { $InputName }
+    Log-Message "Distro Name: $DistroName"
 }
 
 if (-not $InstallPath) {
@@ -223,30 +239,35 @@ if (-not $InstallPath) {
     $DefaultPath = Join-Path $BasePath $DistroName
     $InputPath = Read-Host "Enter Install Location [Default: $DefaultPath]"
     $InstallPath = if ([string]::IsNullOrWhiteSpace($InputPath)) { $DefaultPath } else { $InputPath }
+    Log-Message "Install Path: $InstallPath"
 }
 
 # --- Installation Logic ---
-Write-Host "`n=== Configuration ===" -ForegroundColor Gray
-Write-Host "Distro:  $DistroName"
-Write-Host "Source:  $DownloadUrl"
-Write-Host "Dest:    $InstallPath"
-Write-Host "====================="
+Log-Message "`n=== Configuration ==="
+Log-Message "Distro:  $DistroName"
+Log-Message "Source:  $DownloadUrl"
+Log-Message "Dest:    $InstallPath"
+Log-Message "====================="
 if (-not $DistroName -or -not $InstallPath -or -not $DownloadUrl) {
-    Write-Error "Missing configuration values. Exiting."
+    $errMsg = "Missing configuration values. Exiting."
+    Log-Message "ERROR: $errMsg"
+    Write-Error $errMsg
     exit 1
 }
 
 # Check if Distro Name already exists
 $Existing = wsl --list --quiet | Where-Object { $_ -match "$DistroName" }
 if ($Existing) {
-    Write-Error "A WSL distro with the name '$DistroName' might already exist."
+    $errMsg = "A WSL distro with the name '$DistroName' might already exist."
+    Log-Message "ERROR: $errMsg"
+    Write-Error $errMsg
     # Continue? No, error out to be safe.
 }
 
 # Create a temporary directory for processing
 $TempDir = Join-Path $env:TEMP "WSL_Install_$(Get-Random)"
 New-Item -ItemType Directory -Force -Path $TempDir | Out-Null
-Write-Host "`nPreparing workspace at $TempDir..." -ForegroundColor DarkGray
+Log-Message "Preparing workspace at $TempDir..."
 
 try {
     # 1. Acquire Package (Cache Check)
@@ -257,15 +278,17 @@ try {
     if ($SelectedVersion.LocalPath) {
         if (Test-Path $SelectedVersion.LocalPath) {
             $SourcePath = $SelectedVersion.LocalPath
-            Write-Host "Using registered local copy: $SourcePath" -ForegroundColor Green
+            Log-Message "Using registered local copy: $SourcePath"
         } else {
-             Write-Warning "Registered LocalPath '$($SelectedVersion.LocalPath)' not found."
+             $warnMsg = "Registered LocalPath '$($SelectedVersion.LocalPath)' not found."
+             Log-Message "WARNING: $warnMsg"
+             Write-Warning $warnMsg
         }
     }
 
     # Priority 2: Use Download Manager to Find/Download
     if (-not $SourcePath -and $SelectedFamilyKey -and $SelectedVersionKey) {
-        Write-Host "Checking download status (invoking download manager)..." -ForegroundColor Cyan
+        Log-Message "Checking download status (invoking download manager)..."
         & "$PSScriptRoot\download_all_distros.ps1" -SelectFamily $SelectedFamilyKey -SelectVersion $SelectedVersionKey
         
         # Reload Config to get updated path from disk
@@ -278,10 +301,12 @@ try {
                  if ($UpdatedVersion.local_path -and (Test-Path $UpdatedVersion.local_path)) {
                      $SourcePath = $UpdatedVersion.local_path
                      $SelectedVersion.LocalPath = $SourcePath
-                     Write-Host "Package ready: $SourcePath" -ForegroundColor Green
+                     Log-Message "Package ready: $SourcePath"
                  }
              } catch {
-                 Write-Warning "Failed to reload config: $_"
+                 $warnMsg = "Failed to reload config: $_"
+                 Log-Message "WARNING: $warnMsg"
+                 Write-Warning $warnMsg
              }
         }
     }
@@ -291,16 +316,26 @@ try {
     }
 
     # Determine file type based on extension
-    $SourceFileName = [System.IO.Path]::GetFileName($CachedFile)
+    $SourceFileName = if ($CachedFile) { [System.IO.Path]::GetFileName($CachedFile) } else { $null }
+    
+    if (-not $SourceFileName -and $DownloadUrl) {
+        # Try to infer filename from URL if not cached
+        try {
+            $uri = [System.Uri]$DownloadUrl
+            $SourceFileName = [System.IO.Path]::GetFileName($uri.LocalPath)
+        } catch {}
+        if (-not $SourceFileName) { $SourceFileName = "downloaded_distro.tar.gz" }
+    }
+
     $ProcessingFile = Join-Path $TempDir $SourceFileName
     
     if ($CachedFile) {
-        Write-Host "Copying to workspace..." -ForegroundColor Gray
+        Log-Message "Copying to workspace..."
         Copy-Item $CachedFile $ProcessingFile
     } else {
         # Fallback for manual URL
-        Write-Host "Downloading from URL..." -ForegroundColor Cyan
-        Invoke-WebRequest -Uri $DownloadUrl -OutFile $ProcessingFile -UseBasicParsing -Verbose
+        Log-Message "Downloading from URL..."
+        Invoke-WebRequest -Uri $DownloadUrl -OutFile $ProcessingFile -UseBasicParsing
     }
     
     $RootFs = $null
@@ -308,7 +343,7 @@ try {
     # Check for known Archive types that need extraction (Appx, Zip)
     if ($ProcessingFile -match "\.(zip|appx|appxbundle)$") {
         # 2. Extract 
-        Write-Host "Extracting package..." -ForegroundColor Cyan
+        Log-Message "Extracting package..."
         $ExtractDir = Join-Path $TempDir "extracted"
         Expand-Archive -Path $ProcessingFile -DestinationPath $ExtractDir -Force
 
@@ -321,7 +356,7 @@ try {
             $AppxFile = Get-ChildItem -Path $ExtractDir -Filter "*x64*.appx" -Recurse | Select-Object -First 1
             
             if ($AppxFile) {
-                Write-Host "Found inner package: $($AppxFile.Name)" -ForegroundColor Gray
+                Log-Message "Found inner package: $($AppxFile.Name)"
                 # Rename .appx to .zip and extract again
                 $InnerZip = Join-Path $TempDir "inner.zip"
                 Copy-Item $AppxFile.FullName $InnerZip
@@ -332,7 +367,7 @@ try {
         }
     } else {
         # Assume it is already a RootFS (tar.gz, .wsl, etc.)
-        Write-Host "Package recognized as direct RootFS ($([System.IO.Path]::GetExtension($ProcessingFile)))..." -ForegroundColor Cyan
+        Log-Message "Package recognized as direct RootFS ($([System.IO.Path]::GetExtension($ProcessingFile)))..."
         $RootFs = $ProcessingFile
     }
 
@@ -346,12 +381,12 @@ try {
     }
 
     # 5. Import into WSL
-    Write-Host "Registering '$DistroName'..." -ForegroundColor Cyan
+    Log-Message "Registering '$DistroName'..."
     wsl --import $DistroName $InstallPath $RootFs --version 2
 
     # 6. User Setup (if requested)
     if ($user) {
-        Write-Host "Setting up user '$user'..." -ForegroundColor Cyan
+        Log-Message "Setting up user '$user'..."
         
         # Create user
         # Note: Using 'exec' to run commands directly inside the distro
@@ -374,7 +409,7 @@ try {
         # Note: bash -c "echo ... > file" might fail with complex strings, but simple content is fine.
         wsl -d $DistroName -u root -- exec sh -c "printf '[user]\ndefault=$user\n' > /etc/wsl.conf"
         
-        Write-Host "User '$user' configured as default." -ForegroundColor Green
+        Log-Message "User '$user' configured as default."
         
         # Terminate to ensure next start picks up the config? Defaults usually apply on next session.
         wsl --terminate $DistroName
@@ -400,7 +435,9 @@ try {
             # Force to array if single object
             if ($CurrentInstances -isnot [System.Array]) { $CurrentInstances = @($CurrentInstances) }
         } catch {
-            Write-Warning "Could not read existing instances.json. Starting fresh."
+            $warnMsg = "Could not read existing instances.json. Starting fresh."
+            Log-Message "WARNING: $warnMsg"
+            Write-Warning $warnMsg
         }
     }
     
@@ -409,16 +446,18 @@ try {
     $CurrentInstances += $NewInstance
     
     $CurrentInstances | ConvertTo-Json -Depth 4 | Set-Content $InstancesConfigPath -Force
-    Write-Host "Updated instances registry." -ForegroundColor Green
+    Log-Message "Updated instances registry."
 
-    Write-Host "`n[SUCCESS] WSL2 Instance '$DistroName' is ready!" -ForegroundColor Green
-    Write-Host "Location: $InstallPath"
-    Write-Host "To start: wsl -d $DistroName"
+    Log-Message "`n[SUCCESS] WSL2 Instance '$DistroName' is ready!"
+    Log-Message "Location: $InstallPath"
+    Log-Message "To start: wsl -d $DistroName"
     
 } catch {
-    Write-Error "Installation failed: $_"
+    $err = "Installation failed: $_"
+    Log-Message "ERROR: $err"
+    Write-Error $err
 } finally {
-    Write-Host "Cleaning up..." -ForegroundColor DarkGray
+    Log-Message "Cleaning up..."
     if (Test-Path $TempDir) {
         Remove-Item -Path $TempDir -Recurse -Force -ErrorAction SilentlyContinue
     }

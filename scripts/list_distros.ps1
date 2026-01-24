@@ -9,6 +9,11 @@ $ErrorActionPreference = "Stop"
 # Ensure UTF-8 output for JSON
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
+# --- Logging Setup ---
+. "$PSScriptRoot\pwsh_utils.ps1"
+Setup-Logger -LogFileName "list.log"
+Log-Message "Starting list generation" -FileOnly
+
 # --- Configuration ---
 $ConfigDir = Join-Path $PSScriptRoot "..\\config"
 if (-not (Test-Path $ConfigDir)) { New-Item -ItemType Directory -Path $ConfigDir -Force | Out-Null }
@@ -50,7 +55,9 @@ function Get-WslDistros {
             foreach ($c in $CacheData) {
                 if ($c.Name) { $Cache[$c.Name] = $c }
             }
-        } catch {}
+        } catch {
+             Log-Message "Failed to load cache: $_" -Level WARN -FileOnly
+        }
     }
 
     $CurrentDistros = @()
@@ -111,64 +118,63 @@ function Get-WslDistros {
         # 3. Missing critical info in cache (Release empty)
         $ShouldFetch = $ForceUpdate -or $IsNew -or ([string]::IsNullOrEmpty($Release))
 
-        if ($ShouldFetch) {
-            # Try to fetch info
-            # Only if running or if we are forced/new to verify
-            # To fetch 'User' and 'Release', the instance must be accessible (running).
+        # User Request: Avoid auto-starting instances to fetch info. 
+        # Information like OS Release or User is static mostly.
+        # We only fetch if the instance is CURRENTLY RUNNING.
+        if ($ShouldFetch -and ($State -eq "Running")) {
             
-            # If ForceUpdate is TRUE, we are allowed to start the instance momentarily.
-            # If ForceUpdate is FALSE, we only check if it is ALREADY running.
-            
-            $CanConnect = ($State -eq "Running")
-            if (($ForceUpdate -or $IsNew) -and (-not $CanConnect)) {
-                 # Attempt start
-                 wsl -d $Name -e true 2>$null
-                 if ($?) { $CanConnect = $true }
-                 # Note: state remains "Stopped" in our list visually if it stops immediately, 
-                 # but for now it is running effectively.
-                 # Actually, `wsl -d ... true` exits immediately. 
-                 # We need to run a quick command.
-            }
-
-            if ($CanConnect -or $ForceUpdate) { 
-                # If we forced update, we run commands even if it involves starting it up
-                
-                # Get Release
-                try {
-                    $osRel = wsl -d $Name cat /etc/os-release 2>$null
-                    $newRel = ""
-                    if ($osRel) {
-                        foreach ($line in $osRel) {
-                           if ($line -match '^PRETTY_NAME="?([^"]+)"?') {
-                               $newRel = $matches[1]
-                               break
-                           }
-                        }
+            # Get Release
+            try {
+                $osRel = wsl -d $Name cat /etc/os-release 2>$null
+                $newRel = ""
+                if ($osRel) {
+                    foreach ($line in $osRel) {
+                       if ($line -match '^PRETTY_NAME="?([^"]+)"?') {
+                           $newRel = $matches[1]
+                           break
+                       }
                     }
-                    if ($newRel -and $newRel -ne $Release) {
-                        $Release = $newRel
+                }
+                if ($newRel -and $newRel -ne $Release) {
+                    $Release = $newRel
+                    $CacheChanged = $true
+                }
+            } catch {}
+
+            # Get User
+            if ([string]::IsNullOrEmpty($User) -or $ForceUpdate) {
+                 $Uid = $Props.DefaultUid
+                 if ($null -eq $Uid) { $Uid = 0 }
+                 try {
+                    $newUser = wsl -d $Name id -nu $Uid 2>$null
+                    if ($newUser -and $newUser -ne $User) { 
+                        $User = $newUser 
                         $CacheChanged = $true
                     }
-                } catch {}
-
-                # Get User
-                if ([string]::IsNullOrEmpty($User) -or $ForceUpdate) {
-                     $Uid = $Props.DefaultUid
-                     if ($null -eq $Uid) { $Uid = 0 }
-                     try {
-                        $newUser = wsl -d $Name id -nu $Uid 2>$null
-                        if ($newUser -and $newUser -ne $User) { 
-                            $User = $newUser 
-                            $CacheChanged = $true
-                        }
-                    } catch {
-                         # If lookup fails, maybe just "root"
-                         if (-not $User) { $User = "root" }
-                    }
+                } catch {
+                     # If lookup fails, maybe just "root"
+                     if (-not $User) { $User = "root" }
                 }
             }
         }
         
+        # Get Disk Size
+        $DiskSize = "Unknown"
+        if ($BasePath -and (Test-Path $BasePath)) {
+            # Manual join to avoid 'drive is null' error with \\?\ paths in Join-Path
+            $Vhdx = "$BasePath\ext4.vhdx"
+            if (Test-Path $Vhdx) {
+                $Bytes = (Get-Item $Vhdx).Length
+                if ($Bytes -gt 1GB) {
+                    $DiskSize = "{0:N2} GB" -f ($Bytes / 1GB)
+                } elseif ($Bytes -gt 1MB) {
+                    $DiskSize = "{0:N2} MB" -f ($Bytes / 1MB)
+                } else {
+                    $DiskSize = "{0:N0} KB" -f ($Bytes / 1KB)
+                }
+            }
+        }
+
         $DistroObj = [ordered]@{
             Name        = $Name
             BasePath    = $BasePath
@@ -177,6 +183,7 @@ function Get-WslDistros {
             Release     = $Release
             User        = $User
             InstallTime = $InstallTime
+            DiskSize    = $DiskSize
         }
         
         $CurrentDistros += $DistroObj

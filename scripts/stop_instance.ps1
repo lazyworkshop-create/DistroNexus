@@ -8,12 +8,23 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-if (-not (wsl --list --quiet | Select-String -Pattern "^$DistroName$")) {
-    Write-Error "WSL instance '$DistroName' not found."
+# --- Logging Setup ---
+. "$PSScriptRoot\pwsh_utils.ps1"
+Setup-Logger -LogFileName "stop.log"
+
+# Get list of distros, trim whitespace, and filter empty lines
+# This handles potential encoding issues with wsl output
+$rawOutput = wsl --list --quiet
+$distros = $rawOutput | ForEach-Object { $_.Trim() -replace "`0", "" } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+
+if ($distros -notcontains $DistroName) {
+    $msg = "WSL instance '$DistroName' not found. Available: $($distros -join ', ')"
+    Log-Message $msg "ERROR"
+    Write-Error $msg
     exit 1
 }
 
-Write-Host "Stopping WSL instance '$DistroName'..." -ForegroundColor Cyan
+Log-Message "Stopping WSL instance '$DistroName'..."
 try {
     wsl --terminate $DistroName
     
@@ -28,8 +39,10 @@ try {
         }
     }
 
-    Write-Host "Instance '$DistroName' stopped successfully." -ForegroundColor Green
+    Log-Message "Instance '$DistroName' stopped successfully."
 } catch {
-    Write-Error "Failed to stop instance: $_"
+    $err = "Failed to stop instance: $_"
+    Log-Message $err "ERROR"
+    Write-Error $err
     exit 1
 }

@@ -1,17 +1,27 @@
 # PowerShell Script to Update DistroNexus Configuration from Microsoft Official Source
 # Usage: .\update_distros.ps1
 
+param(
+    [string]$SourceUrl
+)
+
 $ErrorActionPreference = "Stop"
 
+# --- Logging Setup ---
+. "$PSScriptRoot\pwsh_utils.ps1"
+Setup-Logger -LogFileName "update.log"
+
 # --- Configuration ---
-$Url = "https://raw.githubusercontent.com/microsoft/WSL/master/distributions/DistributionInfo.json"
+$DefaultUrl = "https://raw.githubusercontent.com/microsoft/WSL/master/distributions/DistributionInfo.json"
+if (-not $SourceUrl) { $SourceUrl = $DefaultUrl }
+
 $ScriptDir = $PSScriptRoot
 # Navigate up from tools/ to config/
 $ConfigDir = Join-Path $ScriptDir "..\config"
 $OutputPath = Join-Path $ConfigDir "distros.json"
 
-Write-Host "=== DistroNexus Update Tool (PowerShell) ==="
-Write-Host "Fetching latest distribution info from: $Url"
+Log-Message "=== DistroNexus Update Tool (PowerShell) ==="
+Log-Message "Fetching latest distribution info from: $SourceUrl"
 
 # 0. Load Existing Config for Preservation
 $ExistingConfig = $null
@@ -19,19 +29,22 @@ if (Test-Path $OutputPath) {
     try {
         $ExistingConfig = Get-Content -Raw -Path $OutputPath | ConvertFrom-Json
     } catch {
+        Log-Message "Could not load existing config for preservation." "WARN"
         Write-Warning "Could not load existing config for preservation."
     }
 }
 
 # 1. Fetch JSON
 try {
-    $JsonContent = Invoke-RestMethod -Uri $Url -Method Get
+    $JsonContent = Invoke-RestMethod -Uri $SourceUrl -Method Get
 } catch {
-    Write-Error "Failed to fetch distribution info: $_"
+    $err = "Failed to fetch distribution info: $_"
+    Log-Message $err "ERROR"
+    Write-Error $err
     exit 1
 }
 
-Write-Host "Found $($JsonContent.ModernDistributions.PSObject.Properties.Count) distribution families."
+Log-Message "Found $($JsonContent.ModernDistributions.PSObject.Properties.Count) distribution families."
 
 # 2. Convert to DistroNexus Format
 $NexusData = [ordered]@{}
@@ -111,10 +124,12 @@ if (Test-Path $OutputPath) {
     $Timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
     $BackupPath = "$OutputPath.$Timestamp.bak"
     Copy-Item -Path $OutputPath -Destination $BackupPath -Force
-    Write-Host "Backed up existing config to $BackupPath"
+    Log-Message "Backed up existing config to $BackupPath"
 }
 
 $OutputJson = $NexusData | ConvertTo-Json -Depth 4
 Set-Content -Path $OutputPath -Value $OutputJson -Encoding UTF8
+
+Log-Message "Successfully updated $OutputPath with $($NexusData.Count) families."
 
 Write-Host "Successfully updated $OutputPath with $($NexusData.Count) families."

@@ -13,14 +13,26 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-if (-not (wsl --list --quiet | Select-String -Pattern "^$OldName$")) {
-    Write-Error "Source instance '$OldName' not found."
+# --- Logging Setup ---
+. "$PSScriptRoot\pwsh_utils.ps1"
+Setup-Logger -LogFileName "rename.log"
+
+# Get list of distros, trim whitespace, and filter empty lines
+$rawOutput = wsl --list --quiet
+$distros = $rawOutput | ForEach-Object { $_.Trim() -replace "`0", "" } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+
+if ($distros -notcontains $OldName) {
+    $msg = "Source instance '$OldName' not found. Available: $($distros -join ', ')"
+    Log-Message $msg "ERROR"
+    Write-Error $msg
     exit 1
 }
 
 # Check if NewName exists
-if (wsl --list --quiet | Select-String -Pattern "^$NewName$") {
-    Write-Error "Target name '$NewName' already exists."
+if ($distros -contains $NewName) {
+    $msg = "Target name '$NewName' already exists."
+    Log-Message $msg "ERROR"
+    Write-Error $msg
     exit 1
 }
 
@@ -28,24 +40,40 @@ if ($NewPath) {
     $TargetDir = [System.IO.Path]::GetFullPath($NewPath)
 } else {
     # If no path specified, try to stay in current parent dir but rename folder?
-    # Or just use current location?
-    # Safer: Require NewPath or imply same location? 
-    # If we import inplace, files clash.
-    # Let's assume we want to create a new folder for the new name if not specified.
     
-    # Get Old Path
-    $LxssPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss"
-    $Keys = Get-ChildItem -Path $LxssPath
+    # 1. Try to find BasePath from instances.json first (preferred)
+    $ConfigPath = Join-Path $PSScriptRoot "..\config\instances.json"
     $OldPath = $null
-    foreach ($Key in $Keys) {
-        $Props = Get-ItemProperty -Path $Key.PSPath
-        if ($Props.DistributionName -eq $OldName) {
-            $OldPath = $Props.BasePath
-            break
+    
+    if (Test-Path $ConfigPath) {
+        try {
+            $Json = Get-Content $ConfigPath -Raw | ConvertFrom-Json
+            if ($Json -isnot [System.Array]) { $Json = @($Json) }
+            $Found = $Json | Where-Object { $_.Name -eq $OldName }
+            if ($Found) { $OldPath = $Found.BasePath }
+        } catch {
+             Log-Message "Failed to read instances.json for path lookup." "WARN"
+             Write-Warning "Failed to read instances.json for path lookup."
+        }
+    }
+
+    # 2. Fallback to Registry if not found
+    if (-not $OldPath) {
+        Log-Message "Searching registry for instance location..."
+        $LxssPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss"
+        if (Test-Path $LxssPath) {
+            $Keys = Get-ChildItem -Path $LxssPath
+            foreach ($Key in $Keys) {
+                $Props = Get-ItemProperty -Path $Key.PSPath
+                if ($Props.DistributionName -eq $OldName) {
+                    $OldPath = $Props.BasePath
+                    break
+                }
+            }
         }
     }
     
-    if (-not $OldPath) { throw "Could not determine path for $OldName" }
+    if (-not $OldPath) { throw "Could not determine installation path for '$OldName'. Please specify -NewPath manually." }
     
     # sibling folder
     $Parent = Split-Path $OldPath -Parent
@@ -56,15 +84,15 @@ if (-not (Test-Path $TargetDir)) {
     New-Item -ItemType Directory -Force -Path $TargetDir | Out-Null
 }
 
-Write-Host "Renaming '$OldName' -> '$NewName'..." -ForegroundColor Cyan
-Write-Host "Location: $TargetDir" -ForegroundColor Gray
+Log-Message "Renaming '$OldName' -> '$NewName'..."
+Log-Message "Location: $TargetDir"
 
 # Prepare Temp File (outside target to avoid conflicts if same dir?)
 $TempExport = Join-Path $env:TEMP "${OldName}_export.tar"
 
 try {
     # 1. Export
-    Write-Host "Exporting..." -ForegroundColor Gray
+    Log-Message "Exporting..."
     wsl --terminate $OldName
     wsl --export $OldName $TempExport
 
@@ -82,19 +110,20 @@ try {
     }
 
     # 3. Unregister Old
-    Write-Host "Unregistering old..." -ForegroundColor Gray
+    Log-Message "Unregistering old..."
     wsl --unregister $OldName
     
     # Optional: If old path is empty and different, remove it? 
     # Not doing it automatically to be safe.
 
     # 4. Import New
-    Write-Host "Importing as '$NewName'..." -ForegroundColor Gray
+    Log-Message "Importing as '$NewName'..."
     wsl --import $NewName $TargetDir $TempExport --version 2
 
     # 5. Restore Metadata logic
     if ($User -ne "root") {
-         wsl -d $NewName -u root -- sh -c "echo '[user]\ndefault=$User' > /etc/wsl.conf"
+         # Use printf for reliable newline handling in /etc/wsl.conf
+         wsl -d $NewName -u root -- sh -c "printf '[user]\ndefault=$User\n' > /etc/wsl.conf"
     }
 
     # 6. Update Json Manually (instead of scan, to preserve Release name immediately)
@@ -126,10 +155,12 @@ try {
     # Cleanup
     Remove-Item $TempExport -Force
     
-    Write-Host "Rename complete." -ForegroundColor Green
+    Log-Message "Rename complete."
 
 } catch {
-    Write-Error "Rename failed: $_"
+    $err = "Rename failed: $_"
+    Log-Message $err "ERROR"
+    Write-Error $err
     if (Test-Path $TempExport) { Remove-Item $TempExport -ErrorAction SilentlyContinue }
     exit 1
 }

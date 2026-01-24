@@ -13,26 +13,32 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# --- Logging Setup ---
+. "$PSScriptRoot\pwsh_utils.ps1"
+Setup-Logger -LogFileName "credentials.log"
+
 if (-not (wsl --list --quiet | Select-String -Pattern "^$DistroName$")) {
-    Write-Error "WSL instance '$DistroName' not found."
+    $msg = "WSL instance '$DistroName' not found."
+    Log-Message $msg "ERROR"
+    Write-Error $msg
     exit 1
 }
 
-Write-Host "Configuring credentials for '$DistroName'..." -ForegroundColor Cyan
+Log-Message "Configuring credentials for '$DistroName'..."
 
 try {
     # Check if user exists
     $CheckUser = wsl -d $DistroName -u root -- id -u $UserName 2>$null
     if (-not $CheckUser) {
-        Write-Host "Creating user '$UserName'..." -ForegroundColor Gray
+        Log-Message "Creating user '$UserName'..."
         wsl -d $DistroName -u root -- useradd -m -s /bin/bash $UserName
     } else {
-        Write-Host "User '$UserName' already exists. Updating..." -ForegroundColor Gray
+        Log-Message "User '$UserName' already exists. Updating..."
     }
 
     # Set password if provided
     if ($Password) {
-        Write-Host "Setting password..." -ForegroundColor Gray
+        Log-Message "Setting password..."
         wsl -d $DistroName -u root -- sh -c "echo '${UserName}:${Password}' | chpasswd"
     }
 
@@ -48,7 +54,7 @@ try {
     # Implem: Just write [user] default=$UserName for now, preserving boot settings is harder without parsing.
     # Assuming minimal config for these custom instances.
     
-    Write-Host "Setting default user in /etc/wsl.conf..." -ForegroundColor Gray
+    Log-Message "Setting default user in /etc/wsl.conf..."
     
     # Read existing conf
     $CurrentConf = wsl -d $DistroName -u root -- cat /etc/wsl.conf 2>$null
@@ -80,9 +86,11 @@ try {
         }
     }
 
-    Write-Host "Credentials updated successfully. Instance terminated to apply settings." -ForegroundColor Green
+    Log-Message "Credentials updated successfully. Instance terminated to apply settings."
 
 } catch {
-    Write-Error "Failed to set credentials: $_"
+    $err = "Failed to set credentials: $_"
+    Log-Message $err "ERROR"
+    Write-Error $err
     exit 1
 }

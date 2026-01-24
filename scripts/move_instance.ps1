@@ -11,11 +11,22 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# --- Logging Setup ---
+. "$PSScriptRoot\pwsh_utils.ps1"
+Setup-Logger -LogFileName "move.log"
+
 # Use absolute path
 $NewPath = [System.IO.Path]::GetFullPath($NewPath)
 
-if (-not (wsl --list --quiet | Select-String -Pattern "^$DistroName$")) {
-    Write-Error "WSL instance '$DistroName' not found."
+# Get list of distros, trim whitespace, and filter empty lines
+# This handles potential encoding issues with wsl output
+$rawOutput = wsl --list --quiet
+$distros = $rawOutput | ForEach-Object { $_.Trim() -replace "`0", "" } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+
+if ($distros -notcontains $DistroName) {
+    $msg = "WSL instance '$DistroName' not found. Available: $($distros -join ', ')"
+    Log-Message $msg "ERROR"
+    Write-Error $msg
     exit 1
 }
 
@@ -24,20 +35,22 @@ if (-not (Test-Path $NewPath)) {
 } else {
     # Check if empty
     if ((Get-ChildItem $NewPath).Count -gt 0) {
-        Write-Warning "Target directory '$NewPath' is not empty."
+        $warnMsg = "Target directory '$NewPath' is not empty."
+        Log-Message $warnMsg "WARN"
+        Write-Warning $warnMsg
         $Confirm = Read-Host "Continue? (y/n)"
         if ($Confirm -ne 'y') { exit }
     }
 }
 
-Write-Host "Moving '$DistroName' to '$NewPath'..." -ForegroundColor Cyan
+Log-Message "Moving '$DistroName' to '$NewPath'..."
 
 # Prepare Temp File
 $TempExport = Join-Path $NewPath "export_temp.tar"
 
 try {
     # 1. Export
-    Write-Host "Exporting instance (this may take time)..." -ForegroundColor Gray
+    Log-Message "Exporting instance (this may take time)..."
     wsl --terminate $DistroName
     wsl --export $DistroName $TempExport
 
@@ -55,11 +68,11 @@ try {
     }
 
     # 3. Unregister
-    Write-Host "Unregistering old instance..." -ForegroundColor Gray
+    Log-Message "Unregistering old instance..."
     wsl --unregister $DistroName
 
     # 4. Import to new location
-    Write-Host "Importing to new location..." -ForegroundColor Gray
+    Log-Message "Importing to new location..."
     wsl --import $DistroName $NewPath $TempExport --version 2
 
     # 5. Restore Config (User)
@@ -67,7 +80,7 @@ try {
     # Actually, --import doesn't preserve /etc/wsl.conf if it's inside the tar? Yes it does.
     # But wsl executable metadata for "default user" is lost.
     if ($User -ne "root") {
-        Write-Host "Restoring default user to '$User'..." -ForegroundColor Gray
+        Log-Message "Restoring default user to '$User'..."
         # We assume /etc/wsl.conf is inside the tar.
         # But we might need to nudge registry?
         # Usually handled by `scan_wsl_instances` or manual usage.
@@ -81,11 +94,14 @@ try {
     # 7. Update Registry
     & "$PSScriptRoot\scan_wsl_instances.ps1"
 
-    Write-Host "Move complete." -ForegroundColor Green
+    Log-Message "Move complete."
 
 } catch {
-    Write-Error "Move failed: $_"
+    $err = "Move failed: $_"
+    Log-Message $err "ERROR"
+    Write-Error $err
     if (Test-Path $TempExport) {
+        Log-Message "A temporary export exists at: $TempExport" "WARN"
         Write-Warning "A temporary export exists at: $TempExport"
     }
     exit 1

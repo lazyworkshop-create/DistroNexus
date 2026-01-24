@@ -8,6 +8,10 @@ param (
 
 $ErrorActionPreference = "Stop"
 
+# --- Logging Setup ---
+. "$PSScriptRoot\pwsh_utils.ps1"
+Setup-Logger -LogFileName "uninstall.log"
+
 # Use UTF-8 for output
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
@@ -51,18 +55,11 @@ function Get-WslDistros {
         
         # Filesystem Info
         $InstallTime = "Unknown"
-        $LastUsedTime = "Unknown"
         
         if ($BasePath -and (Test-Path $BasePath)) {
              try {
                  $DirInfo = Get-Item $BasePath
                  $InstallTime = $DirInfo.CreationTime.ToString("yyyy-MM-dd HH:mm")
-                 
-                 $VhdxPath = Join-Path $BasePath "ext4.vhdx"
-                 if (Test-Path $VhdxPath) {
-                     $FileInfo = Get-Item $VhdxPath
-                     $LastUsedTime = $FileInfo.LastWriteTime.ToString("yyyy-MM-dd HH:mm")
-                 }
              } catch {}
         }
 
@@ -100,7 +97,6 @@ function Get-WslDistros {
             Name        = $Name
             BasePath    = $BasePath
             InstallTime = $InstallTime
-            LastUsed    = $LastUsedTime
             State       = $State
             WslVer      = $WslVer
             OsName      = $OsName
@@ -109,11 +105,11 @@ function Get-WslDistros {
     return $Distros
 }
 
-Write-Host "Scanning for WSL distributions (this may wake up stopped instances)..." -ForegroundColor Gray
+Log-Message "Scanning for WSL distributions..."
 $Available = Get-WslDistros
 
 if ($Available.Count -eq 0) {
-    Write-Host "No WSL distributions found." -ForegroundColor Yellow
+    Log-Message "No WSL distributions found." "WARN"
     exit 0
 }
 
@@ -122,7 +118,9 @@ $Target = $null
 if ($DistroName) {
     $Target = $Available | Where-Object { $_.Name -eq $DistroName } | Select-Object -First 1
     if (-not $Target) {
-        Write-Error "Distribution '$DistroName' not found."
+        $msg = "Distribution '$DistroName' not found."
+        Log-Message $msg "ERROR"
+        Write-Error $msg
         exit 1
     }
 } else {
@@ -141,7 +139,6 @@ if ($DistroName) {
         
         # Line 2: Path, Installed
         Write-Host "      Path: $($d.BasePath)" -ForegroundColor DarkGray
-        # Write-Host "      Installed: $($d.InstallTime)  Last Used: $($d.LastUsed)" -ForegroundColor DarkGray
     }
 
     # --- 2. Select Instance ---
@@ -154,24 +151,25 @@ if ($DistroName) {
 }
 
 # --- 3. Confirm Uninstall (Unregister) ---
-Write-Host "`n[WARNING] You are about to UNREGISTER the following distribution:" -ForegroundColor Yellow
-Write-Host "  Name: $($Target.Name)"
-Write-Host "  Path: $($Target.BasePath)"
-Write-Host "This will remove the registration from WSL."
+Log-Message "`n[WARNING] You are about to UNREGISTER the following distribution:"
+Log-Message "  Name: $($Target.Name)"
+Log-Message "  Path: $($Target.BasePath)"
+Log-Message "This will remove the registration from WSL."
 
 if (-not $Force) {
     $Confirm = Read-Host "Are you sure? (Type 'yes' to confirm)"
     if ($Confirm -ne 'yes') {
-        Write-Host "Operation cancelled." -ForegroundColor Red
+        Log-Message "Operation cancelled." "WARN"
         exit 0
     }
 }
 
-Write-Host "Unregistering $($Target.Name)..." -ForegroundColor Cyan
+Log-Message "Unregistering $($Target.Name)..."
 try {
     wsl --unregister $Target.Name
-    Write-Host "Unregistered successfully." -ForegroundColor Green
+    Log-Message "Unregistered successfully."
 } catch {
+    Log-Message "Failed to unregister: $_" "ERROR"
     Write-Error "Failed to unregister: $_"
     # Proceed to file deletion? Maybe ask user.
 }
@@ -181,8 +179,8 @@ if ($Target.BasePath -and (Test-Path $Target.BasePath)) {
     # Check if files remain
     $RemainingItems = Get-ChildItem -Path $Target.BasePath -Force -ErrorAction SilentlyContinue
     if ($RemainingItems) {
-         Write-Host "`nThe directory '$($Target.BasePath)' still exists and is not empty." -ForegroundColor Yellow
-         Write-Host "It may contain user data or the disk image if unregistering failed to clean it up."
+         Log-Message "`nThe directory '$($Target.BasePath)' still exists and is not empty." "WARN"
+         Log-Message "It may contain user data or the disk image if unregistering failed to clean it up."
          
          if ($Force) {
              $ConfirmDelete = 'delete'
@@ -191,23 +189,24 @@ if ($Target.BasePath -and (Test-Path $Target.BasePath)) {
          }
 
          if ($ConfirmDelete -eq 'delete') {
-             Write-Host "Deleting files..." -ForegroundColor Cyan
+             Log-Message "Deleting files..."
              try {
                 Remove-Item -Path $Target.BasePath -Recurse -Force -ErrorAction Stop
-                Write-Host "Folder deleted." -ForegroundColor Green
+                Log-Message "Folder deleted."
              } catch {
+                Log-Message "Failed to delete folder: $_" "ERROR"
                 Write-Error "Failed to delete folder: $_"
              }
          } else {
-             Write-Host "Folder preserved at $($Target.BasePath)" -ForegroundColor Gray
+             Log-Message "Folder preserved at $($Target.BasePath)"
          }
     } else {
         # Directory is empty, maybe just remove it
-        Write-Host "Removing empty directory $($Target.BasePath)..." -ForegroundColor Gray
+        Log-Message "Removing empty directory $($Target.BasePath)..."
         Remove-Item -Path $Target.BasePath -Force -ErrorAction SilentlyContinue
     }
 } else {
-    Write-Host "Install location is already gone." -ForegroundColor Gray
+    Log-Message "Install location is already gone."
 }
 
 # --- 5. Update Instances Configuration ---
@@ -225,10 +224,11 @@ if (Test-Path $InstancesConfigPath) {
         $UpdatedInstances = $CurrentInstances | Where-Object { $_.Name -ne $Target.Name }
         
         $UpdatedInstances | ConvertTo-Json -Depth 4 | Set-Content $InstancesConfigPath -Force
-        Write-Host "Updated instances registry (removed '$($Target.Name)')." -ForegroundColor Green
+        Log-Message "Updated instances registry (removed '$($Target.Name)')."
     } catch {
+        Log-Message "Failed to update instances.json: $_" "WARN"
         Write-Warning "Failed to update instances.json: $_"
     }
 }
 
-Write-Host "`nUninstall process complete."
+Log-Message "`nUninstall process complete."

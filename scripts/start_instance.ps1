@@ -3,13 +3,25 @@
 
 param(
     [Parameter(Mandatory=$true)]
-    [string]$DistroName
+    [string]$DistroName,
+    [switch]$OpenTerminal,
+    [string]$StartPath
 )
 
 $ErrorActionPreference = "Stop"
 
-if (-not (wsl --list --quiet | Select-String -Pattern "^$DistroName$")) {
-    Write-Error "WSL instance '$DistroName' not found."
+# --- Logging Setup ---
+. "$PSScriptRoot\pwsh_utils.ps1"
+Setup-Logger -LogFileName "start.log"
+Log-Message "Starting '$DistroName'..." -FileOnly
+
+# Get list of distros, trim whitespace, and filter empty lines
+# This handles potential encoding issues with wsl output
+$rawOutput = wsl --list --quiet
+$distros = $rawOutput | ForEach-Object { $_.Trim() -replace "`0", "" } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+
+if ($distros -notcontains $DistroName) {
+    Write-Error "WSL instance '$DistroName' not found. Available: $($distros -join ', ')"
     exit 1
 }
 
@@ -21,7 +33,6 @@ if (Test-Path $ConfigPath) {
         $Instance = $Json | Where-Object { $_.Name -eq $DistroName }
         if ($Instance) {
             $Instance.State = "Running"
-            $Instance.LastUsed = (Get-Date).ToString("yyyy-MM-dd HH:mm")
             $Json | ConvertTo-Json -Depth 4 | Set-Content $ConfigPath -Force
         }
     } catch {
@@ -29,10 +40,19 @@ if (Test-Path $ConfigPath) {
     }
 }
 
-Write-Host "Starting '$DistroName'..." -ForegroundColor Green
-
 # Launch the distro
-# This will block until the session is closed if running in the same console.
-# If called from GUI, GUI should handle execution (e.g. launch in new terminal).
-# If this script is the entry point, we simply hand over execution.
-wsl -d $DistroName
+if ($OpenTerminal) {
+    Log-Message "Starting in terminal..."
+    if ($StartPath) {
+        Log-Message "Working Dir: $StartPath"
+        wsl -d $DistroName --cd "$StartPath"
+    } else {
+        # Default to user home if not specified, instead of current working directory
+        wsl -d $DistroName --cd "~"
+    }
+} else {
+    Log-Message "Starting in background..."
+    # Start the instance without opening a shell (run a no-op command)
+    # This ensures the WSL VM for this distro is booted.
+    wsl -d $DistroName -e true
+}

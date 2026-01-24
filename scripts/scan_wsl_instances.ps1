@@ -4,7 +4,11 @@
 $ErrorActionPreference = "Continue" # Don't stop on single read error
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-Write-Host "Scanning WSL instances..." -ForegroundColor Cyan
+# --- Logging Setup ---
+. "$PSScriptRoot\pwsh_utils.ps1"
+Setup-Logger -LogFileName "scan.log"
+
+Log-Message "Scanning WSL instances..."
 
 $LxssPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss"
 $ConfigPath = Join-Path $PSScriptRoot "..\config\instances.json"
@@ -101,4 +105,4 @@ foreach ($d in $Distros) {
 }
 
 $FinalList | ConvertTo-Json -Depth 4 | Set-Content $ConfigPath -Force
-Write-Host "Registry updated with $($FinalList.Count) instances." -ForegroundColor Green
+Log-Message "Registry updated with $($FinalList.Count) instances."
