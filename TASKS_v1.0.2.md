@@ -25,54 +25,54 @@
 ## 1. Core Logic & Backend
 
 ### 1.1. Settings & Configuration
-- [ ] **Config Update**: Update `Settings` struct to include `PackageCachePath` and `DefaultInstallPath`.
-- [ ] **Persistence**: Ensure these new fields are correctly saved to and loaded from `settings.json`.
-- [ ] **Custom Sources**: Implement a data structure and storage mechanism for "Custom Package Sources" (Name, Version, URL/Path).
+- [x] **Config Update**: Update `Settings` struct to include `PackageCachePath` and `DefaultInstallPath`.
+- [x] **Persistence**: Ensure these new fields are correctly saved to and loaded from `settings.json`.
+- [x] **Custom Sources**: Implement a data structure and storage mechanism for "Custom Package Sources" (Name, Version, URL/Path).
 
 ### 1.2. Instance Management (Logic)
-- [ ] **Disk Usage**: Implement a function to calculate the size of the instance's directory (specifically `ext4.vhdx`).
-- [ ] **Stop Instance**: Implement Go wrapper to call `scripts/stop_instance.ps1`.
-- [ ] **Rename Instance**: Implement Go wrapper to call `scripts/rename_instance.ps1`.
-- [ ] **Move Instance**: Implement Go wrapper to call `scripts/move_instance.ps1`.
+- [x] **Disk Usage**: Implement a function to calculate the size of the instance's directory (specifically `ext4.vhdx`).
+- [x] **Stop Instance**: Implement Go wrapper to call `scripts/stop_instance.ps1`.
+- [x] **Rename Instance**: Implement Go wrapper to call `scripts/rename_instance.ps1`.
+- [x] **Move Instance**: Implement Go wrapper to call `scripts/move_instance.ps1`.
     - Note: Ensure script updates `instances.json` or returns new path for Go to update.
-- [ ] **Credentials**: Implement Go wrapper to call `scripts/set_credentials.ps1`.
+- [x] **Credentials**: Implement Go wrapper to call `scripts/set_credentials.ps1`.
 
 ### 1.3. Package Management (Logic)
-- [ ] **Cache Enumeration**: Create function to list files in the configured `PackageCachePath`.
-- [ ] **Download Manager**: Refactor existing download logic to support independent downloads (not tied to immediate install).
-- [ ] **Delete Package**: Implement function to delete files from cache.
-- [ ] **Fetch Online List**: logical function to fetch `distros.json` independent of UI.
+- [x] **Cache Enumeration**: Create function to list files in the configured `PackageCachePath`.
+- [x] **Download Manager**: Refactor existing download logic to support independent downloads (not tied to immediate install).
+- [x] **Delete Package**: Implement function to delete files from cache.
+- [x] **Fetch Online List**: logical function to fetch `distros.json` independent of UI.
 
 ## 2. UI / Fyne Implementation
 
 ### 2.1. Main Window & Navigation
-- [ ] **Layout**: Switch to `BorderLayout` with top Toolbar and switched Center content.
-- [ ] **Toolbar**: Icons only: `Home`, `Package`, `Spacer`, `Add`, `Settings`.
+- [x] **Layout**: Switch to `BorderLayout` with top Toolbar and switched Center content.
+- [x] **Toolbar**: Icons only: `Home`, `Package`, `Spacer`, `Add`, `Settings`.
 
 ### 2.2. Installation UI Refactor
-- [ ] **Quick Mode**: Restore Checkbox. Logic:
+- [x] **Quick Mode**: Restore Checkbox. Logic:
     - Checked: Hide Path/User/Pass. Use `DefaultInstallPath/<Name>` and user `root`.
     - Unchecked: Show all fields (including Path Picker).
 
 ### 2.3. Installed Instance Cards
-- [ ] **Layout Update**: specific area to show "Disk Usage" (e.g., bottom right of card).
-- [ ] **Action Buttons**: Add Toolbar or ButtonGroup to card:
-    - [ ] **Stop**: (Enable only if running).
-    - [ ] **Move**: Triggers folder picker -> logic.
-    - [ ] **Rename**: Triggers input dialog.
-    - [ ] **Credentials**: Triggers username/password dialog.
+- [x] **Layout Update**: specific area to show "Disk Usage" (e.g., bottom right of card).
+- [x] **Action Buttons**: Add Toolbar or ButtonGroup to card:
+    - [x] **Stop**: (Enable only if running).
+    - [x] **Move**: Triggers folder picker -> logic.
+    - [x] **Rename**: Triggers input dialog.
+    - [x] **Credentials**: Triggers username/password dialog.
 
 ### 2.4. Package Management Tab
-- [ ] **Unified List**:
+- [x] **Unified List**:
     - **Grouped by Distro**: Section headers for "Ubuntu", "Debian", etc.
     - **Rows**: [Name/Version] [Spacer] [Status Icon/Text] [Action Button].
-- [ ] **Logic**:
+- [x] **Logic**:
     - Check if file exists in Cache.
     - Status: "Cached (Size)" or "Available".
     - Button: "Delete" vs "Download".
 
 ### 2.5. Global Settings UI
-- [ ] **Paths**: Add File/Folder pickers for:
+- [x] **Paths**: Add File/Folder pickers for:
     - Default Install Path.
     - Package Cache Path.
 

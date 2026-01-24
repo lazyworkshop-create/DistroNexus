@@ -1,70 +1,159 @@
-{
-  "1": {
-    "Name": "Ubuntu",
-    "Versions": {
-      "1": {
-        "Name": "Ubuntu 24.04 LTS",
-        "Url": "https://wslstorestorage.blob.core.windows.net/wslblob/Ubuntu2404-240425.AppxBundle",
-        "DefaultName": "Ubuntu-24.04",
-        "Filename": "Ubuntu-24.04.AppxBundle"
-      },
-      "2": {
-        "Name": "Ubuntu 22.04 LTS",
-        "Url": "https://aka.ms/wslubuntu2204",
-        "DefaultName": "Ubuntu-22.04",
-        "Filename": "Ubuntu-22.04.AppxBundle"
-      },
-      "3": {
-        "Name": "Ubuntu 20.04 LTS",
-        "Url": "https://aka.ms/wslubuntu2004",
-        "DefaultName": "Ubuntu-20.04",
-        "Filename": "Ubuntu-20.04.AppxBundle"
-      },
-      "4": {
-        "Name": "Ubuntu 18.04 LTS",
-        "Url": "https://aka.ms/wsl-ubuntu-1804",
-        "DefaultName": "Ubuntu-18.04",
-        "Filename": "Ubuntu-18.04.AppxBundle"
-      }
-    }
-  },
-  "2": {
-    "Name": "Debian",
-    "Versions": {
-      "1": {
-        "Name": "Debian GNU/Linux",
-        "Url": "https://aka.ms/wsl-debian-gnulinux",
-        "DefaultName": "Debian",
-        "Filename": "Debian.appx"
-      }
-    }
-  },
-  "3": {
-    "Name": "Kali Linux",
-    "Versions": {
-      "1": {
-        "Name": "Kali Linux Rolling",
-        "Url": "https://aka.ms/wsl-kali-linux-new",
-        "DefaultName": "Kali-Rolling",
-        "Filename": "Kali.appx"
-      }
-    }
-  },
-  "4": {
-    "Name": "Oracle Linux",
-    "Versions": {
-      "1": {
-        "Name": "Oracle Linux 9.1",
-        "Url": "https://publicwsldistros.blob.core.windows.net/wsldistrostorage/OracleLinux_9.1-230428.Appx",
-        "DefaultName": "OracleLinux-9.1",
-        "Filename": "OracleLinux-9.1.appx"
-      },
-      "2": {
-        "Name": "Oracle Linux 8.7",
-        "Url": "https://publicwsldistros.blob.core.windows.net/wsldistrostorage/OracleLinux_8.7-230428.Appx",
-        "DefaultName": "OracleLinux-8.7",
-        "Filename": "OracleLinux-8.7.appx"
-      }
-    }
-  }
+﻿{
+    "1":  {
+              "Name":  "Ubuntu",
+              "Versions":  {
+                               "1":  {
+                                         "Name":  "Ubuntu",
+                                         "Url":  "https://releases.ubuntu.com/24.04.3/ubuntu-24.04.3-wsl-amd64.wsl",
+                                         "DefaultName":  "Ubuntu",
+                                         "Filename":  "ubuntu-24.04.3-wsl-amd64.wsl",
+                                         "Source":  "Official"
+                                     },
+                               "2":  {
+                                         "Name":  "Ubuntu 24.04 LTS",
+                                         "Url":  "https://releases.ubuntu.com/24.04.3/ubuntu-24.04.3-wsl-amd64.wsl",
+                                         "DefaultName":  "Ubuntu-24.04",
+                                         "Filename":  "ubuntu-24.04.3-wsl-amd64.wsl",
+                                         "Source":  "Official"
+                                     }
+                           }
+          },
+    "2":  {
+              "Name":  "openSUSE",
+              "Versions":  {
+                               "1":  {
+                                         "Name":  "openSUSE Tumbleweed",
+                                         "Url":  "https://github.com/openSUSE/WSL-instarball/releases/download/v20260106.0/openSUSE-Tumbleweed-20260103.x86_64-1.224-Build1.224.wsl",
+                                         "DefaultName":  "openSUSE-Tumbleweed",
+                                         "Filename":  "openSUSE-Tumbleweed-20260103.x86_64-1.224-Build1.224.wsl",
+                                         "Source":  "Official"
+                                     },
+                               "2":  {
+                                         "Name":  "openSUSE Leap 16.0",
+                                         "Url":  "https://github.com/openSUSE/WSL-instarball/releases/download/v20251001.0/openSUSE-Leap-16.0-16.0.x86_64-22.57-Build22.57.wsl",
+                                         "DefaultName":  "openSUSE-Leap-16.0",
+                                         "Filename":  "openSUSE-Leap-16.0-16.0.x86_64-22.57-Build22.57.wsl",
+                                         "Source":  "Official"
+                                     }
+                           }
+          },
+    "3":  {
+              "Name":  "SUSE",
+              "Versions":  {
+                               "1":  {
+                                         "Name":  "SUSE Linux Enterprise 15 SP7",
+                                         "Url":  "https://github.com/SUSE/WSL-instarball/releases/download/v20251201.0/SUSE-Linux-Enterprise-15-SP7-15.7.x86_64-30.1-Build30.1.wsl",
+                                         "DefaultName":  "SUSE-Linux-Enterprise-15-SP7",
+                                         "Filename":  "SUSE-Linux-Enterprise-15-SP7-15.7.x86_64-30.1-Build30.1.wsl",
+                                         "Source":  "Official"
+                                     },
+                               "2":  {
+                                         "Name":  "SUSE Linux Enterprise 16.0",
+                                         "Url":  "https://github.com/SUSE/WSL-instarball/releases/download/v20251201.0/SUSE-Linux-Enterprise-16.0-16.0.x86_64-1.9-Build1.9.wsl",
+                                         "DefaultName":  "SUSE-Linux-Enterprise-16.0",
+                                         "Filename":  "SUSE-Linux-Enterprise-16.0-16.0.x86_64-1.9-Build1.9.wsl",
+                                         "Source":  "Official"
+                                     }
+                           }
+          },
+    "4":  {
+              "Name":  "Kali",
+              "Versions":  {
+                               "1":  {
+                                         "Name":  "Kali Linux Rolling",
+                                         "Url":  "https://kali.download/wsl-images/kali-2025.4/kali-linux-2025.4-wsl-rootfs-amd64.wsl",
+                                         "DefaultName":  "kali-linux",
+                                         "Filename":  "kali-linux-2025.4-wsl-rootfs-amd64.wsl",
+                                         "Source":  "Official"
+                                     }
+                           }
+          },
+    "5":  {
+              "Name":  "Debian",
+              "Versions":  {
+                               "1":  {
+                                         "Name":  "Debian GNU/Linux",
+                                         "Url":  "https://salsa.debian.org/debian/WSL/-/jobs/7949331/artifacts/raw/Debian_WSL_AMD64_v1.22.0.0.wsl",
+                                         "DefaultName":  "Debian",
+                                         "Filename":  "Debian_WSL_AMD64_v1.22.0.0.wsl",
+                                         "Source":  "Official"
+                                     }
+                           }
+          },
+    "6":  {
+              "Name":  "AlmaLinux",
+              "Versions":  {
+                               "1":  {
+                                         "Name":  "AlmaLinux OS 8",
+                                         "Url":  "https://github.com/AlmaLinux/wsl-images/releases/download/v8.10.20250415.0/AlmaLinux-8.10_x64_20250415.0.wsl",
+                                         "DefaultName":  "AlmaLinux-8",
+                                         "Filename":  "AlmaLinux-8.10_x64_20250415.0.wsl",
+                                         "Source":  "Official"
+                                     },
+                               "2":  {
+                                         "Name":  "AlmaLinux OS 9",
+                                         "Url":  "https://github.com/AlmaLinux/wsl-images/releases/download/v9.7.20251119.0/AlmaLinux-9.7_x64_20251119.0.wsl",
+                                         "DefaultName":  "AlmaLinux-9",
+                                         "Filename":  "AlmaLinux-9.7_x64_20251119.0.wsl",
+                                         "Source":  "Official"
+                                     },
+                               "3":  {
+                                         "Name":  "AlmaLinux OS Kitten 10",
+                                         "Url":  "https://github.com/AlmaLinux/wsl-images/releases/download/v10-kitten.20251030.0/AlmaLinux-Kitten-10_x64_20251030.0.wsl",
+                                         "DefaultName":  "AlmaLinux-Kitten-10",
+                                         "Filename":  "AlmaLinux-Kitten-10_x64_20251030.0.wsl",
+                                         "Source":  "Official"
+                                     },
+                               "4":  {
+                                         "Name":  "AlmaLinux OS 10",
+                                         "Url":  "https://github.com/AlmaLinux/wsl-images/releases/download/v10.1.20251124.0/AlmaLinux-10.1_x64_20251124.0.wsl",
+                                         "DefaultName":  "AlmaLinux-10",
+                                         "Filename":  "AlmaLinux-10.1_x64_20251124.0.wsl",
+                                         "Source":  "Official"
+                                     }
+                           }
+          },
+    "7":  {
+              "Name":  "archlinux",
+              "Versions":  {
+                               "1":  {
+                                         "Name":  "Arch Linux",
+                                         "Url":  "https://fastly.mirror.pkgbuild.com/wsl/2026.01.01.156076/archlinux-2026.01.01.156076.wsl",
+                                         "DefaultName":  "archlinux",
+                                         "Filename":  "archlinux-2026.01.01.156076.wsl",
+                                         "Source":  "Official"
+                                     }
+                           }
+          },
+    "8":  {
+              "Name":  "Fedora",
+              "Versions":  {
+                               "1":  {
+                                         "Name":  "Fedora Linux 43",
+                                         "Url":  "https://download.fedoraproject.org/pub/fedora/linux/releases/43/Container/x86_64/images/Fedora-WSL-Base-43-1.6.x86_64.wsl",
+                                         "DefaultName":  "FedoraLinux-43",
+                                         "Filename":  "Fedora-WSL-Base-43-1.6.x86_64.wsl",
+                                         "Source":  "Official"
+                                     },
+                               "2":  {
+                                         "Name":  "Fedora Linux 42",
+                                         "Url":  "https://download.fedoraproject.org/pub/fedora/linux/releases/42/Container/x86_64/images/Fedora-WSL-Base-42-1.1.x86_64.tar.xz",
+                                         "DefaultName":  "FedoraLinux-42",
+                                         "Filename":  "Fedora-WSL-Base-42-1.1.x86_64.tar.xz",
+                                         "Source":  "Official"
+                                     }
+                           }
+          },
+    "9":  {
+              "Name":  "eLxr",
+              "Versions":  {
+                               "1":  {
+                                         "Name":  "eLxr 12.12.0.0 GNU/Linux",
+                                         "Url":  "https://gitlab.com/api/v4/projects/68007430/packages/generic/wsl/12.12.0.0/eLxr_WSL_AMD64_12.12.0.0.wsl",
+                                         "DefaultName":  "eLxr",
+                                         "Filename":  "eLxr_WSL_AMD64_12.12.0.0.wsl",
+                                         "Source":  "Official"
+                                     }
+                           }
+          }
 }
