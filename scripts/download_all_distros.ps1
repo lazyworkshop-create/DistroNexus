@@ -101,11 +101,10 @@ foreach ($FamilyKey in $DistroCatalog.Keys) {
     }
 }
 
-Write-Host "`nAll downloads completed." -ForegroundColor Cyan
-if (Test-Path $BaseDir) { Invoke-Item $BaseDir }
-
 if ($ConfigChanged) {
     Write-Host "Updating configuration file with local paths..." -ForegroundColor DarkCyan
     $JsonOutput = $ConfigRaw | ConvertTo-Json -Depth 6
-    Set-Content -Path $ConfigPath -Value $JsonOutput -Encoding UTF8
+    if ($JsonOutput) {
+        Set-Content -Path $ConfigPath -Value $JsonOutput -Encoding UTF8
+    }
 }

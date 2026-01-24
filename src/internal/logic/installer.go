@@ -21,12 +21,25 @@ func RunInstallScript(ctx context.Context, projectRoot string, familyName string
 			"-NoProfile",
 			"-ExecutionPolicy", "Bypass",
 			"-File", scriptPath,
-			"-SelectFamily", familyName,
-			"-SelectVersion", versionName,
-			"-DistroName", distroName,
-			"-InstallPath", installPath,
-			"-user", user,
-			"-pass", pass,
+		}
+
+		if familyName != "" {
+			args = append(args, "-SelectFamily", familyName)
+		}
+		if versionName != "" {
+			args = append(args, "-SelectVersion", versionName)
+		}
+		if distroName != "" {
+			args = append(args, "-DistroName", distroName)
+		}
+		if installPath != "" {
+			args = append(args, "-InstallPath", installPath)
+		}
+		if user != "" {
+			args = append(args, "-user", user)
+		}
+		if pass != "" {
+			args = append(args, "-pass", pass)
 		}
 
 		cmd := exec.CommandContext(ctx, "powershell.exe", args...)
