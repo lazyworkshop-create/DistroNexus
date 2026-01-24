@@ -10,13 +10,12 @@ Version 1.0.2 focuses on improving the user interface and enhancing the manageme
 - **Icon Update**: The icon for the "Installed Instances" tab/button will be changed to a "Home" (House) icon to signify its central role.
 
 ### 2.2. "Install New Instance" Revamp
-- **Interaction Model**: Changing from a separate tab/page to a **Modal/Popup Window**, consistent with the current "Settings" dialog behavior.
-- **Icon Update**: The icon for triggering the installation process will be updated to be more distinct (e.g., a "Plus" or "Download" icon).
+- **Interaction Model**: Changing from a separate tab/page to a **Modal/Popup Window**.
+- **Quick Mode**:
+  - If checked: Use defaults (Root user, Default Path), hide details.
+  - If unchecked: Show full configuration.
 - **Functionality**:
-  - Existing basic installation logic (select distro, configure basics) remains unchanged.
-  - **New Feature: Custom Install Location**:
-    - Users can specific the destination path for the new instance.
-    - UI Element: A "Select Folder" button (with folder icon) allows the user to browse and pick the target directory.
+  - **New Feature: Custom Install Location** (Standard Mode).
 
 ### 2.3. Global Settings Updates
 - **Package Cache Location**:
@@ -56,28 +55,32 @@ The card or list item for each installed instance will be upgraded with the foll
 - The "Stop" feature likely requires invoking `wsl --terminate <distro_name>`.
 - Disk usage calculation generally involves checking the size of the `ext4.vhdx` file.
 
-## 5. Package Management (New Tab)
-A new dedicated tab will be introduced for managing distribution packages (rootfs/images) independent of the installation process.
+## 5. Package Management (Main View)
+Accessible via the main toolbar (Package Icon).
 
-### 5.1. Capability
-- **Tab Icon**: A box or package icon.
-- **View**: A list or grid view of available and cached packages.
+### 5.1. Unified View
+- **Grouping**: Packages are grouped by Distribution Family (e.g., Ubuntu, Debian).
+- **Naming**: Show precise version names (not indices).
 
-### 5.2. Cached Packages
-- **Function**: Display a list of packages that have been downloaded to the local cache.
+### 5.2. Item Actions & Status
+- **Status Indicator**: Show if the package is "Cached" (Downloaded) or "Online".
 - **Actions**:
-  - **Delete**: Remove the cached file to free up space.
-  - **Details**: View file size, download date, and version.
-
-### 5.3. Online Repository
-- **Function**: View the list of available distributions from the official source (e.g., parsing `distros.json`).
-- **Update List**: A button to fetch the latest `distros.json` from the remote source to ensure the list is up-to-date.
-- **Actions**:
-  - **Download**: Pre-download a specific package without installing it immediately.
-  - **Redownload**: Force re-download of a package if a file is corrupted or to ensure freshness.
+  - **Inline Buttons**:
+    - **Download**: If not cached.
+    - **Delete**: If cached (to clear space).
+    - **Redownload**: Always available (e.g., context menu or secondary action).
+  - No separate split pane. A single, clean list.
 
 ### 5.4. Custom Sources
 - **Add Custom Package**:
   - Ability to add a local tarball or a custom URL as an installable source.
   - User can specify the Name, Version, and File Path/URL.
   - These custom entries should persist in the local configuration.
+
+### 5.5. Online Catalog Synchronization
+- **Source**: Fetch the latest distribution catalog (`distros.json`) directly from the official GitHub repository (e.g., via Raw Git content) to ensure the list of available distributions is always up-to-date.
+- **Fallback Mechanism**:
+  - If the online fetch fails (timeout, offline), the application must silently fallback to the local `distros.json` shipped with the application.
+  - An indicator (e.g., "Offline Mode") should be visible if online synchronization failed.
+- **Refresh**:
+  - Provide a "Refresh" button in the toolbar to manually trigger a catalog update.
