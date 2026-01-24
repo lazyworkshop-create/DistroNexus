@@ -42,6 +42,9 @@ go mod tidy
 if command -v x86_64-w64-mingw32-gcc &> /dev/null; then
     echo "Building for Windows (amd64)..."
     
+    # Strip debug symbols (-s) and DWARF table (-w) to reduce binary size
+    export GOFLAGS="-ldflags=-s -w"
+
     # Use 'fyne package' to embed icon if available, else standard go build
     if command -v fyne &> /dev/null; then
         echo "Using Fyne CLI for packaging (with icon)..."
@@ -74,7 +77,7 @@ if command -v x86_64-w64-mingw32-gcc &> /dev/null; then
     else
         echo "Fyne CLI not found, falling back to standard go build (no exe icon)..."
         CC=x86_64-w64-mingw32-gcc CGO_ENABLED=1 GOOS=windows GOARCH=amd64 \
-            go build -ldflags -H=windowsgui -o "$OUTPUT_DIR/DistroNexus.exe" ./cmd/gui/main.go
+            go build -ldflags "-s -w -H=windowsgui" -o "$OUTPUT_DIR/DistroNexus.exe" ./cmd/gui/main.go
     fi
 
     echo "Copying resources..."
