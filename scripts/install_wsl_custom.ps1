@@ -290,7 +290,9 @@ try {
         $CachedFile = $SourcePath
     }
 
-    $ProcessingFile = Join-Path $TempDir "distro_package.zip"
+    # Determine file type based on extension
+    $SourceFileName = [System.IO.Path]::GetFileName($CachedFile)
+    $ProcessingFile = Join-Path $TempDir $SourceFileName
     
     if ($CachedFile) {
         Write-Host "Copying to workspace..." -ForegroundColor Gray
@@ -301,32 +303,41 @@ try {
         Invoke-WebRequest -Uri $DownloadUrl -OutFile $ProcessingFile -UseBasicParsing -Verbose
     }
     
-    # 2. Extract 
-    Write-Host "Extracting package..." -ForegroundColor Cyan
-    $ExtractDir = Join-Path $TempDir "extracted"
-    Expand-Archive -Path $ProcessingFile -DestinationPath $ExtractDir -Force
+    $RootFs = $null
 
-    # 3. Locate install.tar.gz (Handle Bundles vs Direct Appx)
-    # Check 1: Direct RootFS in download
-    $RootFs = Join-Path $ExtractDir "install.tar.gz"
-    
-    if (-not (Test-Path $RootFs)) {
-        # Check 2: It's a bundle, find the x64 appx
-        $AppxFile = Get-ChildItem -Path $ExtractDir -Filter "*x64*.appx" -Recurse | Select-Object -First 1
+    # Check for known Archive types that need extraction (Appx, Zip)
+    if ($ProcessingFile -match "\.(zip|appx|appxbundle)$") {
+        # 2. Extract 
+        Write-Host "Extracting package..." -ForegroundColor Cyan
+        $ExtractDir = Join-Path $TempDir "extracted"
+        Expand-Archive -Path $ProcessingFile -DestinationPath $ExtractDir -Force
+
+        # 3. Locate install.tar.gz (Handle Bundles vs Direct Appx)
+        # Check 1: Direct RootFS in download
+        $RootFs = Join-Path $ExtractDir "install.tar.gz"
         
-        if ($AppxFile) {
-            Write-Host "Found inner package: $($AppxFile.Name)" -ForegroundColor Gray
-            # Rename .appx to .zip and extract again
-            $InnerZip = Join-Path $TempDir "inner.zip"
-            Copy-Item $AppxFile.FullName $InnerZip
-            $InnerDir = Join-Path $TempDir "inner_extracted"
-            Expand-Archive -Path $InnerZip -DestinationPath $InnerDir -Force
-            $RootFs = Join-Path $InnerDir "install.tar.gz"
+        if (-not (Test-Path $RootFs)) {
+            # Check 2: It's a bundle, find the x64 appx
+            $AppxFile = Get-ChildItem -Path $ExtractDir -Filter "*x64*.appx" -Recurse | Select-Object -First 1
+            
+            if ($AppxFile) {
+                Write-Host "Found inner package: $($AppxFile.Name)" -ForegroundColor Gray
+                # Rename .appx to .zip and extract again
+                $InnerZip = Join-Path $TempDir "inner.zip"
+                Copy-Item $AppxFile.FullName $InnerZip
+                $InnerDir = Join-Path $TempDir "inner_extracted"
+                Expand-Archive -Path $InnerZip -DestinationPath $InnerDir -Force
+                $RootFs = Join-Path $InnerDir "install.tar.gz"
+            }
         }
+    } else {
+        # Assume it is already a RootFS (tar.gz, .wsl, etc.)
+        Write-Host "Package recognized as direct RootFS ($([System.IO.Path]::GetExtension($ProcessingFile)))..." -ForegroundColor Cyan
+        $RootFs = $ProcessingFile
     }
 
-    if (-not (Test-Path $RootFs)) {
-        throw "Could not find 'install.tar.gz' in the downloaded package. The structure might be different than expected."
+    if (-not $RootFs -or -not (Test-Path $RootFs)) {
+        throw "Could not find 'install.tar.gz' or valid RootFS in the package."
     }
 
     # 4. Create Install Directory
