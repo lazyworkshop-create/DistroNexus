@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bytes"
 	"distronexus-gui/internal/model"
 	"encoding/json"
 	"fmt"
@@ -24,6 +25,9 @@ func (l *Loader) LoadDistros() (map[string]model.DistroConfig, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read distros.json at %s: %w", path, err)
 	}
+
+	// Strip UTF-8 BOM if present (common when editing via PowerShell)
+	data = bytes.TrimPrefix(data, []byte("\xef\xbb\xbf"))
 
 	var distros map[string]model.DistroConfig
 	if err := json.Unmarshal(data, &distros); err != nil {
@@ -51,10 +55,23 @@ func (l *Loader) LoadSettings() (*model.GlobalSettings, error) {
 		return nil, fmt.Errorf("failed to read settings.json: %w", err)
 	}
 
+	// Strip UTF-8 BOM if present
+	data = bytes.TrimPrefix(data, []byte("\xef\xbb\xbf"))
+
 	if err := json.Unmarshal(data, &settings); err != nil {
 		return nil, fmt.Errorf("failed to parse settings.json: %w", err)
 	}
 	return &settings, nil
+}
+
+// SaveDistros writes the distros.json file
+func (l *Loader) SaveDistros(distros map[string]model.DistroConfig) error {
+	path := l.getPath("distros.json")
+	data, err := json.MarshalIndent(distros, "", "    ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0644)
 }
 
 // SaveSettings writes the settings.json file

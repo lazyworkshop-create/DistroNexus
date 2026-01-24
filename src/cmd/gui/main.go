@@ -28,6 +28,8 @@ func main() {
 		cwd, _ := os.Getwd()
 		if _, err := os.Stat(filepath.Join(cwd, "config")); err == nil {
 			projectRoot = cwd
+		} else if _, err := os.Stat(filepath.Join(cwd, "..", "config")); err == nil {
+			projectRoot = filepath.Join(cwd, "..")
 		}
 	}
 

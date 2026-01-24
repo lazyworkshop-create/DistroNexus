@@ -2,27 +2,79 @@ package ui
 
 import (
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
 
 // ShowSettingsDialog displays a modal dialog for editing global settings
 func (mw *MainWindow) ShowSettingsDialog() {
-	// Create entry fields
+	// Create entry fields and pickers
 	installPathEntry := widget.NewEntry()
 	installPathEntry.SetText(mw.Settings.DefaultInstallPath)
+	btnPickRec := widget.NewButtonWithIcon("", theme.FolderOpenIcon(), func() {
+		dialog.ShowFolderOpen(func(uri fyne.ListableURI, err error) {
+			if uri != nil {
+				installPathEntry.SetText(uri.Path())
+			}
+		}, mw.Window)
+	})
+	installPathContainer := container.NewBorder(nil, nil, nil, btnPickRec, installPathEntry)
 
 	distroCachePathEntry := widget.NewEntry()
 	distroCachePathEntry.SetText(mw.Settings.DistroCachePath)
+	btnPickCache := widget.NewButtonWithIcon("", theme.FolderOpenIcon(), func() {
+		dialog.ShowFolderOpen(func(uri fyne.ListableURI, err error) {
+			if uri != nil {
+				distroCachePathEntry.SetText(uri.Path())
+			}
+		}, mw.Window)
+	})
+	cachePathContainer := container.NewBorder(nil, nil, nil, btnPickCache, distroCachePathEntry)
 
 	defaultDistroEntry := widget.NewEntry()
 	defaultDistroEntry.SetText(mw.Settings.DefaultDistro)
 
+	distroSourceEntry := widget.NewEntry()
+	distroSourceEntry.SetPlaceHolder("Default: Microsoft Official GitHub")
+	distroSourceEntry.SetText(mw.Settings.DistroSourceUrl)
+
+	terminalPathEntry := widget.NewEntry()
+	terminalPathEntry.SetPlaceHolder("Default: ~ (User Home)")
+	terminalPathEntry.SetText(mw.Settings.DefaultTerminalStartPath)
+	btnPickTerminal := widget.NewButtonWithIcon("", theme.FolderOpenIcon(), func() {
+		dialog.ShowFolderOpen(func(uri fyne.ListableURI, err error) {
+			if uri != nil {
+				terminalPathEntry.SetText(uri.Path())
+			}
+		}, mw.Window)
+	})
+	terminalPathContainer := container.NewBorder(nil, nil, nil, btnPickTerminal, terminalPathEntry)
+
+	// Reset Button
+	btnReset := widget.NewButton("Reset to Defaults", func() {
+		dialog.ShowConfirm("Reset Settings", "Are you sure you want to restore default settings?", func(ok bool) {
+			if ok {
+				// Restore defaults matching mainwindow.go logic
+				installPathEntry.SetText("D:\\WSL")
+				distroCachePathEntry.SetText("distro_cache")
+				defaultDistroEntry.SetText("Ubuntu-24.04")
+				distroSourceEntry.SetText("") // Empty defaults to MS Official in logic
+				terminalPathEntry.SetText("") // Empty defaults to ~
+			}
+		}, mw.Window)
+	})
+	btnReset.Importance = widget.DangerImportance
+
 	// Create a custom content form
 	items := []*widget.FormItem{
-		widget.NewFormItem("Default Install Path", installPathEntry),
-		widget.NewFormItem("Distro Cache Path", distroCachePathEntry),
+		widget.NewFormItem("Default Install Path", installPathContainer),
+		widget.NewFormItem("Distro Cache Path", cachePathContainer),
 		widget.NewFormItem("Default Quick Distro", defaultDistroEntry),
+		widget.NewFormItem("Update Source URL", distroSourceEntry),
+		widget.NewFormItem("Default Terminal Path", terminalPathContainer),
+		widget.NewFormItem("", btnReset),
 	}
 
 	// Create and show dialog
@@ -32,6 +84,8 @@ func (mw *MainWindow) ShowSettingsDialog() {
 			mw.Settings.DefaultInstallPath = installPathEntry.Text
 			mw.Settings.DistroCachePath = distroCachePathEntry.Text
 			mw.Settings.DefaultDistro = defaultDistroEntry.Text
+			mw.Settings.DistroSourceUrl = distroSourceEntry.Text
+			mw.Settings.DefaultTerminalStartPath = terminalPathEntry.Text
 
 			// Persist to disk
 			err := mw.Config.SaveSettings(mw.Settings)
@@ -46,6 +100,6 @@ func (mw *MainWindow) ShowSettingsDialog() {
 		}
 	}, mw.Window)
 
-	d.Resize(fyne.NewSize(400, 300))
+	d.Resize(fyne.NewSize(600, 500))
 	d.Show()
 }
