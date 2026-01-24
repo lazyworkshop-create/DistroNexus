@@ -3,7 +3,23 @@ function Setup-Logger {
     param(
         [string]$LogFileName
     )
-    $Global:LogDir = Join-Path $PSScriptRoot "..\logs"
+    $LocalLogDir = Join-Path $PSScriptRoot "..\logs"
+    
+    # Try to use local logs folder (Portable Mode preference), fallback to LocalAppData if permission denied (Installed Mode)
+    try {
+        if (-not (Test-Path $LocalLogDir)) { New-Item -ItemType Directory -Path $LocalLogDir -ErrorAction Stop | Out-Null }
+        
+        # Test write permission
+        $TestFile = Join-Path $LocalLogDir "write_test.tmp"
+        New-Item -Path $TestFile -ItemType File -Force -ErrorAction Stop | Out-Null
+        Remove-Item $TestFile -Force
+        
+        $Global:LogDir = $LocalLogDir
+    } catch {
+        # Permission denied or readonly, fallback to %LocalAppData%
+        $Global:LogDir = Join-Path $env:LOCALAPPDATA "DistroNexus\logs"
+    }
+
     if (-not (Test-Path $Global:LogDir)) { New-Item -ItemType Directory -Path $Global:LogDir -Force | Out-Null }
     
     $Global:LogFile = Join-Path $Global:LogDir $LogFileName
