@@ -1,9 +1,16 @@
 # PowerShell script to download all available WSL2 distro packages
 # Author: GitHub Copilot
 
+param (
+    [string]$SelectFamily,
+    [string]$SelectVersion
+)
+
 # --- Distro Definitions ---
 $ConfigPath = Join-Path $PSScriptRoot "..\config\distros.json"
 if (-not (Test-Path $ConfigPath)) { throw "Config file not found at: $ConfigPath" }
+$ConfigRaw = Get-Content -Raw -Path $ConfigPath | ConvertFrom-Json
+$ConfigChanged = $false
 
 $SettingsPath = Join-Path $PSScriptRoot "..\config\settings.json"
 $GlobalSettings = $null
@@ -15,17 +22,11 @@ if (Test-Path $SettingsPath) {
     }
 }
 
-try {
-    $JsonRaw = Get-Content -Raw -Path $ConfigPath | ConvertFrom-Json
-} catch {
-    throw "Failed to parse distros.json. Please ensure it is valid JSON."
-}
-
 $DistroCatalog = [ordered]@{}
 # Reconstruct ordered dictionary
-$Keys = $JsonRaw.PSObject.Properties.Name | Sort-Object { [int]$_ }
+$Keys = $ConfigRaw.PSObject.Properties.Name | Sort-Object { [int]$_ }
 foreach ($Key in $Keys) {
-    $FamObj = $JsonRaw.$Key
+    $FamObj = $ConfigRaw.$Key
     $VersionsDict = [ordered]@{}
     $VerKeys = $FamObj.Versions.PSObject.Properties.Name | Sort-Object { [int]$_ }
     foreach ($vKey in $VerKeys) {
@@ -54,9 +55,13 @@ Write-Host "Base Directory: $BaseDir"
 Write-Host "============================`n"
 
 foreach ($FamilyKey in $DistroCatalog.Keys) {
+    if ($SelectFamily -and $FamilyKey -ne $SelectFamily) { continue }
+
     $Family = $DistroCatalog[$FamilyKey]
     
     foreach ($VerKey in $Family.Versions.Keys) {
+        if ($SelectVersion -and $VerKey -ne $SelectVersion) { continue }
+
         $Version = $Family.Versions[$VerKey]
         
         # Organization: distro/FamilyName/VersionName/File
@@ -71,14 +76,26 @@ foreach ($FamilyKey in $DistroCatalog.Keys) {
         
         Write-Host "[$($Family.Name)] $($Version.Name)" -NoNewline
 
-        if (Test-Path $OutFile) {
+        $FileExists = Test-Path $OutFile
+        if ($FileExists) {
             Write-Host " -> Skipped (Already exists)" -ForegroundColor Yellow
         } else {
             Write-Host " -> Downloading..." -ForegroundColor Green
             try {
                 Invoke-WebRequest -Uri $Version.Url -OutFile $OutFile -UseBasicParsing -Verbose
+                $FileExists = $true
             } catch {
                 Write-Host " -> Failed: $_" -ForegroundColor Red
+            }
+        }
+
+        # Update Config if path changed or is new
+        if ($FileExists) {
+            $CurrentSavedPath = $ConfigRaw.$FamilyKey.Versions.$VerKey.LocalPath
+            if ($CurrentSavedPath -ne $OutFile) {
+                # We need to assign to the PSObject
+                $ConfigRaw.$FamilyKey.Versions.$VerKey | Add-Member -MemberType NoteProperty -Name "LocalPath" -Value $OutFile -Force
+                $ConfigChanged = $true
             }
         }
     }
@@ -86,3 +103,9 @@ foreach ($FamilyKey in $DistroCatalog.Keys) {
 
 Write-Host "`nAll downloads completed." -ForegroundColor Cyan
 if (Test-Path $BaseDir) { Invoke-Item $BaseDir }
+
+if ($ConfigChanged) {
+    Write-Host "Updating configuration file with local paths..." -ForegroundColor DarkCyan
+    $JsonOutput = $ConfigRaw | ConvertTo-Json -Depth 6
+    Set-Content -Path $ConfigPath -Value $JsonOutput -Encoding UTF8
+}

@@ -131,20 +131,47 @@ function Show-Menu {
 # --- Interactive Selection ---
 
 if ($SelectFamily) {
-    # Try to find family by name
-    $FoundFamilyKey = $DistroCatalog.Keys | Where-Object { $DistroCatalog[$_].Name -eq $SelectFamily } | Select-Object -First 1
-    if ($FoundFamilyKey) {
-        $SelectedFamily = $DistroCatalog[$FoundFamilyKey]
-        
+    # 1. Try as exact Key (ID)
+    if ($DistroCatalog.Contains($SelectFamily)) {
+        $SelectedFamilyKey = $SelectFamily
+        $SelectedFamily = $DistroCatalog[$SelectFamily]
+    } else {
+        # 2. Try as Name
+        $FoundFamilyKey = $DistroCatalog.Keys | Where-Object { $DistroCatalog[$_].Name -eq $SelectFamily } | Select-Object -First 1
+        if ($FoundFamilyKey) {
+            $SelectedFamilyKey = $FoundFamilyKey
+            $SelectedFamily = $DistroCatalog[$FoundFamilyKey]
+        }
+    }
+
+    if ($SelectedFamily) {
         if ($SelectVersion) {
-                $FoundVersionKey = $SelectedFamily.Versions.Keys | Where-Object { $SelectedFamily.Versions[$_].Name -like "*$SelectVersion*" } | Select-Object -First 1
-                if ($FoundVersionKey) {
-                    $SelectedVersion = $SelectedFamily.Versions[$FoundVersionKey]
-                } else {
-                    Write-Warning "Version '$SelectVersion' not found for $($SelectedFamily.Name). Using default."
-                    $SelectedVersion = $SelectedFamily.Versions["1"]
+            # 1. Try as exact Key (ID)
+            if ($SelectedFamily.Versions.Contains($SelectVersion)) {
+                 $SelectedVersionKey = $SelectVersion
+                 $SelectedVersion = $SelectedFamily.Versions[$SelectVersion]
+            } else {
+                # 2. Try as Name (NavName)
+                $FoundVersionKey = $SelectedFamily.Versions.Keys | Where-Object { $SelectedFamily.Versions[$_].NavName -eq $SelectVersion } | Select-Object -First 1
+                
+                # 3. Try partial Name match if exact not found
+                if (-not $FoundVersionKey) {
+                    $FoundVersionKey = $SelectedFamily.Versions.Keys | Where-Object { $SelectedFamily.Versions[$_].Name -like "*$SelectVersion*" } | Select-Object -First 1
                 }
+                
+                if ($FoundVersionKey) {
+                    $SelectedVersionKey = $FoundVersionKey
+                    $SelectedVersion = $SelectedFamily.Versions[$FoundVersionKey]
+                }
+            }
+            
+            if (-not $SelectedVersion) {
+                 Write-Warning "Version '$SelectVersion' not found for $($SelectedFamily.Name). Using default."
+                 $SelectedVersionKey = "1"
+                 $SelectedVersion = $SelectedFamily.Versions["1"]
+            }
         } else {
+            $SelectedVersionKey = "1"
             $SelectedVersion = $SelectedFamily.Versions["1"]
         }
         $DownloadUrl = $SelectedVersion.Url
@@ -224,30 +251,43 @@ Write-Host "`nPreparing workspace at $TempDir..." -ForegroundColor DarkGray
 try {
     # 1. Acquire Package (Cache Check)
     $CachedFile = $null
+    $SourcePath = $null
     
-    if ($SelectedVersion -and $SelectedFamily) {
-        $BaseDistroDir = Join-Path $PSScriptRoot "..\..\distro"
-        if ($GlobalSettings.DistroCachePath) {
-            if ([System.IO.Path]::IsPathRooted($GlobalSettings.DistroCachePath)) {
-                $BaseDistroDir = $GlobalSettings.DistroCachePath
-            } else {
-                $BaseDistroDir = Join-Path $PSScriptRoot $GlobalSettings.DistroCachePath
-            }
-        }
-        $BaseDistroDir = [System.IO.Path]::GetFullPath($BaseDistroDir)
-
-        $VersionDir = Join-Path $BaseDistroDir "$($SelectedFamily.Name)\$($SelectedVersion.Name)"
-        $ExpectedCachePath = Join-Path $VersionDir $SelectedVersion.Filename
-
-        if (Test-Path $ExpectedCachePath) {
-            Write-Host "Using cached package: $ExpectedCachePath" -ForegroundColor Green
-            $CachedFile = $ExpectedCachePath
+    # Priority 1: Check LocalPath from Config
+    if ($SelectedVersion.LocalPath) {
+        if (Test-Path $SelectedVersion.LocalPath) {
+            $SourcePath = $SelectedVersion.LocalPath
+            Write-Host "Using registered local copy: $SourcePath" -ForegroundColor Green
         } else {
-            Write-Host "Downloading to cache: $ExpectedCachePath" -ForegroundColor Cyan
-            if (-not (Test-Path $VersionDir)) { New-Item -Path $VersionDir -ItemType Directory -Force | Out-Null }
-            Invoke-WebRequest -Uri $DownloadUrl -OutFile $ExpectedCachePath -UseBasicParsing -Verbose
-            $CachedFile = $ExpectedCachePath
+             Write-Warning "Registered LocalPath '$($SelectedVersion.LocalPath)' not found."
         }
+    }
+
+    # Priority 2: Use Download Manager to Find/Download
+    if (-not $SourcePath -and $SelectedFamilyKey -and $SelectedVersionKey) {
+        Write-Host "Checking download status (invoking download manager)..." -ForegroundColor Cyan
+        & "$PSScriptRoot\download_all_distros.ps1" -SelectFamily $SelectedFamilyKey -SelectVersion $SelectedVersionKey
+        
+        # Reload Config to get updated path from disk
+        if (Test-Path $ConfigPath) {
+             try {
+                 $RawJson = Get-Content $ConfigPath -Raw | ConvertFrom-Json
+                 $UpdatedFamily = $RawJson.distros | Where-Object { $_.key -eq $SelectedFamilyKey }
+                 $UpdatedVersion = $UpdatedFamily.versions | Where-Object { $_.key -eq $SelectedVersionKey }
+                 
+                 if ($UpdatedVersion.local_path -and (Test-Path $UpdatedVersion.local_path)) {
+                     $SourcePath = $UpdatedVersion.local_path
+                     $SelectedVersion.LocalPath = $SourcePath
+                     Write-Host "Package ready: $SourcePath" -ForegroundColor Green
+                 }
+             } catch {
+                 Write-Warning "Failed to reload config: $_"
+             }
+        }
+    }
+
+    if ($SourcePath) {
+        $CachedFile = $SourcePath
     }
 
     $ProcessingFile = Join-Path $TempDir "distro_package.zip"
@@ -328,6 +368,37 @@ try {
         # Terminate to ensure next start picks up the config? Defaults usually apply on next session.
         wsl --terminate $DistroName
     }
+
+    # 7. Update Instances Configuration
+    $InstancesConfigPath = Join-Path $PSScriptRoot "..\config\instances.json"
+    $NewInstance = @{
+        Name = $DistroName
+        BasePath = $InstallPath
+        State = "Stopped"
+        WslVer = "2"
+        Release = if ($SelectedVersion) { $SelectedVersion.Name } else { "Custom" }
+        User = if ($user) { $user } else { "root" }
+        InstallTime = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+    }
+
+    $CurrentInstances = @()
+    if (Test-Path $InstancesConfigPath) {
+        try {
+            $CurrentInstances = Get-Content $InstancesConfigPath -Raw | ConvertFrom-Json
+            if (-not $CurrentInstances) { $CurrentInstances = @() }
+            # Force to array if single object
+            if ($CurrentInstances -isnot [System.Array]) { $CurrentInstances = @($CurrentInstances) }
+        } catch {
+            Write-Warning "Could not read existing instances.json. Starting fresh."
+        }
+    }
+    
+    # Remove duplicates if reinstalling with same name
+    $CurrentInstances = $CurrentInstances | Where-Object { $_.Name -ne $DistroName }
+    $CurrentInstances += $NewInstance
+    
+    $CurrentInstances | ConvertTo-Json -Depth 4 | Set-Content $InstancesConfigPath -Force
+    Write-Host "Updated instances registry." -ForegroundColor Green
 
     Write-Host "`n[SUCCESS] WSL2 Instance '$DistroName' is ready!" -ForegroundColor Green
     Write-Host "Location: $InstallPath"

@@ -188,4 +188,25 @@ if ($Target.BasePath -and (Test-Path $Target.BasePath)) {
     Write-Host "Install location is already gone." -ForegroundColor Gray
 }
 
+# --- 5. Update Instances Configuration ---
+$InstancesConfigPath = Join-Path $PSScriptRoot "..\config\instances.json"
+if (Test-Path $InstancesConfigPath) {
+    try {
+        $CurrentInstances = Get-Content $InstancesConfigPath -Raw | ConvertFrom-Json
+        # Handle single object vs array
+        if ($CurrentInstances -isnot [System.Array]) { 
+             if ($CurrentInstances) { $CurrentInstances = @($CurrentInstances) }
+             else { $CurrentInstances = @() }
+        }
+
+        # Filter out the removed instance
+        $UpdatedInstances = $CurrentInstances | Where-Object { $_.Name -ne $Target.Name }
+        
+        $UpdatedInstances | ConvertTo-Json -Depth 4 | Set-Content $InstancesConfigPath -Force
+        Write-Host "Updated instances registry (removed '$($Target.Name)')." -ForegroundColor Green
+    } catch {
+        Write-Warning "Failed to update instances.json: $_"
+    }
+}
+
 Write-Host "`nUninstall process complete."

@@ -1,16 +1,28 @@
 # PowerShell script to list WSL instances as JSON
 # Used by GUI to populate Uninstall list
 
+param (
+    [switch]$ForceUpdate
+)
+
 $ErrorActionPreference = "Stop"
+# Ensure UTF-8 output for JSON
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+# --- Configuration ---
+$ConfigDir = Join-Path $PSScriptRoot "..\\config"
+if (-not (Test-Path $ConfigDir)) { New-Item -ItemType Directory -Path $ConfigDir -Force | Out-Null }
+$CacheFile = Join-Path $ConfigDir "instances.json" 
+
+# --- Functions ---
 
 function Get-WslDistros {
     $LxssPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss"
     if (-not (Test-Path $LxssPath)) { return @() }
     
-    # 1. Get Running State and Version
+    # 1. Get Running State and Version from wsl --list --verbose
+    # This is fast and always needed for current state
     $WslStatus = @{}
-    # Force UTF-8 output from wsl.exe if possible or just parse
     $cliOutput = wsl --list --verbose
     if ($cliOutput) {
         foreach ($line in $cliOutput) {
@@ -27,8 +39,25 @@ function Get-WslDistros {
         }
     }
 
-    $Distros = @()
+    # 2. Load Cache if exists
+    $Cache = @{}
+    if (Test-Path $CacheFile) {
+        try {
+            $CacheData = Get-Content $CacheFile -Raw -Encoding UTF8 | ConvertFrom-Json
+            # Handle Single Object vs Array
+            if ($CacheData -is [PSCustomObject]) { $CacheData = @($CacheData) }
+            
+            foreach ($c in $CacheData) {
+                if ($c.Name) { $Cache[$c.Name] = $c }
+            }
+        } catch {}
+    }
+
+    $CurrentDistros = @()
     $Keys = Get-ChildItem -Path $LxssPath
+
+    $UpdatedCache = @{}
+    $CacheChanged = $false
 
     foreach ($Key in $Keys) {
         $Props = Get-ItemProperty -Path $Key.PSPath
@@ -38,7 +67,7 @@ function Get-WslDistros {
         
         $BasePath = $Props.BasePath
         
-        # Status Info
+        # Determine Status
         $State = "Stopped"
         $WslVer = "?"
         if ($WslStatus.Contains($Name)) {
@@ -46,15 +75,129 @@ function Get-WslDistros {
             $WslVer = $WslStatus[$Name].Version
         }
         
-        $Distros += [ordered]@{
+        # --- Cache Logic ---
+        $CachedItem = $Cache[$Name]
+        $IsNew = ($null -eq $CachedItem)
+        
+        $Release = ""
+        $User = ""
+        $InstallTime = ""
+        
+        if (-not $IsNew) {
+            # Use cached values
+            $Release = $CachedItem.Release
+            $User = $CachedItem.User
+            $InstallTime = $CachedItem.InstallTime
+        }
+
+        # Initialize InstallTime if missing
+        if ([string]::IsNullOrEmpty($InstallTime)) {
+            if (Test-Path $BasePath) {
+                 try {
+                    $InstallTime = (Get-Item $BasePath).CreationTime.ToString("yyyy-MM-dd HH:mm:ss")
+                 } catch {
+                    $InstallTime = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+                 }
+            } else {
+                 $InstallTime = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+            }
+            $CacheChanged = $true
+        }
+
+        # Force Update / Discovery Logic
+        # We try to fetch info if:
+        # 1. ForceUpdate is requested
+        # 2. It's a new instance (first discovery)
+        # 3. Missing critical info in cache (Release empty)
+        $ShouldFetch = $ForceUpdate -or $IsNew -or ([string]::IsNullOrEmpty($Release))
+
+        if ($ShouldFetch) {
+            # Try to fetch info
+            # Only if running or if we are forced/new to verify
+            # To fetch 'User' and 'Release', the instance must be accessible (running).
+            
+            # If ForceUpdate is TRUE, we are allowed to start the instance momentarily.
+            # If ForceUpdate is FALSE, we only check if it is ALREADY running.
+            
+            $CanConnect = ($State -eq "Running")
+            if (($ForceUpdate -or $IsNew) -and (-not $CanConnect)) {
+                 # Attempt start
+                 wsl -d $Name -e true 2>$null
+                 if ($?) { $CanConnect = $true }
+                 # Note: state remains "Stopped" in our list visually if it stops immediately, 
+                 # but for now it is running effectively.
+                 # Actually, `wsl -d ... true` exits immediately. 
+                 # We need to run a quick command.
+            }
+
+            if ($CanConnect -or $ForceUpdate) { 
+                # If we forced update, we run commands even if it involves starting it up
+                
+                # Get Release
+                try {
+                    $osRel = wsl -d $Name cat /etc/os-release 2>$null
+                    $newRel = ""
+                    if ($osRel) {
+                        foreach ($line in $osRel) {
+                           if ($line -match '^PRETTY_NAME="?([^"]+)"?') {
+                               $newRel = $matches[1]
+                               break
+                           }
+                        }
+                    }
+                    if ($newRel -and $newRel -ne $Release) {
+                        $Release = $newRel
+                        $CacheChanged = $true
+                    }
+                } catch {}
+
+                # Get User
+                if ([string]::IsNullOrEmpty($User) -or $ForceUpdate) {
+                     $Uid = $Props.DefaultUid
+                     if ($null -eq $Uid) { $Uid = 0 }
+                     try {
+                        $newUser = wsl -d $Name id -nu $Uid 2>$null
+                        if ($newUser -and $newUser -ne $User) { 
+                            $User = $newUser 
+                            $CacheChanged = $true
+                        }
+                    } catch {
+                         # If lookup fails, maybe just "root"
+                         if (-not $User) { $User = "root" }
+                    }
+                }
+            }
+        }
+        
+        $DistroObj = [ordered]@{
             Name        = $Name
             BasePath    = $BasePath
             State       = $State
             WslVer      = $WslVer
+            Release     = $Release
+            User        = $User
+            InstallTime = $InstallTime
         }
+        
+        $CurrentDistros += $DistroObj
+        $UpdatedCache[$Name] = $DistroObj
     }
-    return $Distros
+
+    # Detect Deletions (Items in Cache but not in Current Registry)
+    if ($Cache.Count -ne $CurrentDistros.Count) {
+         # If counts differ, something changed (ignoring strict content check, registry is truth)
+         # We rewrite cache based on CurrentDistros (which is registry-derived)
+         $CacheChanged = $true
+    }
+    
+    # Save Cache if needed
+    if ($CacheChanged) {
+        $JsonData = $CurrentDistros | ConvertTo-Json -Depth 2
+        Set-Content -Path $CacheFile -Value $JsonData -Encoding UTF8
+    }
+
+    return $CurrentDistros
 }
 
-$data = Get-WslDistros
-$data | ConvertTo-Json -Depth 2
+$Available = Get-WslDistros
+$Available | ConvertTo-Json -Depth 2
