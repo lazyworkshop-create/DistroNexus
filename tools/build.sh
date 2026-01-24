@@ -71,9 +71,8 @@ if [ -n "$CC_CMD" ]; then
         # Let's assume we run it in src/cmd/gui? But go.mod is in src.
         
         # Best approach: Run in src.
-        # Use relative path for icon to avoid MSYS/Windows path conversion issues
-        # SRC_DIR is src/, so tools/ is ../tools/
-        ICON_PATH="../tools/icon.png"
+        # Use absolute path for icon to avoid resolution issues
+        ICON_PATH="$PROJECT_ROOT/tools/icon.png"
         
         # NOTE: For WSL cross-compilation, we use 'fyne package' if available on Linux,
         # but fyne CLI on Linux usually targets Linux unless -os is specified.
