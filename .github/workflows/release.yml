@@ -37,15 +37,11 @@ jobs:
       run: ./scripts/update_distros.ps1
       shell: pwsh
       
-    - name: Build Binary
-      run: ./tools/build.sh
-      shell: bash
-
-    - name: Package (Zip and Installer)
+    - name: Build and Package (Windows)
       run: |
-        VERSION=${GITHUB_REF#refs/tags/v}
-        ./tools/packaging/package.sh $VERSION
-      shell: bash
+        $VERSION = "${{ github.ref_name }}".TrimStart('v')
+        .\tools\windows_release.ps1 -Version $VERSION
+      shell: pwsh
 
     # Code Signing Step (Start)
     # This step requires setting up SignPath project and secrets

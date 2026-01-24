@@ -75,6 +75,10 @@ if [ -n "$CC_CMD" ]; then
         # SRC_DIR is src/, so tools/ is ../tools/
         ICON_PATH="../tools/icon.png"
         
+        # NOTE: For WSL cross-compilation, we use 'fyne package' if available on Linux,
+        # but fyne CLI on Linux usually targets Linux unless -os is specified.
+        # MinGW is required.
+        
         echo "Executing: CC=$CC_CMD CGO_ENABLED=1 fyne package -os windows -icon $ICON_PATH -name DistroNexus --src ./cmd/gui"
         CC=$CC_CMD CGO_ENABLED=1 fyne package -os windows -icon "$ICON_PATH" -name DistroNexus --src ./cmd/gui
         
