@@ -9,10 +9,17 @@
 *   **Modern GUI Dashboard**: A cross-platform graphical interface (built with Fyne) to manage everything visually.
 *   **Centralized Download**: Automatically download the latest offline packages (Appx/AppxBundle) for popular distributions like Ubuntu, Debian, Kali Linux, and Oracle Linux.
 *   **Custom Installation**: Install any WSL distro into a custom directory of your choice, bypassing the default system drive location.
-*   **Instance Management**: View installed distributions, their status, versions, and paths.
+*   **Advanced Instance Management**: 
+    *   **Start**: Start the instance in the background.
+    *   **Open Terminal**: Open a new terminal window for a running instance (supports custom starting directory).
+    *   **Stop/Terminate**: Immediately stop running instances.
+    *   **Move**: Relocate an existing distro to a new drive or folder without data loss.
+    *   **Rename**: Change the registered name of your WSL instance.
+    *   **Credentials**: Reset or set the default username and password for any instance.
 *   **Safety Checks**: Built-in validation prevents overwriting existing instances or installing into valid directories.
 *   **Side-by-Side Versions**: Easily install multiple versions of the same distro (e.g., Ubuntu 20.04 and 22.04) or multiple instances of the same version.
 *   **Offline Support**: Uses a local cache of downloaded packages to speed up re-installations.
+*   **Package Management**: View and manage the local cache of downloaded distro packages.
 *   **Uninstall Helper**: Easily unregister and remove custom WSL instances with a single click.
 
 ## Configuration
@@ -22,23 +29,29 @@ Global settings are stored in `config/settings.json`:
 ```json
 {
     "DefaultInstallPath": "D:\\WSL",
-    "DefaultDistro": "Ubuntu-24.04",
-    "DistroCachePath": "..\\..\\distro"
+    "PackageCachePath": "D:\\WSL_Cache",
+    "DefaultTerminalStartPath": "~",
+    "DefaultDistro": "Ubuntu-24.04"
 }
 ```
 
 *   `DefaultInstallPath`: The root directory where distros will be installed if no path is provided.
+*   `PackageCachePath`: Directory to store downloaded offline packages.
+*   `DefaultTerminalStartPath`: Default starting directory when opening a terminal (e.g., `~` for home, or `/mnt/c/`).
 *   `DefaultDistro`: The identifier (DefaultName) of the distro to use for Quick Mode.
-*   `DistroCachePath`: Directory to store downloaded offline packages. Can be absolute or relative to `scripts/`.
 
 ## Graphical User Interface (GUI)
 
 DistroNexus now comes with a unified Dashboard application (`DistroNexus.exe`) that wraps the powerful PowerShell scripts into a user-friendly experience.
 
 ### Main Capabilities
-- **Install Tab**: Select family/version, configure users, and monitor installation logs in real-time.
-- **My Installs Tab**: View all registered WSL distributions, check their running status, and uninstall them (unregister + file cleanup).
-- **Settings**: Configure default paths and cache locations.
+- **Install Tab**: Select family/version, configure users, and monitor installation logs. Supports "Quick Mode" for one-click setup.
+- **My Installs Tab**: 
+    - View all registered WSL distributions.
+    - **Actions Dashboard**: Stop, Move, Rename, Set Credentials, and Uninstall instances directly from the card.
+    - **Disk Usage**: Monitor the size of each distro's virtual disk.
+- **Package Manager**: View locally cached distro packages, see their size, and delete unused files.
+- **Settings**: Configure default paths (Install, Cache, Terminal) and reset configuration.
 
 ![App Icon](tools/icon.png)
 
@@ -86,38 +99,25 @@ View all supported distributions and their identifiers (for configuration or sel
 .\scripts\install_wsl_custom.ps1 -ls
 ```
 
-**Interactive Mode:**
-Simply run the script to be guided through a menu to select the distro family, version, name, and install path.
-```powershell
-.\scripts\install_wsl_custom.ps1
-```
+### 3. Management Scripts
 
-**Command-Line Mode (Unattended):**
-Use parameters to skip the interactive menus.
+*   **`move_instance.ps1`**: Moves a WSL instance to a new location (Safe Export -> Unregister -> Import).
+*   **`rename_instance.ps1`**: Renames a registry entry for a WSL instance.
+*   **`start_instance.ps1`**: Starts a distro, optionally with a specific starting directory (`-StartPath`).
+*   **`stop_instance.ps1`**: Terminates a running instance.
+*   **`set_credentials.ps1`**: Configures the default user and password inside the distro.
 
-*   **One-Click Install (Quick Mode) with User Setup:**
-    ```powershell
-    .\scripts\install_wsl_custom.ps1 -name "MyDevEnv" -user "devops" -pass "securepass"
-    ```
+### 4. `download_all_distros.ps1`
 
-*   **Install by selecting Family and Version:**
-    ```powershell
-    .\scripts\install_wsl_custom.ps1 -SelectFamily "Ubuntu" -SelectVersion "22.04"
-    ```
+Downloads all (or specific) WSL distribution packages to the configured cache path.
 
-*   **Full customization without direct URL:**
-    ```powershell
-    .\scripts\install_wsl_custom.ps1 -SelectFamily "Debian" -SelectVersion "GNU/Linux" -DistroName "Debian-Dev" -InstallPath "D:\WSL\Debian-Dev"
-    ```
+### 5. `scan_wsl_instances.ps1`
 
-*   **Parameters:**
-    *   `-DistroName`: Manually specify the registered WSL name.
-    *   `-InstallPath`: Manually specify the installation directory.
-    *   `-SelectFamily`: The name of the distro family (e.g., "Ubuntu", "Debian").
-    *   `-SelectVersion`: The version string to match (e.g., "24.04").
-    *   `-name`: Quick install mode: sets the instance name (uses default distro type).
-    *   `-user`: Default username to create.
-    *   `-pass`: Password for the default user.
+Scans the output of `wsl -l -v` and synchronizes the internal `config/instances.json` registry.
+
+### Infrastructure
+
+*   **`pwsh_utils.ps1`**: Shared library for logging and common utilities. Logs are stored in `logs/` directory with rotation support.
 
 ## Project Structure
 
@@ -128,20 +128,27 @@ DistroNexus/
 │   ├── distros.json              # Distro definitions
 │   └── settings.json             # User settings
 ├── scripts/                      # PowerShell backend
-│   ├── download_all_distros.ps1  # Downloader script
-│   ├── install_wsl_custom.ps1    # Installer script
-│   ├── list_distros.ps1          # List helper
-│   └── uninstall_wsl_custom.ps1  # Uninstaller script
+│   ├── download_all_distros.ps1  # Downloader
+│   ├── install_wsl_custom.ps1    # Installer
+│   ├── move_instance.ps1         # Move logic
+│   ├── pwsh_utils.ps1            # Logging & Utils
+│   ├── rename_instance.ps1       # Rename logic
+│   ├── scan_wsl_instances.ps1    # Registry Sync
+│   ├── set_credentials.ps1       # User/Pass logic
+│   ├── start_instance.ps1        # Launcher
+│   ├── stop_instance.ps1         # Terminator
+│   └── uninstall_wsl_custom.ps1  # Uninstaller
 ├── src/                          # Go Source Code
 │   ├── cmd/                      # Entry points
 │   ├── internal/                 # App logic & UI
+│   │   ├── config/               # Config loader
+│   │   ├── logic/                # Backend logic
+│   │   ├── model/                # Data types
+│   │   └── ui/                   # Fyne UI components
 │   ├── go.mod                    # Go dependencies
 │   └── vendor/                   # Vendored dependencies
 ├── tools/                        # Build tools & resources
-│   ├── build.sh
-│   ├── gen_gear.go               # Icon generator
-│   ├── icon.png                  # App icon
-│   └── setup_go_env.sh           # Environment setup
+├── docs/                         # Documentation & Archive
 ├── README.md                     # Documentation (English)
 └── README_CN.md                  # Documentation (Chinese)
 ```

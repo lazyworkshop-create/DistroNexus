@@ -9,55 +9,18 @@
 *   **现代图形界面 (GUI)**：基于 Fyne 构建的跨平台图形化仪表盘，可视化管理一切。
 *   **集中下载**：自动下载主流发行版（如 Ubuntu, Debian, Kali Linux, Oracle Linux）的最新离线安装包 (Appx/AppxBundle)。
 *   **自定义安装**：将 WSL 发行版安装到你指定的任意目录或驱动器，不再受限于系统盘默认路径。
-*   **实例管理**：查看已安装的发行版、状态、版本和路径。
+*   **高级实例管理**：
+    *   **启动 (Start)**：在后台启动实例。
+    *   **打开终端 (Open Terminal)**：为正在运行的实例打开一个新的终端窗口（支持自定义启动目录下）。
+    *   **停止 (Stop)**：立即终止正在运行的实例。
+    *   **移动 (Move)**：将现有发行版无损迁移到新的驱动器或文件夹。
+    *   **重命名 (Rename)**：更改 WSL 实例的注册名称。
+    *   **凭据 (Credentials)**：重置或设置任何实例的默认用户名和密码。
 *   **安全检查**：内置验证机制，防止覆盖现有实例或安装到非空目录。
 *   **多版本共存**：轻松安装同一发行版的多个版本（例如同时安装 Ubuntu 20.04 和 22.04），或同一版本的多个实例。
 *   **离线支持**：利用本地缓存的安装包，极大加快重装或多实例部署的速度。
+*   **包管理**：查看和管理本地缓存的发行版安装包。
 *   **卸载助手**：一键注销并移除自定义的 WSL 实例文件。
-
-## 图形用户界面 (GUI)
-
-DistroNexus 现已包含一个现代化的图形界面 (`DistroNexus.exe`)，将强大的 PowerShell 脚本封装在用户友好的体验中。
-
-### 主要功能
-- **安装 (Install)**: 选择发行版家族/版本，配置用户，并实时监控安装日志。
-- **我的实例 (My Installs)**: 查看所有已注册的 WSL 发行版，检查其运行状态，以及一键卸载（注销 + 文件清理）。
-- **设置 (Settings)**: 配置默认安装路径和缓存位置。
-
-要启动 GUI：
-1.  确保你已安装 Go 环境和 Fyne 依赖。
-2.  运行构建后的可执行文件 `build/DistroNexus.exe`（如果已构建），或直接运行源码（见下文）。
-
-## 从源码构建
-
-本项目采用 Go 语言编写，使用了 [Fyne](https://fyne.io/) GUI 框架。
-
-### 前置要求
-
-*   **Go**: 版本 1.22 或更高。
-*   **C 编译器**: Windows 上推荐使用 TDM-GCC 或 MinGW-w64 (用于 Fyne 的 CGO 绑定)。
-*   **Fyne**: 将在首次运行时自动下载，或通过脚本配置。
-
-### 构建步骤
-
-1.  **设置环境**:
-    运行帮助脚本自动安装 Fyne 工具链。
-    ```powershell
-    .\tools\setup_go_env.sh
-    ```
-
-2.  **构建应用**:
-    使用提供的构建脚本生成带图标的 Windows 可执行文件。
-    ```powershell
-    .\tools\build.sh
-    ```
-    构建产物将位于 `build/DistroNexus.exe`。
-
-3.  **开发模式运行**:
-    如果你不想编译二进制文件，也可以直接运行源码：
-    ```powershell
-    go run .\src\main.go
-    ```
 
 ## 配置
 
@@ -66,14 +29,33 @@ DistroNexus 现已包含一个现代化的图形界面 (`DistroNexus.exe`)，将
 ```json
 {
     "DefaultInstallPath": "D:\\WSL",
-    "DefaultDistro": "Ubuntu-24.04",
-    "DistroCachePath": "..\\..\\distro"
+    "PackageCachePath": "D:\\WSL_Cache",
+    "DefaultTerminalStartPath": "~",
+    "DefaultDistro": "Ubuntu-24.04"
 }
 ```
 
 *   `DefaultInstallPath`: 如果未提供路径，发行版将被安装到的根目录。
+*   `PackageCachePath`: 下载离线包的存储目录。
+*   `DefaultTerminalStartPath`: 打开终端时的默认启动目录 (例如 `~` 代表用户主目录，或 `/mnt/c/`)。
 *   `DefaultDistro`: 快速模式下默认使用的发行版标识符。
-*   `DistroCachePath`: 下载离线包的存储目录。可以是绝对路径或相对于 `scripts/` 的相对路径。
+
+## 图形用户界面 (GUI)
+
+DistroNexus 现已包含一个现代化的图形界面 (`DistroNexus.exe`)，将强大的 PowerShell 脚本封装在用户友好的体验中。
+
+### 主要功能
+- **安装 (Install)**: 选择发行版家族/版本，配置用户，并实时监控安装日志。支持“快速模式”一键设置。
+- **我的实例 (My Installs)**: 
+    - 查看所有已注册的 WSL 发行版。
+    - **操作面板**: 直接在卡片上停止、移动、重命名、设置凭据和卸载实例。
+    - **磁盘使用量**: 监控每个发行版虚拟磁盘的大小。
+- **包管理器 (Package Manager)**: 查看本地缓存的发行版包，查看其大小，并删除未使用的文件。
+- **设置 (Settings)**: 配置默认路径（安装、缓存、终端）并支持重置配置。
+
+![App Icon](tools/icon.png)
+
+## 从源码构建
 
 ## 脚本说明
 
@@ -131,6 +113,26 @@ DistroNexus 现已包含一个现代化的图形界面 (`DistroNexus.exe`)，将
     *   `-user`: 默认创建的用户名。
     *   `-pass`: 默认用户的密码。
 
+### 3. 管理脚本
+
+*   **`move_instance.ps1`**: 将 WSL 实例移动到新位置（安全导出 -> 注销 -> 导入）。
+*   **`rename_instance.ps1`**: 重命名 WSL 实例的注册表项。
+*   **`start_instance.ps1`**: 启动发行版，可选指定启动目录 (`-StartPath`)。
+*   **`stop_instance.ps1`**: 终止正在运行的实例。
+*   **`set_credentials.ps1`**: 配置发行版内的默认用户和密码。
+
+### 4. `download_all_distros.ps1`
+
+将所有（或指定的）WSL 发行版安装包下载到配置的缓存路径。
+
+### 5. `scan_wsl_instances.ps1`
+
+扫描 `wsl -l -v` 的输出并同步内部的 `config/instances.json` 注册表。
+
+### 基础架构
+
+*   **`pwsh_utils.ps1`**: 用于日志记录和通用功能的共享库。日志存储在 `logs/` 目录中，支持轮转。
+
 ## 项目结构
 
 ```
@@ -140,20 +142,27 @@ DistroNexus/
 │   ├── distros.json              # 发行版定义
 │   └── settings.json             # 用户设置
 ├── scripts/                      # PowerShell 后端脚本
-│   ├── download_all_distros.ps1  # 下载工具脚本
-│   ├── install_wsl_custom.ps1    # 安装工具脚本
-│   ├── list_distros.ps1          # 列表辅助脚本
-│   └── uninstall_wsl_custom.ps1  # 卸载工具脚本
+│   ├── download_all_distros.ps1  # 下载器
+│   ├── install_wsl_custom.ps1    # 安装器
+│   ├── move_instance.ps1         # 移动逻辑
+│   ├── pwsh_utils.ps1            # 日志与工具
+│   ├── rename_instance.ps1       # 重命名逻辑
+│   ├── scan_wsl_instances.ps1    # 注册表同步
+│   ├── set_credentials.ps1       # 用户/密码逻辑
+│   ├── start_instance.ps1        # 启动器
+│   ├── stop_instance.ps1         # 终止器
+│   └── uninstall_wsl_custom.ps1  # 卸载器
 ├── src/                          # Go 源代码
 │   ├── cmd/                      # 入口点
 │   ├── internal/                 # 应用逻辑 & UI
+│   │   ├── config/               # 配置加载器
+│   │   ├── logic/                # 后端逻辑
+│   │   ├── model/                # 数据类型
+│   │   └── ui/                   # Fyne UI 组件
 │   ├── go.mod                    # Go 依赖定义
 │   └── vendor/                   # 依赖包副本
 ├── tools/                        # 构建工具和资源
-│   ├── build.sh
-│   ├── gen_gear.go               # 图标生成器
-│   ├── icon.png                  # 应用图标
-│   └── setup_go_env.sh           # 环境设置脚本
+├── docs/                         # 文档与归档
 ├── README.md                     # 英文说明文档
 └── README_CN.md                  # 中文说明文档
 ```
