@@ -26,7 +26,12 @@ jobs:
       shell: pwsh
 
     - name: Install Fyne CLI
-      run: go install fyne.io/fyne/v2/cmd/fyne@latest
+      # Install the new Fyne CLI tool (replaces fyne.io/fyne/v2/cmd/fyne)
+      run: go install fyne.io/tools/cmd/fyne@latest
+
+    - name: Add Go Bin to Path
+      run: echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      shell: bash
 
     - name: Update Distro List
       run: ./scripts/update_distros.ps1

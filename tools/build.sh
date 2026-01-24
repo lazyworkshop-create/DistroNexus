@@ -71,8 +71,12 @@ if [ -n "$CC_CMD" ]; then
         # Let's assume we run it in src/cmd/gui? But go.mod is in src.
         
         # Best approach: Run in src.
-        # Use .png path for icon
-        CC=$CC_CMD CGO_ENABLED=1 fyne package -os windows -icon "$PROJECT_ROOT/tools/icon.png" -name DistroNexus --src ./cmd/gui
+        # Use relative path for icon to avoid MSYS/Windows path conversion issues
+        # SRC_DIR is src/, so tools/ is ../tools/
+        ICON_PATH="../tools/icon.png"
+        
+        echo "Executing: CC=$CC_CMD CGO_ENABLED=1 fyne package -os windows -icon $ICON_PATH -name DistroNexus --src ./cmd/gui"
+        CC=$CC_CMD CGO_ENABLED=1 fyne package -os windows -icon "$ICON_PATH" -name DistroNexus --src ./cmd/gui
         
         # It seems fyne package outputs to the src directory if specified with --src?
         # Check where it fell.
