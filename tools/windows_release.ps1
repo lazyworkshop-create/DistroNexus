@@ -37,7 +37,7 @@ if (-not (Get-Command gcc -ErrorAction SilentlyContinue)) {
 }
 
 # Build using Fyne or Go
-Push-Locate $SrcDir
+Push-Location $SrcDir
     Write-Host "Tidying modules..."
     go mod tidy
 
