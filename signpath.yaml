@@ -1,0 +1,14 @@
+# SignPath Policy Configuration
+# Place this at the root of your repository if SignPath is configured to read from SCM.
+
+version: 1.0
+project: DistroNexus
+signing-policies:
+  - name: release-signing
+    # Using an OSS certificate usually managed by SignPath
+    certificate: oss-code-signing
+    # Auto-approval for protected branches or specific conditions
+    approval: auto
+webhook:
+  # Optional: Callback when signing is done
+  url: https://github.com/DistroNexus/DistroNexus/actions

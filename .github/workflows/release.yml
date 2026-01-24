@@ -7,59 +7,65 @@ on:
 
 jobs:
   build-and-release:
-    name: Build & Release
+    name: Build and Release
     runs-on: ubuntu-latest
     
-    permissions:
-      contents: write
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.22'
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.22'
 
-      - name: Setup Environment
-        run: |
-          chmod +x tools/setup_go_env.sh
-          ./tools/setup_go_env.sh
+    - name: Setup Environment (Deps & Tools)
+      run: |
+        chmod +x ./tools/setup_go_env.sh
+        ./tools/setup_go_env.sh
+        # Add GOPATH/bin to PATH for subsequent steps (to find 'fyne')
+        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
-      - name: Generate Icon
-        run: |
-          go run tools/gen_gear.go
+    - name: Install Inno Setup
+      uses: minijazz/inno-setup-action@v1.0.1
+      # On Linux, this sets up Wine and ISCC
 
-      - name: Build for Windows
-        env:
-          CC: x86_64-w64-mingw32-gcc
-        run: |
-          chmod +x tools/build.sh
-          
-          # Run build script
-          ./tools/build.sh
-          
-          # Zip the build output (containing exe, config, and scripts)
-          cd build
-          zip -r ../DistroNexus-Windows-x64.zip .
-          cd ..
+    - name: Build Binary
+      run: |
+        chmod +x ./tools/build.sh
+        ./tools/build.sh
 
-      - name: Check for Release Note
-        id: release_note
-        run: |
-          TAG_NAME=${GITHUB_REF#refs/tags/}
-          NOTE_FILE="docs/release_notes/${TAG_NAME}.md"
-          if [ -f "$NOTE_FILE" ]; then
-            echo "path=$NOTE_FILE" >> $GITHUB_OUTPUT
-          else
-            echo "path=" >> $GITHUB_OUTPUT
-          fi
+    - name: Update Distro List
+      run: |
+        SHELL=pwsh pwsh ./scripts/update_distros.ps1
+      shell: bash
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          files: DistroNexus-Windows-x64.zip
-          body_path: ${{ steps.release_note.outputs.path }}
-          generate_release_notes: true
+    - name: Package (Zip and Installer)
+      run: |
+        chmod +x ./tools/packaging/package.sh
+        # Pass the tag version (remove 'v' prefix)
+        VERSION=${GITHUB_REF#refs/tags/v}
+        ./tools/packaging/package.sh $VERSION
+
+    # Code Signing Step (Start)
+    # This step requires setting up SignPath project and secrets
+    # Uncomment and configure when ready
+    # - name: Sign with SignPath
+    #   uses: signpath/github-action@v1
+    #   with:
+    #     api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+    #     signing-policy-slug: release-signing
+    #     artifact-file: release/DistroNexus_Setup_*.exe
+    #     output-artifact-file: release/DistroNexus_Setup_Signed.exe
+    # Code Signing Step (End)
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        body_path: docs/release_notes/${{ github.ref_name }}.md
+        files: |
+          release/*.zip
+          release/*.exe
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

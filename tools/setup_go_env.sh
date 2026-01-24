@@ -70,8 +70,8 @@ echo "Found: $GO_VERSION"
 # 2. Check Fyne system dependencies (Linux only)
 echo "[2/4] Checking System Dependencies..."
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    # Standard Fyne deps + Cross compilation deps
-    REQUIRED_PACKAGES="gcc libgl1-mesa-dev xorg-dev gcc-mingw-w64"
+    # Standard Fyne deps + Cross compilation deps + Packaging tools
+    REQUIRED_PACKAGES="gcc libgl1-mesa-dev xorg-dev gcc-mingw-w64 zip"
     MISSING_PACKAGES=""
     
     if command -v dpkg &> /dev/null; then

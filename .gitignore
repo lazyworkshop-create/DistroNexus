@@ -39,3 +39,4 @@ go.work
 Thumbs.db
 
 src/main
+release/
