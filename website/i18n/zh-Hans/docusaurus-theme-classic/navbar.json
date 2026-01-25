@@ -1,0 +1,22 @@
+{
+  "title": {
+    "message": "DistroNexus",
+    "description": "The title in the navbar"
+  },
+  "logo.alt": {
+    "message": "DistroNexus Logo",
+    "description": "The alt text of navbar logo"
+  },
+  "item.label.Documentation": {
+    "message": "文档",
+    "description": "Navbar item with label Documentation"
+  },
+  "item.label.Release Notes": {
+    "message": "发布日志",
+    "description": "Navbar item with label Release Notes"
+  },
+  "item.label.GitHub": {
+    "message": "GitHub",
+    "description": "Navbar item with label GitHub"
+  }
+}
