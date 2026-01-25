@@ -90,5 +90,5 @@ We will create a specific directory (e.g., `website/` or `docs-site/`) to contai
     - [x] Create `.github/workflows/deploy-site.yml` to build and deploy to `gh-pages` branch.
 
 - [ ] **Verification**
-    - [ ] Build locally to test links and images.
+    - [x] Build locally to test links and images.
     - [ ] Push and verify GitHub Pages deployment.
