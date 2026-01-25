@@ -4,6 +4,11 @@
 
 **DistroNexus** is a comprehensive GUI application (powered by PowerShell) designed to simplify the management, downloading, and custom installation of Windows Subsystem for Linux (WSL) distributions. It acts as a central hub for your WSL needs, allowing you to forge your perfect Linux environment on Windows.
 
+## 📘 Documentation
+
+Full documentation and user guides are hosted on our official website:
+👉 **[https://lazyworkshop-create.github.io/DistroNexus/](https://lazyworkshop-create.github.io/DistroNexus/)**
+
 ## Features
 
 *   **Modern GUI Dashboard**: A cross-platform graphical interface (built with Fyne) to manage everything visually.
