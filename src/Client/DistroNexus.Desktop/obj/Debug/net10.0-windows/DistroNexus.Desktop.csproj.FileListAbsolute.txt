@@ -92,3 +92,7 @@ D:\wsl\DistroNexus\src\Client\DistroNexus.Desktop\obj\Debug\net10.0-windows\ref\
 D:\wsl\DistroNexus\src\Client\DistroNexus.Desktop\obj\Debug\net10.0-windows\GeneratedInternalTypeHelper.g.cs
 D:\wsl\DistroNexus\src\Client\DistroNexus.Desktop\bin\Debug\net10.0-windows\Microsoft.Extensions.Http.dll
 D:\wsl\DistroNexus\src\Client\DistroNexus.Desktop\obj\Debug\net10.0-windows\App.baml
+D:\wsl\DistroNexus\src\Client\DistroNexus.Desktop\obj\Debug\net10.0-windows\Views\PackageManagerPage.g.cs
+D:\wsl\DistroNexus\src\Client\DistroNexus.Desktop\obj\Debug\net10.0-windows\Views\SettingsPage.g.cs
+D:\wsl\DistroNexus\src\Client\DistroNexus.Desktop\obj\Debug\net10.0-windows\Views\PackageManagerPage.baml
+D:\wsl\DistroNexus\src\Client\DistroNexus.Desktop\obj\Debug\net10.0-windows\Views\SettingsPage.baml

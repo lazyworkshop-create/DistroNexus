@@ -2,6 +2,8 @@
 using System.Windows;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Services;
+using DistroNexus.Desktop.ViewModels;
+using DistroNexus.Desktop.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -11,7 +13,7 @@ namespace DistroNexus.Desktop;
 /// <summary>
 /// Interaction logic for App.xaml
 /// </summary>
-public partial class App : Application
+public partial class App : System.Windows.Application
 {
     private IHost? _host;
 
@@ -31,8 +33,15 @@ public partial class App : Application
                 services.AddSingleton<ISettingsService, SettingsService>();
                 services.AddSingleton<ICatalogService, CatalogService>();
 
-                // Register MainWindow
+                // Register ViewModels
+                services.AddTransient<MainViewModel>();
+                services.AddTransient<SettingsViewModel>();
+                services.AddTransient<PackageManagerViewModel>();
+
+                // Register Views/Pages
                 services.AddSingleton<MainWindow>();
+                services.AddTransient<SettingsPage>();
+                services.AddTransient<PackageManagerPage>();
 
                 // Configure logging
                 services.AddLogging(builder =>

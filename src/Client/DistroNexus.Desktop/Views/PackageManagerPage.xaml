@@ -1,0 +1,112 @@
+<Page x:Class="DistroNexus.Desktop.Views.PackageManagerPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:vm="clr-namespace:DistroNexus.Desktop.ViewModels"
+      mc:Ignorable="d"
+      Title="Package Manager"
+      d:DataContext="{d:DesignInstance Type=vm:PackageManagerViewModel}">
+    
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Toolbar -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
+            <ui:Button Content="Refresh Catalog" 
+                      Icon="{ui:SymbolIcon Symbol=ArrowSync20}"
+                      Command="{Binding RefreshCatalogCommand}"
+                      Margin="0,0,10,0"/>
+            <ui:TextBox PlaceholderText="Search distributions..." 
+                       Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
+                       Width="300"
+                       Margin="0,0,10,0"/>
+            <ui:Button Content="Search" 
+                      Icon="{ui:SymbolIcon Symbol=Search20}"
+                      Command="{Binding SearchCommand}"/>
+        </StackPanel>
+
+        <!-- Status Bar -->
+        <ui:InfoBar Grid.Row="1" 
+                    Title="{Binding StatusMessage}"
+                    IsOpen="True"
+                    Severity="Informational"
+                    IsClosable="False"
+                    Margin="0,0,0,15"/>
+
+        <!-- Package List -->
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding FilteredPackages}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <ui:Card Margin="0,0,0,10" Padding="15">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Icon (placeholder) -->
+                                <ui:SymbolIcon Grid.Column="0" 
+                                              Symbol="Box20" 
+                                              FontSize="48"
+                                              Margin="0,0,15,0"/>
+
+                                <!-- Package Info -->
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="{Binding Name}" 
+                                              FontSize="18" 
+                                              FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding Version}" 
+                                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                              Margin="0,2,0,0"/>
+                                    <TextBlock Text="{Binding Description}" 
+                                              Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                              TextWrapping="Wrap"
+                                              Margin="0,5,0,0"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                        <ui:Badge Content="{Binding Category}" 
+                                                 Appearance="Secondary"
+                                                 Margin="0,0,5,0"/>
+                                        <TextBlock Text="{Binding FileSize, Converter={StaticResource FileSizeFormatter}}" 
+                                                  Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Actions -->
+                                <StackPanel Grid.Column="2" 
+                                           VerticalAlignment="Center">
+                                    <ui:Button Content="Download" 
+                                              Icon="{ui:SymbolIcon Symbol=ArrowDownload20}"
+                                              Command="{Binding DataContext.DownloadPackageCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                              CommandParameter="{Binding}"
+                                              Appearance="Primary"/>
+                                </StackPanel>
+                            </Grid>
+                        </ui:Card>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <!-- Loading Overlay -->
+        <Grid Grid.Row="2" 
+              Background="#80000000" 
+              Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                <ui:ProgressRing IsIndeterminate="True" Width="50" Height="50"/>
+                <TextBlock Text="Loading catalog..." 
+                          Foreground="White" 
+                          FontSize="16" 
+                          Margin="0,10,0,0"
+                          HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Page>

@@ -1,0 +1,202 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using DistroNexus.Core.Interfaces;
+using DistroNexus.Core.Models;
+using Microsoft.Extensions.Logging;
+using System.Collections.ObjectModel;
+using System.Windows;
+
+namespace DistroNexus.Desktop.ViewModels;
+
+/// <summary>
+/// View model for the package manager page.
+/// </summary>
+public partial class PackageManagerViewModel : ObservableObject
+{
+    private readonly ICatalogService _catalogService;
+    private readonly IDownloadService _downloadService;
+    private readonly ILogger<PackageManagerViewModel> _logger;
+
+    [ObservableProperty]
+    private ObservableCollection<DistroPackage> _packages = new();
+
+    [ObservableProperty]
+    private ObservableCollection<DistroPackage> _filteredPackages = new();
+
+    [ObservableProperty]
+    private DistroPackage? _selectedPackage;
+
+    [ObservableProperty]
+    private string _searchQuery = string.Empty;
+
+    [ObservableProperty]
+    private bool _isLoading;
+
+    [ObservableProperty]
+    private string _statusMessage = "Ready";
+
+    public PackageManagerViewModel(
+        ICatalogService catalogService,
+        IDownloadService downloadService,
+        ILogger<PackageManagerViewModel> logger)
+    {
+        _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
+        _downloadService = downloadService ?? throw new ArgumentNullException(nameof(downloadService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
+
+    [RelayCommand]
+    private async Task LoadCatalogAsync()
+    {
+        try
+        {
+            IsLoading = true;
+            StatusMessage = "Loading distribution catalog...";
+
+            _logger.LogInformation("Loading distribution catalog");
+
+            var packages = await _catalogService.LoadCatalogAsync();
+            
+            Packages.Clear();
+            FilteredPackages.Clear();
+            
+            foreach (var package in packages)
+            {
+                Packages.Add(package);
+                FilteredPackages.Add(package);
+            }
+
+            StatusMessage = $"Loaded {Packages.Count} distribution(s)";
+            _logger.LogInformation("Loaded {Count} distributions", Packages.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load catalog");
+            StatusMessage = $"Error loading catalog: {ex.Message}";
+            MessageBox.Show($"Failed to load catalog: {ex.Message}", 
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task RefreshCatalogAsync()
+    {
+        try
+        {
+            IsLoading = true;
+            StatusMessage = "Refreshing catalog from remote source...";
+
+            _logger.LogInformation("Refreshing catalog");
+
+            await _catalogService.RefreshCatalogAsync();
+            await LoadCatalogAsync();
+
+            MessageBox.Show("Catalog refreshed successfully", 
+                "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to refresh catalog");
+            StatusMessage = $"Error refreshing catalog: {ex.Message}";
+            MessageBox.Show($"Failed to refresh catalog: {ex.Message}", 
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task SearchAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Searching for '{Query}'", SearchQuery);
+
+            var results = await _catalogService.SearchDistributionsAsync(SearchQuery);
+            
+            FilteredPackages.Clear();
+            foreach (var package in results)
+            {
+                FilteredPackages.Add(package);
+            }
+
+            StatusMessage = $"Found {FilteredPackages.Count} matching distribution(s)";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Search failed");
+            MessageBox.Show($"Search failed: {ex.Message}", 
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    [RelayCommand]
+    private async Task DownloadPackageAsync(DistroPackage package)
+    {
+        if (package == null)
+            return;
+
+        try
+        {
+            _logger.LogInformation("Downloading package {PackageName}", package.Name);
+
+            var downloadsPath = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), 
+                "Downloads", 
+                "DistroNexus");
+
+            if (!System.IO.Directory.Exists(downloadsPath))
+                System.IO.Directory.CreateDirectory(downloadsPath);
+
+            var fileName = System.IO.Path.GetFileName(new Uri(package.DownloadUrl).LocalPath);
+            var destination = System.IO.Path.Combine(downloadsPath, fileName);
+
+            var progress = new Progress<double>(percent =>
+            {
+                StatusMessage = $"Downloading {package.Name}: {percent:F1}%";
+            });
+
+            var success = await _downloadService.DownloadFileAsync(
+                package.DownloadUrl, 
+                destination, 
+                progress);
+
+            if (success)
+            {
+                StatusMessage = $"Downloaded {package.Name} successfully";
+                MessageBox.Show($"Package downloaded to:\n{destination}", 
+                    "Download Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                StatusMessage = "Download failed";
+                MessageBox.Show("Download failed. Please try again.", 
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to download package");
+            MessageBox.Show($"Failed to download package: {ex.Message}", 
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    partial void OnSearchQueryChanged(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            FilteredPackages.Clear();
+            foreach (var package in Packages)
+            {
+                FilteredPackages.Add(package);
+            }
+        }
+    }
+}

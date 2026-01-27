@@ -1,0 +1,109 @@
+<Page x:Class="DistroNexus.Desktop.Views.SettingsPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:vm="clr-namespace:DistroNexus.Desktop.ViewModels"
+      mc:Ignorable="d"
+      Title="Settings"
+      d:DataContext="{d:DesignInstance Type=vm:SettingsViewModel}">
+    
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="20" MaxWidth="800">
+            <!-- General Settings -->
+            <ui:CardControl Header="General Settings" Margin="0,0,0,20">
+                <StackPanel>
+                    <TextBlock Text="Default Installation Path" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBox Grid.Column="0" 
+                                   Text="{Binding DefaultInstallPath, UpdateSourceTrigger=PropertyChanged}"
+                                   Margin="0,0,10,0"/>
+                        <ui:Button Grid.Column="1" 
+                                  Content="Browse"
+                                  Command="{Binding BrowseInstallPathCommand}"/>
+                    </Grid>
+
+                    <TextBlock Text="Default WSL Version" FontWeight="SemiBold" Margin="0,15,0,5"/>
+                    <ComboBox SelectedIndex="{Binding DefaultWslVersion, Converter={StaticResource WslVersionConverter}}">
+                        <ComboBoxItem Content="WSL 1"/>
+                        <ComboBoxItem Content="WSL 2" IsSelected="True"/>
+                    </ComboBox>
+
+                    <TextBlock Text="Default Username" FontWeight="SemiBold" Margin="0,15,0,5"/>
+                    <ui:TextBox Text="{Binding DefaultUsername, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <ui:CardExpander Header="Advanced Options" Margin="0,15,0,0">
+                        <StackPanel>
+                            <CheckBox Content="Enable Logging" 
+                                     IsChecked="{Binding EnableLogging}"
+                                     Margin="0,5"/>
+                            <CheckBox Content="Check for Updates on Startup" 
+                                     IsChecked="{Binding CheckUpdatesOnStartup}"
+                                     Margin="0,5"/>
+                            <CheckBox Content="Show Confirmation Dialogs" 
+                                     IsChecked="{Binding ShowConfirmationDialogs}"
+                                     Margin="0,5"/>
+                        </StackPanel>
+                    </ui:CardExpander>
+                </StackPanel>
+            </ui:CardControl>
+
+            <!-- Download Settings -->
+            <ui:CardControl Header="Download Settings" Margin="0,0,0,20">
+                <StackPanel>
+                    <TextBlock Text="Catalog URL" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                    <ui:TextBox Text="{Binding CatalogUrl, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Text="Max Concurrent Downloads" FontWeight="SemiBold" Margin="0,15,0,5"/>
+                    <ui:NumberBox Value="{Binding MaxConcurrentDownloads}"/>
+
+                    <CheckBox Content="Auto Retry Failed Downloads" 
+                             IsChecked="{Binding AutoRetryDownloads}"
+                             Margin="0,15"/>
+
+                    <TextBlock Text="Max Retry Attempts" FontWeight="SemiBold" Margin="0,10,0,5"/>
+                    <ui:NumberBox Value="{Binding MaxRetryAttempts}"/>
+                </StackPanel>
+            </ui:CardControl>
+
+            <!-- Appearance Settings -->
+            <ui:CardControl Header="Appearance" Margin="0,0,0,20">
+                <StackPanel>
+                    <TextBlock Text="Theme" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                    <ComboBox SelectedItem="{Binding Theme}">
+                        <ComboBoxItem Content="Light"/>
+                        <ComboBoxItem Content="Dark"/>
+                        <ComboBoxItem Content="Auto" IsSelected="True"/>
+                    </ComboBox>
+
+                    <TextBlock Text="Language" FontWeight="SemiBold" Margin="0,15,0,5"/>
+                    <ComboBox SelectedItem="{Binding Language}">
+                        <ComboBoxItem Content="English (US)" Tag="en-US" IsSelected="True"/>
+                        <ComboBoxItem Content="简体中文" Tag="zh-CN"/>
+                    </ComboBox>
+                </StackPanel>
+            </ui:CardControl>
+
+            <!-- Action Buttons -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <ui:Button Content="Reset to Defaults" 
+                          Command="{Binding ResetSettingsCommand}"
+                          Margin="0,0,10,0"/>
+                <ui:Button Content="Save Settings" 
+                          Command="{Binding SaveSettingsCommand}"
+                          Appearance="Primary"/>
+            </StackPanel>
+
+            <!-- Dirty Indicator -->
+            <TextBlock Text="* You have unsaved changes" 
+                      Foreground="Orange"
+                      Margin="0,10,0,0"
+                      Visibility="{Binding IsDirty, Converter={StaticResource BoolToVisibilityConverter}}"/>
+        </StackPanel>
+    </ScrollViewer>
+</Page>
