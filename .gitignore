@@ -33,6 +33,12 @@ go.work
 # IDE
 .vscode/
 .idea/
+.vs/
+
+# .NET Build outputs
+**/bin/
+**/obj/
+**/.vs/
 
 # OS specific
 .DS_Store

@@ -19,8 +19,11 @@ public class PowerShellService : IPowerShellService, IDisposable
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         
-        // Create a runspace for PowerShell execution
-        _runspace = RunspaceFactory.CreateRunspace();
+        // Create a runspace with minimal configuration to avoid snap-in loading issues
+        var initialSessionState = InitialSessionState.CreateDefault();
+        initialSessionState.ThrowOnRunspaceOpenError = true;
+        
+        _runspace = RunspaceFactory.CreateRunspace(initialSessionState);
         _runspace.Open();
         
         _logger.LogInformation("PowerShell service initialized");
