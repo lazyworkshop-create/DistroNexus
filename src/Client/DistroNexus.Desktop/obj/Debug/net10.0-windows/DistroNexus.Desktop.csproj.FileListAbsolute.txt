@@ -89,3 +89,6 @@ D:\wsl\DistroNexus\src\Client\DistroNexus.Desktop\obj\Debug\net10.0-windows\refi
 D:\wsl\DistroNexus\src\Client\DistroNexus.Desktop\obj\Debug\net10.0-windows\DistroNexus.Desktop.pdb
 D:\wsl\DistroNexus\src\Client\DistroNexus.Desktop\obj\Debug\net10.0-windows\DistroNexus.Desktop.genruntimeconfig.cache
 D:\wsl\DistroNexus\src\Client\DistroNexus.Desktop\obj\Debug\net10.0-windows\ref\DistroNexus.Desktop.dll
+D:\wsl\DistroNexus\src\Client\DistroNexus.Desktop\obj\Debug\net10.0-windows\GeneratedInternalTypeHelper.g.cs
+D:\wsl\DistroNexus\src\Client\DistroNexus.Desktop\bin\Debug\net10.0-windows\Microsoft.Extensions.Http.dll
+D:\wsl\DistroNexus\src\Client\DistroNexus.Desktop\obj\Debug\net10.0-windows\App.baml
