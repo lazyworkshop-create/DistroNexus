@@ -2,6 +2,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
+using DistroNexus.Desktop.Views;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
 using System.Windows;
@@ -15,6 +17,8 @@ public partial class MainViewModel : ObservableObject
 {
     private readonly IWslManagerService _wslManager;
     private readonly ISettingsService _settingsService;
+    private readonly INavigationService _navigationService;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<MainViewModel> _logger;
 
     [ObservableProperty]
@@ -29,14 +33,69 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _statusMessage = "Ready";
 
+    [ObservableProperty]
+    private object? _currentPage;
+
+    [ObservableProperty]
+    private bool _isOnDashboard = true;
+
     public MainViewModel(
         IWslManagerService wslManager,
         ISettingsService settingsService,
+        INavigationService navigationService,
+        IServiceProvider serviceProvider,
         ILogger<MainViewModel> logger)
     {
         _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
+        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+        // Start auto-refresh timer
+        StartAutoRefresh();
+    }
+
+    private System.Timers.Timer? _refreshTimer;
+
+    private void StartAutoRefresh()
+    {
+        _refreshTimer = new System.Timers.Timer(10000); // Refresh every 10 seconds
+        _refreshTimer.Elapsed += async (s, e) =>
+        {
+            if (IsOnDashboard && !IsLoading)
+            {
+                await RefreshInstanceStatesAsync();
+            }
+        };
+        _refreshTimer.Start();
+    }
+
+    /// <summary>
+    /// Refreshes only the instance states without full reload.
+    /// </summary>
+    private async Task RefreshInstanceStatesAsync()
+    {
+        try
+        {
+            var instances = await _wslManager.GetInstancesAsync();
+            
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                foreach (var currentInstance in Instances)
+                {
+                    var updated = instances.FirstOrDefault(i => i.Name == currentInstance.Name);
+                    if (updated != null && updated.State != currentInstance.State)
+                    {
+                        currentInstance.UpdateState(updated.State);
+                    }
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to refresh instance states");
+        }
     }
 
     [RelayCommand]
@@ -80,24 +139,60 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void ShowDashboard()
+    {
+        StatusMessage = "Dashboard";
+        CurrentPage = null;
+        IsOnDashboard = true;
+        _logger.LogInformation("Navigated to dashboard");
+    }
+
+    [RelayCommand]
     private void ShowSettings()
     {
-        StatusMessage = "Opening settings...";
-        // TODO: Navigate to settings page
+        StatusMessage = "Settings";
+        var settingsPage = _serviceProvider.GetRequiredService<SettingsPage>();
+        CurrentPage = settingsPage;
+        IsOnDashboard = false;
+        _logger.LogInformation("Navigated to settings");
     }
 
     [RelayCommand]
     private void ShowInstallWizard()
     {
         StatusMessage = "Opening installation wizard...";
-        // TODO: Show install wizard dialog
+        _logger.LogInformation("Opening install wizard");
+
+        var dialog = _serviceProvider.GetRequiredService<InstallWizardDialog>();
+        dialog.Owner = Application.Current.MainWindow;
+        
+        var result = dialog.ShowDialog();
+        
+        if (result == true)
+        {
+            StatusMessage = "Installation completed - refreshing instances...";
+            _ = LoadInstancesAsync();
+        }
+        else
+        {
+            StatusMessage = "Ready";
+        }
     }
 
     [RelayCommand]
     private void ShowPackageManager()
     {
-        StatusMessage = "Opening package manager...";
-        // TODO: Navigate to package manager page
+        StatusMessage = "Package Manager";
+        var packagePage = _serviceProvider.GetRequiredService<PackageManagerPage>();
+        CurrentPage = packagePage;
+        IsOnDashboard = false;
+        _logger.LogInformation("Navigated to package manager");
+    }
+
+    [RelayCommand]
+    private void GoBack()
+    {
+        ShowDashboard();
     }
 }
 
@@ -117,6 +212,12 @@ public partial class WslInstanceViewModel : ObservableObject
     public bool IsRunning => Instance.IsRunning;
     public string InstallPath => Instance.InstallPath;
     public string Distribution => Instance.Distribution;
+    public long DiskSize => Instance.Size;
+    
+    /// <summary>
+    /// Gets the disk size formatted for display.
+    /// </summary>
+    public string DiskSizeDisplay => FormatFileSize(DiskSize);
 
     public WslInstanceViewModel(
         WslInstance instance, 
@@ -126,6 +227,31 @@ public partial class WslInstanceViewModel : ObservableObject
         _instance = instance;
         _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
+
+    private static string FormatFileSize(long bytes)
+    {
+        if (bytes <= 0) return "Unknown";
+        string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+        int order = 0;
+        double size = bytes;
+        while (size >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            size /= 1024;
+        }
+        return $"{size:0.##} {sizes[order]}";
+    }
+
+    /// <summary>
+    /// Updates the instance state and notifies property changes.
+    /// </summary>
+    /// <param name="newState">The new state value.</param>
+    public void UpdateState(string newState)
+    {
+        Instance.State = newState;
+        OnPropertyChanged(nameof(State));
+        OnPropertyChanged(nameof(IsRunning));
     }
 
     [RelayCommand]
@@ -201,6 +327,168 @@ public partial class WslInstanceViewModel : ObservableObject
         {
             _logger.LogError(ex, "Failed to remove instance {Name}", Name);
             MessageBox.Show($"Failed to remove instance: {ex.Message}", 
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    [RelayCommand]
+    private void OpenTerminal()
+    {
+        try
+        {
+            _logger.LogInformation("Opening terminal for instance {Name}", Name);
+            
+            var startInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "wt.exe",
+                Arguments = $"-w 0 wsl -d {Name}",
+                UseShellExecute = true
+            };
+            
+            System.Diagnostics.Process.Start(startInfo);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to open terminal for instance {Name}", Name);
+            
+            // Fallback to cmd if Windows Terminal is not available
+            try
+            {
+                var startInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "cmd.exe",
+                    Arguments = $"/c wsl -d {Name}",
+                    UseShellExecute = true
+                };
+                System.Diagnostics.Process.Start(startInfo);
+            }
+            catch (Exception fallbackEx)
+            {
+                _logger.LogError(fallbackEx, "Failed to open fallback terminal for instance {Name}", Name);
+                MessageBox.Show($"Failed to open terminal: {ex.Message}", 
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+    }
+
+    [RelayCommand]
+    private async Task MoveAsync()
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = $"Select new location for '{Name}'"
+        };
+
+        if (dialog.ShowDialog() != true)
+            return;
+
+        var newPath = dialog.FolderName;
+
+        var confirm = MessageBox.Show(
+            $"Move instance '{Name}' to:\n{newPath}\n\nThis may take a while depending on the instance size.",
+            "Confirm Move",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+
+        if (confirm != MessageBoxResult.Yes)
+            return;
+
+        try
+        {
+            _logger.LogInformation("Moving instance {Name} to {NewPath}", Name, newPath);
+            
+            await _wslManager.MoveInstanceAsync(Name, newPath);
+            
+            Instance.InstallPath = newPath;
+            OnPropertyChanged(nameof(InstallPath));
+            
+            MessageBox.Show($"Instance '{Name}' moved successfully", 
+                "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to move instance {Name}", Name);
+            MessageBox.Show($"Failed to move instance: {ex.Message}", 
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    [RelayCommand]
+    private async Task RenameAsync()
+    {
+        var inputDialog = new Wpf.Ui.Controls.MessageBox
+        {
+            Title = "Rename Instance",
+            Content = new System.Windows.Controls.TextBox
+            {
+                Text = Name,
+                MinWidth = 200
+            },
+            PrimaryButtonText = "Rename",
+            CloseButtonText = "Cancel"
+        };
+
+        var result = await inputDialog.ShowDialogAsync();
+        
+        if (result != Wpf.Ui.Controls.MessageBoxResult.Primary)
+            return;
+
+        var textBox = inputDialog.Content as System.Windows.Controls.TextBox;
+        var newName = textBox?.Text?.Trim();
+
+        if (string.IsNullOrEmpty(newName) || newName == Name)
+            return;
+
+        try
+        {
+            _logger.LogInformation("Renaming instance {OldName} to {NewName}", Name, newName);
+            
+            await _wslManager.RenameInstanceAsync(Name, newName);
+            
+            Instance.Name = newName;
+            OnPropertyChanged(nameof(Name));
+            
+            MessageBox.Show($"Instance renamed to '{newName}' successfully", 
+                "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to rename instance {Name}", Name);
+            MessageBox.Show($"Failed to rename instance: {ex.Message}", 
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    [RelayCommand]
+    private async Task SetCredentialsAsync()
+    {
+        // For now, show a simple dialog - in a full implementation, use a proper dialog
+        var username = Microsoft.VisualBasic.Interaction.InputBox(
+            "Enter username:",
+            "Set Credentials",
+            "root");
+
+        if (string.IsNullOrEmpty(username))
+            return;
+
+        var password = Microsoft.VisualBasic.Interaction.InputBox(
+            "Enter password:",
+            "Set Credentials",
+            "");
+
+        try
+        {
+            _logger.LogInformation("Setting credentials for instance {Name}", Name);
+            
+            await _wslManager.SetCredentialsAsync(Name, username, password);
+            
+            MessageBox.Show($"Credentials set successfully for '{Name}'", 
+                "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to set credentials for instance {Name}", Name);
+            MessageBox.Show($"Failed to set credentials: {ex.Message}", 
                 "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }

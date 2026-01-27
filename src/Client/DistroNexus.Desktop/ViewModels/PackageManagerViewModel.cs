@@ -197,6 +197,118 @@ public partial class PackageManagerViewModel : ObservableObject
             {
                 FilteredPackages.Add(package);
             }
+            UpdateGroupedPackages();
+        }
+        else
+        {
+            // Trigger search when user stops typing
+            _ = SearchAsync();
         }
     }
+
+    [ObservableProperty]
+    private ObservableCollection<PackageGroup> _groupedPackages = new();
+
+    [ObservableProperty]
+    private string _customSourceUrl = string.Empty;
+
+    /// <summary>
+    /// Updates the grouped packages collection based on category.
+    /// </summary>
+    private void UpdateGroupedPackages()
+    {
+        GroupedPackages.Clear();
+        
+        var groups = FilteredPackages
+            .GroupBy(p => string.IsNullOrEmpty(p.Category) ? "Other" : p.Category)
+            .OrderBy(g => g.Key);
+
+        foreach (var group in groups)
+        {
+            GroupedPackages.Add(new PackageGroup
+            {
+                Category = group.Key,
+                Packages = new ObservableCollection<DistroPackage>(group.ToList())
+            });
+        }
+    }
+
+    [RelayCommand]
+    private async Task DeletePackageAsync(DistroPackage package)
+    {
+        if (package == null)
+            return;
+
+        var result = MessageBox.Show(
+            $"Are you sure you want to delete the cached package '{package.Name}'?",
+            "Confirm Delete",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (result != MessageBoxResult.Yes)
+            return;
+
+        try
+        {
+            _logger.LogInformation("Deleting cached package {PackageName}", package.Name);
+            
+            await _catalogService.DeleteCachedPackageAsync(package.Id);
+            
+            package.IsCached = false;
+            StatusMessage = $"Deleted cached package: {package.Name}";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete cached package");
+            MessageBox.Show($"Failed to delete package: {ex.Message}", 
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    [RelayCommand]
+    private async Task AddCustomSourceAsync()
+    {
+        if (string.IsNullOrWhiteSpace(CustomSourceUrl))
+        {
+            MessageBox.Show("Please enter a valid URL", "Invalid URL", 
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        try
+        {
+            _logger.LogInformation("Adding custom source: {Url}", CustomSourceUrl);
+            
+            // Validate URL format
+            if (!Uri.TryCreate(CustomSourceUrl, UriKind.Absolute, out var uri))
+            {
+                MessageBox.Show("Invalid URL format", "Error", 
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            await _catalogService.AddCustomSourceAsync(CustomSourceUrl);
+            
+            CustomSourceUrl = string.Empty;
+            await LoadCatalogAsync();
+            
+            MessageBox.Show("Custom source added successfully", "Success", 
+                MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to add custom source");
+            MessageBox.Show($"Failed to add custom source: {ex.Message}", 
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+}
+
+/// <summary>
+/// Represents a group of packages by category.
+/// </summary>
+public class PackageGroup
+{
+    public string Category { get; set; } = string.Empty;
+    public ObservableCollection<DistroPackage> Packages { get; set; } = new();
 }

@@ -56,6 +56,16 @@ public class DistroPackage
     public bool IsOfficial { get; set; }
 
     /// <summary>
+    /// Gets or sets whether this package is cached locally.
+    /// </summary>
+    public bool IsCached { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether this package is from a custom source.
+    /// </summary>
+    public bool IsCustomSource { get; set; }
+
+    /// <summary>
     /// Gets or sets additional metadata as key-value pairs.
     /// </summary>
     public Dictionary<string, string> Metadata { get; set; } = new();

@@ -1,37 +1,12 @@
 {
   "Version": 1,
   "WorkspaceRootPath": "D:\\wsl\\DistroNexus\\src\\Client\\",
-  "Documents": [
-    {
-      "AbsoluteMoniker": "D:0:0:{C949793A-F64F-2971-0077-B4FD5E8D5095}|DistroNexus.Core\\DistroNexus.Core.csproj|d:\\wsl\\distronexus\\src\\client\\distronexus.core\\class1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{C949793A-F64F-2971-0077-B4FD5E8D5095}|DistroNexus.Core\\DistroNexus.Core.csproj|solutionrelative:distronexus.core\\class1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    }
-  ],
+  "Documents": [],
   "DocumentGroupContainers": [
     {
       "Orientation": 0,
       "VerticalTabListWidth": 256,
-      "DocumentGroups": [
-        {
-          "DockedWidth": 200,
-          "SelectedChildIndex": 0,
-          "Children": [
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "Class1.cs",
-              "DocumentMoniker": "D:\\wsl\\DistroNexus\\src\\Client\\DistroNexus.Core\\Class1.cs",
-              "RelativeDocumentMoniker": "DistroNexus.Core\\Class1.cs",
-              "ToolTip": "D:\\wsl\\DistroNexus\\src\\Client\\DistroNexus.Core\\Class1.cs",
-              "RelativeToolTip": "DistroNexus.Core\\Class1.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-01-27T14:57:14.63Z",
-              "EditorCaption": ""
-            }
-          ]
-        }
-      ]
+      "DocumentGroups": []
     }
   ]
 }

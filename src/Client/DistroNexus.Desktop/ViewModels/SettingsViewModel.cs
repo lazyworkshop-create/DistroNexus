@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using Microsoft.Extensions.Logging;
+using System.Collections.ObjectModel;
 using System.Windows;
 
 namespace DistroNexus.Desktop.ViewModels;
@@ -13,13 +14,29 @@ namespace DistroNexus.Desktop.ViewModels;
 public partial class SettingsViewModel : ObservableObject
 {
     private readonly ISettingsService _settingsService;
+    private readonly ICatalogService _catalogService;
     private readonly ILogger<SettingsViewModel> _logger;
 
     [ObservableProperty]
     private string _defaultInstallPath = @"C:\WSL";
 
     [ObservableProperty]
+    private string _packageCachePath = string.Empty;
+
+    [ObservableProperty]
+    private string _terminalStartPath = "~";
+
+    [ObservableProperty]
     private int _defaultWslVersion = 2;
+
+    /// <summary>
+    /// Gets the WSL version index for ComboBox binding (0 = WSL1, 1 = WSL2).
+    /// </summary>
+    public int WslVersionIndex
+    {
+        get => DefaultWslVersion - 1;
+        set => DefaultWslVersion = value + 1;
+    }
 
     [ObservableProperty]
     private string _defaultUsername = "root";
@@ -57,9 +74,19 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private bool _isDirty;
 
-    public SettingsViewModel(ISettingsService settingsService, ILogger<SettingsViewModel> logger)
+    [ObservableProperty]
+    private ObservableCollection<DistroPackage> _availableDistributions = new();
+
+    [ObservableProperty]
+    private DistroPackage? _defaultDistribution;
+
+    public SettingsViewModel(
+        ISettingsService settingsService, 
+        ICatalogService catalogService,
+        ILogger<SettingsViewModel> logger)
     {
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -73,6 +100,8 @@ public partial class SettingsViewModel : ObservableObject
             var settings = await _settingsService.LoadSettingsAsync();
 
             DefaultInstallPath = settings.DefaultInstallPath;
+            PackageCachePath = settings.PackageCachePath;
+            TerminalStartPath = settings.TerminalStartPath;
             DefaultWslVersion = settings.DefaultWslVersion;
             DefaultUsername = settings.DefaultUsername;
             EnableLogging = settings.EnableLogging;
@@ -86,6 +115,9 @@ public partial class SettingsViewModel : ObservableObject
             AutoRetryDownloads = settings.AutoRetryDownloads;
             MaxRetryAttempts = settings.MaxRetryAttempts;
 
+            // Load available distributions for default selection
+            await LoadDistributionsAsync();
+
             IsDirty = false;
             _logger.LogInformation("Settings loaded successfully");
         }
@@ -94,6 +126,23 @@ public partial class SettingsViewModel : ObservableObject
             _logger.LogError(ex, "Failed to load settings");
             MessageBox.Show($"Failed to load settings: {ex.Message}", 
                 "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private async Task LoadDistributionsAsync()
+    {
+        try
+        {
+            var distributions = await _catalogService.LoadCatalogAsync();
+            AvailableDistributions.Clear();
+            foreach (var distro in distributions)
+            {
+                AvailableDistributions.Add(distro);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to load distributions for settings");
         }
     }
 
@@ -107,8 +156,11 @@ public partial class SettingsViewModel : ObservableObject
             var settings = new GlobalSettings
             {
                 DefaultInstallPath = DefaultInstallPath,
+                PackageCachePath = PackageCachePath,
+                TerminalStartPath = TerminalStartPath,
                 DefaultWslVersion = DefaultWslVersion,
                 DefaultUsername = DefaultUsername,
+                DefaultDistributionId = DefaultDistribution?.Id ?? string.Empty,
                 EnableLogging = EnableLogging,
                 LogPath = LogPath,
                 CheckUpdatesOnStartup = CheckUpdatesOnStartup,
@@ -170,20 +222,56 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private void BrowseInstallPath()
     {
-        var dialog = new System.Windows.Forms.FolderBrowserDialog
+        var dialog = new Microsoft.Win32.OpenFolderDialog
         {
-            Description = "Select default installation path",
-            SelectedPath = DefaultInstallPath
+            Title = "Select default installation path",
+            InitialDirectory = DefaultInstallPath
         };
 
-        if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+        if (dialog.ShowDialog() == true)
         {
-            DefaultInstallPath = dialog.SelectedPath;
+            DefaultInstallPath = dialog.FolderName;
+            IsDirty = true;
+        }
+    }
+
+    [RelayCommand]
+    private void BrowseCachePath()
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = "Select package cache path",
+            InitialDirectory = PackageCachePath
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            PackageCachePath = dialog.FolderName;
+            IsDirty = true;
+        }
+    }
+
+    [RelayCommand]
+    private void BrowseTerminalPath()
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = "Select terminal start path",
+            InitialDirectory = string.IsNullOrEmpty(TerminalStartPath) || TerminalStartPath == "~" 
+                ? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) 
+                : TerminalStartPath
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            TerminalStartPath = dialog.FolderName;
             IsDirty = true;
         }
     }
 
     partial void OnDefaultInstallPathChanged(string value) => IsDirty = true;
+    partial void OnPackageCachePathChanged(string value) => IsDirty = true;
+    partial void OnTerminalStartPathChanged(string value) => IsDirty = true;
     partial void OnDefaultWslVersionChanged(int value) => IsDirty = true;
     partial void OnDefaultUsernameChanged(string value) => IsDirty = true;
     partial void OnEnableLoggingChanged(bool value) => IsDirty = true;
@@ -195,4 +283,5 @@ public partial class SettingsViewModel : ObservableObject
     partial void OnMaxConcurrentDownloadsChanged(int value) => IsDirty = true;
     partial void OnAutoRetryDownloadsChanged(bool value) => IsDirty = true;
     partial void OnMaxRetryAttemptsChanged(int value) => IsDirty = true;
+    partial void OnDefaultDistributionChanged(DistroPackage? value) => IsDirty = true;
 }

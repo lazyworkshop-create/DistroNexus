@@ -152,4 +152,96 @@ public class CatalogService : ICatalogService
     {
         return _catalogCachePath;
     }
+
+    /// <inheritdoc/>
+    public async Task DeleteCachedPackageAsync(string packageId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(packageId))
+            throw new ArgumentNullException(nameof(packageId));
+
+        try
+        {
+            _logger.LogInformation("Deleting cached package {PackageId}", packageId);
+
+            var settings = await _settingsService.LoadSettingsAsync(cancellationToken);
+            var cachePath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "DistroNexus",
+                "packages");
+
+            if (!Directory.Exists(cachePath))
+            {
+                _logger.LogWarning("Package cache directory does not exist");
+                return;
+            }
+
+            // Find and delete files matching the package ID
+            var packageFiles = Directory.GetFiles(cachePath, $"{packageId}*");
+            foreach (var file in packageFiles)
+            {
+                File.Delete(file);
+                _logger.LogInformation("Deleted cached file: {FilePath}", file);
+            }
+
+            // Update cached catalog to mark as not cached
+            if (_cachedCatalog != null)
+            {
+                var package = _cachedCatalog.FirstOrDefault(p => p.Id == packageId);
+                if (package != null)
+                {
+                    package.IsCached = false;
+                }
+            }
+
+            _logger.LogInformation("Deleted cached package {PackageId}", packageId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete cached package {PackageId}", packageId);
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task AddCustomSourceAsync(string sourceUrl, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(sourceUrl))
+            throw new ArgumentNullException(nameof(sourceUrl));
+
+        try
+        {
+            _logger.LogInformation("Adding custom source: {Url}", sourceUrl);
+
+            // Validate and fetch the custom catalog
+            var customJson = await _httpClient.GetStringAsync(sourceUrl, cancellationToken);
+            var customPackages = JsonSerializer.Deserialize<List<DistroPackage>>(customJson);
+
+            if (customPackages == null || customPackages.Count == 0)
+            {
+                throw new InvalidOperationException("No packages found in the custom source");
+            }
+
+            // Mark packages as custom
+            foreach (var package in customPackages)
+            {
+                package.IsCustomSource = true;
+            }
+
+            // Add to cached catalog
+            _cachedCatalog ??= new List<DistroPackage>();
+            _cachedCatalog.AddRange(customPackages);
+
+            // Save updated catalog
+            var cacheOptions = new JsonSerializerOptions { WriteIndented = true };
+            var cacheJson = JsonSerializer.Serialize(_cachedCatalog, cacheOptions);
+            await File.WriteAllTextAsync(_catalogCachePath, cacheJson, cancellationToken);
+
+            _logger.LogInformation("Added {Count} packages from custom source", customPackages.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to add custom source: {Url}", sourceUrl);
+            throw;
+        }
+    }
 }

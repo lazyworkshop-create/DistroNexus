@@ -1,14 +1,5 @@
 <Solution>
-  <Folder Name="/build/" />
-  <Folder Name="/docs/" />
-  <Folder Name="/src/" />
-  <Folder Name="/src/Client/">
-    <Project Path="DistroNexus.Core/DistroNexus.Core.csproj" />
-    <Project Path="DistroNexus.Desktop/DistroNexus.Desktop.csproj" />
-  </Folder>
-  <Folder Name="/src/PowerShell/" />
-  <Folder Name="/src/test/">
-    <Project Path="DistroNexus.Tests/DistroNexus.Tests.csproj" />
-  </Folder>
-  <Folder Name="/toosl/" />
+  <Project Path="DistroNexus.Core/DistroNexus.Core.csproj" />
+  <Project Path="DistroNexus.Desktop/DistroNexus.Desktop.csproj" />
+  <Project Path="DistroNexus.Tests/DistroNexus.Tests.csproj" />
 </Solution>

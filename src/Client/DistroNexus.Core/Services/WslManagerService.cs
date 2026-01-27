@@ -40,7 +40,7 @@ public class WslManagerService : IWslManagerService
     }
 
     /// <inheritdoc/>
-    public async Task InstallInstanceAsync(InstallOptions options, IProgress<double>? progress = null, CancellationToken cancellationToken = default)
+    public async Task InstallInstanceAsync(InstallOptions options, IProgress<(double Percentage, string Message)>? progress = null, CancellationToken cancellationToken = default)
     {
         if (options == null)
             throw new ArgumentNullException(nameof(options));
@@ -56,6 +56,8 @@ public class WslManagerService : IWslManagerService
             _logger.LogInformation("Installing WSL instance '{InstanceName}' to '{InstallPath}'", 
                 options.InstanceName, options.InstallPath);
 
+            progress?.Report((10, "Preparing installation..."));
+
             var parameters = new Dictionary<string, object>
             {
                 { "DistroName", options.InstanceName },
@@ -63,10 +65,17 @@ public class WslManagerService : IWslManagerService
                 { "Username", options.Username }
             };
 
+            if (options.Package != null)
+            {
+                parameters.Add("PackageUrl", options.Package.DownloadUrl);
+            }
+
             if (options.Password != null)
             {
                 parameters.Add("Password", options.Password);
             }
+
+            progress?.Report((30, "Installing distribution..."));
 
             await _powerShellService.ExecuteAsync<object>(
                 "Install-DistroNexusInstance",
@@ -74,7 +83,11 @@ public class WslManagerService : IWslManagerService
                 cancellationToken
             );
 
+            progress?.Report((90, "Finalizing installation..."));
+
             _logger.LogInformation("WSL instance '{InstanceName}' installed successfully", options.InstanceName);
+            
+            progress?.Report((100, "Installation complete"));
         }
         catch (Exception ex)
         {

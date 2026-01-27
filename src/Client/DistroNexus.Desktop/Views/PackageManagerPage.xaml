@@ -9,91 +9,158 @@
       Title="Package Manager"
       d:DataContext="{d:DesignInstance Type=vm:PackageManagerViewModel}">
     
-    <Grid Margin="20">
+    <Grid Margin="0">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
+        <!-- Header -->
+        <TextBlock Grid.Row="0" Text="Package Manager" FontSize="24" FontWeight="Bold" Margin="0,0,0,15"/>
+
         <!-- Toolbar -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
-            <ui:Button Content="Refresh Catalog" 
-                      Icon="{ui:SymbolIcon Symbol=ArrowSync20}"
-                      Command="{Binding RefreshCatalogCommand}"
-                      Margin="0,0,10,0"/>
-            <ui:TextBox PlaceholderText="Search distributions..." 
-                       Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
-                       Width="300"
-                       Margin="0,0,10,0"/>
-            <ui:Button Content="Search" 
-                      Icon="{ui:SymbolIcon Symbol=Search20}"
-                      Command="{Binding SearchCommand}"/>
-        </StackPanel>
+        <Grid Grid.Row="1" Margin="0,0,0,15">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
 
-        <!-- Status Bar -->
-        <ui:InfoBar Grid.Row="1" 
-                    Title="{Binding StatusMessage}"
-                    IsOpen="True"
-                    Severity="Informational"
-                    IsClosable="False"
-                    Margin="0,0,0,15"/>
+            <StackPanel Grid.Column="0" Orientation="Horizontal">
+                <ui:Button Content="Refresh Catalog" 
+                          Icon="{ui:SymbolIcon Symbol=ArrowSync20}"
+                          Command="{Binding RefreshCatalogCommand}"
+                          Margin="0,0,10,0"/>
+                <ui:TextBox PlaceholderText="Search distributions..." 
+                           Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
+                           Width="300"
+                           Margin="0,0,10,0"/>
+                <ui:Button Content="Search" 
+                          Icon="{ui:SymbolIcon Symbol=Search20}"
+                          Command="{Binding SearchCommand}"/>
+            </StackPanel>
 
-        <!-- Package List -->
+            <TextBlock Grid.Column="1" 
+                       Text="{Binding StatusMessage}" 
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+        </Grid>
+
+        <!-- Package List Grouped by Category -->
         <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
-            <ItemsControl ItemsSource="{Binding FilteredPackages}">
+            <ItemsControl ItemsSource="{Binding GroupedPackages}">
                 <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <ui:Card Margin="0,0,0,10" Padding="15">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
+                    <DataTemplate DataType="{x:Type vm:PackageGroup}">
+                        <StackPanel Margin="0,0,0,20">
+                            <!-- Category Header -->
+                            <TextBlock Text="{Binding Category}" 
+                                       FontSize="16" 
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       Margin="0,0,0,10"/>
+                            
+                            <!-- Packages in Category -->
+                            <ItemsControl ItemsSource="{Binding Packages}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <ui:Card Margin="0,0,0,8" Padding="12">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
 
-                                <!-- Icon (placeholder) -->
-                                <ui:SymbolIcon Grid.Column="0" 
-                                              Symbol="Box20" 
-                                              FontSize="48"
-                                              Margin="0,0,15,0"/>
+                                                <!-- Icon -->
+                                                <ui:SymbolIcon Grid.Column="0" 
+                                                              Symbol="Box20" 
+                                                              FontSize="36"
+                                                              Margin="0,0,12,0"/>
 
-                                <!-- Package Info -->
-                                <StackPanel Grid.Column="1">
-                                    <TextBlock Text="{Binding Name}" 
-                                              FontSize="18" 
-                                              FontWeight="Bold"/>
-                                    <TextBlock Text="{Binding Version}" 
-                                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                              Margin="0,2,0,0"/>
-                                    <TextBlock Text="{Binding Description}" 
-                                              Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                              TextWrapping="Wrap"
-                                              Margin="0,5,0,0"/>
-                                    <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
-                                        <ui:Badge Content="{Binding Category}" 
-                                                 Appearance="Secondary"
-                                                 Margin="0,0,5,0"/>
-                                        <TextBlock Text="{Binding FileSize, Converter={StaticResource FileSizeFormatter}}" 
-                                                  Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
-                                    </StackPanel>
-                                </StackPanel>
+                                                <!-- Package Info -->
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding Name}" 
+                                                                  FontSize="15" 
+                                                                  FontWeight="SemiBold"/>
+                                                        <ui:Badge Content="Cached" 
+                                                                 Appearance="Success" 
+                                                                 Margin="8,0,0,0"
+                                                                 Visibility="{Binding IsCached, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                        <ui:Badge Content="Custom" 
+                                                                 Appearance="Caution" 
+                                                                 Margin="8,0,0,0"
+                                                                 Visibility="{Binding IsCustomSource, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                    </StackPanel>
+                                                    <TextBlock Text="{Binding Description}" 
+                                                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                              TextTrimming="CharacterEllipsis"
+                                                              MaxWidth="400"
+                                                              Margin="0,2,0,0"/>
+                                                    <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                                        <TextBlock Text="{Binding Version}" 
+                                                                  Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                                  FontSize="11"/>
+                                                        <TextBlock Text=" | " Foreground="{DynamicResource TextFillColorTertiaryBrush}" FontSize="11"/>
+                                                        <TextBlock Text="{Binding FileSize, Converter={StaticResource FileSizeFormatter}}" 
+                                                                  Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                                  FontSize="11"/>
+                                                    </StackPanel>
+                                                </StackPanel>
 
-                                <!-- Actions -->
-                                <StackPanel Grid.Column="2" 
-                                           VerticalAlignment="Center">
-                                    <ui:Button Content="Download" 
-                                              Icon="{ui:SymbolIcon Symbol=ArrowDownload20}"
-                                              Command="{Binding DataContext.DownloadPackageCommand, RelativeSource={RelativeSource AncestorType=Page}}"
-                                              CommandParameter="{Binding}"
-                                              Appearance="Primary"/>
-                                </StackPanel>
-                            </Grid>
-                        </ui:Card>
+                                                <!-- Download/Delete Actions -->
+                                                <ui:Button Grid.Column="2" 
+                                                          Content="Download" 
+                                                          Icon="{ui:SymbolIcon Symbol=ArrowDownload20}"
+                                                          Command="{Binding DataContext.DownloadPackageCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                                          CommandParameter="{Binding}"
+                                                          Visibility="{Binding IsCached, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}"
+                                                          Appearance="Primary"
+                                                          Margin="0,0,5,0"/>
+                                                
+                                                <ui:Button Grid.Column="3" 
+                                                          Content="Delete" 
+                                                          Icon="{ui:SymbolIcon Symbol=Delete20}"
+                                                          Command="{Binding DataContext.DeletePackageCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                                          CommandParameter="{Binding}"
+                                                          Visibility="{Binding IsCached, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                          Appearance="Danger"/>
+                                            </Grid>
+                                        </ui:Card>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </ScrollViewer>
+
+        <!-- Custom Source Panel -->
+        <ui:Card Grid.Row="3" Padding="12" Margin="0,15,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBlock Grid.Column="0" 
+                           Text="Add Custom Source:" 
+                           VerticalAlignment="Center"
+                           Margin="0,0,10,0"/>
+                <ui:TextBox Grid.Column="1" 
+                           Text="{Binding CustomSourceUrl, UpdateSourceTrigger=PropertyChanged}"
+                           PlaceholderText="Enter catalog URL (e.g., https://example.com/distros.json)"/>
+                <ui:Button Grid.Column="2" 
+                          Content="Add" 
+                          Icon="{ui:SymbolIcon Symbol=Add20}"
+                          Command="{Binding AddCustomSourceCommand}"
+                          Margin="10,0,0,0"/>
+            </Grid>
+        </ui:Card>
 
         <!-- Loading Overlay -->
         <Grid Grid.Row="2" 

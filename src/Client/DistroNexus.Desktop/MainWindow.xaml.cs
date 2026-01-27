@@ -1,6 +1,4 @@
-﻿using DistroNexus.Core.Interfaces;
 using DistroNexus.Desktop.ViewModels;
-using Microsoft.Extensions.Logging;
 using Wpf.Ui.Controls;
 
 namespace DistroNexus.Desktop;
@@ -12,14 +10,11 @@ public partial class MainWindow : FluentWindow
 {
     private readonly MainViewModel _viewModel;
 
-    public MainWindow(
-        IWslManagerService wslManager,
-        ISettingsService settingsService,
-        ILogger<MainViewModel> logger)
+    public MainWindow(MainViewModel viewModel)
     {
         InitializeComponent();
 
-        _viewModel = new MainViewModel(wslManager, settingsService, logger);
+        _viewModel = viewModel;
         DataContext = _viewModel;
 
         Loaded += OnLoaded;

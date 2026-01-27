@@ -18,9 +18,9 @@ public interface IWslManagerService
     /// Installs a new WSL distribution instance.
     /// </summary>
     /// <param name="options">The installation options.</param>
-    /// <param name="progress">Progress reporter for the installation.</param>
+    /// <param name="progress">Progress reporter for the installation (percentage and message).</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
-    Task InstallInstanceAsync(InstallOptions options, IProgress<double>? progress = null, CancellationToken cancellationToken = default);
+    Task InstallInstanceAsync(InstallOptions options, IProgress<(double Percentage, string Message)>? progress = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Starts a WSL instance.

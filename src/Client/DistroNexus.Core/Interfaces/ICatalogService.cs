@@ -41,4 +41,18 @@ public interface ICatalogService
     /// </summary>
     /// <returns>The full path to the cached catalog file.</returns>
     string GetCatalogCachePath();
+
+    /// <summary>
+    /// Deletes a cached distribution package.
+    /// </summary>
+    /// <param name="packageId">The package ID to delete.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    Task DeleteCachedPackageAsync(string packageId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Adds a custom catalog source URL.
+    /// </summary>
+    /// <param name="sourceUrl">The URL of the custom catalog source.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    Task AddCustomSourceAsync(string sourceUrl, CancellationToken cancellationToken = default);
 }

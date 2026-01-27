@@ -11,6 +11,16 @@ public class GlobalSettings
     public string DefaultInstallPath { get; set; } = @"C:\WSL";
 
     /// <summary>
+    /// Gets or sets the path for cached distribution packages.
+    /// </summary>
+    public string PackageCachePath { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the default starting path when opening a terminal.
+    /// </summary>
+    public string TerminalStartPath { get; set; } = "~";
+
+    /// <summary>
     /// Gets or sets the default WSL version (1 or 2) for new installations.
     /// </summary>
     public int DefaultWslVersion { get; set; } = 2;
@@ -19,6 +29,11 @@ public class GlobalSettings
     /// Gets or sets the default username for new instances.
     /// </summary>
     public string DefaultUsername { get; set; } = "root";
+
+    /// <summary>
+    /// Gets or sets the ID of the default distribution for new installations.
+    /// </summary>
+    public string DefaultDistributionId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets whether to enable logging.

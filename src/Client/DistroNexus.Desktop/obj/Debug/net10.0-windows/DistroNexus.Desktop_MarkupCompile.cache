@@ -10,11 +10,11 @@ none
 false
 TRACE;DEBUG;NET;NET10_0;NETCOREAPP;WINDOWS;WINDOWS7_0;NET5_0_OR_GREATER;NET6_0_OR_GREATER;NET7_0_OR_GREATER;NET8_0_OR_GREATER;NET9_0_OR_GREATER;NET10_0_OR_GREATER;NETCOREAPP3_0_OR_GREATER;NETCOREAPP3_1_OR_GREATER;WINDOWS7_0_OR_GREATER
 D:\wsl\DistroNexus\src\Client\DistroNexus.Desktop\App.xaml
-32100866968
+6-107906936
 
-12181058365
+181702393100
 254361619775
-MainWindow.xaml;Views\PackageManagerPage.xaml;Views\SettingsPage.xaml;
+Controls\ConfirmationDialog.xaml;Controls\ProgressDialog.xaml;MainWindow.xaml;Views\InstallWizardDialog.xaml;Views\PackageManagerPage.xaml;Views\SettingsPage.xaml;
 
 False
 
