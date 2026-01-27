@@ -65,7 +65,8 @@ function Set-DistroNexusCredential {
                 $plainPassword = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto(
                     [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($Password)
                 )
-                wsl -d $Name --exec bash -c "echo '$Username:$plainPassword' | chpasswd"
+                $chpasswdCmd = "echo '${Username}:${plainPassword}' | chpasswd"
+                wsl -d $Name --exec bash -c $chpasswdCmd
                 $plainPassword = $null # Clear from memory
             }
             
