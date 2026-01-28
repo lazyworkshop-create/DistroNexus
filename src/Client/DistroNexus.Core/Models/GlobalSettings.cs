@@ -84,4 +84,14 @@ public class GlobalSettings
     /// Gets or sets the maximum number of retry attempts.
     /// </summary>
     public int MaxRetryAttempts { get; set; } = 3;
+
+    /// <summary>
+    /// Gets or sets whether to automatically save settings.
+    /// </summary>
+    public bool AutoSaveEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the auto-save interval in seconds.
+    /// </summary>
+    public int AutoSaveInterval { get; set; } = 30;
 }

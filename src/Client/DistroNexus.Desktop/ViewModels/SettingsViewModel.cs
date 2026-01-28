@@ -5,6 +5,7 @@ using DistroNexus.Core.Models;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Timers;
 using System.Windows;
 
 namespace DistroNexus.Desktop.ViewModels;
@@ -18,6 +19,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly ICatalogService _catalogService;
     private readonly ITerminalService _terminalService;
     private readonly ILogger<SettingsViewModel> _logger;
+    private Timer? _autoSaveTimer;
 
     [ObservableProperty]
     private string _defaultInstallPath = @"C:\WSL";
@@ -77,6 +79,15 @@ public partial class SettingsViewModel : ObservableObject
     private bool _isDirty;
 
     [ObservableProperty]
+    private bool _autoSaveEnabled = true;
+
+    [ObservableProperty]
+    private int _autoSaveInterval = 30;
+
+    [ObservableProperty]
+    private string _autoSaveStatus = "Auto-save enabled";
+
+    [ObservableProperty]
     private ObservableCollection<DistroPackage> _availableDistributions = new();
 
     [ObservableProperty]
@@ -105,6 +116,9 @@ public partial class SettingsViewModel : ObservableObject
         _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
         _terminalService = terminalService ?? throw new ArgumentNullException(nameof(terminalService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        
+        // Initialize auto-save timer
+        SetupAutoSaveTimer();
     }
 
     [RelayCommand]
@@ -131,6 +145,8 @@ public partial class SettingsViewModel : ObservableObject
             MaxConcurrentDownloads = settings.MaxConcurrentDownloads;
             AutoRetryDownloads = settings.AutoRetryDownloads;
             MaxRetryAttempts = settings.MaxRetryAttempts;
+            AutoSaveEnabled = settings.AutoSaveEnabled;
+            AutoSaveInterval = settings.AutoSaveInterval;
 
             // Load available distributions for default selection
             await LoadDistributionsAsync();
@@ -190,7 +206,9 @@ public partial class SettingsViewModel : ObservableObject
                 ShowConfirmationDialogs = ShowConfirmationDialogs,
                 MaxConcurrentDownloads = MaxConcurrentDownloads,
                 AutoRetryDownloads = AutoRetryDownloads,
-                MaxRetryAttempts = MaxRetryAttempts
+                MaxRetryAttempts = MaxRetryAttempts,
+                AutoSaveEnabled = AutoSaveEnabled,
+                AutoSaveInterval = AutoSaveInterval
             };
 
             await _settingsService.SaveSettingsAsync(settings);
@@ -346,6 +364,8 @@ public partial class SettingsViewModel : ObservableObject
     partial void OnAutoRetryDownloadsChanged(bool value) => IsDirty = true;
     partial void OnMaxRetryAttemptsChanged(int value) => IsDirty = true;
     partial void OnDefaultDistributionChanged(DistroPackage? value) => IsDirty = true;
+    partial void OnAutoSaveEnabledChanged(bool value) => SetupAutoSaveTimer();
+    partial void OnAutoSaveIntervalChanged(int value) => SetupAutoSaveTimer();
 
     /// <summary>
     /// Refreshes cache usage information.
@@ -499,5 +519,90 @@ public partial class SettingsViewModel : ObservableObject
         {
             mainViewModel.ShowDashboardCommand.Execute(null);
         }
+    }
+
+    /// <summary>
+    /// Sets up the auto-save timer based on current settings.
+    /// </summary>
+    private void SetupAutoSaveTimer()
+    {
+        // Dispose existing timer
+        _autoSaveTimer?.Stop();
+        _autoSaveTimer?.Dispose();
+        _autoSaveTimer = null;
+
+        if (AutoSaveEnabled && AutoSaveInterval > 0)
+        {
+            _autoSaveTimer = new Timer(AutoSaveInterval * 1000); // Convert seconds to milliseconds
+            _autoSaveTimer.Elapsed += OnAutoSaveTimerElapsed;
+            _autoSaveTimer.AutoReset = true;
+            _autoSaveTimer.Start();
+
+            AutoSaveStatus = $"Auto-save enabled (every {AutoSaveInterval}s)";
+            _logger.LogInformation("Auto-save timer started: {Interval}s", AutoSaveInterval);
+        }
+        else
+        {
+            AutoSaveStatus = AutoSaveEnabled ? "Auto-save enabled" : "Auto-save disabled";
+            _logger.LogInformation("Auto-save timer stopped");
+        }
+    }
+
+    /// <summary>
+    /// Handles the auto-save timer elapsed event.
+    /// </summary>
+    private async void OnAutoSaveTimerElapsed(object? sender, ElapsedEventArgs e)
+    {
+        if (IsDirty)
+        {
+            try
+            {
+                _logger.LogInformation("Auto-saving settings");
+                
+                var settings = new GlobalSettings
+                {
+                    DefaultInstallPath = DefaultInstallPath,
+                    PackageCachePath = PackageCachePath,
+                    TerminalStartPath = TerminalStartPath,
+                    DefaultWslVersion = DefaultWslVersion,
+                    DefaultUsername = DefaultUsername,
+                    DefaultDistributionId = DefaultDistribution?.Id ?? string.Empty,
+                    EnableLogging = EnableLogging,
+                    LogPath = LogPath,
+                    CheckUpdatesOnStartup = CheckUpdatesOnStartup,
+                    CatalogUrl = CatalogUrl,
+                    Theme = Theme,
+                    Language = Language,
+                    ShowConfirmationDialogs = ShowConfirmationDialogs,
+                    MaxConcurrentDownloads = MaxConcurrentDownloads,
+                    AutoRetryDownloads = AutoRetryDownloads,
+                    MaxRetryAttempts = MaxRetryAttempts,
+                    AutoSaveEnabled = AutoSaveEnabled,
+                    AutoSaveInterval = AutoSaveInterval
+                };
+
+                await _settingsService.SaveSettingsAsync(settings);
+
+                IsDirty = false;
+                AutoSaveStatus = $"Last auto-saved: {DateTime.Now:HH:mm:ss}";
+                
+                _logger.LogInformation("Auto-save completed successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Auto-save failed");
+                AutoSaveStatus = "Auto-save failed";
+            }
+        }
+    }
+
+    /// <summary>
+    /// Called when the ViewModel is disposed to clean up resources.
+    /// </summary>
+    public void Dispose()
+    {
+        _autoSaveTimer?.Stop();
+        _autoSaveTimer?.Dispose();
+        _autoSaveTimer = null;
     }
 }
