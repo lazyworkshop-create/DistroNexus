@@ -11,13 +11,18 @@ namespace DistroNexus.Core.Services;
 public partial class WslManagerService : IWslManagerService
 {
     private readonly IPowerShellService _powerShellService;
+    private readonly ICatalogService _catalogService;
     private readonly ILogger<WslManagerService> _logger;
 
     private const string LxssRegistryPath = @"HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss";
 
-    public WslManagerService(IPowerShellService powerShellService, ILogger<WslManagerService> logger)
+    public WslManagerService(
+        IPowerShellService powerShellService,
+        ICatalogService catalogService,
+        ILogger<WslManagerService> logger)
     {
         _powerShellService = powerShellService ?? throw new ArgumentNullException(nameof(powerShellService));
+        _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -171,39 +176,34 @@ public partial class WslManagerService : IWslManagerService
                 "'success'";
             await _powerShellService.ExecuteScriptAsync(createDirScript, cancellationToken);
 
-            progress?.Report((30, "Downloading distribution package..."));
+            progress?.Report((30, "Preparing distribution package..."));
             cancellationToken.ThrowIfCancellationRequested();
 
-            // Download the package if URL is provided
-            if (!string.IsNullOrEmpty(downloadUrl))
+            string packageFile;
+            
+            // Check for cached package first
+            if (options.UseLocalCache && !string.IsNullOrEmpty(options.Package?.Id))
             {
-                var tempFile = Path.Combine(Path.GetTempPath(), $"{options.InstanceName}_{Guid.NewGuid():N}.tar.gz");
-                var escapedTempFile = EscapePowerShellString(tempFile);
+                var cachePath = _catalogService.GetPackageCachePath();
+                var cachedFile = Path.Combine(cachePath, $"{options.Package.Id}.tar.gz");
                 
-                var downloadScript = 
-                    "$ProgressPreference = 'SilentlyContinue'; " +
-                    "$ErrorActionPreference = 'Stop'; " +
-                    $"try {{ " +
-                    $"  Invoke-WebRequest -Uri {escapedUrl} -OutFile {escapedTempFile} -UseBasicParsing; " +
-                    $"  if (-not (Test-Path {escapedTempFile})) {{ throw 'Download failed: File was not created' }}; " +
-                    $"  {escapedTempFile} " +
-                    $"}} catch {{ " +
-                    $"  throw \"Download failed: $($_.Exception.Message)\" " +
-                    $"}}";
-                
-                try
+                if (File.Exists(cachedFile))
                 {
-                    var downloadedFile = await _powerShellService.ExecuteScriptAsync(downloadScript, cancellationToken);
+                    _logger.LogInformation("Using cached package: {CachedFile}", cachedFile);
+                    packageFile = cachedFile;
+                    progress?.Report((40, "Using cached distribution package..."));
                 }
-                catch (Exception ex)
+                else
                 {
-                    // Check if it was cancelled
-                    cancellationToken.ThrowIfCancellationRequested();
-                    
-                    throw new InvalidOperationException(
-                        $"Failed to download distribution package from {options.Package?.Name}. " +
-                        $"Please check your internet connection and try again.", ex);
+                    _logger.LogInformation("Cached package not found, downloading from remote");
+                    packageFile = await DownloadPackageAsync(options, progress, cancellationToken);
                 }
+            }
+            else
+            {
+                _logger.LogInformation("Downloading package from remote (cache disabled)");
+                packageFile = await DownloadPackageAsync(options, progress, cancellationToken);
+            }
                 
                 progress?.Report((60, "Importing distribution..."));
                 cancellationToken.ThrowIfCancellationRequested();
@@ -218,7 +218,7 @@ public partial class WslManagerService : IWslManagerService
                     "$ErrorActionPreference = 'Continue'; " +
                     $"$installPath = {escapedFullPath}; " +
                     $"$instanceName = '{options.InstanceName}'; " +
-                    $"$tarFile = {escapedTempFile}; " +
+                    $"$tarFile = {EscapePowerShellString(packageFile)}; " +
                     // Capture WSL output and exit code
                     "$wslOutput = wsl --import $instanceName $installPath $tarFile 2>&1 | Out-String; " +
                     "$exitCode = $LASTEXITCODE; " +
@@ -557,6 +557,52 @@ public partial class WslManagerService : IWslManagerService
         {
             _logger.LogError(ex, "Failed to set credentials for WSL instance '{InstanceName}'", instanceName);
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Downloads a distribution package to a temporary file.
+    /// </summary>
+    private async Task<string> DownloadPackageAsync(
+        InstallOptions options, 
+        IProgress<(double Percentage, string Message)>? progress,
+        CancellationToken cancellationToken)
+    {
+        var downloadUrl = options.Package?.DownloadUrl ?? string.Empty;
+        if (string.IsNullOrEmpty(downloadUrl))
+            throw new ArgumentException("Download URL is required when UseLocalCache is false or no cached package is available.");
+
+        var tempFile = Path.Combine(Path.GetTempPath(), $"{options.InstanceName}_{Guid.NewGuid():N}.tar.gz");
+        var escapedTempFile = EscapePowerShellString(tempFile);
+        var escapedUrl = EscapePowerShellString(downloadUrl);
+        
+        progress?.Report((35, "Downloading distribution package..."));
+        
+        var downloadScript = 
+            "$ProgressPreference = 'SilentlyContinue'; " +
+            "$ErrorActionPreference = 'Stop'; " +
+            $"try {{ " +
+            $"  Invoke-WebRequest -Uri {escapedUrl} -OutFile {escapedTempFile} -UseBasicParsing; " +
+            $"  if (-not (Test-Path {escapedTempFile})) {{ throw 'Download failed: File was not created' }}; " +
+            $"  {escapedTempFile} " +
+            $"}} catch {{ " +
+            $"  throw \"Download failed: $($_.Exception.Message)\" " +
+            $"}}";
+        
+        try
+        {
+            var downloadedFile = await _powerShellService.ExecuteScriptAsync(downloadScript, cancellationToken);
+            progress?.Report((55, "Package downloaded successfully"));
+            return tempFile;
+        }
+        catch (Exception ex)
+        {
+            // Check if it was cancelled
+            cancellationToken.ThrowIfCancellationRequested();
+            
+            throw new InvalidOperationException(
+                $"Failed to download distribution package from {options.Package?.Name}. " +
+                $"Please check your internet connection and try again.", ex);
         }
     }
 

@@ -101,6 +101,9 @@ public partial class InstallWizardViewModel : ObservableObject
     [ObservableProperty]
     private bool _launchAfterInstall = true;
 
+    [ObservableProperty]
+    private bool _useLocalCache = true;
+
     #endregion
 
     /// <summary>
@@ -198,7 +201,8 @@ public partial class InstallWizardViewModel : ObservableObject
                 Password = CreateUser ? Password : null,
                 WslVersion = WslVersion,
                 SetAsDefault = SetAsDefault,
-                LaunchAfterInstall = LaunchAfterInstall
+                LaunchAfterInstall = LaunchAfterInstall,
+                UseLocalCache = UseLocalCache
             };
 
             // Progress callback

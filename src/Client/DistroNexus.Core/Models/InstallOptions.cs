@@ -46,6 +46,11 @@ public class InstallOptions
     public bool LaunchAfterInstall { get; set; }
 
     /// <summary>
+    /// Gets or sets whether to use locally cached package if available.
+    /// </summary>
+    public bool UseLocalCache { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets custom initialization commands to run after installation.
     /// </summary>
     public List<string> InitCommands { get; set; } = new();
