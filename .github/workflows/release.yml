@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (without v prefix)'
+        required: true
+        default: '2.0.0'
 
 jobs:
   build-and-release:
@@ -16,54 +22,79 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Go
-      uses: actions/setup-go@v5
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
       with:
-        go-version: '1.22'
+        dotnet-version: '10.0.x'
+        dotnet-quality: 'preview'
 
-    - name: Install Dependencies
+    - name: Get version
+      id: version
       run: |
-        choco install innosetup --no-progress
-        choco install zip --no-progress
+        if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+          $VERSION = "${{ github.event.inputs.version }}"
+        } else {
+          $VERSION = "${{ github.ref_name }}".TrimStart('v')
+        }
+        echo "VERSION=$VERSION" >> $env:GITHUB_OUTPUT
+        echo "Building version: $VERSION"
       shell: pwsh
 
-    - name: Install Fyne CLI
-      # Install the new Fyne CLI tool (replaces fyne.io/fyne/v2/cmd/fyne)
-      run: go install fyne.io/tools/cmd/fyne@latest
+    - name: Restore dependencies
+      run: dotnet restore src/Client/DistroNexus.slnx
 
-    - name: Add Go Bin to Path
-      run: echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-      shell: bash
+    - name: Build
+      run: dotnet build src/Client/DistroNexus.slnx --configuration Release --no-restore
 
-    - name: Update Distro List
-      run: ./scripts/update_distros.ps1
-      shell: pwsh
-      
-    - name: Build and Package (Windows)
+    - name: Run tests
+      run: dotnet test src/Client/DistroNexus.slnx --configuration Release --no-build --verbosity normal
+      continue-on-error: true
+
+    - name: Build portable package (framework-dependent)
       run: |
-        $VERSION = "${{ github.ref_name }}".TrimStart('v')
-        .\tools\windows_release.ps1 -Version $VERSION
+        ./tools/build.ps1 -Configuration Release -Publish -CreateZip -Version ${{ steps.version.outputs.VERSION }}
       shell: pwsh
 
-    # Code Signing Step (Start)
-    # This step requires setting up SignPath project and secrets
-    # Uncomment and configure when ready
-    # - name: Sign with SignPath
-    #   uses: signpath/github-action@v1
-    #   with:
-    #     api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
-    #     signing-policy-slug: release-signing
-    #     artifact-file: release/DistroNexus_Setup_*.exe
-    #     output-artifact-file: release/DistroNexus_Setup_Signed.exe
-    # Code Signing Step (End)
+    - name: Build self-contained package
+      run: |
+        ./tools/build.ps1 -Configuration Release -Publish -SelfContained -CreateZip -Version ${{ steps.version.outputs.VERSION }}
+      shell: pwsh
+
+    - name: Install Inno Setup
+      run: |
+        choco install innosetup --no-progress -y
+      shell: pwsh
+      continue-on-error: true
+
+    - name: Build installer
+      run: |
+        ./tools/build-installer.ps1 -Version ${{ steps.version.outputs.VERSION }}
+      shell: pwsh
+      continue-on-error: true
+
+    - name: List release artifacts
+      run: |
+        Get-ChildItem release -Recurse | Select-Object FullName, Length
+      shell: pwsh
 
     - name: Create Release
       uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
       with:
-        body_path: docs/release_notes/${{ github.ref_name }}.md
+        body_path: docs/release_notes/v${{ steps.version.outputs.VERSION }}.md
         files: |
           release/*.zip
-          release/*.exe
+          release/installer/*.exe
+        fail_on_unmatched_files: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload artifacts (for manual builds)
+      if: github.event_name == 'workflow_dispatch'
+      uses: actions/upload-artifact@v4
+      with:
+        name: DistroNexus-v${{ steps.version.outputs.VERSION }}
+        path: |
+          release/*.zip
+          release/installer/*.exe
+        retention-days: 30

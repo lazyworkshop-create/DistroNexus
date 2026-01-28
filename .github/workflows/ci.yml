@@ -1,0 +1,102 @@
+name: CI Build
+
+on:
+  push:
+    branches: [ main, feature/*, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+        dotnet-quality: 'preview'
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Restore dependencies
+      run: dotnet restore src/Client/DistroNexus.slnx
+
+    - name: Build
+      run: dotnet build src/Client/DistroNexus.slnx --configuration Release --no-restore
+
+    - name: Run tests
+      run: dotnet test src/Client/DistroNexus.slnx --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
+      continue-on-error: true
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: "**/TestResults/*.trx"
+        retention-days: 7
+
+  lint-powershell:
+    name: Lint PowerShell Module
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install PSScriptAnalyzer
+      run: |
+        Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
+      shell: pwsh
+
+    - name: Analyze PowerShell scripts
+      run: |
+        $results = Invoke-ScriptAnalyzer -Path src/PowerShell -Recurse -Severity Error,Warning
+        if ($results) {
+          $results | Format-Table -AutoSize
+          if ($results | Where-Object Severity -eq 'Error') {
+            exit 1
+          }
+        } else {
+          Write-Host "No issues found!" -ForegroundColor Green
+        }
+      shell: pwsh
+
+  build-portable:
+    name: Build Portable Package
+    runs-on: windows-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+        dotnet-quality: 'preview'
+
+    - name: Build portable package
+      run: |
+        ./tools/build.ps1 -Configuration Release -Publish -CreateZip -Version "2.0.0-ci.${{ github.run_number }}"
+      shell: pwsh
+
+    - name: Upload portable package
+      uses: actions/upload-artifact@v4
+      with:
+        name: DistroNexus-portable-ci
+        path: release/*.zip
+        retention-days: 7

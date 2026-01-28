@@ -16,7 +16,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCopyrightAttribute("Copyright © 2026 DistroNexus Team")]
 [assembly: System.Reflection.AssemblyDescriptionAttribute("Windows Subsystem for Linux (WSL) distribution management tool")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("2.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("2.0.0+8a4a2661f379ffbafabe67caee2411da91bd1fa6")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("2.0.0+b4e7f228998bfbc499e2548ef293e3d6f5041d96")]
 [assembly: System.Reflection.AssemblyProductAttribute("DistroNexus")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DistroNexus.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("2.0.0.0")]

@@ -43,12 +43,17 @@ Full documentation and user guides are hosted on our official website:
 ### Installation
 
 #### Option 1: Installer (Recommended)
-1. Download `DistroNexus-2.0.0-Setup.exe` from [Releases](https://github.com/yourusername/DistroNexus/releases)
+1. Download `DistroNexus-2.0.0-Setup.exe` from [Releases](https://github.com/lazyworkshop-create/DistroNexus/releases)
 2. Run the installer
 3. Launch from Start Menu
 
 #### Option 2: Portable
-1. Download `DistroNexus-2.0.0-Portable.zip`
+1. Download `DistroNexus-v2.0.0-Release.zip`
+2. Extract to any folder
+3. Run `DistroNexus.Desktop.exe`
+
+#### Option 3: Self-Contained (No .NET Required)
+1. Download `DistroNexus-v2.0.0-Release-selfcontained.zip`
 2. Extract to any folder
 3. Run `DistroNexus.Desktop.exe`
 
@@ -111,23 +116,29 @@ Configure via Settings page in the application or edit JSON directly.
 
 ```powershell
 # Clone the repository
-git clone https://github.com/yourusername/DistroNexus.git
+git clone https://github.com/lazyworkshop-create/DistroNexus.git
 cd DistroNexus
 
 # Build with the provided script
-.\tools\build_v2.ps1 -Configuration Release
+.\tools\build.ps1 -Configuration Release
 
 # Or use dotnet CLI directly
-dotnet build src/Client/DistroNexus.sln -c Release
+dotnet build src/Client/DistroNexus.slnx -c Release
 ```
 
 ### Publish for Distribution
 
 ```powershell
-# Create publish output with PowerShell module and config
-.\tools\build_v2.ps1 -Publish -Configuration Release
+# Create portable ZIP package (framework-dependent)
+.\tools\build.ps1 -Publish -CreateZip -Configuration Release
 
-# Output will be in release/DistroNexus-Release/
+# Create self-contained package (no .NET runtime required)
+.\tools\build.ps1 -Publish -SelfContained -CreateZip -Configuration Release
+
+# Build Windows installer (requires Inno Setup)
+.\tools\build-installer.ps1 -Version 2.0.0
+
+# Output will be in release/
 ```
 
 ## 🔧 Legacy Scripts (v1.x)
@@ -226,8 +237,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📞 Support
 
 - 📖 [Documentation](https://lazyworkshop-create.github.io/DistroNexus/)
-- 🐛 [Issue Tracker](https://github.com/yourusername/DistroNexus/issues)
-- 💬 [Discussions](https://github.com/yourusername/DistroNexus/discussions)
+- 🐛 [Issue Tracker](https://github.com/lazyworkshop-create/DistroNexus/issues)
+- 💬 [Discussions](https://github.com/lazyworkshop-create/DistroNexus/discussions)
 
 ---
 
