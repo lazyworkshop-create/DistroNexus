@@ -19,6 +19,7 @@ public partial class MainViewModel : ObservableObject
     private readonly ISettingsService _settingsService;
     private readonly INavigationService _navigationService;
     private readonly ITerminalService _terminalService;
+    private readonly IDownloadTaskManager _downloadTaskManager;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<MainViewModel> _logger;
 
@@ -46,11 +47,23 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _currentLanguage = "en-US";
 
+    [ObservableProperty]
+    private bool _isDownloadPanelVisible;
+
+    [ObservableProperty]
+    private int _activeDownloadsCount;
+
+    /// <summary>
+    /// Gets the collection of download tasks for data binding.
+    /// </summary>
+    public ObservableCollection<DownloadTask> DownloadTasks => _downloadTaskManager.Tasks;
+
     public MainViewModel(
         IWslManagerService wslManager,
         ISettingsService settingsService,
         INavigationService navigationService,
         ITerminalService terminalService,
+        IDownloadTaskManager downloadTaskManager,
         IServiceProvider serviceProvider,
         ILogger<MainViewModel> logger)
     {
@@ -58,14 +71,21 @@ public partial class MainViewModel : ObservableObject
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
         _terminalService = terminalService ?? throw new ArgumentNullException(nameof(terminalService));
+        _downloadTaskManager = downloadTaskManager ?? throw new ArgumentNullException(nameof(downloadTaskManager));
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+        // Subscribe to download task status changes
+        _downloadTaskManager.TaskStatusChanged += OnDownloadTaskStatusChanged;
 
         // Load saved theme and language settings
         _ = LoadUserPreferencesAsync();
 
         // Start auto-refresh timer
         StartAutoRefresh();
+
+        // Update active downloads count initially
+        UpdateActiveDownloadsCount();
     }
 
     private System.Timers.Timer? _refreshTimer;
@@ -187,6 +207,78 @@ public partial class MainViewModel : ObservableObject
         CurrentPage = settingsPage;
         IsOnDashboard = false;
         _logger.LogInformation("Navigated to settings");
+    }
+
+    /// <summary>
+    /// Toggles the download panel visibility.
+    /// </summary>
+    [RelayCommand]
+    private void ToggleDownloadPanel()
+    {
+        IsDownloadPanelVisible = !IsDownloadPanelVisible;
+        _logger.LogInformation("Download panel visibility: {IsVisible}", IsDownloadPanelVisible);
+    }
+
+    /// <summary>
+    /// Clears all completed download tasks.
+    /// </summary>
+    [RelayCommand]
+    private void ClearCompletedDownloads()
+    {
+        _downloadTaskManager.ClearCompletedTasks();
+        UpdateActiveDownloadsCount();
+        _logger.LogInformation("Cleared completed downloads");
+    }
+
+    /// <summary>
+    /// Cancels a specific download task.
+    /// </summary>
+    [RelayCommand]
+    private async Task CancelDownloadAsync(Guid? taskId)
+    {
+        if (taskId.HasValue)
+        {
+            await _downloadTaskManager.CancelTaskAsync(taskId.Value);
+            UpdateActiveDownloadsCount();
+        }
+    }
+
+    /// <summary>
+    /// Retries a failed download task.
+    /// </summary>
+    [RelayCommand]
+    private async Task RetryDownloadAsync(Guid? taskId)
+    {
+        if (taskId.HasValue)
+        {
+            await _downloadTaskManager.RetryTaskAsync(taskId.Value);
+            UpdateActiveDownloadsCount();
+        }
+    }
+
+    /// <summary>
+    /// Handles download task status changes.
+    /// </summary>
+    private void OnDownloadTaskStatusChanged(object? sender, DownloadTask task)
+    {
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            UpdateActiveDownloadsCount();
+            
+            // Optionally show notification for completed downloads
+            if (task.Status == DownloadStatus.Completed)
+            {
+                _logger.LogInformation("Download completed: {PackageName}", task.PackageName);
+            }
+        });
+    }
+
+    /// <summary>
+    /// Updates the active downloads count.
+    /// </summary>
+    private void UpdateActiveDownloadsCount()
+    {
+        ActiveDownloadsCount = _downloadTaskManager.GetActiveTasksCount();
     }
 
     [RelayCommand]

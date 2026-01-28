@@ -47,6 +47,7 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<INavigationService, NavigationService>();
                     services.AddSingleton<IUpdateService, UpdateService>();
                     services.AddSingleton<ITerminalService, TerminalService>();
+                    services.AddSingleton<IDownloadTaskManager, DownloadTaskManager>();
 
                     // Register ViewModels
                     services.AddTransient<MainViewModel>();
