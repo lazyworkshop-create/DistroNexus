@@ -108,6 +108,7 @@ public class IntToBoolConverter : IValueConverter
     }
 }
 
+
 /// <summary>
 /// Converts string to boolean (true if not null or empty).
 /// </summary>
@@ -116,6 +117,43 @@ public class StringToBoolConverter : IValueConverter
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
         return !string.IsNullOrEmpty(value as string);
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Converts string to visibility (Visible if not null or empty, Collapsed otherwise).
+/// </summary>
+public class StringToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        var hasValue = !string.IsNullOrEmpty(value as string);
+        return hasValue ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Converts boolean to button appearance (Primary for true, Secondary for false).
+/// </summary>
+public class BoolToPrimaryAppearanceConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is bool isPrimary && isPrimary)
+        {
+            return Wpf.Ui.Controls.ControlAppearance.Primary;
+        }
+        return Wpf.Ui.Controls.ControlAppearance.Secondary;
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
