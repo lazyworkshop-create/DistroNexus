@@ -55,4 +55,24 @@ public interface ICatalogService
     /// <param name="sourceUrl">The URL of the custom catalog source.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     Task AddCustomSourceAsync(string sourceUrl, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets cache usage statistics including total size and cached packages.
+    /// </summary>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>Cache usage information.</returns>
+    Task<CacheUsageInfo> GetCacheUsageAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Clears all cached packages.
+    /// </summary>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The number of files deleted.</returns>
+    Task<int> ClearAllCacheAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the package cache directory path.
+    /// </summary>
+    /// <returns>The full path to the package cache directory.</returns>
+    string GetPackageCachePath();
 }

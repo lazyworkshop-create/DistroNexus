@@ -66,6 +66,11 @@ public class DistroPackage
     public bool IsCustomSource { get; set; }
 
     /// <summary>
+    /// Gets or sets the local file path if the package is cached.
+    /// </summary>
+    public string LocalPath { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets additional metadata as key-value pairs.
     /// </summary>
     public Dictionary<string, string> Metadata { get; set; } = new();
