@@ -16,6 +16,7 @@ public partial class PackageManagerViewModel : ObservableObject
 {
     private readonly ICatalogService _catalogService;
     private readonly IDownloadService _downloadService;
+    private readonly IDownloadTaskManager _downloadTaskManager;
     private readonly ILogger<PackageManagerViewModel> _logger;
 
     [ObservableProperty]
@@ -42,10 +43,12 @@ public partial class PackageManagerViewModel : ObservableObject
     public PackageManagerViewModel(
         ICatalogService catalogService,
         IDownloadService downloadService,
+        IDownloadTaskManager downloadTaskManager,
         ILogger<PackageManagerViewModel> logger)
     {
         _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
         _downloadService = downloadService ?? throw new ArgumentNullException(nameof(downloadService));
+        _downloadTaskManager = downloadTaskManager ?? throw new ArgumentNullException(nameof(downloadTaskManager));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -172,44 +175,19 @@ public partial class PackageManagerViewModel : ObservableObject
 
         try
         {
-            _logger.LogInformation("Downloading package {PackageName}", package.Name);
+            _logger.LogInformation("Queuing download for package {PackageName}", package.Name);
 
-            var downloadsPath = System.IO.Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), 
-                "Downloads", 
-                "DistroNexus");
+            // Queue the download task
+            await _downloadTaskManager.QueueDownloadAsync(package);
 
-            // DownloadService will create directory if needed
-            var fileName = System.IO.Path.GetFileName(new Uri(package.DownloadUrl).LocalPath);
-            var destination = System.IO.Path.Combine(downloadsPath, fileName);
-
-            var progress = new Progress<double>(percent =>
-            {
-                StatusMessage = $"Downloading {package.Name}: {percent:F1}%";
-            });
-
-            var success = await _downloadService.DownloadFileAsync(
-                package.DownloadUrl, 
-                destination, 
-                progress);
-
-            if (success)
-            {
-                StatusMessage = $"Downloaded {package.Name} successfully";
-                MessageBox.Show($"Package downloaded to:\n{destination}", 
-                    "Download Complete", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            else
-            {
-                StatusMessage = "Download failed";
-                MessageBox.Show("Download failed. Please try again.", 
-                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            StatusMessage = $"Download queued: {package.Name}";
+            _logger.LogInformation("Download queued successfully for {PackageName}", package.Name);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to download package");
-            MessageBox.Show($"Failed to download package: {ex.Message}", 
+            _logger.LogError(ex, "Failed to queue download");
+            StatusMessage = "Failed to queue download";
+            MessageBox.Show($"Failed to queue download: {ex.Message}", 
                 "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
