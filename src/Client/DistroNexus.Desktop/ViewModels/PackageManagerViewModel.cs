@@ -4,6 +4,7 @@ using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
+using System.Net.Http;
 using System.Windows;
 
 namespace DistroNexus.Desktop.ViewModels;
@@ -34,6 +35,9 @@ public partial class PackageManagerViewModel : ObservableObject
 
     [ObservableProperty]
     private string _statusMessage = "Ready";
+
+    [ObservableProperty]
+    private bool _isOfflineMode;
 
     public PackageManagerViewModel(
         ICatalogService catalogService,
@@ -66,6 +70,8 @@ public partial class PackageManagerViewModel : ObservableObject
                 FilteredPackages.Add(package);
             }
 
+            UpdateGroupedPackages();
+
             StatusMessage = $"Loaded {Packages.Count} distribution(s)";
             _logger.LogInformation("Loaded {Count} distributions", Packages.Count);
         }
@@ -88,6 +94,7 @@ public partial class PackageManagerViewModel : ObservableObject
         try
         {
             IsLoading = true;
+            IsOfflineMode = false;
             StatusMessage = "Refreshing catalog from remote source...";
 
             _logger.LogInformation("Refreshing catalog");
@@ -95,15 +102,34 @@ public partial class PackageManagerViewModel : ObservableObject
             await _catalogService.RefreshCatalogAsync();
             await LoadCatalogAsync();
 
+            StatusMessage = "Catalog refreshed successfully";
             MessageBox.Show("Catalog refreshed successfully", 
                 "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (HttpRequestException ex)
+        {
+            // Network error - switch to offline mode
+            _logger.LogWarning(ex, "Network error - switching to offline mode");
+            IsOfflineMode = true;
+            StatusMessage = "Offline Mode - Using cached catalog";
+            
+            // Try to load from cache
+            await LoadCatalogAsync();
+            
+            MessageBox.Show("Unable to connect to remote catalog. Using cached data.\n\nWorking in Offline Mode.", 
+                "Offline Mode", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to refresh catalog");
-            StatusMessage = $"Error refreshing catalog: {ex.Message}";
-            MessageBox.Show($"Failed to refresh catalog: {ex.Message}", 
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            IsOfflineMode = true;
+            StatusMessage = "Offline Mode - " + ex.Message;
+            
+            // Try to load from cache anyway
+            await LoadCatalogAsync();
+            
+            MessageBox.Show($"Failed to refresh catalog: {ex.Message}\n\nUsing cached data.", 
+                "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         finally
         {
@@ -125,6 +151,8 @@ public partial class PackageManagerViewModel : ObservableObject
             {
                 FilteredPackages.Add(package);
             }
+
+            UpdateGroupedPackages();
 
             StatusMessage = $"Found {FilteredPackages.Count} matching distribution(s)";
         }
@@ -212,6 +240,22 @@ public partial class PackageManagerViewModel : ObservableObject
     [ObservableProperty]
     private string _customSourceUrl = string.Empty;
 
+    [ObservableProperty]
+    private bool _isAddSourcePanelVisible;
+
+    /// <summary>
+    /// Toggles the visibility of the Add Source panel.
+    /// </summary>
+    [RelayCommand]
+    private void ToggleAddSourcePanel()
+    {
+        IsAddSourcePanelVisible = !IsAddSourcePanelVisible;
+        if (!IsAddSourcePanelVisible)
+        {
+            CustomSourceUrl = string.Empty;
+        }
+    }
+
     /// <summary>
     /// Updates the grouped packages collection based on category.
     /// </summary>
@@ -256,11 +300,45 @@ public partial class PackageManagerViewModel : ObservableObject
             
             package.IsCached = false;
             StatusMessage = $"Deleted cached package: {package.Name}";
+            
+            // Refresh the grouped packages to update UI
+            UpdateGroupedPackages();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to delete cached package");
             MessageBox.Show($"Failed to delete package: {ex.Message}", 
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    /// <summary>
+    /// Re-downloads a package, replacing any existing cached version.
+    /// </summary>
+    [RelayCommand]
+    private async Task RedownloadPackageAsync(DistroPackage package)
+    {
+        if (package == null)
+            return;
+
+        try
+        {
+            _logger.LogInformation("Re-downloading package {PackageName}", package.Name);
+
+            // Delete existing cache first if present
+            if (package.IsCached)
+            {
+                await _catalogService.DeleteCachedPackageAsync(package.Id);
+                package.IsCached = false;
+            }
+
+            // Download the package
+            await DownloadPackageAsync(package);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to redownload package");
+            MessageBox.Show($"Failed to redownload package: {ex.Message}", 
                 "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -290,6 +368,7 @@ public partial class PackageManagerViewModel : ObservableObject
             await _catalogService.AddCustomSourceAsync(CustomSourceUrl);
             
             CustomSourceUrl = string.Empty;
+            IsAddSourcePanelVisible = false;
             await LoadCatalogAsync();
             
             MessageBox.Show("Custom source added successfully", "Success", 
@@ -300,6 +379,22 @@ public partial class PackageManagerViewModel : ObservableObject
             _logger.LogError(ex, "Failed to add custom source");
             MessageBox.Show($"Failed to add custom source: {ex.Message}", 
                 "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    /// <summary>
+    /// Navigates back to the dashboard.
+    /// </summary>
+    [RelayCommand]
+    private void GoBack()
+    {
+        _logger.LogInformation("Navigating back from package manager");
+        
+        // Get the MainViewModel from the application's main window
+        var mainWindow = System.Windows.Application.Current.MainWindow;
+        if (mainWindow?.DataContext is MainViewModel mainViewModel)
+        {
+            mainViewModel.ShowDashboardCommand.Execute(null);
         }
     }
 }

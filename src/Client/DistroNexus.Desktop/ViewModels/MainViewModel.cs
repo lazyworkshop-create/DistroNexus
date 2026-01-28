@@ -39,6 +39,12 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _isOnDashboard = true;
 
+    [ObservableProperty]
+    private string _currentTheme = "Dark";
+
+    [ObservableProperty]
+    private string _currentLanguage = "en-US";
+
     public MainViewModel(
         IWslManagerService wslManager,
         ISettingsService settingsService,
@@ -52,11 +58,34 @@ public partial class MainViewModel : ObservableObject
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
+        // Load saved theme and language settings
+        _ = LoadUserPreferencesAsync();
+
         // Start auto-refresh timer
         StartAutoRefresh();
     }
 
     private System.Timers.Timer? _refreshTimer;
+
+    /// <summary>
+    /// Loads user preferences from settings.
+    /// </summary>
+    private async Task LoadUserPreferencesAsync()
+    {
+        try
+        {
+            var settings = await _settingsService.LoadSettingsAsync();
+            CurrentTheme = settings.Theme ?? "Dark";
+            CurrentLanguage = settings.Language ?? "en-US";
+
+            _logger.LogInformation("Loaded user preferences: Theme={Theme}, Language={Language}", 
+                CurrentTheme, CurrentLanguage);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to load user preferences, using defaults");
+        }
+    }
 
     private void StartAutoRefresh()
     {
@@ -163,7 +192,8 @@ public partial class MainViewModel : ObservableObject
         StatusMessage = "Opening installation wizard...";
         _logger.LogInformation("Opening install wizard");
 
-        var dialog = _serviceProvider.GetRequiredService<InstallWizardDialog>();
+        // Use the new workflow-based wizard dialog
+        var dialog = _serviceProvider.GetRequiredService<InstallWizardDialogNew>();
         dialog.Owner = Application.Current.MainWindow;
         
         var result = dialog.ShowDialog();
@@ -193,6 +223,77 @@ public partial class MainViewModel : ObservableObject
     private void GoBack()
     {
         ShowDashboard();
+    }
+
+    /// <summary>
+    /// Toggles between light and dark theme.
+    /// </summary>
+    [RelayCommand]
+    private void ToggleTheme()
+    {
+        try
+        {
+            _logger.LogInformation("Toggling theme from {CurrentTheme}", CurrentTheme);
+
+            // Toggle between Dark and Light
+            CurrentTheme = CurrentTheme == "Dark" ? "Light" : "Dark";
+
+            // Use App's ApplyThemeFromSettings for consistent theme switching
+            var app = (App)Application.Current;
+            app.ApplyThemeFromSettings(CurrentTheme);
+
+            // Save theme preference
+            var settings = _settingsService.LoadSettingsAsync().Result;
+            settings.Theme = CurrentTheme;
+            _ = _settingsService.SaveSettingsAsync(settings);
+
+            StatusMessage = $"Theme changed to {CurrentTheme}";
+            _logger.LogInformation("Theme changed to {Theme}", CurrentTheme);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to toggle theme");
+            StatusMessage = "Failed to change theme";
+        }
+    }
+
+    /// <summary>
+    /// Toggles between English and Chinese language.
+    /// </summary>
+    [RelayCommand]
+    private void ToggleLanguage()
+    {
+        try
+        {
+            _logger.LogInformation("Toggling language from {CurrentLanguage}", CurrentLanguage);
+
+            // Toggle between en-US and zh-CN
+            CurrentLanguage = CurrentLanguage == "en-US" ? "zh-CN" : "en-US";
+
+            // Save language preference
+            var settings = _settingsService.LoadSettingsAsync().Result;
+            settings.Language = CurrentLanguage;
+            _ = _settingsService.SaveSettingsAsync(settings);
+
+            StatusMessage = CurrentLanguage == "en-US" 
+                ? "Language changed to English" 
+                : "语言已切换为中文";
+
+            _logger.LogInformation("Language changed to {Language}", CurrentLanguage);
+
+            MessageBox.Show(
+                CurrentLanguage == "en-US"
+                    ? "Language changed to English. Please restart the application for the change to take full effect."
+                    : "语言已切换为中文。请重启应用程序以使更改完全生效。",
+                CurrentLanguage == "en-US" ? "Language Changed" : "语言已更改",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to toggle language");
+            StatusMessage = "Failed to change language";
+        }
     }
 }
 

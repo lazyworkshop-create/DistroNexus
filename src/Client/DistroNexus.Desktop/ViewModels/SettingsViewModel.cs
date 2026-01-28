@@ -4,6 +4,7 @@ using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Windows;
 
 namespace DistroNexus.Desktop.ViewModels;
@@ -80,6 +81,19 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private DistroPackage? _defaultDistribution;
 
+    // Cache management properties
+    [ObservableProperty]
+    private string _cachePath = string.Empty;
+
+    [ObservableProperty]
+    private int _cachedPackageCount;
+
+    [ObservableProperty]
+    private string _cacheTotalSize = "0 B";
+
+    [ObservableProperty]
+    private ObservableCollection<CachedPackageInfo> _cachedPackages = [];
+
     public SettingsViewModel(
         ISettingsService settingsService, 
         ICatalogService catalogService,
@@ -117,6 +131,9 @@ public partial class SettingsViewModel : ObservableObject
 
             // Load available distributions for default selection
             await LoadDistributionsAsync();
+
+            // Load cache info
+            await RefreshCacheInfoAsync();
 
             IsDirty = false;
             _logger.LogInformation("Settings loaded successfully");
@@ -174,6 +191,9 @@ public partial class SettingsViewModel : ObservableObject
             };
 
             await _settingsService.SaveSettingsAsync(settings);
+
+            // Apply theme immediately
+            ApplyTheme(Theme);
 
             IsDirty = false;
             MessageBox.Show("Settings saved successfully", 
@@ -251,6 +271,45 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Applies the selected theme to the application.
+    /// </summary>
+    /// <param name="themeName">The name of the theme to apply ("Light", "Dark", or "Auto").</param>
+    private void ApplyTheme(string themeName)
+    {
+        try
+        {
+            _logger.LogInformation("Applying theme: {Theme}", themeName);
+
+            var app = (App)Application.Current;
+            app.ApplyThemeFromSettings(themeName);
+
+            _logger.LogInformation("Theme applied successfully: {Theme}", themeName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to apply theme");
+            MessageBox.Show($"Failed to apply theme: {ex.Message}",
+                "Theme Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    [RelayCommand]
+    private void BrowseLogPath()
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = "Select log file path",
+            InitialDirectory = LogPath
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            LogPath = dialog.FolderName;
+            IsDirty = true;
+        }
+    }
+
     [RelayCommand]
     private void BrowseTerminalPath()
     {
@@ -284,4 +343,158 @@ public partial class SettingsViewModel : ObservableObject
     partial void OnAutoRetryDownloadsChanged(bool value) => IsDirty = true;
     partial void OnMaxRetryAttemptsChanged(int value) => IsDirty = true;
     partial void OnDefaultDistributionChanged(DistroPackage? value) => IsDirty = true;
+
+    /// <summary>
+    /// Refreshes cache usage information.
+    /// </summary>
+    [RelayCommand]
+    private async Task RefreshCacheInfoAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Refreshing cache info");
+
+            var cacheInfo = await _catalogService.GetCacheUsageAsync();
+
+            CachePath = cacheInfo.CachePath;
+            CachedPackageCount = cacheInfo.PackageCount;
+            CacheTotalSize = cacheInfo.TotalSizeDisplay;
+
+            CachedPackages.Clear();
+            foreach (var package in cacheInfo.CachedPackages)
+            {
+                CachedPackages.Add(package);
+            }
+
+            _logger.LogInformation("Cache info refreshed: {Count} packages, {Size}", 
+                CachedPackageCount, CacheTotalSize);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to refresh cache info");
+        }
+    }
+
+    /// <summary>
+    /// Clears all cached packages.
+    /// </summary>
+    [RelayCommand]
+    private async Task ClearCacheAsync()
+    {
+        var result = MessageBox.Show(
+            "Are you sure you want to clear all cached packages? This will free up disk space but downloaded packages will need to be re-downloaded.",
+            "Confirm Clear Cache",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (result != MessageBoxResult.Yes)
+            return;
+
+        try
+        {
+            _logger.LogInformation("Clearing cache");
+
+            var deletedCount = await _catalogService.ClearAllCacheAsync();
+
+            await RefreshCacheInfoAsync();
+
+            MessageBox.Show($"Successfully cleared {deletedCount} cached files.", 
+                "Cache Cleared", MessageBoxButton.OK, MessageBoxImage.Information);
+
+            _logger.LogInformation("Cache cleared: {Count} files deleted", deletedCount);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to clear cache");
+            MessageBox.Show($"Failed to clear cache: {ex.Message}", 
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    /// <summary>
+    /// Deletes a single cached package file.
+    /// </summary>
+    [RelayCommand]
+    private async Task DeleteCachedPackageAsync(CachedPackageInfo package)
+    {
+        if (package == null)
+            return;
+
+        var result = MessageBox.Show(
+            $"Are you sure you want to delete the cached file '{package.FileName}'?",
+            "Confirm Delete",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (result != MessageBoxResult.Yes)
+            return;
+
+        try
+        {
+            _logger.LogInformation("Deleting cached file: {FilePath}", package.FilePath);
+
+            if (System.IO.File.Exists(package.FilePath))
+            {
+                System.IO.File.Delete(package.FilePath);
+            }
+
+            await RefreshCacheInfoAsync();
+
+            _logger.LogInformation("Deleted cached file: {FileName}", package.FileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete cached file");
+            MessageBox.Show($"Failed to delete file: {ex.Message}", 
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    /// <summary>
+    /// Opens the cache folder in File Explorer.
+    /// </summary>
+    [RelayCommand]
+    private void OpenCacheFolder()
+    {
+        try
+        {
+            var cachePath = _catalogService.GetPackageCachePath();
+
+            if (!string.IsNullOrEmpty(cachePath) && System.IO.Directory.Exists(cachePath))
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = cachePath,
+                    UseShellExecute = true
+                });
+            }
+            else
+            {
+                MessageBox.Show("Cache folder does not exist yet.", 
+                    "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to open cache folder");
+            MessageBox.Show($"Failed to open cache folder: {ex.Message}", 
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    /// <summary>
+    /// Navigates back to the dashboard.
+    /// </summary>
+    [RelayCommand]
+    private void GoBack()
+    {
+        _logger.LogInformation("Navigating back from settings");
+        
+        // Get the MainViewModel from the application's main window
+        var mainWindow = Application.Current.MainWindow;
+        if (mainWindow?.DataContext is MainViewModel mainViewModel)
+        {
+            mainViewModel.ShowDashboardCommand.Execute(null);
+        }
+    }
 }
