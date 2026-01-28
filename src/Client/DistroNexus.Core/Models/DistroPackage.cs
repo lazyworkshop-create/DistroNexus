@@ -1,9 +1,11 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+
 namespace DistroNexus.Core.Models;
 
 /// <summary>
 /// Represents a WSL distribution package available for installation.
 /// </summary>
-public class DistroPackage
+public partial class DistroPackage : ObservableObject
 {
     /// <summary>
     /// Gets or sets the unique identifier for the distribution.
@@ -58,7 +60,8 @@ public class DistroPackage
     /// <summary>
     /// Gets or sets whether this package is cached locally.
     /// </summary>
-    public bool IsCached { get; set; }
+    [ObservableProperty]
+    private bool _isCached;
 
     /// <summary>
     /// Gets or sets whether this package is from a custom source.
@@ -68,7 +71,14 @@ public class DistroPackage
     /// <summary>
     /// Gets or sets the local file path if the package is cached.
     /// </summary>
-    public string LocalPath { get; set; } = string.Empty;
+    [ObservableProperty]
+    private string _localPath = string.Empty;
+
+    /// <summary>
+    /// Gets or sets whether this package is currently downloading.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isDownloading;
 
     /// <summary>
     /// Gets or sets additional metadata as key-value pairs.
