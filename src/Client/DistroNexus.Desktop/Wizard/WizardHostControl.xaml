@@ -1,0 +1,137 @@
+<UserControl x:Class="DistroNexus.Desktop.Wizard.WizardHostControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:local="clr-namespace:DistroNexus.Desktop.Wizard"
+             mc:Ignorable="d" 
+             d:DesignHeight="500" d:DesignWidth="650"
+             d:DataContext="{d:DesignInstance Type=local:InstallWizardWorkflowViewModel}">
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Step Indicator (only for indicator steps) -->
+        <Border Grid.Row="0" 
+                Padding="0,0,0,20"
+                Visibility="{Binding Workflow.CurrentStep.ShowInStepIndicator, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel HorizontalAlignment="Center">
+                <!-- Step Progress Text -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,15">
+                    <TextBlock Text="Step " 
+                              FontSize="14"
+                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                    <TextBlock Text="{Binding Workflow.CurrentStepNumber}" 
+                              FontSize="14" 
+                              FontWeight="Bold"/>
+                    <TextBlock Text=" of " 
+                              FontSize="14"
+                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                    <TextBlock Text="{Binding Workflow.TotalIndicatorSteps}" 
+                              FontSize="14" 
+                              FontWeight="Bold"/>
+                    <TextBlock Text=" - " 
+                              FontSize="14"
+                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                    <TextBlock Text="{Binding Workflow.CurrentStepTitle}" 
+                              FontSize="14" 
+                              FontWeight="SemiBold"/>
+                </StackPanel>
+                
+                <!-- Visual Step Indicators -->
+                <ItemsControl ItemsSource="{Binding Workflow.IndicatorSteps}" 
+                             HorizontalAlignment="Center">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <!-- Step Circle -->
+                                <Border Width="32" Height="32" 
+                                        CornerRadius="16"
+                                        BorderThickness="2"
+                                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                        Background="{DynamicResource ControlFillColorDefaultBrush}">
+                                    <TextBlock Text="{Binding StepNumber}"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              FontWeight="SemiBold"/>
+                                </Border>
+                                <!-- Connector Line (not for last item) -->
+                                <Border Width="40" Height="2"
+                                        Background="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                        VerticalAlignment="Center"
+                                        Margin="5,0"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+        
+        <!-- Step Title (for non-indicator steps like progress/result) -->
+        <Border Grid.Row="0" 
+                Padding="0,0,0,20"
+                Visibility="{Binding Workflow.CurrentStep.ShowInStepIndicator, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
+            <TextBlock Text="{Binding Workflow.CurrentStepTitle}"
+                      FontSize="18"
+                      FontWeight="SemiBold"
+                      HorizontalAlignment="Center"/>
+        </Border>
+        
+        <!-- Step Content -->
+        <ContentControl Grid.Row="1" 
+                       Content="{Binding Workflow.CurrentStep.Content}"
+                       Margin="0,0,0,20"/>
+        
+        <!-- Error Message -->
+        <Border Grid.Row="1" 
+                VerticalAlignment="Bottom"
+                Margin="0,0,0,30"
+                Padding="10"
+                CornerRadius="4"
+                Background="#20D13438"
+                Visibility="{Binding Workflow.CurrentStep.ErrorMessage, Converter={StaticResource StringToVisibilityConverter}}">
+            <StackPanel Orientation="Horizontal">
+                <ui:SymbolIcon Symbol="ErrorCircle20" 
+                              Foreground="#D13438"
+                              Margin="0,0,8,0"/>
+                <TextBlock Text="{Binding Workflow.CurrentStep.ErrorMessage}"
+                          Foreground="#D13438"/>
+            </StackPanel>
+        </Border>
+        
+        <!-- Buttons -->
+        <Border Grid.Row="2" 
+                BorderThickness="0,1,0,0"
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                Padding="0,15,0,0">
+            <ItemsControl ItemsSource="{Binding Workflow.CurrentStep.Buttons}"
+                         HorizontalAlignment="Right">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <ui:Button Content="{Binding Content}"
+                                  Command="{Binding Command}"
+                                  Appearance="{Binding IsPrimary, Converter={StaticResource BoolToPrimaryAppearanceConverter}}"
+                                  Visibility="{Binding IsVisible, Converter={StaticResource BoolToVisibilityConverter}}"
+                                  Margin="0,0,10,0"
+                                  MinWidth="90"/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Border>
+    </Grid>
+</UserControl>

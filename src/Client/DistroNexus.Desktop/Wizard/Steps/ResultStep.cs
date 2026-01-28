@@ -1,0 +1,123 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using System.IO;
+using System.Windows.Controls;
+
+namespace DistroNexus.Desktop.Wizard.Steps;
+
+/// <summary>
+/// Step 6: Show installation result (success or failure).
+/// </summary>
+public partial class ResultStep : WizardStepBase
+{
+    public override string StepId => "result";
+    public override string Title => "Complete";
+    public override string Description => "Installation result";
+
+    /// <summary>
+    /// This step is not shown in the step indicator.
+    /// </summary>
+    public override bool ShowInStepIndicator => false;
+
+    /// <summary>
+    /// Gets the full installation path.
+    /// </summary>
+    public string FullInstallPath => Context != null
+        ? Path.Combine(Context.InstallPath, Context.InstanceName)
+        : string.Empty;
+
+    /// <summary>
+    /// Gets the success message.
+    /// </summary>
+    public string SuccessMessage => Context != null
+        ? $"{Context.SelectedDistribution?.Name} has been installed successfully and is ready to use."
+        : "Installation completed successfully.";
+
+    /// <summary>
+    /// Gets whether there are error details to show.
+    /// Only show if ErrorMessage exists and is different from ResultMessage.
+    /// </summary>
+    public bool HasErrorDetails
+    {
+        get
+        {
+            if (Context == null || string.IsNullOrWhiteSpace(Context.ErrorMessage))
+                return false;
+
+            // Don't show if the error message is the same as the result message
+            if (string.Equals(Context.ErrorMessage?.Trim(), Context.ResultMessage?.Trim(), StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            // Show if ErrorMessage contains technical details (e.g., exception type, stack trace)
+            return Context.ErrorMessage.Length > 100 || 
+                   Context.ErrorMessage.Contains("Exception", StringComparison.OrdinalIgnoreCase) ||
+                   Context.ErrorMessage.Contains("at ", StringComparison.Ordinal);
+        }
+    }
+
+    public ResultStep()
+    {
+    }
+
+    protected override UserControl CreateContent()
+    {
+        return new ResultStepView { DataContext = this };
+    }
+
+    protected override List<WizardButtonAction> CreateButtons()
+    {
+        var buttons = new List<WizardButtonAction>();
+
+        // Show "Try Again" button if failed
+        if (Context?.InstallFailed == true)
+        {
+            buttons.Add(new WizardButtonAction
+            {
+                Content = "Try Again",
+                Command = new RelayCommand(TryAgain),
+                IsVisible = true,
+                IsPrimary = false
+            });
+        }
+
+        // Always show Finish/Close button
+        buttons.Add(new WizardButtonAction
+        {
+            Content = Context?.InstallCompleted == true ? "Finish" : "Close",
+            Command = new RelayCommand(Finish),
+            IsVisible = true,
+            IsPrimary = true
+        });
+
+        return buttons;
+    }
+
+    public override Task OnEnterAsync()
+    {
+        // Clear the step's ErrorMessage since ResultStep displays errors in its own UI
+        ErrorMessage = string.Empty;
+
+        // Refresh computed properties
+        OnPropertyChanged(nameof(FullInstallPath));
+        OnPropertyChanged(nameof(SuccessMessage));
+        OnPropertyChanged(nameof(HasErrorDetails));
+
+        // Refresh buttons based on result
+        RefreshButtons();
+
+        return Task.CompletedTask;
+    }
+
+    private void TryAgain()
+    {
+        // Reset to first step
+        Context?.Reset();
+        _ = Workflow?.GoToStepAsync("select-distribution");
+    }
+
+    private void Finish()
+    {
+        // Complete the wizard with success status
+        Workflow?.Complete(Context?.InstallCompleted == true);
+    }
+}

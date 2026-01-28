@@ -1,0 +1,118 @@
+<UserControl x:Class="DistroNexus.Desktop.Wizard.Steps.ResultStepView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:local="clr-namespace:DistroNexus.Desktop.Wizard.Steps"
+             mc:Ignorable="d" 
+             d:DesignHeight="400" d:DesignWidth="600"
+             d:DataContext="{d:DesignInstance Type=local:ResultStep}">
+    
+    <Grid VerticalAlignment="Center" HorizontalAlignment="Center">
+        <StackPanel Width="600">
+            <!-- Success State -->
+            <StackPanel Visibility="{Binding Context.InstallCompleted, Converter={StaticResource BoolToVisibilityConverter}}">
+                <!-- Success Icon -->
+                <Border Width="80" Height="80"
+                        CornerRadius="40"
+                        Background="#10107C10"
+                        HorizontalAlignment="Center"
+                        Margin="0,0,0,20">
+                    <ui:SymbolIcon Symbol="CheckmarkCircle48"
+                                  FontSize="48"
+                                  Foreground="#107C10"/>
+                </Border>
+                
+                <!-- Success Title -->
+                <TextBlock Text="Installation Successful!"
+                          FontSize="24"
+                          FontWeight="SemiBold"
+                          HorizontalAlignment="Center"
+                          Foreground="#107C10"
+                          Margin="0,0,0,10"/>
+                
+                <!-- Success Message -->
+                <TextBlock Text="{Binding SuccessMessage}"
+                          FontSize="14"
+                          HorizontalAlignment="Center"
+                          TextAlignment="Center"
+                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                          TextWrapping="Wrap"
+                          Margin="0,0,0,20"/>
+                
+                <!-- Instance Details Card -->
+                <ui:Card Padding="15" Margin="0,10,0,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Distribution:"
+                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Context.SelectedDistribution.Name}"
+                                  FontWeight="SemiBold"/>
+                        
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Instance:" Margin="0,5,0,0"
+                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Context.InstanceName}" Margin="0,5,0,0"
+                                  FontWeight="SemiBold"/>
+                        
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Location:" Margin="0,5,0,0"
+                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding FullInstallPath}" Margin="0,5,0,0"
+                                  FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                    </Grid>
+                </ui:Card>
+            </StackPanel>
+            
+            <!-- Failure State -->
+            <StackPanel Visibility="{Binding Context.InstallFailed, Converter={StaticResource BoolToVisibilityConverter}}">
+                <!-- Failure Icon -->
+                <Border Width="80" Height="80"
+                        CornerRadius="40"
+                        Background="#10D13438"
+                        HorizontalAlignment="Center"
+                        Margin="0,0,0,20">
+                    <ui:SymbolIcon Symbol="DismissCircle48"
+                                  FontSize="48"
+                                  Foreground="#D13438"/>
+                </Border>
+                
+                <!-- Failure Title -->
+                <TextBlock Text="Installation Failed"
+                          FontSize="24"
+                          FontWeight="SemiBold"
+                          HorizontalAlignment="Center"
+                          Foreground="#D13438"
+                          Margin="0,0,0,10"/>
+                
+                <!-- Error Message -->
+                <TextBlock Text="{Binding Context.ResultMessage}"
+                          FontSize="14"
+                          HorizontalAlignment="Center"
+                          TextAlignment="Center"
+                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                          TextWrapping="Wrap"
+                          Margin="0,0,0,20"/>
+                
+                <!-- Error Details Card -->
+                <ui:Card Padding="15" Margin="0,10,0,0"
+                        Visibility="{Binding HasErrorDetails, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding Context.ErrorMessage}"
+                                  FontSize="12"
+                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                  TextWrapping="Wrap"/>
+                    </StackPanel>
+                </ui:Card>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</UserControl>
