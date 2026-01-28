@@ -297,6 +297,33 @@ public partial class WslManagerService : IWslManagerService
             progress?.Report((90, "Finalizing installation..."));
             cancellationToken.ThrowIfCancellationRequested();
 
+            // Execute initialization commands
+            if (options.InitCommands != null && options.InitCommands.Count > 0)
+            {
+                progress?.Report((95, "Running initialization commands..."));
+                
+                foreach (var command in options.InitCommands)
+                {
+                    try
+                    {
+                        _logger.LogInformation("Running init command: {Command}", command);
+                        
+                        var initScript = 
+                            "$ProgressPreference = 'SilentlyContinue'; " +
+                            "$ErrorActionPreference = 'Continue'; " +
+                            $"wsl --distribution '{options.InstanceName}' -- bash -c \"{EscapePowerShellString(command)}\"";
+                        
+                        var result = await _powerShellService.ExecuteScriptAsync(initScript, cancellationToken);
+                        _logger.LogInformation("Init command completed: {Command}", command);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Init command failed: {Command}", command);
+                        // Continue with other commands even if one fails
+                    }
+                }
+            }
+
             _logger.LogInformation("WSL instance '{InstanceName}' installed successfully", options.InstanceName);
             
             progress?.Report((100, "Installation complete"));

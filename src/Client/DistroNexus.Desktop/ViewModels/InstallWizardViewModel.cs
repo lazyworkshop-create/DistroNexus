@@ -58,6 +58,9 @@ public partial class InstallWizardViewModel : ObservableObject
     [ObservableProperty]
     private string _errorMessage = string.Empty;
 
+    [ObservableProperty]
+    private ObservableCollection<string> _installLogs = new();
+
     // Step 1: Distribution Selection
     [ObservableProperty]
     private ObservableCollection<DistroPackage> _availableDistributions = new();
@@ -217,14 +220,20 @@ public partial class InstallWizardViewModel : ObservableObject
                 WslVersion = WslVersion,
                 SetAsDefault = SetAsDefault,
                 LaunchAfterInstall = LaunchAfterInstall,
-                UseLocalCache = UseLocalCache
+                UseLocalCache = UseLocalCache,
+                InitCommands = GetInitializationCommands()
             };
+
+            // Clear previous logs
+            InstallLogs.Clear();
+            AddInstallLog("Starting installation...");
 
             // Progress callback
             var progress = new Progress<(double percentage, string message)>(p =>
             {
                 InstallProgress = p.percentage;
                 InstallStatusMessage = p.message;
+                AddInstallLog($"[{p.percentage:F1}%] {p.message}");
             });
 
             await _wslManager.InstallInstanceAsync(options, progress, _installCts.Token);
@@ -233,7 +242,7 @@ public partial class InstallWizardViewModel : ObservableObject
             InstallStatusMessage = "Installation completed successfully!";
             InstallCompleted = true;
             
-            _logger.LogInformation("Installation completed successfully");
+                _logger.LogInformation("Installation completed successfully");
         }
         catch (OperationCanceledException)
         {
@@ -425,6 +434,71 @@ public partial class InstallWizardViewModel : ObservableObject
     partial void OnInstanceNameChanged(string value)
     {
         ValidateInstallPath();
+    }
+
+    /// <summary>
+    /// Adds a log entry to the installation logs.
+    /// </summary>
+    private void AddInstallLog(string message)
+    {
+        var timestamp = DateTime.Now.ToString("HH:mm:ss");
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            InstallLogs.Insert(0, $"[{timestamp}] {message}");
+            
+            // Keep only the last 100 log entries
+            while (InstallLogs.Count > 100)
+            {
+                InstallLogs.RemoveAt(InstallLogs.Count - 1);
+            }
+        });
+        
+        _logger.LogInformation("Install log: {Message}", message);
+    }
+
+    /// <summary>
+    /// Gets initialization commands based on the selected distribution type.
+    /// </summary>
+    private List<string> GetInitializationCommands()
+    {
+        var commands = new List<string>();
+        
+        if (SelectedDistribution?.Category?.Contains("Debian", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            commands.AddRange([
+                "apt update",
+                "apt upgrade -y",
+                "apt install -y curl wget git vim nano"
+            ]);
+        }
+        else if (SelectedDistribution?.Category?.Contains("RedHat", StringComparison.OrdinalIgnoreCase) == true ||
+                 SelectedDistribution?.Category?.Contains("Enterprise", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            commands.AddRange([
+                "dnf update -y",
+                "dnf install -y curl wget git vim nano"
+            ]);
+        }
+        else if (SelectedDistribution?.Category?.Contains("Arch", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            commands.AddRange([
+                "pacman -Syu --noconfirm",
+                "pacman -S --noconfirm curl wget git vim nano"
+            ]);
+        }
+        else
+        {
+            // Default commands for other distributions
+            commands.AddRange([
+                "echo 'Initializing system...'",
+                "echo 'System initialization complete'"
+            ]);
+        }
+        
+        _logger.LogInformation("Added {Count} initialization commands for distribution {DistroCategory}", 
+            commands.Count, SelectedDistribution?.Category ?? "Unknown");
+        
+        return commands;
     }
 
     private void ValidateInstallPath()
