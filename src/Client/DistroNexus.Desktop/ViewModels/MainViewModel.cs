@@ -18,6 +18,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IWslManagerService _wslManager;
     private readonly ISettingsService _settingsService;
     private readonly INavigationService _navigationService;
+    private readonly ITerminalService _terminalService;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<MainViewModel> _logger;
 
@@ -49,12 +50,14 @@ public partial class MainViewModel : ObservableObject
         IWslManagerService wslManager,
         ISettingsService settingsService,
         INavigationService navigationService,
+        ITerminalService terminalService,
         IServiceProvider serviceProvider,
         ILogger<MainViewModel> logger)
     {
         _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
+        _terminalService = terminalService ?? throw new ArgumentNullException(nameof(terminalService));
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
@@ -142,7 +145,7 @@ public partial class MainViewModel : ObservableObject
             Instances.Clear();
             foreach (var instance in instances)
             {
-                Instances.Add(new WslInstanceViewModel(instance, _wslManager, _logger));
+                Instances.Add(new WslInstanceViewModel(instance, _wslManager, _terminalService, _logger));
             }
 
             StatusMessage = $"Loaded {Instances.Count} instance(s)";
@@ -303,6 +306,7 @@ public partial class MainViewModel : ObservableObject
 public partial class WslInstanceViewModel : ObservableObject
 {
     private readonly IWslManagerService _wslManager;
+    private readonly ITerminalService _terminalService;
     private readonly ILogger _logger;
 
     [ObservableProperty]
@@ -322,11 +326,13 @@ public partial class WslInstanceViewModel : ObservableObject
 
     public WslInstanceViewModel(
         WslInstance instance, 
-        IWslManagerService wslManager, 
+        IWslManagerService wslManager,
+        ITerminalService terminalService,
         ILogger logger)
     {
         _instance = instance;
         _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
+        _terminalService = terminalService ?? throw new ArgumentNullException(nameof(terminalService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -433,42 +439,25 @@ public partial class WslInstanceViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void OpenTerminal()
+    private async Task OpenTerminalAsync()
     {
         try
         {
             _logger.LogInformation("Opening terminal for instance {Name}", Name);
             
-            var startInfo = new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = "wt.exe",
-                Arguments = $"-w 0 wsl -d {Name}",
-                UseShellExecute = true
-            };
+            var success = await _terminalService.OpenTerminalAsync(Name);
             
-            System.Diagnostics.Process.Start(startInfo);
+            if (!success)
+            {
+                MessageBox.Show($"Failed to open terminal for instance '{Name}'", 
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to open terminal for instance {Name}", Name);
-            
-            // Fallback to cmd if Windows Terminal is not available
-            try
-            {
-                var startInfo = new System.Diagnostics.ProcessStartInfo
-                {
-                    FileName = "cmd.exe",
-                    Arguments = $"/c wsl -d {Name}",
-                    UseShellExecute = true
-                };
-                System.Diagnostics.Process.Start(startInfo);
-            }
-            catch (Exception fallbackEx)
-            {
-                _logger.LogError(fallbackEx, "Failed to open fallback terminal for instance {Name}", Name);
-                MessageBox.Show($"Failed to open terminal: {ex.Message}", 
-                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            MessageBox.Show($"Failed to open terminal: {ex.Message}", 
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

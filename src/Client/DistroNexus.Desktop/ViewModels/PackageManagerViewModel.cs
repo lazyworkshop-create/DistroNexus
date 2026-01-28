@@ -179,9 +179,7 @@ public partial class PackageManagerViewModel : ObservableObject
                 "Downloads", 
                 "DistroNexus");
 
-            if (!System.IO.Directory.Exists(downloadsPath))
-                System.IO.Directory.CreateDirectory(downloadsPath);
-
+            // DownloadService will create directory if needed
             var fileName = System.IO.Path.GetFileName(new Uri(package.DownloadUrl).LocalPath);
             var destination = System.IO.Path.Combine(downloadsPath, fileName);
 

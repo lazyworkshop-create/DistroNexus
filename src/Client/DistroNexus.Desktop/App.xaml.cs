@@ -46,6 +46,7 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<ICatalogService, CatalogService>();
                     services.AddSingleton<INavigationService, NavigationService>();
                     services.AddSingleton<IUpdateService, UpdateService>();
+                    services.AddSingleton<ITerminalService, TerminalService>();
 
                     // Register ViewModels
                     services.AddTransient<MainViewModel>();

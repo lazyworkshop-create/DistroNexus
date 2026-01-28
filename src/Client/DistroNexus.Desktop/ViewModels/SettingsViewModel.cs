@@ -16,6 +16,7 @@ public partial class SettingsViewModel : ObservableObject
 {
     private readonly ISettingsService _settingsService;
     private readonly ICatalogService _catalogService;
+    private readonly ITerminalService _terminalService;
     private readonly ILogger<SettingsViewModel> _logger;
 
     [ObservableProperty]
@@ -97,10 +98,12 @@ public partial class SettingsViewModel : ObservableObject
     public SettingsViewModel(
         ISettingsService settingsService, 
         ICatalogService catalogService,
+        ITerminalService terminalService,
         ILogger<SettingsViewModel> logger)
     {
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
+        _terminalService = terminalService ?? throw new ArgumentNullException(nameof(terminalService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -431,16 +434,14 @@ public partial class SettingsViewModel : ObservableObject
 
         try
         {
-            _logger.LogInformation("Deleting cached file: {FilePath}", package.FilePath);
+            _logger.LogInformation("Deleting cached package: {PackageId}", package.PackageId);
 
-            if (System.IO.File.Exists(package.FilePath))
-            {
-                System.IO.File.Delete(package.FilePath);
-            }
+            // Use catalog service to delete the package
+            await _catalogService.DeleteCachedPackageAsync(package.PackageId);
 
             await RefreshCacheInfoAsync();
 
-            _logger.LogInformation("Deleted cached file: {FileName}", package.FileName);
+            _logger.LogInformation("Deleted cached package: {FileName}", package.FileName);
         }
         catch (Exception ex)
         {
@@ -454,23 +455,25 @@ public partial class SettingsViewModel : ObservableObject
     /// Opens the cache folder in File Explorer.
     /// </summary>
     [RelayCommand]
-    private void OpenCacheFolder()
+    private async Task OpenCacheFolderAsync()
     {
         try
         {
             var cachePath = _catalogService.GetPackageCachePath();
 
-            if (!string.IsNullOrEmpty(cachePath) && System.IO.Directory.Exists(cachePath))
+            if (!string.IsNullOrEmpty(cachePath))
             {
-                Process.Start(new ProcessStartInfo
+                var success = await _terminalService.OpenFileExplorerAsync(cachePath);
+                
+                if (!success)
                 {
-                    FileName = cachePath,
-                    UseShellExecute = true
-                });
+                    MessageBox.Show("Failed to open cache folder.", 
+                        "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
             else
             {
-                MessageBox.Show("Cache folder does not exist yet.", 
+                MessageBox.Show("Cache folder path is not configured.", 
                     "Information", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
