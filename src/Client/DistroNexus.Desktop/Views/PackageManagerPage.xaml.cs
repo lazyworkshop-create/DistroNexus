@@ -1,5 +1,7 @@
 using DistroNexus.Desktop.ViewModels;
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace DistroNexus.Desktop.Views;
 
@@ -8,10 +10,26 @@ namespace DistroNexus.Desktop.Views;
 /// </summary>
 public partial class PackageManagerPage : Page
 {
+    private readonly PackageManagerViewModel _viewModel;
+
     public PackageManagerPage(PackageManagerViewModel viewModel)
     {
         InitializeComponent();
+        _viewModel = viewModel;
         DataContext = viewModel;
-        Loaded += async (s, e) => await viewModel.LoadCatalogCommand.ExecuteAsync(null);
+    }
+
+    private async void Page_Loaded(object sender, RoutedEventArgs e)
+    {
+        await _viewModel.LoadCatalogCommand.ExecuteAsync(null);
+    }
+
+    /// <summary>
+    /// Handles clicks on the overlay to close the Add Source panel.
+    /// </summary>
+    private void Overlay_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        // Close the Add Source panel when clicking on the overlay
+        _viewModel.ToggleAddSourcePanelCommand.Execute(null);
     }
 }

@@ -9,195 +9,313 @@
       Title="Settings"
       d:DataContext="{d:DesignInstance Type=vm:SettingsViewModel}">
     
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="0" MaxWidth="800">
-            <!-- Header -->
-            <TextBlock Text="Settings" FontSize="24" FontWeight="Bold" Margin="0,0,0,20"/>
+    <Grid Margin="0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
 
-            <!-- General Settings -->
-            <ui:Card Margin="0,0,0,15">
-                <StackPanel>
-                    <TextBlock Text="General Settings" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
-                    
-                    <TextBlock Text="Default Installation Path" Margin="0,0,0,5"/>
-                    <Grid Margin="0,0,0,15">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBox Grid.Column="0" 
-                                   Text="{Binding DefaultInstallPath, UpdateSourceTrigger=PropertyChanged}"
-                                   Margin="0,0,10,0"/>
-                        <ui:Button Grid.Column="1" 
-                                  Content="Browse..."
-                                  Icon="{ui:SymbolIcon Symbol=Folder20}"
-                                  Command="{Binding BrowseInstallPathCommand}"/>
-                    </Grid>
+        <!-- Toolbar -->
+        <Grid Grid.Row="0" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
 
-                    <TextBlock Text="Package Cache Path" Margin="0,0,0,5"/>
-                    <Grid Margin="0,0,0,15">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBox Grid.Column="0" 
-                                   Text="{Binding PackageCachePath, UpdateSourceTrigger=PropertyChanged}"
-                                   Margin="0,0,10,0"/>
-                        <ui:Button Grid.Column="1" 
-                                  Content="Browse..."
-                                  Icon="{ui:SymbolIcon Symbol=Folder20}"
-                                  Command="{Binding BrowseCachePathCommand}"/>
-                    </Grid>
-
-                    <Grid Margin="0,0,0,15">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        
-                        <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                            <TextBlock Text="Default WSL Version" Margin="0,0,0,5"/>
-                            <ComboBox SelectedIndex="{Binding WslVersionIndex}">
-                                <ComboBoxItem Content="WSL 1"/>
-                                <ComboBoxItem Content="WSL 2 (Recommended)"/>
-                            </ComboBox>
-                        </StackPanel>
-                        
-                        <StackPanel Grid.Column="1">
-                            <TextBlock Text="Default Username" Margin="0,0,0,5"/>
-                            <ui:TextBox Text="{Binding DefaultUsername, UpdateSourceTrigger=PropertyChanged}"/>
-                        </StackPanel>
-                    </Grid>
-
-                    <TextBlock Text="Default Terminal Start Path" Margin="0,0,0,5"/>
-                    <Grid Margin="0,0,0,15">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <ui:TextBox Grid.Column="0" 
-                                   Text="{Binding TerminalStartPath, UpdateSourceTrigger=PropertyChanged}"
-                                   PlaceholderText="~ (home directory)"
-                                   Margin="0,0,10,0"/>
-                        <ui:Button Grid.Column="1" 
-                                  Content="Browse..."
-                                  Icon="{ui:SymbolIcon Symbol=Folder20}"
-                                  Command="{Binding BrowseTerminalPathCommand}"/>
-                    </Grid>
-
-                    <TextBlock Text="Default Distribution" Margin="0,0,0,5"/>
-                    <ComboBox ItemsSource="{Binding AvailableDistributions}" 
-                              SelectedItem="{Binding DefaultDistribution}"
-                              DisplayMemberPath="Name"
-                              Margin="0,0,0,0"/>
-                </StackPanel>
-            </ui:Card>
-
-            <!-- Appearance Settings -->
-            <ui:Card Margin="0,0,0,15">
-                <StackPanel>
-                    <TextBlock Text="Appearance" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
-                    
-                    <TextBlock Text="Theme" Margin="0,0,0,5"/>
-                    <ComboBox SelectedItem="{Binding Theme}" Margin="0,0,0,15">
-                        <ComboBoxItem Content="Light"/>
-                        <ComboBoxItem Content="Dark"/>
-                        <ComboBoxItem Content="Auto"/>
-                    </ComboBox>
-
-                    <TextBlock Text="Language" Margin="0,0,0,5"/>
-                    <ComboBox SelectedItem="{Binding Language}">
-                        <ComboBoxItem Content="en-US"/>
-                        <ComboBoxItem Content="zh-CN"/>
-                    </ComboBox>
-                </StackPanel>
-            </ui:Card>
-
-            <!-- Download Settings -->
-            <ui:Card Margin="0,0,0,15">
-                <StackPanel>
-                    <TextBlock Text="Download Settings" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
-                    
-                    <TextBlock Text="Online Catalog Source URL" Margin="0,0,0,5"/>
-                    <ui:TextBox Text="{Binding CatalogUrl, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,15"/>
-
-                    <Grid Margin="0,0,0,15">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        
-                        <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                            <TextBlock Text="Max Concurrent Downloads" Margin="0,0,0,5"/>
-                            <ui:NumberBox Value="{Binding MaxConcurrentDownloads}" 
-                                          Minimum="1" 
-                                          Maximum="10"/>
-                        </StackPanel>
-                        
-                        <StackPanel Grid.Column="1">
-                            <TextBlock Text="Max Retry Attempts" Margin="0,0,0,5"/>
-                            <ui:NumberBox Value="{Binding MaxRetryAttempts}" 
-                                          Minimum="0" 
-                                          Maximum="10"/>
-                        </StackPanel>
-                    </Grid>
-
-                    <ui:ToggleSwitch Content="Auto Retry Failed Downloads" 
-                                     IsChecked="{Binding AutoRetryDownloads}"/>
-                </StackPanel>
-            </ui:Card>
-
-            <!-- Behavior Settings -->
-            <ui:Card Margin="0,0,0,15">
-                <StackPanel>
-                    <TextBlock Text="Behavior" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
-                    
-                    <ui:ToggleSwitch Content="Enable Logging" 
-                                     IsChecked="{Binding EnableLogging}"
-                                     Margin="0,0,0,10"/>
-                    
-                    <ui:ToggleSwitch Content="Check for Updates on Startup" 
-                                     IsChecked="{Binding CheckUpdatesOnStartup}"
-                                     Margin="0,0,0,10"/>
-                    
-                    <ui:ToggleSwitch Content="Show Confirmation Dialogs" 
-                                     IsChecked="{Binding ShowConfirmationDialogs}"/>
-                    
-                    <TextBlock Text="Log File Path" Margin="0,15,0,5" 
-                               Visibility="{Binding EnableLogging, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                    <ui:TextBox Text="{Binding LogPath}" 
-                               IsReadOnly="True"
-                               Visibility="{Binding EnableLogging, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                </StackPanel>
-            </ui:Card>
-
-            <!-- Action Buttons -->
-            <Grid Margin="0,10,0,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                 <!-- Dirty Indicator -->
-                <TextBlock Grid.Column="0" 
-                           Text="* You have unsaved changes" 
+                <TextBlock Text="* You have unsaved changes" 
                            Foreground="Orange"
                            VerticalAlignment="Center"
+                           Margin="0,0,15,0"
                            Visibility="{Binding IsDirty, Converter={StaticResource BoolToVisibilityConverter}}"/>
-
-                <ui:Button Grid.Column="1" 
-                           Content="Reset to Defaults" 
+                
+                <ui:Button Content="Reset to Defaults" 
                            Icon="{ui:SymbolIcon Symbol=ArrowReset20}"
                            Command="{Binding ResetSettingsCommand}"
                            Margin="0,0,10,0"/>
                 
-                <ui:Button Grid.Column="2" 
-                           Content="Save Settings" 
+                <ui:Button Content="Save Settings" 
                            Icon="{ui:SymbolIcon Symbol=Save20}"
                            Command="{Binding SaveSettingsCommand}"
                            Appearance="Primary"/>
-            </Grid>
-        </StackPanel>
-    </ScrollViewer>
+            </StackPanel>
+            
+            <ui:Button Grid.Column="1" 
+                      Content="Back" 
+                      Icon="{ui:SymbolIcon Symbol=ArrowLeft20}"
+                      Command="{Binding GoBackCommand}"/>
+        </Grid>
+
+        <!-- Settings Content -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="0">
+                <!-- General Settings -->
+                <ui:Card Margin="0,0,0,15">
+                    <StackPanel>
+                        <TextBlock Text="General Settings" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
+                        
+                        <TextBlock Text="Default Installation Path" Margin="0,0,0,5"/>
+                        <Grid Margin="0,0,0,15">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBox Grid.Column="0" 
+                                       Text="{Binding DefaultInstallPath, UpdateSourceTrigger=PropertyChanged}"
+                                       Margin="0,0,10,0"/>
+                            <ui:Button Grid.Column="1" 
+                                      Content="Browse..."
+                                      Icon="{ui:SymbolIcon Symbol=Folder20}"
+                                      Command="{Binding BrowseInstallPathCommand}"/>
+                        </Grid>
+
+                        <TextBlock Text="Package Cache Path" Margin="0,0,0,5"/>
+                        <Grid Margin="0,0,0,15">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBox Grid.Column="0" 
+                                       Text="{Binding PackageCachePath, UpdateSourceTrigger=PropertyChanged}"
+                                       Margin="0,0,10,0"/>
+                            <ui:Button Grid.Column="1" 
+                                      Content="Browse..."
+                                      Icon="{ui:SymbolIcon Symbol=Folder20}"
+                                      Command="{Binding BrowseCachePathCommand}"/>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,15">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                <TextBlock Text="Default WSL Version" Margin="0,0,0,5"/>
+                                <ComboBox SelectedIndex="{Binding WslVersionIndex}">
+                                    <ComboBoxItem Content="WSL 1"/>
+                                    <ComboBoxItem Content="WSL 2 (Recommended)"/>
+                                </ComboBox>
+                            </StackPanel>
+                            
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="Default Username" Margin="0,0,0,5"/>
+                                <ui:TextBox Text="{Binding DefaultUsername, UpdateSourceTrigger=PropertyChanged}"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <TextBlock Text="Default Terminal Start Path" Margin="0,0,0,5"/>
+                        <Grid Margin="0,0,0,15">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBox Grid.Column="0" 
+                                       Text="{Binding TerminalStartPath, UpdateSourceTrigger=PropertyChanged}"
+                                       PlaceholderText="~ (home directory)"
+                                       Margin="0,0,10,0"/>
+                            <ui:Button Grid.Column="1" 
+                                      Content="Browse..."
+                                      Icon="{ui:SymbolIcon Symbol=Folder20}"
+                                      Command="{Binding BrowseTerminalPathCommand}"/>
+                        </Grid>
+
+                        <TextBlock Text="Default Distribution" Margin="0,0,0,5"/>
+                        <ComboBox ItemsSource="{Binding AvailableDistributions}" 
+                                  SelectedItem="{Binding DefaultDistribution}"
+                                  DisplayMemberPath="Name"
+                                  Margin="0,0,0,0"/>
+                    </StackPanel>
+                </ui:Card>
+
+                <!-- Appearance Settings -->
+                <ui:Card Margin="0,0,0,15">
+                    <StackPanel>
+                        <TextBlock Text="Appearance" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
+                        
+                        <TextBlock Text="Theme" Margin="0,0,0,5"/>
+                        <ComboBox SelectedItem="{Binding Theme}" Margin="0,0,0,15">
+                            <ComboBoxItem Content="Light"/>
+                            <ComboBoxItem Content="Dark"/>
+                            <ComboBoxItem Content="Auto"/>
+                        </ComboBox>
+
+                        <TextBlock Text="Language" Margin="0,0,0,5"/>
+                        <ComboBox SelectedItem="{Binding Language}">
+                            <ComboBoxItem Content="en-US"/>
+                            <ComboBoxItem Content="zh-CN"/>
+                        </ComboBox>
+                    </StackPanel>
+                </ui:Card>
+
+                <!-- Download Settings -->
+                <ui:Card Margin="0,0,0,15">
+                    <StackPanel>
+                        <TextBlock Text="Download Settings" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
+                        
+                        <TextBlock Text="Online Catalog Source URL" Margin="0,0,0,5"/>
+                        <ui:TextBox Text="{Binding CatalogUrl, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,15"/>
+
+                        <Grid Margin="0,0,0,15">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                <TextBlock Text="Max Concurrent Downloads" Margin="0,0,0,5"/>
+                                <ui:NumberBox Value="{Binding MaxConcurrentDownloads}" 
+                                              Minimum="1" 
+                                              Maximum="10"/>
+                            </StackPanel>
+                            
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="Max Retry Attempts" Margin="0,0,0,5"/>
+                                <ui:NumberBox Value="{Binding MaxRetryAttempts}" 
+                                              Minimum="0" 
+                                              Maximum="10"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <ui:ToggleSwitch Content="Auto Retry Failed Downloads" 
+                                         IsChecked="{Binding AutoRetryDownloads}"/>
+                    </StackPanel>
+                </ui:Card>
+
+                <!-- Cache Management -->
+                <ui:Card Margin="0,0,0,15">
+                    <StackPanel>
+                        <TextBlock Text="Cache Management" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
+                        
+                        <Grid Margin="0,0,0,15">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Package Cache Location" Margin="0,0,0,5"/>
+                                <TextBlock Text="{Binding CachePath}" 
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                            
+                            <ui:Button Grid.Column="1" 
+                                      Content="Open Folder"
+                                      Icon="{ui:SymbolIcon Symbol=FolderOpen20}"
+                                      Command="{Binding OpenCacheFolderCommand}"
+                                      VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,15">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                <TextBlock Text="Cached Packages" Margin="0,0,0,5"/>
+                                <TextBlock Text="{Binding CachedPackageCount}" 
+                                           FontSize="24" 
+                                           FontWeight="SemiBold"/>
+                            </StackPanel>
+                            
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="Total Size" Margin="0,0,0,5"/>
+                                <TextBlock Text="{Binding CacheTotalSize}" 
+                                           FontSize="24" 
+                                           FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <StackPanel Orientation="Horizontal">
+                            <ui:Button Content="Refresh" 
+                                      Icon="{ui:SymbolIcon Symbol=ArrowSync20}"
+                                      Command="{Binding RefreshCacheInfoCommand}"
+                                      Margin="0,0,10,0"/>
+                            <ui:Button Content="Clear All Cache" 
+                                      Icon="{ui:SymbolIcon Symbol=Delete20}"
+                                      Command="{Binding ClearCacheCommand}"
+                                      Appearance="Danger"/>
+                        </StackPanel>
+
+                        <!-- Cached Packages List -->
+                        <TextBlock Text="Cached Files" 
+                                   Margin="0,20,0,10"
+                                   FontWeight="SemiBold"
+                                   Visibility="{Binding CachedPackageCount, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                        <ItemsControl ItemsSource="{Binding CachedPackages}" 
+                                      MaxHeight="200"
+                                      Visibility="{Binding CachedPackageCount, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=Inverse}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" 
+                                            BorderThickness="0,0,0,1" 
+                                            Padding="0,8">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="{Binding FileName}" 
+                                                          FontWeight="SemiBold"
+                                                          TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" 
+                                                          FontSize="11">
+                                                    <Run Text="{Binding SizeDisplay, Mode=OneWay}"/>
+                                                    <Run Text=" | Cached: "/>
+                                                    <Run Text="{Binding CachedDate, StringFormat='{}{0:yyyy-MM-dd}', Mode=OneWay}"/>
+                                                </TextBlock>
+                                            </StackPanel>
+                                            
+                                            <TextBlock Grid.Column="1" 
+                                                      Text="{Binding SizeDisplay}" 
+                                                      VerticalAlignment="Center"
+                                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                      Margin="0,0,15,0"/>
+                                            
+                                            <ui:Button Grid.Column="2" 
+                                                      ToolTip="Delete this cached file"
+                                                      Icon="{ui:SymbolIcon Symbol=Delete16}"
+                                                      Command="{Binding DataContext.DeleteCachedPackageCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                                      CommandParameter="{Binding}"
+                                                      Appearance="Secondary"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ui:Card>
+
+                <!-- Behavior Settings -->
+                <ui:Card Margin="0,0,0,15">
+                    <StackPanel>
+                        <TextBlock Text="Behavior" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
+                        
+                        <ui:ToggleSwitch Content="Enable Logging" 
+                                         IsChecked="{Binding EnableLogging}"
+                                         Margin="0,0,0,10"/>
+                        
+                        <ui:ToggleSwitch Content="Check for Updates on Startup" 
+                                         IsChecked="{Binding CheckUpdatesOnStartup}"
+                                         Margin="0,0,0,10"/>
+                        
+                        <ui:ToggleSwitch Content="Show Confirmation Dialogs" 
+                                         IsChecked="{Binding ShowConfirmationDialogs}"/>
+                        
+                        <TextBlock Text="Log File Path" Margin="0,15,0,5" 
+                                   Visibility="{Binding EnableLogging, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                        <ui:TextBox Text="{Binding LogPath}" 
+                                   IsReadOnly="True"
+                                   Visibility="{Binding EnableLogging, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                    </StackPanel>
+                </ui:Card>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
 </Page>
