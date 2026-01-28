@@ -44,6 +44,7 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<IDownloadService, DownloadService>();
                     services.AddSingleton<ISettingsService, SettingsService>();
                     services.AddSingleton<ICatalogService, CatalogService>();
+                    services.AddSingleton<ICatalogSourceManager, CatalogSourceManager>();
                     services.AddSingleton<INavigationService, NavigationService>();
                     services.AddSingleton<IUpdateService, UpdateService>();
                     services.AddSingleton<ITerminalService, TerminalService>();
@@ -54,6 +55,7 @@ public partial class App : System.Windows.Application
                     services.AddTransient<SettingsViewModel>();
                     services.AddTransient<PackageManagerViewModel>();
                     services.AddTransient<InstallWizardViewModel>();
+                    services.AddTransient<SourceManagerViewModel>();
                     services.AddTransient<Wizard.InstallWizardWorkflowViewModel>();
 
                     // Register Views/Pages
