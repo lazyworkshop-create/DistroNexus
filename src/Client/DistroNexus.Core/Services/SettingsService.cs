@@ -41,7 +41,22 @@ public class SettingsService : ISettingsService
             {
                 _logger.LogInformation("Settings file not found, creating default settings");
                 _cachedSettings = new GlobalSettings();
-                await SaveSettingsAsync(_cachedSettings, cancellationToken);
+                
+                // Don't await SaveSettings during initial load to avoid deadlock
+                // Just create the default settings object and return it
+                // The settings will be saved later when user makes changes
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await SaveSettingsAsync(_cachedSettings, CancellationToken.None);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to save default settings in background");
+                    }
+                });
+                
                 return _cachedSettings;
             }
 

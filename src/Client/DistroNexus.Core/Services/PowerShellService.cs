@@ -1,109 +1,169 @@
-using System.Management.Automation;
-using System.Management.Automation.Runspaces;
-using System.Text.Json;
+using System.Diagnostics;
+using System.Text;
 using DistroNexus.Core.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace DistroNexus.Core.Services;
 
 /// <summary>
-/// Service for executing PowerShell commands and scripts.
+/// Service for executing PowerShell commands and scripts using the system-installed PowerShell.
+/// Uses process-based execution to ensure access to all PowerShell modules.
 /// </summary>
 public class PowerShellService : IPowerShellService, IDisposable
 {
     private readonly ILogger<PowerShellService> _logger;
-    private readonly Runspace _runspace;
+    private readonly string _powerShellPath;
     private bool _disposed;
 
     public PowerShellService(ILogger<PowerShellService> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         
-        // Create a runspace with minimal configuration to avoid snap-in loading issues
-        var initialSessionState = InitialSessionState.CreateDefault();
-        initialSessionState.ThrowOnRunspaceOpenError = true;
+        // Find the PowerShell executable (prefer pwsh.exe for PowerShell Core, fallback to powershell.exe)
+        _powerShellPath = FindPowerShellPath();
         
-        _runspace = RunspaceFactory.CreateRunspace(initialSessionState);
-        _runspace.Open();
-        
-        _logger.LogInformation("PowerShell service initialized");
+        _logger.LogInformation("PowerShell service initialized using: {PowerShellPath}", _powerShellPath);
+    }
+
+    private static string FindPowerShellPath()
+    {
+        // Try PowerShell Core (pwsh) first - it's faster and more modern
+        var pwshPaths = new[]
+        {
+            @"C:\Program Files\PowerShell\7\pwsh.exe",
+            @"C:\Program Files\PowerShell\7-preview\pwsh.exe",
+            Environment.ExpandEnvironmentVariables(@"%ProgramFiles%\PowerShell\7\pwsh.exe"),
+        };
+
+        foreach (var path in pwshPaths)
+        {
+            if (File.Exists(path))
+                return path;
+        }
+
+        // Check if pwsh is in PATH
+        try
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "where",
+                Arguments = "pwsh",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                CreateNoWindow = true
+            };
+            using var process = Process.Start(startInfo);
+            if (process != null)
+            {
+                var output = process.StandardOutput.ReadToEnd().Trim();
+                process.WaitForExit();
+                if (process.ExitCode == 0 && !string.IsNullOrEmpty(output))
+                {
+                    var firstPath = output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+                    if (!string.IsNullOrEmpty(firstPath) && File.Exists(firstPath))
+                        return firstPath;
+                }
+            }
+        }
+        catch { /* Ignore and fallback */ }
+
+        // Fallback to Windows PowerShell (always available on Windows)
+        return @"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe";
     }
 
     /// <inheritdoc/>
     public async Task<T?> ExecuteAsync<T>(string cmdlet, Dictionary<string, object>? parameters = null, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(cmdlet))
-            throw new ArgumentNullException(nameof(cmdlet));
+        ArgumentNullException.ThrowIfNull(cmdlet);
 
-        try
+        // Build the command with parameters
+        var scriptBuilder = new StringBuilder(cmdlet);
+        
+        if (parameters != null)
         {
-            using var ps = PowerShell.Create();
-            ps.Runspace = _runspace;
-            ps.AddCommand(cmdlet);
-
-            if (parameters != null)
+            foreach (var param in parameters)
             {
-                foreach (var param in parameters)
+                var value = param.Value switch
                 {
-                    ps.AddParameter(param.Key, param.Value);
-                }
+                    string s => $"'{s.Replace("'", "''")}'",
+                    bool b => b ? "$true" : "$false",
+                    null => "$null",
+                    _ => param.Value.ToString()
+                };
+                scriptBuilder.Append($" -{param.Key} {value}");
             }
-
-            var result = await Task.Run(() => ps.Invoke(), cancellationToken);
-
-            if (ps.HadErrors)
-            {
-                var errors = ps.Streams.Error.ReadAll();
-                var errorMessage = string.Join(Environment.NewLine, errors.Select(e => e.ToString()));
-                _logger.LogError("PowerShell command '{Cmdlet}' failed: {Errors}", cmdlet, errorMessage);
-                throw new InvalidOperationException($"PowerShell command failed: {errorMessage}");
-            }
-
-            // Convert result to requested type
-            if (typeof(T) == typeof(string))
-            {
-                return (T)(object)string.Join(Environment.NewLine, result.Select(r => r?.ToString() ?? string.Empty));
-            }
-
-            // For complex types, serialize to JSON and deserialize
-            if (result.Count == 0)
-                return default;
-
-            var json = JsonSerializer.Serialize(result.Select(r => PSObjectToObject(r)));
-            return JsonSerializer.Deserialize<T>(json);
         }
-        catch (Exception ex)
+
+        var result = await ExecuteScriptAsync(scriptBuilder.ToString(), cancellationToken);
+
+        if (typeof(T) == typeof(string))
         {
-            _logger.LogError(ex, "Error executing PowerShell cmdlet '{Cmdlet}'", cmdlet);
-            throw;
+            return (T)(object)result;
         }
+
+        if (string.IsNullOrWhiteSpace(result))
+            return default;
+
+        return System.Text.Json.JsonSerializer.Deserialize<T>(result);
     }
 
     /// <inheritdoc/>
     public async Task<string> ExecuteScriptAsync(string script, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(script))
-            throw new ArgumentNullException(nameof(script));
+        ArgumentNullException.ThrowIfNull(script);
 
         try
         {
-            using var ps = PowerShell.Create();
-            ps.Runspace = _runspace;
-            ps.AddScript(script);
+            // Encode the script as Base64 to avoid escaping issues
+            var bytes = Encoding.Unicode.GetBytes(script);
+            var encodedCommand = Convert.ToBase64String(bytes);
 
-            var result = await Task.Run(() => ps.Invoke(), cancellationToken);
-
-            if (ps.HadErrors)
+            var startInfo = new ProcessStartInfo
             {
-                var errors = ps.Streams.Error.ReadAll();
-                var errorMessage = string.Join(Environment.NewLine, errors.Select(e => e.ToString()));
-                _logger.LogError("PowerShell script failed: {Errors}", errorMessage);
-                throw new InvalidOperationException($"PowerShell script failed: {errorMessage}");
+                FileName = _powerShellPath,
+                Arguments = $"-NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand {encodedCommand}",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8
+            };
+
+            using var process = new Process { StartInfo = startInfo };
+            var outputBuilder = new StringBuilder();
+            var errorBuilder = new StringBuilder();
+
+            process.OutputDataReceived += (_, e) =>
+            {
+                if (e.Data != null)
+                    outputBuilder.AppendLine(e.Data);
+            };
+
+            process.ErrorDataReceived += (_, e) =>
+            {
+                if (e.Data != null)
+                    errorBuilder.AppendLine(e.Data);
+            };
+
+            process.Start();
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+
+            await process.WaitForExitAsync(cancellationToken);
+
+            var output = outputBuilder.ToString().TrimEnd();
+            var error = errorBuilder.ToString().TrimEnd();
+
+            if (process.ExitCode != 0 && !string.IsNullOrEmpty(error))
+            {
+                _logger.LogError("PowerShell script failed with exit code {ExitCode}: {Error}", process.ExitCode, error);
+                throw new InvalidOperationException($"PowerShell script failed: {error}");
             }
 
-            return string.Join(Environment.NewLine, result.Select(r => r?.ToString() ?? string.Empty));
+            return output;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not InvalidOperationException)
         {
             _logger.LogError(ex, "Error executing PowerShell script");
             throw;
@@ -113,25 +173,16 @@ public class PowerShellService : IPowerShellService, IDisposable
     /// <inheritdoc/>
     public async Task ImportModuleAsync(string modulePath, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(modulePath))
-            throw new ArgumentNullException(nameof(modulePath));
+        ArgumentNullException.ThrowIfNull(modulePath);
 
         if (!File.Exists(modulePath))
             throw new FileNotFoundException($"Module file not found: {modulePath}");
 
-        try
-        {
-            _logger.LogInformation("Importing PowerShell module from {ModulePath}", modulePath);
-            
-            await ExecuteScriptAsync($"Import-Module -Name '{modulePath}' -Force", cancellationToken);
-            
-            _logger.LogInformation("PowerShell module imported successfully");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to import PowerShell module from {ModulePath}", modulePath);
-            throw;
-        }
+        _logger.LogInformation("Importing PowerShell module from {ModulePath}", modulePath);
+        
+        await ExecuteScriptAsync($"Import-Module -Name '{modulePath}' -Force", cancellationToken);
+        
+        _logger.LogInformation("PowerShell module imported successfully");
     }
 
     /// <inheritdoc/>
@@ -139,7 +190,7 @@ public class PowerShellService : IPowerShellService, IDisposable
     {
         try
         {
-            var result = await ExecuteScriptAsync("Get-Module -Name DistroNexus", cancellationToken);
+            var result = await ExecuteScriptAsync("Get-Module -Name DistroNexus | Select-Object -ExpandProperty Name", cancellationToken);
             return !string.IsNullOrWhiteSpace(result);
         }
         catch
@@ -148,22 +199,12 @@ public class PowerShellService : IPowerShellService, IDisposable
         }
     }
 
-    private static object PSObjectToObject(PSObject psObject)
-    {
-        if (psObject == null)
-            return null!;
-
-        return psObject.BaseObject;
-    }
-
     public void Dispose()
     {
         if (_disposed)
             return;
 
-        _runspace?.Dispose();
         _disposed = true;
-        
         GC.SuppressFinalize(this);
     }
 }
