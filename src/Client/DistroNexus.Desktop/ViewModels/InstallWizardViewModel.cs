@@ -104,6 +104,9 @@ public partial class InstallWizardViewModel : ObservableObject
     [ObservableProperty]
     private bool _useLocalCache = true;
 
+    [ObservableProperty]
+    private bool _isQuickMode = false;
+
     #endregion
 
     /// <summary>
@@ -174,6 +177,18 @@ public partial class InstallWizardViewModel : ObservableObject
             CurrentStep++;
             UpdateStepState();
         }
+    }
+
+    [RelayCommand]
+    private void ToggleQuickMode()
+    {
+        IsQuickMode = !IsQuickMode;
+        
+        // Reset to step 1 when toggling modes
+        CurrentStep = 1;
+        UpdateStepState();
+        
+        _logger.LogInformation("Toggled quick mode: {IsQuickMode}", IsQuickMode);
     }
 
     [RelayCommand]
@@ -283,22 +298,46 @@ public partial class InstallWizardViewModel : ObservableObject
 
     private void UpdateStepState()
     {
+        // Update total steps based on mode
+        TotalSteps = IsQuickMode ? 2 : 4;
+        
         CanGoBack = CurrentStep > 1 && !IsInstalling;
         CanGoNext = CurrentStep < TotalSteps && !IsInstalling;
 
-        StepTitle = CurrentStep switch
+        StepTitle = IsQuickMode switch
         {
-            1 => "Select Distribution",
-            2 => "Choose Installation Path",
-            3 => "Configure User Account",
-            4 => "Review and Install",
-            _ => "Installation"
+            true => CurrentStep switch
+            {
+                1 => "Select Distribution",
+                2 => "Quick Installation",
+                _ => "Installation"
+            },
+            false => CurrentStep switch
+            {
+                1 => "Select Distribution",
+                2 => "Choose Installation Path",
+                3 => "Configure User Account",
+                4 => "Review and Install",
+                _ => "Installation"
+            }
         };
 
-        // Auto-generate instance name when moving to step 2
+        // Auto-generate instance name when moving to step 2 (in quick mode) or step 2 (in normal mode)
         if (CurrentStep == 2 && string.IsNullOrEmpty(InstanceName) && SelectedDistribution != null)
         {
             InstanceName = SelectedDistribution.Id;
+            
+            // Set default values for quick mode
+            if (IsQuickMode)
+            {
+                InstallPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DistroNexus", "Instances");
+                Username = "user";
+                Password = "password";
+                CreateUser = true;
+                SetAsDefault = false;
+                UseLocalCache = true;
+            }
+            
             ValidateInstallPath();
         }
     }
@@ -318,6 +357,8 @@ public partial class InstallWizardViewModel : ObservableObject
                 break;
 
             case 2:
+                // In quick mode, this is the final validation before installation
+                // In normal mode, this is just the path validation
                 if (string.IsNullOrWhiteSpace(InstallPath))
                 {
                     ErrorMessage = "Please specify an installation path.";
@@ -333,9 +374,30 @@ public partial class InstallWizardViewModel : ObservableObject
                     ErrorMessage = PathValidationMessage;
                     return false;
                 }
+                
+                // Additional quick mode validation
+                if (IsQuickMode && CreateUser)
+                {
+                    if (string.IsNullOrWhiteSpace(Username))
+                    {
+                        ErrorMessage = "Please enter a username.";
+                        return false;
+                    }
+                    if (string.IsNullOrWhiteSpace(Password))
+                    {
+                        ErrorMessage = "Please enter a password.";
+                        return false;
+                    }
+                    if (Password != ConfirmPassword)
+                    {
+                        ErrorMessage = "Passwords do not match.";
+                        return false;
+                    }
+                }
                 break;
 
             case 3:
+                // Only in normal mode
                 if (CreateUser)
                 {
                     if (string.IsNullOrWhiteSpace(Username))
