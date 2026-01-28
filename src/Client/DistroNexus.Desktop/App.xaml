@@ -12,6 +12,24 @@
                 <ui:ControlsDictionary />
             </ResourceDictionary.MergedDictionaries>
             
+            <!-- Custom Theme Colors -->
+            <!-- Dark Theme Colors -->
+            <Color x:Key="SystemAccentColorDark">#0078D4</Color>
+            <Color x:Key="SystemAccentColorLightDark">#1E88E5</Color>
+            <SolidColorBrush x:Key="SystemAccentBrushDark" Color="#0078D4"/>
+            
+            <!-- Light Theme Colors -->
+            <Color x:Key="SystemAccentColorLight">#0063B1</Color>
+            <Color x:Key="SystemAccentColorLightLight">#1976D2</Color>
+            <SolidColorBrush x:Key="SystemAccentBrushLight" Color="#0063B1"/>
+            
+            <!-- Common Brushes -->
+            <SolidColorBrush x:Key="PrimaryBrush" Color="#0078D4"/>
+            <SolidColorBrush x:Key="SuccessBrush" Color="#107C10"/>
+            <SolidColorBrush x:Key="WarningBrush" Color="#FF8C00"/>
+            <SolidColorBrush x:Key="DangerBrush" Color="#D13438"/>
+            <SolidColorBrush x:Key="InfoBrush" Color="#0078D4"/>
+            
             <!-- Converters -->
             <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
             <converters:IntToVisibilityConverter x:Key="IntToVisibilityConverter"/>
@@ -22,6 +40,8 @@
             <converters:BoolToValidationColorConverter x:Key="BoolToValidationColorConverter"/>
             <converters:IntToBoolConverter x:Key="IntToBoolConverter"/>
             <converters:StringToBoolConverter x:Key="StringToBoolConverter"/>
+            <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
+            <converters:BoolToPrimaryAppearanceConverter x:Key="BoolToPrimaryAppearanceConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
