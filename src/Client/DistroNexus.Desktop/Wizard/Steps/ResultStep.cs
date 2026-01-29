@@ -49,9 +49,10 @@ public partial class ResultStep : WizardStepBase
                 return false;
 
             // Show if ErrorMessage contains technical details (e.g., exception type, stack trace)
-            return Context.ErrorMessage.Length > 100 || 
+            return !string.IsNullOrEmpty(Context.ErrorMessage) && 
+                   (Context.ErrorMessage.Length > 100 || 
                    Context.ErrorMessage.Contains("Exception", StringComparison.OrdinalIgnoreCase) ||
-                   Context.ErrorMessage.Contains("at ", StringComparison.Ordinal);
+                   Context.ErrorMessage.Contains("at ", StringComparison.Ordinal));
         }
     }
 

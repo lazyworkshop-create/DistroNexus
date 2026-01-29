@@ -22,19 +22,29 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
 
-        <StackPanel Grid.Column="0" Orientation="Horizontal">
+        <StackPanel Orientation="Horizontal">
             <ui:Button Content="Refresh" 
                       Icon="{ui:SymbolIcon Symbol=ArrowSync20}"
                       Command="{Binding RefreshCatalogCommand}"
                       Margin="0,0,10,0"/>
+            <ui:Button Content="Update" 
+                      Icon="{ui:SymbolIcon Symbol=CloudSync20}"
+                      Command="{Binding UpdateSourcesCommand}"
+                      ToolTip="Update distribution catalog from remote source"
+                      Margin="0,0,10,0"/>
+            <ui:Button Content="Download" 
+                      Icon="{ui:SymbolIcon Symbol=ArrowDownload20}"
+                      Command="{Binding DownloadAllCommand}"
+                      ToolTip="Download all uncached packages"
+                      Margin="0,0,10,0"/>
             <ui:TextBox PlaceholderText="Search distributions..." 
                        Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
-                       Width="300"
+                       Height="36"
+                       MinWidth="250"
                        Margin="0,0,10,0"/>
-            <ui:Button Content="Add Source" 
+            <ui:Button Content="Add" 
                       Icon="{ui:SymbolIcon Symbol=Add20}"
                       Command="{Binding ToggleAddSourcePanelCommand}"
                       Margin="0,0,10,0"/>
@@ -51,20 +61,14 @@
                       Visibility="{Binding IsOfflineMode, Converter={StaticResource BoolToVisibilityConverter}}"/>
         </StackPanel>
 
-        <TextBlock Grid.Column="1" 
-                   Text="{Binding StatusMessage}" 
-                   VerticalAlignment="Center"
-                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                   Margin="0,0,15,0"/>
-        
-        <ui:Button Grid.Column="2" 
+        <ui:Button Grid.Column="1" 
                   Content="Back" 
                   Icon="{ui:SymbolIcon Symbol=ArrowLeft20}"
                   Command="{Binding GoBackCommand}"/>
     </Grid>
 
         <!-- Package List Grouped by Category -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,16,0">
             <ItemsControl ItemsSource="{Binding GroupedPackages}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:PackageGroup}">
@@ -85,6 +89,7 @@
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto"/>
                                                     <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
                                                     <ColumnDefinition Width="Auto"/>
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
@@ -130,18 +135,45 @@
                                                     </StackPanel>
                                                 </StackPanel>
 
-                                                <!-- Download/Delete Actions -->
+                                                <!-- Download/Cancel/Install Actions -->
+                                                <!-- Download Button (visible when not cached and not downloading) -->
                                                 <ui:Button Grid.Column="2" 
                                                           Content="Download" 
                                                           Icon="{ui:SymbolIcon Symbol=ArrowDownload20}"
                                                           Command="{Binding DataContext.DownloadPackageCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                                           CommandParameter="{Binding}"
-                                                          Visibility="{Binding IsCached, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}"
                                                           Appearance="Primary"
+                                                          Margin="0,0,5,0">
+                                                    <ui:Button.Visibility>
+                                                        <MultiBinding Converter="{StaticResource MultiConditionVisibilityConverter}">
+                                                            <Binding Path="IsCached"/>
+                                                            <Binding Path="IsDownloading"/>
+                                                        </MultiBinding>
+                                                    </ui:Button.Visibility>
+                                                </ui:Button>
+                                                
+                                                <!-- Cancel Button (visible when downloading) -->
+                                                <ui:Button Grid.Column="2" 
+                                                          Content="Cancel" 
+                                                          Icon="{ui:SymbolIcon Symbol=Dismiss20}"
+                                                          Command="{Binding DataContext.CancelDownloadCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                                          CommandParameter="{Binding}"
+                                                          Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                          Appearance="Caution"
+                                                          Margin="0,0,5,0"/>
+                                                
+                                                <!-- Install Button (for cached packages) -->
+                                                <ui:Button Grid.Column="3" 
+                                                          Content="Install" 
+                                                          Icon="{ui:SymbolIcon Symbol=Add20}"
+                                                          Command="{Binding DataContext.InstallCachedPackageCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                                          CommandParameter="{Binding}"
+                                                          Visibility="{Binding IsCached, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                          Appearance="Success"
                                                           Margin="0,0,5,0"/>
                                                 
                                                 <!-- More Actions DropDown (for cached packages) -->
-                                                <ui:DropDownButton Grid.Column="3" 
+                                                <ui:DropDownButton Grid.Column="4" 
                                                                    Content="Actions" 
                                                                    Icon="{ui:SymbolIcon Symbol=MoreHorizontal20}"
                                                                    Visibility="{Binding IsCached, Converter={StaticResource BoolToVisibilityConverter}}">

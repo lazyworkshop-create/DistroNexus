@@ -306,7 +306,25 @@
                                          Margin="0,0,0,10"/>
                         
                         <ui:ToggleSwitch Content="Show Confirmation Dialogs" 
-                                         IsChecked="{Binding ShowConfirmationDialogs}"/>
+                                         IsChecked="{Binding ShowConfirmationDialogs}"
+                                         Margin="0,0,0,10"/>
+                        
+                        <ui:ToggleSwitch Content="Enable Auto Save" 
+                                         IsChecked="{Binding AutoSaveEnabled}"
+                                         Margin="0,0,0,10"/>
+                        
+                        <Grid Visibility="{Binding AutoSaveEnabled, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <TextBlock Grid.Row="0" Text="Auto Save Interval (seconds)" Margin="0,0,0,5"/>
+                            <ui:NumberBox Grid.Row="1" Value="{Binding AutoSaveInterval}" 
+                                          Minimum="30" 
+                                          Maximum="300"
+                                          Margin="0,0,0,15"/>
+                        </Grid>
                         
                         <TextBlock Text="Log File Path" Margin="0,15,0,5" 
                                    Visibility="{Binding EnableLogging, Converter={StaticResource BoolToVisibilityConverter}}"/>
