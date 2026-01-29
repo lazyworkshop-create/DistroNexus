@@ -29,7 +29,28 @@ public interface IDownloadTaskManager
     List<DownloadTask> AddTasks(IEnumerable<DistroPackage> packages);
     
     /// <summary>
+    /// Gets a download task by ID.
+    /// </summary>
+    /// <param name="taskId">The ID of the task to retrieve.</param>
+    /// <returns>The download task if found, otherwise null.</returns>
+    DownloadTask? GetTask(string taskId);
+    
+    /// <summary>
+    /// Removes a download task by ID.
+    /// </summary>
+    /// <param name="taskId">The ID of the task to remove.</param>
+    /// <returns>True if the task was removed, false if not found.</returns>
+    bool RemoveTask(string taskId);
+    
+    /// <summary>
     /// Cancels a download task.
+    /// </summary>
+    /// <param name="taskId">The ID of the task to cancel.</param>
+    /// <returns>True if the task was cancelled, false if not found.</returns>
+    bool CancelTask(string taskId);
+    
+    /// <summary>
+    /// Cancels a download task asynchronously.
     /// </summary>
     /// <param name="taskId">The ID of the task to cancel.</param>
     Task CancelTaskAsync(Guid taskId);

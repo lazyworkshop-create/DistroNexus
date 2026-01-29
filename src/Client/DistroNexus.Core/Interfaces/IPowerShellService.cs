@@ -1,3 +1,5 @@
+using DistroNexus.Core.Models;
+
 namespace DistroNexus.Core.Interfaces;
 
 /// <summary>
@@ -22,6 +24,14 @@ public interface IPowerShellService
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>The script output.</returns>
     Task<string> ExecuteScriptAsync(string script, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Executes a PowerShell script and returns detailed result information.
+    /// </summary>
+    /// <param name="script">The script to execute.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The script execution result with exit code, output, and error information.</returns>
+    Task<PowerShellScriptResult> ExecuteScriptWithResultAsync(string script, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Imports the DistroNexus PowerShell module.

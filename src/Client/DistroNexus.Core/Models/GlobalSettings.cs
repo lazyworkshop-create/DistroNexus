@@ -94,4 +94,9 @@ public class GlobalSettings
     /// Gets or sets the auto-save interval in seconds.
     /// </summary>
     public int AutoSaveInterval { get; set; } = 30;
+
+    /// <summary>
+    /// Gets or sets custom data storage for extensions and plugins.
+    /// </summary>
+    public Dictionary<string, string> CustomData { get; set; } = new();
 }
