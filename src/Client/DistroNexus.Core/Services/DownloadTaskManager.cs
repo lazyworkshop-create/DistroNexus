@@ -2,7 +2,6 @@ using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
-using System.Windows;
 
 namespace DistroNexus.Core.Services;
 
@@ -56,8 +55,11 @@ public class DownloadTaskManager : IDownloadTaskManager
             CancellationTokenSource = new CancellationTokenSource()
         };
         
-        // Add to UI thread
-        Application.Current.Dispatcher.Invoke(() => Tasks.Add(task));
+        // Add to tasks collection (will be called from background thread)
+        lock (Tasks)
+        {
+            Tasks.Add(task);
+        }
         
         // Start download in background
         _ = Task.Run(() => ProcessTaskAsync(task));
@@ -211,12 +213,12 @@ public class DownloadTaskManager : IDownloadTaskManager
             if (package != null)
             {
                 // Update package properties
-                Application.Current.Dispatcher.Invoke(() =>
+                lock (package)
                 {
                     package.IsCached = true;
                     package.LocalPath = localPath;
                     package.IsDownloading = false;
-                });
+                }
                 
                 _logger.LogInformation("Updated cache status for package: {PackageId}", packageId);
             }
@@ -225,6 +227,45 @@ public class DownloadTaskManager : IDownloadTaskManager
         {
             _logger.LogError(ex, "Failed to update package cache status for: {PackageId}", packageId);
         }
+    }
+    
+    /// <inheritdoc/>
+    public DownloadTask? GetTask(string taskId)
+    {
+        lock (Tasks)
+        {
+            return Tasks.FirstOrDefault(t => t.Id.ToString() == taskId);
+        }
+    }
+    
+    /// <inheritdoc/>
+    public bool RemoveTask(string taskId)
+    {
+        lock (Tasks)
+        {
+            var task = Tasks.FirstOrDefault(t => t.Id.ToString() == taskId);
+            if (task != null)
+            {
+                task.CancellationTokenSource?.Dispose();
+                Tasks.Remove(task);
+                _logger.LogInformation("Removed download task: {PackageName}", task.PackageName);
+                return true;
+            }
+            return false;
+        }
+    }
+    
+    /// <inheritdoc/>
+    public bool CancelTask(string taskId)
+    {
+        var task = GetTask(taskId);
+        if (task != null && task.Status == DownloadStatus.Downloading)
+        {
+            task.CancellationTokenSource?.Cancel();
+            _logger.LogInformation("Cancelled download task: {PackageName}", task.PackageName);
+            return true;
+        }
+        return false;
     }
     
     /// <inheritdoc/>
@@ -268,14 +309,14 @@ public class DownloadTaskManager : IDownloadTaskManager
             t.Status == DownloadStatus.Failed || 
             t.Status == DownloadStatus.Cancelled).ToList();
         
-        Application.Current.Dispatcher.Invoke(() =>
+        lock (Tasks)
         {
             foreach (var task in completed)
             {
                 task.CancellationTokenSource?.Dispose();
                 Tasks.Remove(task);
             }
-        });
+        }
         
         _logger.LogInformation("Cleared {Count} completed tasks", completed.Count);
     }

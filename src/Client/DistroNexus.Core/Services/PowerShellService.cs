@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using DistroNexus.Core.Interfaces;
+using DistroNexus.Core.Models;
 using Microsoft.Extensions.Logging;
 
 namespace DistroNexus.Core.Services;
@@ -41,28 +42,47 @@ public class PowerShellService : IPowerShellService, IDisposable
                 return path;
         }
 
-        // Check if pwsh is in PATH
+        // Quick check if pwsh is in PATH with timeout
         try
         {
-            var startInfo = new ProcessStartInfo
+            var task = Task.Run(() =>
             {
-                FileName = "where",
-                Arguments = "pwsh",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                CreateNoWindow = true
-            };
-            using var process = Process.Start(startInfo);
-            if (process != null)
-            {
-                var output = process.StandardOutput.ReadToEnd().Trim();
-                process.WaitForExit();
-                if (process.ExitCode == 0 && !string.IsNullOrEmpty(output))
+                try
                 {
-                    var firstPath = output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-                    if (!string.IsNullOrEmpty(firstPath) && File.Exists(firstPath))
-                        return firstPath;
+                    var startInfo = new ProcessStartInfo
+                    {
+                        FileName = "where",
+                        Arguments = "pwsh",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        CreateNoWindow = true
+                    };
+                    using var process = Process.Start(startInfo);
+                    if (process != null)
+                    {
+                        var output = process.StandardOutput.ReadToEnd().Trim();
+                        process.WaitForExit(2000); // 2 second timeout
+                        if (process.ExitCode == 0 && !string.IsNullOrEmpty(output))
+                        {
+                            var firstPath = output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+                            if (!string.IsNullOrEmpty(firstPath) && File.Exists(firstPath))
+                                return firstPath;
+                        }
+                    }
                 }
+                catch
+                {
+                    // Ignore errors in the task
+                }
+                return null;
+            });
+
+            var completed = task.Wait(TimeSpan.FromSeconds(3));
+            if (completed)
+            {
+                var result = task.Result;
+                if (!string.IsNullOrEmpty(result))
+                    return result;
             }
         }
         catch { /* Ignore and fallback */ }
@@ -150,7 +170,11 @@ public class PowerShellService : IPowerShellService, IDisposable
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
 
-            await process.WaitForExitAsync(cancellationToken);
+            // Add timeout to prevent hanging
+            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+
+            await process.WaitForExitAsync(combinedCts.Token);
 
             var output = outputBuilder.ToString().TrimEnd();
             var error = errorBuilder.ToString().TrimEnd();
@@ -163,7 +187,81 @@ public class PowerShellService : IPowerShellService, IDisposable
 
             return output;
         }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("PowerShell script execution timed out or was canceled");
+            throw;
+        }
         catch (Exception ex) when (ex is not InvalidOperationException)
+        {
+            _logger.LogError(ex, "Error executing PowerShell script");
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<PowerShellScriptResult> ExecuteScriptWithResultAsync(string script, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(script);
+
+        try
+        {
+            // Encode the script as Base64 to avoid escaping issues
+            var bytes = Encoding.Unicode.GetBytes(script);
+            var encodedCommand = Convert.ToBase64String(bytes);
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = _powerShellPath,
+                Arguments = $"-NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand {encodedCommand}",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8
+            };
+
+            using var process = new Process { StartInfo = startInfo };
+            var outputBuilder = new StringBuilder();
+            var errorBuilder = new StringBuilder();
+
+            process.OutputDataReceived += (_, e) =>
+            {
+                if (e.Data != null)
+                    outputBuilder.AppendLine(e.Data);
+            };
+
+            process.ErrorDataReceived += (_, e) =>
+            {
+                if (e.Data != null)
+                    errorBuilder.AppendLine(e.Data);
+            };
+
+            process.Start();
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+
+            await process.WaitForExitAsync(cancellationToken);
+
+            var output = outputBuilder.ToString().TrimEnd();
+            var error = errorBuilder.ToString().TrimEnd();
+
+            var result = new PowerShellScriptResult
+            {
+                ExitCode = process.ExitCode,
+                Output = output,
+                Error = error
+            };
+
+            if (process.ExitCode != 0 && !string.IsNullOrEmpty(error))
+            {
+                _logger.LogWarning("PowerShell script failed with exit code {ExitCode}: {Error}", process.ExitCode, error);
+            }
+
+            return result;
+        }
+        catch (Exception ex)
         {
             _logger.LogError(ex, "Error executing PowerShell script");
             throw;

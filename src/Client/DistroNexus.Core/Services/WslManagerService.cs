@@ -33,13 +33,13 @@ public partial class WslManagerService : IWslManagerService
         {
             _logger.LogInformation("Retrieving WSL instances");
 
-            // Get WSL status from wsl.exe --list --verbose (no interpolation needed)
+            // Get WSL status from wsl.exe --list (faster than --verbose) with timeout
             const string script = """
                 $instances = @()
                 $defaultDistro = $null
                 
-                # Get running state and version from wsl --list --verbose
-                $wslOutput = wsl --list --verbose 2>&1
+                # Get basic state from wsl --list (faster than --verbose)
+                $wslOutput = wsl --list 2>&1
                 $wslStatus = @{}
                 
                 if ($wslOutput -and $LASTEXITCODE -eq 0) {
@@ -51,11 +51,11 @@ public partial class WslManagerService : IWslManagerService
                         $cleanLine = $cleanLine.TrimStart("*").Trim()
                         $parts = $cleanLine -split "\s+" | Where-Object { $_ }
                         
-                        if ($parts.Count -ge 3) {
+                        if ($parts.Count -ge 2) {
                             $name = $parts[0]
                             $wslStatus[$name] = @{
                                 State = $parts[1]
-                                Version = [int]$parts[2]
+                                Version = 2  # Default to WSL2
                                 IsDefault = $isDefault
                             }
                             if ($isDefault) { $defaultDistro = $name }
@@ -63,48 +63,54 @@ public partial class WslManagerService : IWslManagerService
                     }
                 }
                 
-                # Get installation paths from registry
+                # Get installation paths from registry - optimized with error handling
                 $lxssPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss"
                 if (Test-Path $lxssPath) {
-                    $keys = Get-ChildItem -Path $lxssPath -ErrorAction SilentlyContinue
+                    $keys = Get-ChildItem -Path $lxssPath -ErrorAction SilentlyContinue | Select-Object -First 20  # Limit to 20 instances
                     foreach ($key in $keys) {
-                        $props = Get-ItemProperty -Path $key.PSPath -ErrorAction SilentlyContinue
-                        $name = $props.DistributionName
-                        if (-not $name) { continue }
-                        
-                        $basePath = $props.BasePath
-                        $size = 0
-                        $lastAccessed = $null
-                        
-                        if ($basePath -and (Test-Path $basePath)) {
-                            try {
-                                $vhdxPath = Join-Path $basePath "ext4.vhdx"
-                                if (Test-Path $vhdxPath) {
-                                    $size = (Get-Item $vhdxPath).Length
-                                    $lastAccessed = (Get-Item $vhdxPath).LastAccessTime.ToString("o")
-                                }
-                            } catch {}
-                        }
-                        
-                        $state = "Stopped"
-                        $version = 2
-                        $isDefault = $false
-                        
-                        if ($wslStatus.ContainsKey($name)) {
-                            $state = $wslStatus[$name].State
-                            $version = $wslStatus[$name].Version
-                            $isDefault = $wslStatus[$name].IsDefault
-                        }
-                        
-                        $instances += [PSCustomObject]@{
-                            Name = $name
-                            State = $state
-                            Version = $version
-                            InstallPath = $basePath
-                            IsDefault = $isDefault
-                            Size = $size
-                            Distribution = $name
-                            LastAccessed = $lastAccessed
+                        try {
+                            $props = Get-ItemProperty -Path $key.PSPath -ErrorAction SilentlyContinue
+                            $name = $props.DistributionName
+                            if (-not $name) { continue }
+                            
+                            $basePath = $props.BasePath
+                            $size = 0
+                            $lastAccessed = $null
+                            
+                            # Skip size calculation for faster startup
+                            if ($basePath -and (Test-Path $basePath)) {
+                                try {
+                                    $vhdxPath = Join-Path $basePath "ext4.vhdx"
+                                    if (Test-Path $vhdxPath) {
+                                        # Don't calculate size during startup for performance
+                                        $lastAccessed = (Get-Item $vhdxPath).LastAccessTime.ToString("o")
+                                    }
+                                } catch {}
+                            }
+                            
+                            $state = "Stopped"
+                            $version = 2
+                            $isDefault = $false
+                            
+                            if ($wslStatus.ContainsKey($name)) {
+                                $state = $wslStatus[$name].State
+                                $version = $wslStatus[$name].Version
+                                $isDefault = $wslStatus[$name].IsDefault
+                            }
+                            
+                            $instances += [PSCustomObject]@{
+                                Name = $name
+                                State = $state
+                                Version = $version
+                                InstallPath = $basePath
+                                IsDefault = $isDefault
+                                Size = $size
+                                Distribution = $name
+                                LastAccessed = $lastAccessed
+                            }
+                        } catch {
+                            # Skip problematic instances
+                            continue
                         }
                     }
                 }
@@ -112,20 +118,31 @@ public partial class WslManagerService : IWslManagerService
                 $instances | ConvertTo-Json -Depth 3
                 """;
 
-            var result = await _powerShellService.ExecuteScriptAsync(script, cancellationToken);
+            // Add timeout to prevent hanging
+            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+
+            var result = await _powerShellService.ExecuteScriptAsync(script, combinedCts.Token);
 
             if (string.IsNullOrWhiteSpace(result) || result == "null")
             {
+                _logger.LogInformation("No WSL instances found");
                 return [];
             }
 
             var instances = System.Text.Json.JsonSerializer.Deserialize<List<WslInstance>>(result);
             return instances ?? [];
         }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("WSL instance retrieval timed out or was canceled");
+            return [];
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to retrieve WSL instances");
-            throw;
+            // Return empty list instead of throwing to prevent app startup failure
+            return [];
         }
     }
 
@@ -204,64 +221,62 @@ public partial class WslManagerService : IWslManagerService
                 _logger.LogInformation("Downloading package from remote (cache disabled)");
                 packageFile = await DownloadPackageAsync(options, progress, cancellationToken);
             }
-                
-                progress?.Report((60, "Importing distribution..."));
+            
+            progress?.Report((60, "Importing distribution..."));
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // Construct full installation path (WSL expects the full directory path, not the parent)
+            var fullInstallPath = Path.Combine(options.InstallPath, options.InstanceName);
+            var escapedFullPath = EscapePowerShellString(fullInstallPath);
+
+            // Import the distribution
+            var importScript = 
+                "$ProgressPreference = 'SilentlyContinue'; " +
+                "$ErrorActionPreference = 'Continue'; " +
+                $"$installPath = {escapedFullPath}; " +
+                $"$instanceName = '{options.InstanceName}'; " +
+                $"$tarFile = {EscapePowerShellString(packageFile)}; " +
+                // Capture WSL output and exit code
+                "$wslOutput = wsl --import $instanceName $installPath $tarFile 2>&1 | Out-String; " +
+                "$exitCode = $LASTEXITCODE; " +
+                // Clean up temp file
+                "Remove-Item $tarFile -Force -ErrorAction SilentlyContinue; " +
+                // Check result
+                "if ($exitCode -ne 0) { " +
+                "  $cleanOutput = $wslOutput -replace \"`0\", '' -replace \"`r\", '' -replace \"`n\", ' ' | Out-String; " +
+                "  $cleanOutput = $cleanOutput.Trim(); " +
+                "  if ([string]::IsNullOrWhiteSpace($cleanOutput)) { " +
+                "    throw 'WSL import failed with no error message. Please ensure WSL is properly installed and configured.'; " +
+                "  } else { " +
+                "    throw \"WSL import failed: $cleanOutput\"; " +
+                "  } " +
+                "} " +
+                "'success'";
+            
+            try
+            {
+                await _powerShellService.ExecuteScriptAsync(importScript, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                // Check if it was cancelled
                 cancellationToken.ThrowIfCancellationRequested();
-
-                // Construct full installation path (WSL expects the full directory path, not the parent)
-                var fullInstallPath = Path.Combine(options.InstallPath, options.InstanceName);
-                var escapedFullPath = EscapePowerShellString(fullInstallPath);
-
-                // Import the distribution
-                var importScript = 
-                    "$ProgressPreference = 'SilentlyContinue'; " +
-                    "$ErrorActionPreference = 'Continue'; " +
-                    $"$installPath = {escapedFullPath}; " +
-                    $"$instanceName = '{options.InstanceName}'; " +
-                    $"$tarFile = {EscapePowerShellString(packageFile)}; " +
-                    // Capture WSL output and exit code
-                    "$wslOutput = wsl --import $instanceName $installPath $tarFile 2>&1 | Out-String; " +
-                    "$exitCode = $LASTEXITCODE; " +
-                    // Clean up temp file
-                    "Remove-Item $tarFile -Force -ErrorAction SilentlyContinue; " +
-                    // Check result
-                    "if ($exitCode -ne 0) { " +
-                    "  $cleanOutput = $wslOutput -replace \"`0\", '' -replace \"`r\", '' -replace \"`n\", ' ' | Out-String; " +
-                    "  $cleanOutput = $cleanOutput.Trim(); " +
-                    "  if ([string]::IsNullOrWhiteSpace($cleanOutput)) { " +
-                    "    throw 'WSL import failed with no error message. Please ensure WSL is properly installed and configured.'; " +
-                    "  } else { " +
-                    "    throw \"WSL import failed: $cleanOutput\"; " +
-                    "  } " +
-                    "} " +
-                    "'success'";
                 
+                // Cleanup: try to unregister if import failed
                 try
                 {
-                    await _powerShellService.ExecuteScriptAsync(importScript, cancellationToken);
+                    await _powerShellService.ExecuteScriptAsync(
+                        "$ProgressPreference = 'SilentlyContinue'; " +
+                        $"wsl --unregister '{options.InstanceName}' 2>&1 | Out-Null", 
+                        CancellationToken.None); // Don't use cancellation token for cleanup
                 }
-                catch (Exception ex)
-                {
-                    // Check if it was cancelled
-                    cancellationToken.ThrowIfCancellationRequested();
-                    
-                    // Cleanup: try to unregister if import failed
-                    try
-                    {
-                        await _powerShellService.ExecuteScriptAsync(
-                            "$ProgressPreference = 'SilentlyContinue'; " +
-                            $"wsl --unregister '{options.InstanceName}' 2>&1 | Out-Null", 
-                            CancellationToken.None); // Don't use cancellation token for cleanup
-                    }
-                    catch { /* Ignore cleanup errors */ }
-                    
-                    // Re-throw with user-friendly message
-                    var errorMessage = ExtractUserFriendlyError(ex.Message);
-                    throw new InvalidOperationException(
-                        $"Failed to import WSL distribution. {errorMessage}", ex);
-                }
+                catch { /* Ignore cleanup errors */ }
+                
+                // Re-throw with user-friendly message
+                var errorMessage = ExtractUserFriendlyError(ex.Message);
+                throw new InvalidOperationException(
+                    $"Failed to import WSL distribution. {errorMessage}", ex);
             }
-
 
             progress?.Report((80, "Configuring user..."));
             cancellationToken.ThrowIfCancellationRequested();

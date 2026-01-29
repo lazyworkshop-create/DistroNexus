@@ -1,4 +1,5 @@
 using DistroNexus.Core.Interfaces;
+using DistroNexus.Core.Models;
 using Microsoft.Extensions.Logging;
 
 namespace DistroNexus.Core.Services;
@@ -43,7 +44,7 @@ public class TerminalService : ITerminalService
                 throw 'No terminal application available'
             ";
 
-            var result = await _powerShell.ExecuteScriptAsync(script, cancellationToken);
+            var result = await _powerShell.ExecuteScriptWithResultAsync(script, cancellationToken);
             
             if (result.ExitCode == 0)
             {
@@ -90,7 +91,7 @@ public class TerminalService : ITerminalService
                 throw 'No terminal application available'
             ";
 
-            var result = await _powerShell.ExecuteScriptAsync(script, cancellationToken);
+            var result = await _powerShell.ExecuteScriptWithResultAsync(script, cancellationToken);
             
             if (result.ExitCode == 0)
             {
@@ -126,7 +127,7 @@ public class TerminalService : ITerminalService
                 }}
             ";
 
-            var result = await _powerShell.ExecuteScriptAsync(script, cancellationToken);
+            var result = await _powerShell.ExecuteScriptWithResultAsync(script, cancellationToken);
             
             if (result.ExitCode == 0)
             {
@@ -167,7 +168,7 @@ public class TerminalService : ITerminalService
                 $terminals | ConvertTo-Json
             ";
 
-            var result = await _powerShell.ExecuteScriptAsync(script, cancellationToken);
+            var result = await _powerShell.ExecuteScriptWithResultAsync(script, cancellationToken);
             
             if (result.ExitCode == 0 && !string.IsNullOrWhiteSpace(result.Output))
             {
