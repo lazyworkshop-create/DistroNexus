@@ -1,6 +1,15 @@
 <Solution>
   <Folder Name="/Solution Items/">
+    <File Path="docs/COMPILE_STATUS.md" />
     <File Path="docs/FEATURE_COMPARISON_v1_vs_v2.md" />
+    <File Path="docs/SettingsService卡死诊断_CN.md" />
+    <File Path="docs/STARTUP_FLOW_DIAGRAM.md" />
+    <File Path="docs/STARTUP_OPTIMIZATION_SUMMARY.md" />
+    <File Path="docs/启动修复测试清单_CN.md" />
+    <File Path="docs/启动卡死问题修复说明_CN.md" />
+    <File Path="docs/启动时跳过设置加载_最终解决方案_CN.md" />
+    <File Path="docs/懒加载设置验证指南_CN.md" />
+    <File Path="docs/配置卡死终极诊断指南_CN.md" />
   </Folder>
   <Project Path="DistroNexus.Core/DistroNexus.Core.csproj" />
   <Project Path="DistroNexus.Desktop/DistroNexus.Desktop.csproj" />
