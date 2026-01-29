@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DistroNexus.Core\DistroNexus.Core.csproj" />
+    <ProjectReference Include="..\DistroNexus.Desktop\DistroNexus.Desktop.csproj" />
   </ItemGroup>
 
   <ItemGroup>
