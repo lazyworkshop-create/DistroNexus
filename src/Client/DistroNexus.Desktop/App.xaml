@@ -30,6 +30,16 @@
             <SolidColorBrush x:Key="DangerBrush" Color="#D13438"/>
             <SolidColorBrush x:Key="InfoBrush" Color="#0078D4"/>
             
+            <!-- Text Brushes for Theme Compatibility -->
+            <SolidColorBrush x:Key="TextFillColorSecondaryBrush" Color="#8A8A8A"/>
+            <SolidColorBrush x:Key="TextFillColorTertiaryBrush" Color="#737373"/>
+            
+            <!-- Background and Control Brushes -->
+            <SolidColorBrush x:Key="ApplicationBackgroundBrush" Color="#1F1F1F"/>
+            <SolidColorBrush x:Key="ControlStrokeColorDefaultBrush" Color="#3F3F3F"/>
+            <SolidColorBrush x:Key="CardBackgroundFillColorDefaultBrush" Color="#2D2D2D"/>
+            <SolidColorBrush x:Key="ControlFillColorDefaultBrush" Color="#3F3F3F"/>
+            
             <!-- Converters -->
             <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
             <converters:IntToVisibilityConverter x:Key="IntToVisibilityConverter"/>
@@ -42,6 +52,14 @@
             <converters:StringToBoolConverter x:Key="StringToBoolConverter"/>
             <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
             <converters:BoolToPrimaryAppearanceConverter x:Key="BoolToPrimaryAppearanceConverter"/>
+            <converters:DownloadStatusToColorConverter x:Key="DownloadStatusToColorConverter"/>
+            <converters:DownloadingToVisibilityConverter x:Key="DownloadingToVisibilityConverter"/>
+            <converters:FailedToVisibilityConverter x:Key="FailedToVisibilityConverter"/>
+            <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
+            <converters:BoolToVisibilityWithInverseConverter x:Key="BoolToVisibilityConverterWithInverse"/>
+            <converters:DownloadStatusToActionVisibilityConverter x:Key="DownloadStatusToActionVisibilityConverter"/>
+            <converters:DownloadStatusToRetryVisibilityConverter x:Key="DownloadStatusToRetryVisibilityConverter"/>
+            <converters:MultiConditionVisibilityConverter x:Key="MultiConditionVisibilityConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

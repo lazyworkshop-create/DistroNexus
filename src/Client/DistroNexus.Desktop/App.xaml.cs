@@ -26,12 +26,12 @@ public partial class App : System.Windows.Application
         try
         {
             System.Diagnostics.Debug.WriteLine("=== Application OnStartup Begin ===");
-            
+
             // Set up global exception handlers before anything else
             SetupExceptionHandling();
             System.Diagnostics.Debug.WriteLine("Exception handling setup complete");
 
-            // Build the DI container
+            // Build the DI container (this is fast, keep it synchronous)
             _host = Host.CreateDefaultBuilder()
                 .ConfigureServices((context, services) =>
                 {
@@ -82,40 +82,33 @@ public partial class App : System.Windows.Application
             _logger.LogInformation("DistroNexus application starting");
             System.Diagnostics.Debug.WriteLine("Logger initialized");
 
-            // Note: Theme will be loaded and applied in MainWindow.OnLoaded
-            // to avoid async/sync context issues during startup
-            System.Diagnostics.Debug.WriteLine("Skipping theme load in OnStartup - will load in window");
-
-            // Initialize PowerShell module
-            System.Diagnostics.Debug.WriteLine("Initializing PowerShell module...");
-            InitializePowerShellModule();
-            System.Diagnostics.Debug.WriteLine("PowerShell module initialized");
-
-            // Show main window
+            // PRIORITY: Show main window IMMEDIATELY
+            // All other initialization will happen in background after window is shown
             System.Diagnostics.Debug.WriteLine("Creating main window...");
             var mainWindow = _host.Services.GetRequiredService<MainWindow>();
             System.Diagnostics.Debug.WriteLine("Main window created, showing...");
             mainWindow.Show();
-            
+
             _logger.LogInformation("Main window displayed successfully");
-            
-            // Check for updates in background (non-blocking)
-            _ = CheckForUpdatesOnStartupAsync();
-            
+            System.Diagnostics.Debug.WriteLine("=== Main Window Shown - UI is now visible ===");
+
+            // Perform all background initialization asynchronously (non-blocking)
+            _ = InitializeApplicationAsync();
+
             System.Diagnostics.Debug.WriteLine("=== Application OnStartup Complete ===");
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"=== CRITICAL ERROR IN OnStartup ===");
             System.Diagnostics.Debug.WriteLine($"Exception: {ex}");
-            
+
             // Critical startup error - show to user
             var errorMessage = $"Failed to start DistroNexus:\n\n{ex.Message}\n\nStack Trace:\n{ex.StackTrace}";
             MessageBox.Show(errorMessage, "Startup Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            
+
             // Log the error if logger is available
             _logger?.LogCritical(ex, "Critical error during application startup");
-            
+
             // Shutdown the application
             Shutdown(1);
         }
@@ -169,6 +162,35 @@ public partial class App : System.Windows.Application
         {
             System.Diagnostics.Debug.WriteLine($"ApplyThemeFromSettings: ERROR: {ex}");
             _logger?.LogError(ex, "Failed to apply theme");
+        }
+    }
+
+    /// <summary>
+    /// Performs background initialization tasks after the main window is shown.
+    /// This ensures the UI is visible to the user quickly while other operations complete.
+    /// </summary>
+    private async Task InitializeApplicationAsync()
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine("=== Background Initialization Starting ===");
+
+            // Small delay to ensure window is fully rendered
+            await Task.Delay(100);
+
+            // Initialize PowerShell module (non-blocking, runs in background)
+            System.Diagnostics.Debug.WriteLine("Initializing PowerShell module in background...");
+            InitializePowerShellModule();
+
+            // Check for updates (non-blocking)
+            _ = CheckForUpdatesOnStartupAsync();
+
+            System.Diagnostics.Debug.WriteLine("=== Background Initialization Complete ===");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Background initialization encountered an error");
+            // Don't crash the app for background initialization errors
         }
     }
 
