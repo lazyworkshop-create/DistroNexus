@@ -18,6 +18,9 @@ public partial class PackageManagerViewModel : ObservableObject
     private readonly IDownloadService _downloadService;
     private readonly IDownloadTaskManager _downloadTaskManager;
     private readonly ILogger<PackageManagerViewModel> _logger;
+    
+    // Track active downloads: PackageId -> DownloadTask
+    private readonly Dictionary<string, DownloadTask> _activeDownloads = new();
 
     [ObservableProperty]
     private ObservableCollection<DistroPackage> _packages = new();
@@ -177,18 +180,115 @@ public partial class PackageManagerViewModel : ObservableObject
         {
             _logger.LogInformation("Queuing download for package {PackageName}", package.Name);
 
+            // Set downloading state
+            package.IsDownloading = true;
+
             // Queue the download task
-            await _downloadTaskManager.QueueDownloadAsync(package);
+            var destinationPath = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                "DistroNexus", "Downloads", package.Id);
+            
+            var downloadTask = _downloadTaskManager.AddTask(package, destinationPath);
+            
+            // Track the download
+            lock (_activeDownloads)
+            {
+                _activeDownloads[package.Id] = downloadTask;
+            }
+            
+            // Subscribe to status changes to update UI
+            _ = MonitorDownloadTaskAsync(downloadTask, package);
 
             StatusMessage = $"Download queued: {package.Name}";
             _logger.LogInformation("Download queued successfully for {PackageName}", package.Name);
         }
         catch (Exception ex)
         {
+            package.IsDownloading = false;
             _logger.LogError(ex, "Failed to queue download");
             StatusMessage = "Failed to queue download";
             MessageBox.Show($"Failed to queue download: {ex.Message}", 
                 "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    /// <summary>
+    /// Cancels an active download for a package.
+    /// </summary>
+    [RelayCommand]
+    private void CancelDownload(DistroPackage package)
+    {
+        if (package == null)
+            return;
+
+        try
+        {
+            lock (_activeDownloads)
+            {
+                if (_activeDownloads.TryGetValue(package.Id, out var downloadTask))
+                {
+                    _logger.LogInformation("Cancelling download for {PackageName}", package.Name);
+                    downloadTask.CancellationTokenSource?.Cancel();
+                    _activeDownloads.Remove(package.Id);
+                    package.IsDownloading = false;
+                    StatusMessage = $"Download cancelled: {package.Name}";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to cancel download for {PackageName}", package.Name);
+            MessageBox.Show($"Failed to cancel download: {ex.Message}", 
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    /// <summary>
+    /// Monitors a download task and updates the package status.
+    /// </summary>
+    private async Task MonitorDownloadTaskAsync(DownloadTask downloadTask, DistroPackage package)
+    {
+        try
+        {
+            // Poll the task status
+            while (downloadTask.Status == DownloadStatus.Pending || downloadTask.Status == DownloadStatus.Downloading)
+            {
+                await Task.Delay(500);
+            }
+
+            // Task completed or failed
+            switch (downloadTask.Status)
+            {
+                case DownloadStatus.Completed:
+                    package.IsDownloading = false;
+                    package.IsCached = true;
+                    _logger.LogInformation("Download completed for {PackageName}", package.Name);
+                    break;
+                    
+                case DownloadStatus.Failed:
+                    package.IsDownloading = false;
+                    _logger.LogWarning("Download failed for {PackageName}: {Error}", package.Name, downloadTask.ErrorMessage);
+                    break;
+                    
+                case DownloadStatus.Cancelled:
+                    package.IsDownloading = false;
+                    _logger.LogInformation("Download cancelled for {PackageName}", package.Name);
+                    break;
+            }
+
+            // Remove from active downloads
+            lock (_activeDownloads)
+            {
+                _activeDownloads.Remove(package.Id);
+            }
+
+            // Update UI grouping
+            UpdateGroupedPackages();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error monitoring download task for {PackageName}", package.Name);
+            package.IsDownloading = false;
         }
     }
 
@@ -371,6 +471,113 @@ public partial class PackageManagerViewModel : ObservableObject
         if (mainWindow?.DataContext is MainViewModel mainViewModel)
         {
             mainViewModel.ShowDashboardCommand.Execute(null);
+        }
+    }
+
+    /// <summary>
+    /// Updates the distribution catalog from remote sources.
+    /// </summary>
+    [RelayCommand]
+    private async Task UpdateSourcesAsync()
+    {
+        _logger.LogInformation("Updating distribution sources");
+        
+        try
+        {
+            StatusMessage = "Updating sources...";
+            await _catalogService.RefreshCatalogAsync();
+            await RefreshCatalogAsync();
+            StatusMessage = "Sources updated successfully";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update sources");
+            StatusMessage = "Failed to update sources";
+            MessageBox.Show($"Failed to update sources: {ex.Message}", 
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    /// <summary>
+    /// Downloads all uncached packages.
+    /// </summary>
+    [RelayCommand]
+    private async Task DownloadAllAsync()
+    {
+        _logger.LogInformation("Downloading all uncached packages");
+        
+        try
+        {
+            StatusMessage = "Starting download of all packages...";
+            var downloadCount = 0;
+            
+            foreach (var group in GroupedPackages)
+            {
+                foreach (var package in group.Packages)
+                {
+                    if (!package.IsCached)
+                    {
+                        // Create download task instead of directly downloading
+                        var destination = System.IO.Path.Combine(
+                            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                            "DistroNexus", "Downloads", package.Id);
+                        
+                        var task = _downloadTaskManager.AddTask(package, destination);
+                        downloadCount++;
+                        StatusMessage = $"Queued {downloadCount} packages for download...";
+                    }
+                }
+            }
+            
+            StatusMessage = $"Successfully queued {downloadCount} packages for download";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to queue downloads");
+            StatusMessage = "Failed to queue downloads";
+            MessageBox.Show($"Failed to queue downloads: {ex.Message}", 
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    /// <summary>
+    /// Installs a cached package.
+    /// </summary>
+    [RelayCommand]
+    private async Task InstallCachedPackageAsync(DistroPackage package)
+    {
+        if (package == null) return;
+        
+        _logger.LogInformation("Installing cached package: {PackageId}", package.Id);
+        
+        try
+        {
+            StatusMessage = $"Starting installation of {package.Name}...";
+            
+            // For now, just show a confirmation message as the wizard needs more implementation
+            var result = MessageBox.Show(
+                $"Install {package.Name} ({package.Id})?\n\nThis will start the installation process.", 
+                "Install Package", 
+                MessageBoxButton.YesNoCancel, 
+                MessageBoxImage.Question);
+                
+            if (result == MessageBoxResult.Yes)
+            {
+                StatusMessage = $"Installation of {package.Name} started";
+                _logger.LogInformation("Installation started for package: {PackageId}", package.Id);
+            }
+            else
+            {
+                StatusMessage = $"Installation of {package.Name} cancelled";
+                _logger.LogInformation("Installation cancelled for package: {PackageId}", package.Id);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to install cached package: {PackageId}", package.Id);
+            StatusMessage = $"Failed to install {package.Name}";
+            MessageBox.Show($"Failed to install {package.Name}: {ex.Message}", 
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 }

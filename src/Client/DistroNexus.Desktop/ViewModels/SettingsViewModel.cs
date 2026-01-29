@@ -5,6 +5,7 @@ using DistroNexus.Core.Models;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Threading;
 using System.Timers;
 using System.Windows;
 
@@ -19,7 +20,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly ICatalogService _catalogService;
     private readonly ITerminalService _terminalService;
     private readonly ILogger<SettingsViewModel> _logger;
-    private Timer? _autoSaveTimer;
+    private System.Timers.Timer? _autoSaveTimer;
 
     [ObservableProperty]
     private string _defaultInstallPath = @"C:\WSL";
@@ -533,7 +534,7 @@ public partial class SettingsViewModel : ObservableObject
 
         if (AutoSaveEnabled && AutoSaveInterval > 0)
         {
-            _autoSaveTimer = new Timer(AutoSaveInterval * 1000); // Convert seconds to milliseconds
+            _autoSaveTimer = new System.Timers.Timer(AutoSaveInterval * 1000); // Convert seconds to milliseconds
             _autoSaveTimer.Elapsed += OnAutoSaveTimerElapsed;
             _autoSaveTimer.AutoReset = true;
             _autoSaveTimer.Start();

@@ -19,6 +19,7 @@ public partial class InstallWizardViewModel : ObservableObject
 {
     private readonly ICatalogService _catalogService;
     private readonly IWslManagerService _wslManager;
+    private readonly ITerminalService _terminalService;
     private readonly ISettingsService _settingsService;
     private readonly ILogger<InstallWizardViewModel> _logger;
     private CancellationTokenSource? _installCts;
@@ -120,11 +121,13 @@ public partial class InstallWizardViewModel : ObservableObject
     public InstallWizardViewModel(
         ICatalogService catalogService,
         IWslManagerService wslManager,
+        ITerminalService terminalService,
         ISettingsService settingsService,
         ILogger<InstallWizardViewModel> logger)
     {
         _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
         _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
+        _terminalService = terminalService ?? throw new ArgumentNullException(nameof(terminalService));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -549,5 +552,36 @@ public partial class InstallWizardViewModel : ObservableObject
             IsPathValid = false;
             PathValidationMessage = $"Invalid path: {ex.Message}";
         }
+    }
+
+    /// <summary>
+    /// Logs a message to the installation log.
+    /// </summary>
+    /// <param name="message">The message to log.</param>
+    public void LogMessage(string message)
+    {
+        if (message == null) return;
+        
+        var timestamp = DateTime.Now.ToString("HH:mm:ss");
+        var logEntry = $"[{timestamp}] {message}";
+        
+        InstallLogs.Insert(0, logEntry);
+        
+        // Keep only last 1000 log entries
+        while (InstallLogs.Count > 1000)
+        {
+            InstallLogs.RemoveAt(InstallLogs.Count - 1);
+        }
+        
+        _logger.LogDebug("Wizard log: {Message}", message);
+    }
+
+    /// <summary>
+    /// Clears all installation logs.
+    /// </summary>
+    public void ClearLog()
+    {
+        InstallLogs.Clear();
+        _logger.LogDebug("Wizard log cleared");
     }
 }

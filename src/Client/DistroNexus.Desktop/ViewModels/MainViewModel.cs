@@ -33,7 +33,7 @@ public partial class MainViewModel : ObservableObject
     private bool _isLoading;
 
     [ObservableProperty]
-    private string _statusMessage = "Ready";
+    private string _statusMessage = "Initializing...";
 
     [ObservableProperty]
     private object? _currentPage;
@@ -78,14 +78,22 @@ public partial class MainViewModel : ObservableObject
         // Subscribe to download task status changes
         _downloadTaskManager.TaskStatusChanged += OnDownloadTaskStatusChanged;
 
-        // Load saved theme and language settings
-        _ = LoadUserPreferencesAsync();
+        // NOTE: LoadUserPreferencesAsync is now called explicitly from MainWindow.OnLoaded
+        // to avoid async operations in constructor which can block DI resolution
 
         // Start auto-refresh timer
         StartAutoRefresh();
 
         // Update active downloads count initially
         UpdateActiveDownloadsCount();
+    }
+
+    /// <summary>
+    /// Initializes the ViewModel asynchronously. Must be called after construction.
+    /// </summary>
+    public async Task InitializeAsync()
+    {
+        await LoadUserPreferencesAsync();
     }
 
     private System.Timers.Timer? _refreshTimer;
@@ -151,37 +159,41 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task LoadInstancesAsync()
+    private async Task LoadInstancesAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            IsLoading = true;
-            StatusMessage = "Loading WSL instances...";
-
             _logger.LogInformation("Loading WSL instances");
 
-            var instances = await _wslManager.GetInstancesAsync();
-            
-            Instances.Clear();
-            foreach (var instance in instances)
-            {
-                Instances.Add(new WslInstanceViewModel(instance, _wslManager, _terminalService, _logger));
-            }
+            // Add timeout to prevent hanging
+            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
-            StatusMessage = $"Loaded {Instances.Count} instance(s)";
+            var instances = await _wslManager.GetInstancesAsync(combinedCts.Token);
+            
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                Instances.Clear();
+                foreach (var instance in instances)
+                {
+                    Instances.Add(new WslInstanceViewModel(instance, _wslManager, _terminalService, _logger));
+                }
+            });
+
             _logger.LogInformation("Loaded {Count} WSL instances", Instances.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Loading WSL instances canceled or timed out");
+            // Don't show error dialog for timeout to avoid annoying the user
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to load WSL instances");
-            StatusMessage = $"Error loading instances: {ex.Message}";
             MessageBox.Show($"Failed to load WSL instances: {ex.Message}", 
                 "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
-        finally
-        {
-            IsLoading = false;
-        }
+        // Note: Don't set IsLoading = false here as it's controlled by MainWindow
     }
 
     [RelayCommand]
