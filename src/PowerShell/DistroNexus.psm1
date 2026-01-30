@@ -6,6 +6,9 @@ $ErrorActionPreference = 'Stop'
 # Get module root path
 $script:ModuleRoot = $PSScriptRoot
 
+# Set the project root path (two levels up from module directory)
+$script:ProjectRoot = Split-Path (Split-Path $script:ModuleRoot -Parent) -Parent
+
 # Import private helper functions
 $privateFunctions = @(Get-ChildItem -Path "$PSScriptRoot\Private\*.ps1" -ErrorAction SilentlyContinue)
 foreach ($import in $privateFunctions) {

@@ -22,7 +22,7 @@ function Get-DistroNexusConfig {
     )
     
     if (-not $ConfigRoot) {
-        $ConfigRoot = Join-Path $script:ModuleRoot "..\config"
+        $ConfigRoot = Join-Path $script:ProjectRoot "config"
     }
     
     $result = @{
@@ -90,7 +90,7 @@ function Save-DistroNexusSettings {
     )
     
     if (-not $ConfigRoot) {
-        $ConfigRoot = Join-Path $script:ModuleRoot "..\config"
+        $ConfigRoot = Join-Path $script:ProjectRoot "config"
     }
     
     $settingsPath = Join-Path $ConfigRoot "settings.json"
