@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
@@ -6,13 +7,15 @@ using Microsoft.Extensions.Logging;
 namespace DistroNexus.Core.Services;
 
 /// <summary>
-/// Service for managing WSL instances using inline PowerShell scripts.
+/// Service for managing WSL instances using DistroNexus PowerShell module.
+/// Falls back to inline scripts if module is not available.
 /// </summary>
 public partial class WslManagerService : IWslManagerService
 {
     private readonly IPowerShellService _powerShellService;
     private readonly ICatalogService _catalogService;
     private readonly ILogger<WslManagerService> _logger;
+    private readonly bool _useModuleFallback = true;
 
     private const string LxssRegistryPath = @"HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss";
 
@@ -28,6 +31,74 @@ public partial class WslManagerService : IWslManagerService
 
     /// <inheritdoc/>
     public async Task<List<WslInstance>> GetInstancesAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogInformation("Retrieving WSL instances using PowerShell module");
+
+            // Try using PowerShell module first
+            var moduleResult = await _powerShellService.ExecuteModuleCmdletAsync(
+                "Get-DistroNexusInstance",
+                parameters: null,
+                options: new ModuleCallOptions
+                {
+                    TimeoutSeconds = 10,
+                    ParseAsJson = true,
+                    UseModuleFallback = _useModuleFallback
+                },
+                cancellationToken: cancellationToken);
+
+            if (moduleResult.Success && moduleResult.UsedModule && moduleResult.ParsedObjects != null)
+            {
+                _logger.LogInformation("Successfully retrieved {Count} instances using module", moduleResult.ParsedObjects.Count);
+                return ParseInstancesFromModule(moduleResult.ParsedObjects);
+            }
+
+            // Fallback to inline script if module is not available
+            _logger.LogWarning("Module call failed, falling back to inline script");
+            return await GetInstancesInlineAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to retrieve WSL instances");
+            return [];
+        }
+    }
+
+    private List<WslInstance> ParseInstancesFromModule(List<JsonElement> parsedObjects)
+    {
+        var instances = new List<WslInstance>();
+
+        foreach (var element in parsedObjects)
+        {
+            try
+            {
+                var instance = new WslInstance
+                {
+                    Name = element.GetProperty("Name").GetString() ?? "",
+                    State = element.GetProperty("State").GetString() ?? "Unknown",
+                    Version = element.TryGetProperty("Version", out var ver) ? 
+                        int.Parse(ver.GetString() ?? "2") : 2,
+                    InstallPath = element.GetProperty("BasePath").GetString() ?? "",
+                    Size = element.TryGetProperty("DiskSize", out var size) ? size.GetInt64() : 0,
+                    Distribution = element.GetProperty("Name").GetString() ?? "",
+                    IsDefault = false, // Will be determined from wsl --list
+                    LastAccessed = element.TryGetProperty("InstallTime", out var time) && 
+                        DateTime.TryParse(time.GetString(), out var dt) ? dt : (DateTime?)null
+                };
+
+                instances.Add(instance);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to parse instance from module output");
+            }
+        }
+
+        return instances;
+    }
+
+    private async Task<List<WslInstance>> GetInstancesInlineAsync(CancellationToken cancellationToken)
     {
         try
         {

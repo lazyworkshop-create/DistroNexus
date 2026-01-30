@@ -5,7 +5,7 @@ function Install-DistroNexusInstance {
 
     .DESCRIPTION
         Downloads (if needed) and installs a WSL distribution to the specified path.
-        Supports custom user configuration and quick mode with defaults.
+        Supports custom user configuration, interactive mode, automatic download, and terminal launching.
 
     .PARAMETER DistroName
         The default name of the distribution from the catalog (e.g., "Ubuntu-22.04").
@@ -22,12 +22,34 @@ function Install-DistroNexusInstance {
     .PARAMETER Password
         Password for the user (SecureString).
 
+    .PARAMETER Interactive
+        Use interactive mode to select distribution and configure settings.
+
+    .PARAMETER AutoDownload
+        Automatically download the package if not found in cache.
+
+    .PARAMETER OpenTerminal
+        Open a terminal window after successful installation.
+
+    .PARAMETER Shell
+        Default shell for the user (e.g., "bash", "zsh", "fish"). Defaults to "bash".
+
+    .PARAMETER Locale
+        Locale setting (e.g., "en_US.UTF-8"). If not specified, keeps system default.
+
+    .PARAMETER SetAsDefault
+        Set this instance as the default WSL distribution.
+
     .EXAMPLE
         Install-DistroNexusInstance -DistroName "Ubuntu-22.04" -InstallPath "D:\WSL\Ubuntu"
 
     .EXAMPLE
-        $pass = Read-Host -AsSecureString -Prompt "Password"
-        Install-DistroNexusInstance -DistroName "Debian" -InstallPath "E:\Linux" -Username "admin" -Password $pass
+        Install-DistroNexusInstance -Interactive -AutoDownload -OpenTerminal
+
+    .EXAMPLE
+        $pass = ConvertTo-SecureString "MyPassword" -AsPlainText -Force
+        Install-DistroNexusInstance -DistroName "Debian" -InstallPath "E:\Linux" `
+            -Username "admin" -Password $pass -Shell "zsh" -Locale "en_US.UTF-8"
 
     .OUTPUTS
         Boolean indicating success or failure
@@ -35,10 +57,12 @@ function Install-DistroNexusInstance {
     [CmdletBinding(SupportsShouldProcess)]
     [OutputType([bool])]
     param(
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = 'Standard')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'Interactive')]
         [string]$DistroName,
         
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = 'Standard')]
+        [Parameter(Mandatory = $false, ParameterSetName = 'Interactive')]
         [string]$InstallPath,
         
         [Parameter(Mandatory = $false)]
@@ -48,7 +72,26 @@ function Install-DistroNexusInstance {
         [string]$Username = "root",
         
         [Parameter(Mandatory = $false)]
-        [SecureString]$Password
+        [SecureString]$Password,
+        
+        [Parameter(Mandatory = $false, ParameterSetName = 'Interactive')]
+        [switch]$Interactive,
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$AutoDownload,
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$OpenTerminal,
+        
+        [Parameter(Mandatory = $false)]
+        [ValidateSet("bash", "zsh", "fish", "sh")]
+        [string]$Shell = "bash",
+        
+        [Parameter(Mandatory = $false)]
+        [string]$Locale,
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$SetAsDefault
     )
     
     begin {
@@ -56,6 +99,55 @@ function Install-DistroNexusInstance {
     }
     
     process {
+        # Interactive mode
+        if ($Interactive) {
+            Write-Host "`n=== DistroNexus Interactive Installation ===" -ForegroundColor Cyan
+            
+            # Select distribution
+            if (-not $DistroName) {
+                $packages = Get-DistroNexusPackage
+                $selected = $packages | Out-GridView -Title "Select Distribution to Install" -OutputMode Single
+                
+                if (-not $selected) {
+                    Write-DistroNexusLog "No distribution selected" -Level WARN
+                    return $false
+                }
+                
+                $DistroName = $selected.DefaultName
+            }
+            
+            # Get install path
+            if (-not $InstallPath) {
+                $defaultPath = Join-Path $env:USERPROFILE "WSL\$DistroName"
+                $InstallPath = Read-Host "Install path [$defaultPath]"
+                if ([string]::IsNullOrWhiteSpace($InstallPath)) {
+                    $InstallPath = $defaultPath
+                }
+            }
+            
+            # Get instance name
+            if (-not $InstanceName) {
+                $InstanceName = Read-Host "Instance name [$DistroName]"
+                if ([string]::IsNullOrWhiteSpace($InstanceName)) {
+                    $InstanceName = $DistroName
+                }
+            }
+            
+            # Get username
+            if ($Username -eq "root") {
+                $inputUser = Read-Host "Username [root]"
+                if (-not [string]::IsNullOrWhiteSpace($inputUser)) {
+                    $Username = $inputUser
+                }
+            }
+            
+            # Get password if username is not root
+            if ($Username -ne "root" -and -not $Password) {
+                $Password = Read-Host -AsSecureString -Prompt "Password for $Username"
+            }
+        }
+        
+        # Set default instance name
         if (-not $InstanceName) {
             $InstanceName = $DistroName
         }
@@ -82,10 +174,12 @@ function Install-DistroNexusInstance {
             
             # Find distro in catalog
             $distroInfo = $null
+            $distroFamily = $null
             foreach ($family in $config.Distros.PSObject.Properties) {
                 foreach ($version in $family.Value.Versions.PSObject.Properties) {
                     if ($version.Value.DefaultName -eq $DistroName) {
                         $distroInfo = $version.Value
+                        $distroFamily = $family.Name
                         break
                     }
                 }
@@ -106,9 +200,36 @@ function Install-DistroNexusInstance {
                 }
             }
             
+            # Auto-download if not found and AutoDownload is specified
+            if (-not (Test-Path $packagePath) -and $AutoDownload) {
+                Write-DistroNexusLog "Package not found, downloading..."
+                $downloadResult = Save-DistroNexusPackage -DefaultName $DistroName
+                
+                if (-not $downloadResult.Success) {
+                    throw "Failed to download package"
+                }
+                
+                # Update package path
+                if ($cachePath -and $distroInfo.Filename) {
+                    $packagePath = Join-Path $cachePath $distroInfo.Filename
+                }
+            }
+            
             if (-not (Test-Path $packagePath)) {
-                Write-DistroNexusLog "Package not found. Download it first using Save-DistroNexusPackage" -Level ERROR
-                return $false
+                throw "Package not found at: $packagePath. Use -AutoDownload or run Save-DistroNexusPackage first."
+            }
+            
+            # Handle package format (use PackageHandler if not .tar)
+            $finalPackagePath = $packagePath
+            if ($packagePath -notmatch '\.tar(\.gz)?$') {
+                Write-DistroNexusLog "Converting package format..."
+                $extractedPath = Expand-DistroPackage -PackagePath $packagePath
+                if ($extractedPath) {
+                    $finalPackagePath = $extractedPath
+                }
+                else {
+                    throw "Failed to extract package"
+                }
             }
             
             # Create install directory
@@ -117,25 +238,103 @@ function Install-DistroNexusInstance {
             }
             
             # Import distribution
-            Write-DistroNexusLog "Importing from: $packagePath"
-            wsl --import $InstanceName $InstallPath $packagePath
+            Write-DistroNexusLog "Importing from: $finalPackagePath"
+            Write-Progress -Activity "Installing WSL Instance" -Status "Importing $DistroName..." -PercentComplete 30
+            
+            wsl --import $InstanceName $InstallPath $finalPackagePath
             
             if ($LASTEXITCODE -ne 0) {
-                throw "WSL import failed"
+                throw "WSL import failed with exit code: $LASTEXITCODE"
             }
             
-            # Set default user if specified
+            Write-Progress -Activity "Installing WSL Instance" -Status "Configuring instance..." -PercentComplete 60
+            
+            # Configure user if not root
             if ($Username -ne "root") {
-                Write-DistroNexusLog "Configuring user: $Username"
-                # This would typically involve running usermod commands inside WSL
-                # Simplified for now
+                Write-DistroNexusLog "Creating user: $Username"
+                
+                # Detect distro family for appropriate user creation commands
+                $useWheel = $distroFamily -match "Fedora|RHEL|Rocky|Alma|openSUSE"
+                $sudoGroup = if ($useWheel) { "wheel" } else { "sudo" }
+                
+                # Create user with home directory
+                wsl --distribution $InstanceName -- bash -c "useradd -m -s /bin/$Shell $Username 2>/dev/null || true"
+                
+                # Set password if provided
+                if ($Password) {
+                    $plainPassword = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto(
+                        [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($Password))
+                    wsl --distribution $InstanceName -- bash -c "echo '${Username}:${plainPassword}' | chpasswd"
+                }
+                
+                # Add to sudo/wheel group
+                wsl --distribution $InstanceName -- bash -c "usermod -aG $sudoGroup $Username 2>/dev/null || true"
+                
+                # Configure wsl.conf for default user
+                $wslConf = @"
+[user]
+default=$Username
+
+[boot]
+systemd=true
+
+[network]
+generateResolvConf=true
+"@
+                $wslConfEncoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($wslConf))
+                wsl --distribution $InstanceName -- bash -c "echo '$wslConfEncoded' | base64 -d | sudo tee /etc/wsl.conf > /dev/null"
+                
+                Write-DistroNexusLog "User '$Username' created and configured as default"
             }
+            
+            # Set locale if specified
+            if ($Locale) {
+                Write-DistroNexusLog "Configuring locale: $Locale"
+                wsl --distribution $InstanceName -- bash -c "locale-gen $Locale 2>/dev/null || true"
+                wsl --distribution $InstanceName -- bash -c "update-locale LANG=$Locale 2>/dev/null || true"
+            }
+            
+            # Set as default distribution if requested
+            if ($SetAsDefault) {
+                Write-DistroNexusLog "Setting as default distribution"
+                wsl --set-default $InstanceName
+            }
+            
+            # Terminate to apply wsl.conf changes
+            if ($Username -ne "root") {
+                Write-DistroNexusLog "Restarting instance to apply configuration..."
+                wsl --terminate $InstanceName
+                Start-Sleep -Seconds 2
+            }
+            
+            Write-Progress -Activity "Installing WSL Instance" -Status "Complete" -PercentComplete 100
+            Write-Progress -Activity "Installing WSL Instance" -Completed
             
             Write-DistroNexusLog "Successfully installed instance: $InstanceName"
+            
+            # Update cache
+            Update-InstanceCache -Action "Add" -InstanceName $InstanceName
+            
+            # Open terminal if requested
+            if ($OpenTerminal) {
+                Write-DistroNexusLog "Launching terminal..."
+                Invoke-Terminal -DistributionName $InstanceName
+            }
+            
             return $true
         }
         catch {
+            Write-Progress -Activity "Installing WSL Instance" -Completed
             Write-DistroNexusLog "Installation failed: $_" -Level ERROR
+            
+            # Cleanup on failure
+            $existingAfterError = Get-DistroNexusInstance -Name $InstanceName -ForceUpdate | 
+                Where-Object { $_.Name -eq $InstanceName }
+            if ($existingAfterError) {
+                Write-DistroNexusLog "Cleaning up failed installation..." -FileOnly
+                wsl --unregister $InstanceName 2>$null
+            }
+            
             return $false
         }
     }

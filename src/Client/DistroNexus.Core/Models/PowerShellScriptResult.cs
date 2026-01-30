@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace DistroNexus.Core.Models;
 
 /// <summary>
@@ -23,5 +25,15 @@ public class PowerShellScriptResult
     /// <summary>
     /// Gets a value indicating whether the script executed successfully.
     /// </summary>
-    public bool Success => ExitCode == 0;
+    public bool Success => ExitCode == 0 && string.IsNullOrWhiteSpace(Error);
+
+    /// <summary>
+    /// Gets the parsed PowerShell objects from JSON output.
+    /// </summary>
+    public List<JsonElement>? ParsedObjects { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the command was executed via module (true) or inline script (false).
+    /// </summary>
+    public bool UsedModule { get; set; } = false;
 }

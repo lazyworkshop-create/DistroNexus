@@ -45,4 +45,33 @@ public interface IPowerShellService
     /// </summary>
     /// <returns>True if the module is loaded, otherwise false.</returns>
     Task<bool> IsModuleLoadedAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Executes a DistroNexus PowerShell module cmdlet and returns the raw result.
+    /// </summary>
+    /// <param name="cmdletName">Name of the cmdlet (e.g., "Get-DistroNexusInstance").</param>
+    /// <param name="parameters">Cmdlet parameters.</param>
+    /// <param name="options">Module call options.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>PowerShell execution result.</returns>
+    Task<PowerShellScriptResult> ExecuteModuleCmdletAsync(
+        string cmdletName,
+        Dictionary<string, object>? parameters = null,
+        ModuleCallOptions? options = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Executes a DistroNexus PowerShell module cmdlet with typed result.
+    /// </summary>
+    /// <typeparam name="T">The expected return type.</typeparam>
+    /// <param name="cmdletName">Name of the cmdlet (e.g., "Get-DistroNexusInstance").</param>
+    /// <param name="parameters">Cmdlet parameters.</param>
+    /// <param name="options">Module call options.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>Parsed result of type T.</returns>
+    Task<T?> ExecuteModuleCmdletAsync<T>(
+        string cmdletName,
+        Dictionary<string, object>? parameters = null,
+        ModuleCallOptions? options = null,
+        CancellationToken cancellationToken = default);
 }

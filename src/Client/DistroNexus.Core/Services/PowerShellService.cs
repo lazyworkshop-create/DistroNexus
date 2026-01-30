@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using System.Text.Json;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -14,6 +15,7 @@ public class PowerShellService : IPowerShellService, IDisposable
 {
     private readonly ILogger<PowerShellService> _logger;
     private readonly string _powerShellPath;
+    private readonly string? _moduleBasePath;
     private bool _disposed;
 
     public PowerShellService(ILogger<PowerShellService> logger)
@@ -23,7 +25,44 @@ public class PowerShellService : IPowerShellService, IDisposable
         // Find the PowerShell executable (prefer pwsh.exe for PowerShell Core, fallback to powershell.exe)
         _powerShellPath = FindPowerShellPath();
         
+        // Detect DistroNexus module path (src/PowerShell relative to workspace root)
+        _moduleBasePath = FindDistroNexusModulePath();
+        
         _logger.LogInformation("PowerShell service initialized using: {PowerShellPath}", _powerShellPath);
+        if (_moduleBasePath != null)
+        {
+            _logger.LogInformation("DistroNexus module detected at: {ModulePath}", _moduleBasePath);
+        }
+        else
+        {
+            _logger.LogWarning("DistroNexus PowerShell module not found, will use inline scripts");
+        }
+    }
+
+    private static string? FindDistroNexusModulePath()
+    {
+        // Try to locate the DistroNexus module
+        var possiblePaths = new[]
+        {
+            // Development paths (relative to bin directory)
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\..\..\PowerShell\DistroNexus.psd1"),
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\..\PowerShell\DistroNexus.psd1"),
+            
+            // Installed paths
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), @"DistroNexus\PowerShell\DistroNexus.psd1"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"DistroNexus\PowerShell\DistroNexus.psd1"),
+        };
+
+        foreach (var path in possiblePaths)
+        {
+            var fullPath = Path.GetFullPath(path);
+            if (File.Exists(fullPath))
+            {
+                return Path.GetDirectoryName(fullPath);
+            }
+        }
+
+        return null;
     }
 
     private static string FindPowerShellPath()
@@ -304,5 +343,172 @@ public class PowerShellService : IPowerShellService, IDisposable
 
         _disposed = true;
         GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Executes a DistroNexus PowerShell module cmdlet with typed result.
+    /// </summary>
+    /// <typeparam name="T">The expected return type.</typeparam>
+    /// <param name="cmdletName">Name of the cmdlet (e.g., "Get-DistroNexusInstance").</param>
+    /// <param name="parameters">Cmdlet parameters.</param>
+    /// <param name="options">Module call options.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Parsed result of type T.</returns>
+    public async Task<T?> ExecuteModuleCmdletAsync<T>(
+        string cmdletName,
+        Dictionary<string, object>? parameters = null,
+        ModuleCallOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await ExecuteModuleCmdletAsync(cmdletName, parameters, options, cancellationToken);
+        
+        if (!result.Success || string.IsNullOrWhiteSpace(result.Output))
+            return default;
+
+        try
+        {
+            return JsonSerializer.Deserialize<T>(result.Output);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to deserialize module output to {Type}", typeof(T).Name);
+            return default;
+        }
+    }
+
+    /// <summary>
+    /// Executes a DistroNexus PowerShell module cmdlet and returns the raw result.
+    /// </summary>
+    /// <param name="cmdletName">Name of the cmdlet (e.g., "Get-DistroNexusInstance").</param>
+    /// <param name="parameters">Cmdlet parameters.</param>
+    /// <param name="options">Module call options.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>PowerShell execution result.</returns>
+    public async Task<PowerShellScriptResult> ExecuteModuleCmdletAsync(
+        string cmdletName,
+        Dictionary<string, object>? parameters = null,
+        ModuleCallOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(cmdletName);
+        
+        options ??= new ModuleCallOptions();
+
+        // Check if module is available
+        if (_moduleBasePath == null)
+        {
+            _logger.LogWarning("DistroNexus module not available, cannot execute cmdlet: {Cmdlet}", cmdletName);
+            
+            if (options.UseModuleFallback)
+            {
+                _logger.LogInformation("Module fallback is disabled or not implemented for {Cmdlet}", cmdletName);
+            }
+            
+            return new PowerShellScriptResult
+            {
+                ExitCode = 1,
+                Error = "DistroNexus PowerShell module not found",
+                UsedModule = false
+            };
+        }
+
+        try
+        {
+            // Build the cmdlet invocation script
+            var scriptBuilder = new StringBuilder();
+            
+            // Import module
+            scriptBuilder.AppendLine($"Import-Module '{_moduleBasePath}' -ErrorAction Stop");
+            
+            // Execute cmdlet
+            scriptBuilder.Append(cmdletName);
+            
+            // Add parameters
+            if (parameters != null)
+            {
+                foreach (var param in parameters)
+                {
+                    scriptBuilder.Append($" -{param.Key} ");
+                    scriptBuilder.Append(FormatParameterValue(param.Value));
+                }
+            }
+            
+            // Add common parameters
+            if (options.ForceRefresh && cmdletName == "Get-DistroNexusInstance")
+            {
+                scriptBuilder.Append(" -ForceUpdate");
+            }
+            
+            if (options.LogVerbose)
+            {
+                scriptBuilder.Append(" -Verbose");
+            }
+            
+            // Convert output to JSON if requested
+            if (options.ParseAsJson)
+            {
+                scriptBuilder.AppendLine(" | ConvertTo-Json -Depth 10 -Compress");
+            }
+            
+            _logger.LogDebug("Executing module cmdlet: {Cmdlet}", cmdletName);
+            
+            // Execute with timeout
+            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(options.TimeoutSeconds));
+            using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+            
+            var result = await ExecuteScriptWithResultAsync(scriptBuilder.ToString(), combinedCts.Token);
+            result.UsedModule = true;
+            
+            // Parse JSON output if available
+            if (options.ParseAsJson && result.Success && !string.IsNullOrWhiteSpace(result.Output))
+            {
+                try
+                {
+                    var jsonElement = JsonSerializer.Deserialize<JsonElement>(result.Output);
+                    
+                    // Handle both single object and array results
+                    if (jsonElement.ValueKind == JsonValueKind.Array)
+                    {
+                        result.ParsedObjects = jsonElement.EnumerateArray().ToList();
+                    }
+                    else
+                    {
+                        result.ParsedObjects = [jsonElement];
+                    }
+                }
+                catch (JsonException ex)
+                {
+                    _logger.LogWarning(ex, "Failed to parse cmdlet output as JSON");
+                }
+            }
+            
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error executing module cmdlet: {Cmdlet}", cmdletName);
+            
+            return new PowerShellScriptResult
+            {
+                ExitCode = 1,
+                Error = ex.Message,
+                UsedModule = false
+            };
+        }
+    }
+
+    /// <summary>
+    /// Formats a parameter value for PowerShell command line.
+    /// </summary>
+    private static string FormatParameterValue(object? value)
+    {
+        return value switch
+        {
+            null => "$null",
+            string s => $"'{s.Replace("'", "''")}'",
+            bool b => b ? "$true" : "$false",
+            int or long or double or float or decimal => value.ToString()!,
+            _ => $"'{value}'"
+        };
     }
 }

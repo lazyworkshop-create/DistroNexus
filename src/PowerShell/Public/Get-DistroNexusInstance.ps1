@@ -6,17 +6,40 @@ function Get-DistroNexusInstance {
     .DESCRIPTION
         Retrieves detailed information about WSL distributions registered on the system,
         including status, version, base path, and disk usage.
+        
+        By default, uses cached data (valid for 10 minutes) to improve performance.
+        Use -ForceUpdate to bypass cache and scan the system directly.
 
     .PARAMETER Name
         Filter by instance name. Supports wildcards.
 
+    .PARAMETER ForceUpdate
+        Forces a fresh scan of the system, bypassing the cache.
+        Use this to ensure you have the most current information.
+
+    .PARAMETER IncludeRelease
+        Includes Linux distribution release information (e.g., Ubuntu 22.04).
+        WARNING: This requires starting stopped instances, which may be slow.
+
+    .PARAMETER IncludeUser
+        Includes current default user information.
+        WARNING: This requires starting stopped instances, which may be slow.
+
     .EXAMPLE
         Get-DistroNexusInstance
-        # Gets all WSL instances
+        # Gets all WSL instances (uses cache if available)
 
     .EXAMPLE
         Get-DistroNexusInstance -Name "Ubuntu*"
         # Gets all Ubuntu instances
+
+    .EXAMPLE
+        Get-DistroNexusInstance -ForceUpdate
+        # Forces a fresh scan, ignoring cache
+
+    .EXAMPLE
+        Get-DistroNexusInstance -IncludeRelease -IncludeUser
+        # Gets instances with detailed Linux information (slow)
 
     .OUTPUTS
         PSCustomObject representing each WSL instance
@@ -25,11 +48,36 @@ function Get-DistroNexusInstance {
     [OutputType([PSCustomObject])]
     param(
         [Parameter(Mandatory = $false, Position = 0)]
-        [string]$Name
+        [string]$Name,
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$ForceUpdate,
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$IncludeRelease,
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$IncludeUser
     )
     
     begin {
         Initialize-DistroNexusLogger
+        
+        # Try to use cache if ForceUpdate is not specified
+        if (-not $ForceUpdate -and -not $IncludeRelease -and -not $IncludeUser) {
+            $cachedInstances = Get-InstanceCache
+            if ($cachedInstances) {
+                Write-DistroNexusLog "Using cached instance data" -FileOnly
+                
+                # Apply name filter if specified
+                if ($Name) {
+                    $cachedInstances = $cachedInstances | Where-Object { $_.Name -like $Name }
+                }
+                
+                return $cachedInstances
+            }
+        }
+        
         Write-DistroNexusLog "Scanning WSL instances..." -FileOnly
     }
     
@@ -121,6 +169,45 @@ function Get-DistroNexusInstance {
                     Guid = $key.PSChildName
                 }
                 
+                # Add release information if requested (requires starting instance)
+                if ($IncludeRelease -and $state -eq "Stopped") {
+                    Write-Verbose "Querying release info for $distroName (starting instance)..."
+                    try {
+                        $releaseOutput = wsl --distribution $distroName -- bash -c "lsb_release -d 2>/dev/null | cut -f2" 2>$null
+                        if ($releaseOutput -and $LASTEXITCODE -eq 0) {
+                            $instance | Add-Member -NotePropertyName "Release" -NotePropertyValue $releaseOutput.Trim()
+                        }
+                    }
+                    catch {
+                        Write-Verbose "Failed to query release for $distroName : $_"
+                    }
+                }
+                elseif ($IncludeRelease) {
+                    try {
+                        $releaseOutput = wsl --distribution $distroName -- bash -c "lsb_release -d 2>/dev/null | cut -f2" 2>$null
+                        if ($releaseOutput -and $LASTEXITCODE -eq 0) {
+                            $instance | Add-Member -NotePropertyName "Release" -NotePropertyValue $releaseOutput.Trim()
+                        }
+                    }
+                    catch {
+                        Write-Verbose "Failed to query release for $distroName : $_"
+                    }
+                }
+                
+                # Add user information if requested (requires starting instance)
+                if ($IncludeUser) {
+                    Write-Verbose "Querying user info for $distroName..."
+                    try {
+                        $userOutput = wsl --distribution $distroName -- bash -c "whoami" 2>$null
+                        if ($userOutput -and $LASTEXITCODE -eq 0) {
+                            $instance | Add-Member -NotePropertyName "CurrentUser" -NotePropertyValue $userOutput.Trim()
+                        }
+                    }
+                    catch {
+                        Write-Verbose "Failed to query user for $distroName : $_"
+                    }
+                }
+                
                 $instances += $instance
             }
             catch {
@@ -129,6 +216,12 @@ function Get-DistroNexusInstance {
         }
         
         Write-DistroNexusLog "Found $($instances.Count) WSL instance(s)" -FileOnly
+        
+        # Update cache if not using IncludeRelease/IncludeUser (those require instance startup)
+        if (-not $IncludeRelease -and -not $IncludeUser -and $instances.Count -gt 0) {
+            Set-InstanceCache -Instances $instances
+        }
+        
         return $instances
     }
 }
