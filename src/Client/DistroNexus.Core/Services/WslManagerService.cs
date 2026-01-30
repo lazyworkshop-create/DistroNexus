@@ -239,22 +239,19 @@ public partial class WslManagerService : IWslManagerService
             cancellationToken.ThrowIfCancellationRequested();
 
             // Check if instance name already exists
-            var checkScript = 
-                "$ProgressPreference = 'SilentlyContinue'; " +
-                $"$exists = (wsl --list --quiet 2>&1) -replace \"`0\", '' | Where-Object {{ $_.Trim() -eq '{options.InstanceName}' }}; " +
-                $"if ($exists) {{ throw 'An instance with the name \"{options.InstanceName}\" already exists. Please choose a different name.' }}; " +
-                "'ok'";
-            
-            await _powerShellService.ExecuteScriptAsync(checkScript, cancellationToken);
+            var instances = await GetInstancesAsync(cancellationToken);
+            if (instances.Any(i => i.Name == options.InstanceName))
+            {
+                throw new InvalidOperationException(
+                    $"An instance with the name \"{options.InstanceName}\" already exists. Please choose a different name.");
+            }
 
             progress?.Report((10, "Preparing installation..."));
             cancellationToken.ThrowIfCancellationRequested();
 
             var escapedPath = EscapePowerShellString(options.InstallPath);
-            var downloadUrl = options.Package?.DownloadUrl ?? string.Empty;
-            var escapedUrl = EscapePowerShellString(downloadUrl);
             
-            progress?.Report((20, "Creating installation directory..."));
+            progress?.Report((15, "Creating installation directory..."));
             cancellationToken.ThrowIfCancellationRequested();
 
             // Create installation directory
@@ -264,155 +261,71 @@ public partial class WslManagerService : IWslManagerService
                 "'success'";
             await _powerShellService.ExecuteScriptAsync(createDirScript, cancellationToken);
 
-            progress?.Report((30, "Preparing distribution package..."));
+            progress?.Report((20, "Preparing distribution package..."));
             cancellationToken.ThrowIfCancellationRequested();
 
-            string packageFile;
-            
-            // Check for cached package first
-            if (options.UseLocalCache && !string.IsNullOrEmpty(options.Package?.Id))
+            // Prepare module call parameters
+            var moduleParams = new Dictionary<string, object>
             {
-                var cachePath = _catalogService.GetPackageCachePath();
-                var cachedFile = Path.Combine(cachePath, $"{options.Package.Id}.tar.gz");
-                
-                if (File.Exists(cachedFile))
-                {
-                    _logger.LogInformation("Using cached package: {CachedFile}", cachedFile);
-                    packageFile = cachedFile;
-                    progress?.Report((40, "Using cached distribution package..."));
-                }
-                else
-                {
-                    _logger.LogInformation("Cached package not found, downloading from remote");
-                    packageFile = await DownloadPackageAsync(options, progress, cancellationToken);
-                }
-            }
-            else
-            {
-                _logger.LogInformation("Downloading package from remote (cache disabled)");
-                packageFile = await DownloadPackageAsync(options, progress, cancellationToken);
-            }
-            
-            progress?.Report((60, "Importing distribution..."));
-            cancellationToken.ThrowIfCancellationRequested();
+                ["Name"] = options.InstanceName,
+                ["DestinationPath"] = options.InstallPath,
+                ["DistroName"] = options.Package?.Name ?? "Ubuntu",
+                ["PackageUrl"] = options.Package?.DownloadUrl ?? "",
+                ["UseLocalCache"] = options.UseLocalCache
+            };
 
-            // Construct full installation path (WSL expects the full directory path, not the parent)
-            var fullInstallPath = Path.Combine(options.InstallPath, options.InstanceName);
-            var escapedFullPath = EscapePowerShellString(fullInstallPath);
-
-            // Import the distribution
-            var importScript = 
-                "$ProgressPreference = 'SilentlyContinue'; " +
-                "$ErrorActionPreference = 'Continue'; " +
-                $"$installPath = {escapedFullPath}; " +
-                $"$instanceName = '{options.InstanceName}'; " +
-                $"$tarFile = {EscapePowerShellString(packageFile)}; " +
-                // Capture WSL output and exit code
-                "$wslOutput = wsl --import $instanceName $installPath $tarFile 2>&1 | Out-String; " +
-                "$exitCode = $LASTEXITCODE; " +
-                // Clean up temp file
-                "Remove-Item $tarFile -Force -ErrorAction SilentlyContinue; " +
-                // Check result
-                "if ($exitCode -ne 0) { " +
-                "  $cleanOutput = $wslOutput -replace \"`0\", '' -replace \"`r\", '' -replace \"`n\", ' ' | Out-String; " +
-                "  $cleanOutput = $cleanOutput.Trim(); " +
-                "  if ([string]::IsNullOrWhiteSpace($cleanOutput)) { " +
-                "    throw 'WSL import failed with no error message. Please ensure WSL is properly installed and configured.'; " +
-                "  } else { " +
-                "    throw \"WSL import failed: $cleanOutput\"; " +
-                "  } " +
-                "} " +
-                "'success'";
-            
-            try
-            {
-                await _powerShellService.ExecuteScriptAsync(importScript, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                // Check if it was cancelled
-                cancellationToken.ThrowIfCancellationRequested();
-                
-                // Cleanup: try to unregister if import failed
-                try
-                {
-                    await _powerShellService.ExecuteScriptAsync(
-                        "$ProgressPreference = 'SilentlyContinue'; " +
-                        $"wsl --unregister '{options.InstanceName}' 2>&1 | Out-Null", 
-                        CancellationToken.None); // Don't use cancellation token for cleanup
-                }
-                catch { /* Ignore cleanup errors */ }
-                
-                // Re-throw with user-friendly message
-                var errorMessage = ExtractUserFriendlyError(ex.Message);
-                throw new InvalidOperationException(
-                    $"Failed to import WSL distribution. {errorMessage}", ex);
-            }
-
-            progress?.Report((80, "Configuring user..."));
-            cancellationToken.ThrowIfCancellationRequested();
-
-            // Set up default user if specified
+            // Add optional parameters
             if (!string.IsNullOrWhiteSpace(options.Username) && options.Username != "root")
             {
-                var userScript = 
-                    "$ProgressPreference = 'SilentlyContinue'; " +
-                    "$ErrorActionPreference = 'Continue'; " +
-                    $"wsl --distribution '{options.InstanceName}' -- bash -c \"id -u {options.Username} 2>/dev/null || useradd -m -s /bin/bash {options.Username}\"; " +
-                    $"wsl --distribution '{options.InstanceName}' -- bash -c \"echo -e '[user]\\ndefault={options.Username}' > /etc/wsl.conf\"";
-                
+                moduleParams["Username"] = options.Username;
                 if (!string.IsNullOrWhiteSpace(options.Password))
                 {
-                    userScript += $"; wsl --distribution '{options.InstanceName}' -- bash -c \"echo '{options.Username}:{options.Password}' | chpasswd\"";
-                }
-                
-                try
-                {
-                    await _powerShellService.ExecuteScriptAsync(userScript, cancellationToken);
-                }
-                catch (Exception ex)
-                {
-                    // Check if it was cancelled
-                    cancellationToken.ThrowIfCancellationRequested();
-                    
-                    _logger.LogWarning(ex, "Failed to configure user, but instance was created successfully");
-                    // Don't fail the entire installation if user configuration fails
+                    moduleParams["Password"] = options.Password;
                 }
             }
 
-            progress?.Report((90, "Finalizing installation..."));
-            cancellationToken.ThrowIfCancellationRequested();
-
-            // Execute initialization commands
             if (options.InitCommands != null && options.InitCommands.Count > 0)
             {
-                progress?.Report((95, "Running initialization commands..."));
-                
-                foreach (var command in options.InitCommands)
-                {
-                    try
-                    {
-                        _logger.LogInformation("Running init command: {Command}", command);
-                        
-                        var initScript = 
-                            "$ProgressPreference = 'SilentlyContinue'; " +
-                            "$ErrorActionPreference = 'Continue'; " +
-                            $"wsl --distribution '{options.InstanceName}' -- bash -c \"{EscapePowerShellString(command)}\"";
-                        
-                        var result = await _powerShellService.ExecuteScriptAsync(initScript, cancellationToken);
-                        _logger.LogInformation("Init command completed: {Command}", command);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Init command failed: {Command}", command);
-                        // Continue with other commands even if one fails
-                    }
-                }
+                moduleParams["InitCommands"] = options.InitCommands;
             }
 
-            _logger.LogInformation("WSL instance '{InstanceName}' installed successfully", options.InstanceName);
-            
-            progress?.Report((100, "Installation complete"));
+            progress?.Report((30, "Calling PowerShell module for installation..."));
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // Create a progress tracker wrapper to map module progress to our progress scale
+            var progressReporter = new Progress<double>(p =>
+            {
+                // Map module progress (0-100) to our scale (30-95)
+                var scaledProgress = 30 + (p * 0.65);
+                progress?.Report((scaledProgress, $"Installing ({scaledProgress:F0}%)..."));
+                _logger.LogInformation("Install progress: {Percentage}%", (int)scaledProgress);
+            });
+
+            // Try using PowerShell module Cmdlet first
+            var moduleResult = await _powerShellService.ExecuteModuleCmdletAsync(
+                "Install-DistroNexusInstance",
+                moduleParams,
+                new ModuleCallOptions
+                {
+                    TimeoutSeconds = 300, // 5 minutes for long download+import
+                    ParseAsJson = false,
+                    UseModuleFallback = false, // Don't use fallback for Install as it's complex
+                    ProgressTracker = progressReporter
+                },
+                cancellationToken: cancellationToken);
+
+            if (moduleResult.Success)
+            {
+                _logger.LogInformation("WSL instance '{InstanceName}' installed successfully using module", options.InstanceName);
+                progress?.Report((100, "Installation complete"));
+                return;
+            }
+
+            // If module installation fails, throw error (don't fall back to inline script)
+            _logger.LogError("PowerShell module failed to install instance");
+            throw new InvalidOperationException(
+                $"Failed to install WSL distribution using PowerShell module. Please check the error logs and try again.",
+                moduleResult.Exception);
         }
         catch (Exception ex)
         {
@@ -492,6 +405,26 @@ public partial class WslManagerService : IWslManagerService
         {
             _logger.LogInformation("Starting WSL instance '{InstanceName}'", instanceName);
 
+            // Use PowerShell module Cmdlet first
+            var moduleResult = await _powerShellService.ExecuteModuleCmdletAsync(
+                "Start-DistroNexusInstance",
+                new Dictionary<string, object> { ["Name"] = instanceName },
+                new ModuleCallOptions
+                {
+                    TimeoutSeconds = 30,
+                    ParseAsJson = false,
+                    UseModuleFallback = _useModuleFallback
+                },
+                cancellationToken: cancellationToken);
+
+            if (moduleResult.Success)
+            {
+                _logger.LogInformation("WSL instance '{InstanceName}' started successfully using module", instanceName);
+                return true;
+            }
+
+            // Fallback to inline script if module failed
+            _logger.LogWarning("Module execution failed for StartInstanceAsync, falling back to inline script");
             var escapedName = EscapePowerShellString(instanceName);
             var script = 
                 $"$result = (wsl --distribution {escapedName} -- echo 'started' 2>&1) -replace \"`0\", ''; " +
@@ -500,7 +433,7 @@ public partial class WslManagerService : IWslManagerService
 
             await _powerShellService.ExecuteScriptAsync(script, cancellationToken);
 
-            _logger.LogInformation("WSL instance '{InstanceName}' started successfully", instanceName);
+            _logger.LogInformation("WSL instance '{InstanceName}' started successfully using fallback script", instanceName);
             return true;
         }
         catch (Exception ex)
@@ -519,6 +452,26 @@ public partial class WslManagerService : IWslManagerService
         {
             _logger.LogInformation("Stopping WSL instance '{InstanceName}'", instanceName);
 
+            // Use PowerShell module Cmdlet first
+            var moduleResult = await _powerShellService.ExecuteModuleCmdletAsync(
+                "Stop-DistroNexusInstance",
+                new Dictionary<string, object> { ["Name"] = instanceName },
+                new ModuleCallOptions
+                {
+                    TimeoutSeconds = 30,
+                    ParseAsJson = false,
+                    UseModuleFallback = _useModuleFallback
+                },
+                cancellationToken: cancellationToken);
+
+            if (moduleResult.Success)
+            {
+                _logger.LogInformation("WSL instance '{InstanceName}' stopped successfully using module", instanceName);
+                return true;
+            }
+
+            // Fallback to inline script if module failed
+            _logger.LogWarning("Module execution failed for StopInstanceAsync, falling back to inline script");
             var escapedName = EscapePowerShellString(instanceName);
             var script = 
                 $"$result = (wsl --terminate {escapedName} 2>&1) -replace \"`0\", ''; " +
@@ -527,7 +480,7 @@ public partial class WslManagerService : IWslManagerService
 
             await _powerShellService.ExecuteScriptAsync(script, cancellationToken);
 
-            _logger.LogInformation("WSL instance '{InstanceName}' stopped successfully", instanceName);
+            _logger.LogInformation("WSL instance '{InstanceName}' stopped successfully using fallback script", instanceName);
             return true;
         }
         catch (Exception ex)
@@ -546,6 +499,26 @@ public partial class WslManagerService : IWslManagerService
         {
             _logger.LogInformation("Removing WSL instance '{InstanceName}'", instanceName);
 
+            // Use PowerShell module Cmdlet first
+            var moduleResult = await _powerShellService.ExecuteModuleCmdletAsync(
+                "Remove-DistroNexusInstance",
+                new Dictionary<string, object> { ["Name"] = instanceName },
+                new ModuleCallOptions
+                {
+                    TimeoutSeconds = 30,
+                    ParseAsJson = false,
+                    UseModuleFallback = _useModuleFallback
+                },
+                cancellationToken: cancellationToken);
+
+            if (moduleResult.Success)
+            {
+                _logger.LogInformation("WSL instance '{InstanceName}' removed successfully using module", instanceName);
+                return true;
+            }
+
+            // Fallback to inline script if module failed
+            _logger.LogWarning("Module execution failed for RemoveInstanceAsync, falling back to inline script");
             var escapedName = EscapePowerShellString(instanceName);
             var script = 
                 $"$result = (wsl --unregister {escapedName} 2>&1) -replace \"`0\", ''; " +
@@ -554,7 +527,7 @@ public partial class WslManagerService : IWslManagerService
 
             await _powerShellService.ExecuteScriptAsync(script, cancellationToken);
 
-            _logger.LogInformation("WSL instance '{InstanceName}' removed successfully", instanceName);
+            _logger.LogInformation("WSL instance '{InstanceName}' removed successfully using fallback script", instanceName);
             return true;
         }
         catch (Exception ex)
@@ -574,10 +547,47 @@ public partial class WslManagerService : IWslManagerService
         {
             _logger.LogInformation("Moving WSL instance '{InstanceName}' to '{NewPath}'", instanceName, newPath);
 
+            // Try using PowerShell module Cmdlet first
+            var moduleParams = new Dictionary<string, object>
+            {
+                ["Name"] = instanceName,
+                ["DestinationPath"] = newPath
+            };
+
+            // Create a wrapper to track progress
+            var progressReporter = new Progress<double>(p =>
+            {
+                progress?.Report(p);
+                _logger.LogInformation("Move progress: {Percentage}%", (int)p);
+            });
+
+            var moduleResult = await _powerShellService.ExecuteModuleCmdletAsync(
+                "Move-DistroNexusInstance",
+                moduleParams,
+                new ModuleCallOptions
+                {
+                    TimeoutSeconds = 120,
+                    ParseAsJson = false,
+                    UseModuleFallback = _useModuleFallback,
+                    ProgressTracker = progressReporter
+                },
+                cancellationToken: cancellationToken);
+
+            if (moduleResult.Success)
+            {
+                _logger.LogInformation("WSL instance '{InstanceName}' moved successfully using module", instanceName);
+                progress?.Report(100);
+                return;
+            }
+
+            // Fallback to inline script if module failed
+            _logger.LogWarning("Module execution failed for MoveInstanceAsync, falling back to inline script");
             var escapedName = EscapePowerShellString(instanceName);
             var escapedPath = EscapePowerShellString(newPath);
             var tempExportPath = EscapePowerShellString(Path.Combine(Path.GetTempPath(), $"{instanceName}_export.tar"));
             
+            progress?.Report(10);
+
             // Export, unregister, and import to new location
             // Note: WSL outputs UTF-16 text, so we clean null characters
             var script = 
@@ -591,9 +601,11 @@ public partial class WslManagerService : IWslManagerService
                 $"if ($LASTEXITCODE -ne 0) {{ throw \"Import failed: $result\" }}; " +
                 "'success'";
 
+            progress?.Report(50);
             await _powerShellService.ExecuteScriptAsync(script, cancellationToken);
 
-            _logger.LogInformation("WSL instance '{InstanceName}' moved successfully", instanceName);
+            _logger.LogInformation("WSL instance '{InstanceName}' moved successfully using fallback script", instanceName);
+            progress?.Report(100);
         }
         catch (Exception ex)
         {
@@ -612,6 +624,32 @@ public partial class WslManagerService : IWslManagerService
         {
             _logger.LogInformation("Renaming WSL instance '{OldName}' to '{NewName}'", oldName, newName);
 
+            // Try using PowerShell module Cmdlet first
+            var moduleParams = new Dictionary<string, object>
+            {
+                ["OldName"] = oldName,
+                ["NewName"] = newName
+            };
+
+            var moduleResult = await _powerShellService.ExecuteModuleCmdletAsync(
+                "Rename-DistroNexusInstance",
+                moduleParams,
+                new ModuleCallOptions
+                {
+                    TimeoutSeconds = 120,
+                    ParseAsJson = false,
+                    UseModuleFallback = _useModuleFallback
+                },
+                cancellationToken: cancellationToken);
+
+            if (moduleResult.Success)
+            {
+                _logger.LogInformation("WSL instance renamed successfully using module", oldName);
+                return;
+            }
+
+            // Fallback to inline script if module failed
+            _logger.LogWarning("Module execution failed for RenameInstanceAsync, falling back to inline script");
             var escapedOldName = EscapePowerShellString(oldName);
             var escapedNewName = EscapePowerShellString(newName);
             var tempExportPath = EscapePowerShellString(Path.Combine(Path.GetTempPath(), $"{oldName}_rename.tar"));
@@ -634,7 +672,7 @@ public partial class WslManagerService : IWslManagerService
 
             await _powerShellService.ExecuteScriptAsync(script, cancellationToken);
 
-            _logger.LogInformation("WSL instance renamed successfully");
+            _logger.LogInformation("WSL instance renamed successfully using fallback script");
         }
         catch (Exception ex)
         {
@@ -654,6 +692,33 @@ public partial class WslManagerService : IWslManagerService
         {
             _logger.LogInformation("Setting credentials for WSL instance '{InstanceName}'", instanceName);
 
+            // Try using PowerShell module Cmdlet first
+            var moduleParams = new Dictionary<string, object>
+            {
+                ["Name"] = instanceName,
+                ["Username"] = username,
+                ["Password"] = password
+            };
+
+            var moduleResult = await _powerShellService.ExecuteModuleCmdletAsync(
+                "Set-DistroNexusCredential",
+                moduleParams,
+                new ModuleCallOptions
+                {
+                    TimeoutSeconds = 60,
+                    ParseAsJson = false,
+                    UseModuleFallback = _useModuleFallback
+                },
+                cancellationToken: cancellationToken);
+
+            if (moduleResult.Success)
+            {
+                _logger.LogInformation("Credentials set successfully for WSL instance '{InstanceName}' using module", instanceName);
+                return;
+            }
+
+            // Fallback to inline script if module failed
+            _logger.LogWarning("Module execution failed for SetCredentialsAsync, falling back to inline script");
             var escapedName = EscapePowerShellString(instanceName);
             
             var script = 
@@ -664,7 +729,7 @@ public partial class WslManagerService : IWslManagerService
 
             await _powerShellService.ExecuteScriptAsync(script, cancellationToken);
 
-            _logger.LogInformation("Credentials set successfully for WSL instance '{InstanceName}'", instanceName);
+            _logger.LogInformation("Credentials set successfully for WSL instance '{InstanceName}' using fallback script", instanceName);
         }
         catch (Exception ex)
         {
