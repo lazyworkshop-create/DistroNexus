@@ -19,6 +19,19 @@ public partial class WslManagerService : IWslManagerService
 
     private const string LxssRegistryPath = @"HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss";
 
+    // Timeout constants for various operations
+    /// <summary>Quick operations (list, get): 10 seconds</summary>
+    private const int QuickOperationTimeoutSeconds = 10;
+
+    /// <summary>Normal operations (start, stop, remove, rename): 30 seconds</summary>
+    private const int NormalOperationTimeoutSeconds = 30;
+
+    /// <summary>Long operations (move, install): 120 seconds</summary>
+    private const int LongOperationTimeoutSeconds = 120;
+
+    /// <summary>Very long operations (download): 300 seconds (5 minutes)</summary>
+    private const int VeryLongOperationTimeoutSeconds = 300;
+
     public WslManagerService(
         IPowerShellService powerShellService,
         ICatalogService catalogService,
@@ -42,7 +55,7 @@ public partial class WslManagerService : IWslManagerService
                 parameters: null,
                 options: new ModuleCallOptions
                 {
-                    TimeoutSeconds = 10,
+                    TimeoutSeconds = QuickOperationTimeoutSeconds,
                     ParseAsJson = true,
                     UseModuleFallback = _useModuleFallback
                 },
@@ -190,7 +203,7 @@ public partial class WslManagerService : IWslManagerService
                 """;
 
             // Add timeout to prevent hanging
-            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(QuickOperationTimeoutSeconds));
             using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
             var result = await _powerShellService.ExecuteScriptAsync(script, combinedCts.Token);
@@ -307,7 +320,7 @@ public partial class WslManagerService : IWslManagerService
                 moduleParams,
                 new ModuleCallOptions
                 {
-                    TimeoutSeconds = 300, // 5 minutes for long download+import
+                    TimeoutSeconds = VeryLongOperationTimeoutSeconds, // 5 minutes for long download+import
                     ParseAsJson = false,
                     UseModuleFallback = false, // Don't use fallback for Install as it's complex
                     ProgressTracker = progressReporter
@@ -411,7 +424,7 @@ public partial class WslManagerService : IWslManagerService
                 new Dictionary<string, object> { ["Name"] = instanceName },
                 new ModuleCallOptions
                 {
-                    TimeoutSeconds = 30,
+                    TimeoutSeconds = NormalOperationTimeoutSeconds,
                     ParseAsJson = false,
                     UseModuleFallback = _useModuleFallback
                 },
@@ -458,7 +471,7 @@ public partial class WslManagerService : IWslManagerService
                 new Dictionary<string, object> { ["Name"] = instanceName },
                 new ModuleCallOptions
                 {
-                    TimeoutSeconds = 30,
+                    TimeoutSeconds = NormalOperationTimeoutSeconds,
                     ParseAsJson = false,
                     UseModuleFallback = _useModuleFallback
                 },
@@ -505,7 +518,7 @@ public partial class WslManagerService : IWslManagerService
                 new Dictionary<string, object> { ["Name"] = instanceName },
                 new ModuleCallOptions
                 {
-                    TimeoutSeconds = 30,
+                    TimeoutSeconds = NormalOperationTimeoutSeconds,
                     ParseAsJson = false,
                     UseModuleFallback = _useModuleFallback
                 },
@@ -566,7 +579,7 @@ public partial class WslManagerService : IWslManagerService
                 moduleParams,
                 new ModuleCallOptions
                 {
-                    TimeoutSeconds = 120,
+                    TimeoutSeconds = LongOperationTimeoutSeconds,
                     ParseAsJson = false,
                     UseModuleFallback = _useModuleFallback,
                     ProgressTracker = progressReporter
@@ -636,7 +649,7 @@ public partial class WslManagerService : IWslManagerService
                 moduleParams,
                 new ModuleCallOptions
                 {
-                    TimeoutSeconds = 120,
+                    TimeoutSeconds = LongOperationTimeoutSeconds,
                     ParseAsJson = false,
                     UseModuleFallback = _useModuleFallback
                 },
@@ -705,7 +718,7 @@ public partial class WslManagerService : IWslManagerService
                 moduleParams,
                 new ModuleCallOptions
                 {
-                    TimeoutSeconds = 60,
+                    TimeoutSeconds = NormalOperationTimeoutSeconds,
                     ParseAsJson = false,
                     UseModuleFallback = _useModuleFallback
                 },

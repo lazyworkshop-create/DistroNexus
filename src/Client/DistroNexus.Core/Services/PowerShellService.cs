@@ -26,43 +26,121 @@ public class PowerShellService : IPowerShellService, IDisposable
         _powerShellPath = FindPowerShellPath();
         
         // Detect DistroNexus module path (src/PowerShell relative to workspace root)
-        _moduleBasePath = FindDistroNexusModulePath();
+        var moduleSearchResult = FindDistroNexusModulePathWithDebug();
+        _moduleBasePath = moduleSearchResult.ModulePath;
         
         _logger.LogInformation("PowerShell service initialized using: {PowerShellPath}", _powerShellPath);
+        
         if (_moduleBasePath != null)
         {
             _logger.LogInformation("DistroNexus module detected at: {ModulePath}", _moduleBasePath);
         }
         else
         {
-            _logger.LogWarning("DistroNexus PowerShell module not found, will use inline scripts");
+            _logger.LogWarning("DistroNexus PowerShell module not found after checking {PathCount} locations", moduleSearchResult.CheckedPathsCount);
+            _logger.LogDebug("Checked module paths: {Paths}", string.Join("; ", moduleSearchResult.CheckedPaths));
         }
     }
 
     private static string? FindDistroNexusModulePath()
     {
-        // Try to locate the DistroNexus module
-        var possiblePaths = new[]
-        {
-            // Development paths (relative to bin directory)
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\..\..\PowerShell\DistroNexus.psd1"),
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\..\PowerShell\DistroNexus.psd1"),
-            
-            // Installed paths
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), @"DistroNexus\PowerShell\DistroNexus.psd1"),
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"DistroNexus\PowerShell\DistroNexus.psd1"),
-        };
+        var result = FindDistroNexusModulePathWithDebug();
+        return result.ModulePath;
+    }
 
-        foreach (var path in possiblePaths)
+    private static ModuleSearchResult FindDistroNexusModulePathWithDebug()
+    {
+        var checkedPaths = new List<string>();
+
+        // 1. Check environment variable first
+        var envModulePath = Environment.GetEnvironmentVariable("DISTRONEXUS_MODULE_PATH");
+        if (!string.IsNullOrWhiteSpace(envModulePath))
         {
-            var fullPath = Path.GetFullPath(path);
-            if (File.Exists(fullPath))
+            var envPath = Path.Combine(envModulePath, "DistroNexus.psd1");
+            checkedPaths.Add(envPath);
+            if (File.Exists(envPath))
             {
-                return Path.GetDirectoryName(fullPath);
+                return new ModuleSearchResult 
+                { 
+                    ModulePath = Path.GetDirectoryName(envPath), 
+                    CheckedPaths = checkedPaths 
+                };
             }
         }
 
-        return null;
+        // 2. Development paths (relative to bin directory)
+        var devPaths = new[]
+        {
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\..\..\PowerShell\DistroNexus.psd1"),
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\..\PowerShell\DistroNexus.psd1"),
+        };
+
+        foreach (var devPath in devPaths)
+        {
+            checkedPaths.Add(devPath);
+            var fullPath = Path.GetFullPath(devPath);
+            if (File.Exists(fullPath))
+            {
+                return new ModuleSearchResult 
+                { 
+                    ModulePath = Path.GetDirectoryName(fullPath), 
+                    CheckedPaths = checkedPaths 
+                };
+            }
+        }
+
+        // 3. Installed paths
+        var installedPaths = new[]
+        {
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), @"DistroNexus\PowerShell\DistroNexus.psd1"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"DistroNexus\PowerShell\DistroNexus.psd1"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), @"PowerShell\Modules\DistroNexus\DistroNexus.psd1"),
+        };
+
+        foreach (var installedPath in installedPaths)
+        {
+            checkedPaths.Add(installedPath);
+            var fullPath = Path.GetFullPath(installedPath);
+            if (File.Exists(fullPath))
+            {
+                return new ModuleSearchResult 
+                { 
+                    ModulePath = Path.GetDirectoryName(fullPath), 
+                    CheckedPaths = checkedPaths 
+                };
+            }
+        }
+
+        // 4. PowerShell Gallery paths (user profile modules)
+        var psProfileModules = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            @"PowerShell\Modules\DistroNexus");
+        if (Directory.Exists(psProfileModules))
+        {
+            var psdPath = Path.Combine(psProfileModules, "DistroNexus.psd1");
+            checkedPaths.Add(psdPath);
+            if (File.Exists(psdPath))
+            {
+                return new ModuleSearchResult 
+                { 
+                    ModulePath = psProfileModules, 
+                    CheckedPaths = checkedPaths 
+                };
+            }
+        }
+
+        return new ModuleSearchResult 
+        { 
+            ModulePath = null, 
+            CheckedPaths = checkedPaths 
+        };
+    }
+
+    private class ModuleSearchResult
+    {
+        public string? ModulePath { get; set; }
+        public List<string> CheckedPaths { get; set; } = new();
+        public int CheckedPathsCount => CheckedPaths.Count;
     }
 
     private static string FindPowerShellPath()
