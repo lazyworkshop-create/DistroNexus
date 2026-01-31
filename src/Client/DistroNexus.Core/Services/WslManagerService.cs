@@ -117,13 +117,13 @@ public partial class WslManagerService : IWslManagerService
         {
             _logger.LogInformation("Retrieving WSL instances");
 
-            // Get WSL status from wsl.exe --list (faster than --verbose) with timeout
+            // Get WSL status from wsl.exe --list --verbose with timeout
             const string script = """
                 $instances = @()
                 $defaultDistro = $null
                 
-                # Get basic state from wsl --list (faster than --verbose)
-                $wslOutput = wsl --list 2>&1
+                # Get state from wsl --list --verbose (includes Running/Stopped state)
+                $wslOutput = wsl --list --verbose 2>&1
                 $wslStatus = @{}
                 
                 if ($wslOutput -and $LASTEXITCODE -eq 0) {
@@ -139,7 +139,7 @@ public partial class WslManagerService : IWslManagerService
                             $name = $parts[0]
                             $wslStatus[$name] = @{
                                 State = $parts[1]
-                                Version = 2  # Default to WSL2
+                                Version = if ($parts.Count -ge 3) { [int]$parts[2] } else { 2 }
                                 IsDefault = $isDefault
                             }
                             if ($isDefault) { $defaultDistro = $name }
@@ -158,19 +158,11 @@ public partial class WslManagerService : IWslManagerService
                             if (-not $name) { continue }
                             
                             $basePath = $props.BasePath
+                            
+                            # DO NOT access VHDX files during scan - this may auto-start stopped instances!
+                            # Size and LastAccessed will be loaded on-demand when needed
                             $size = 0
                             $lastAccessed = $null
-                            
-                            # Skip size calculation for faster startup
-                            if ($basePath -and (Test-Path $basePath)) {
-                                try {
-                                    $vhdxPath = Join-Path $basePath "ext4.vhdx"
-                                    if (Test-Path $vhdxPath) {
-                                        # Don't calculate size during startup for performance
-                                        $lastAccessed = (Get-Item $vhdxPath).LastAccessTime.ToString("o")
-                                    }
-                                } catch {}
-                            }
                             
                             $state = "Stopped"
                             $version = 2
@@ -807,5 +799,135 @@ public partial class WslManagerService : IWslManagerService
         
         // Escape single quotes by doubling them and wrap in single quotes
         return "'" + input.Replace("'", "''") + "'";
+    }
+
+    /// <inheritdoc/>
+    public async Task<long> GetInstanceDiskSizeAsync(string instanceName, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(instanceName);
+
+        try
+        {
+            _logger.LogInformation("Getting disk size for WSL instance '{InstanceName}'", instanceName);
+
+            // Try using PowerShell module Cmdlet first
+            var moduleParams = new Dictionary<string, object>
+            {
+                ["Name"] = instanceName
+            };
+
+            var moduleResult = await _powerShellService.ExecuteModuleCmdletAsync(
+                "Get-DistroNexusDiskSize",
+                moduleParams,
+                new ModuleCallOptions
+                {
+                    TimeoutSeconds = QuickOperationTimeoutSeconds,
+                    ParseAsJson = false,
+                    UseModuleFallback = _useModuleFallback
+                },
+                cancellationToken: cancellationToken);
+
+            if (moduleResult.Success)
+            {
+                // Try to parse the size from module output
+                if (long.TryParse(moduleResult.Output?.Trim(), out var moduleSize))
+                {
+                    _logger.LogInformation("Disk size for '{InstanceName}': {Size} bytes (from module)", instanceName, moduleSize);
+                    return moduleSize;
+                }
+            }
+
+            // Fallback to inline script if module failed
+            _logger.LogWarning("Module execution failed for GetInstanceDiskSizeAsync, falling back to inline script");
+
+            // Get the instance's install path from registry
+            var instances = await GetInstancesAsync(cancellationToken);
+            var instance = instances.FirstOrDefault(i => i.Name.Equals(instanceName, StringComparison.OrdinalIgnoreCase));
+            
+            if (instance == null)
+            {
+                _logger.LogWarning("Instance '{InstanceName}' not found", instanceName);
+                return 0;
+            }
+
+            var basePath = instance.InstallPath;
+            if (string.IsNullOrEmpty(basePath))
+            {
+                _logger.LogWarning("No install path found for instance '{InstanceName}'", instanceName);
+                return 0;
+            }
+
+            // WARNING: Accessing VHDX file may auto-start a stopped instance!
+            // This method should only be called when the instance is already running,
+            // or when the user explicitly requests disk size information.
+            var escapedPath = EscapePowerShellString(basePath);
+            var script = $@"
+                $basePath = {escapedPath}
+                $vhdxPath = Join-Path $basePath 'ext4.vhdx'
+                
+                if (Test-Path $vhdxPath) {{
+                    $fileInfo = Get-Item $vhdxPath -ErrorAction Stop
+                    return $fileInfo.Length
+                }} else {{
+                    return 0
+                }}
+            ";
+
+            var result = await _powerShellService.ExecuteScriptAsync(script, cancellationToken);
+            
+            if (long.TryParse(result?.Trim(), out var size))
+            {
+                _logger.LogInformation("Disk size for '{InstanceName}': {Size} bytes (from fallback)", instanceName, size);
+                return size;
+            }
+
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get disk size for instance '{InstanceName}'", instanceName);
+            return 0;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<WslInstance?> ForceRefreshInstanceAsync(string instanceName, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogInformation("Force refreshing instance {InstanceName}", instanceName);
+
+            // Call PowerShell module with ForceUpdate and filter by instance name
+            var moduleResult = await _powerShellService.ExecuteModuleCmdletAsync(
+                "Get-DistroNexusInstance",
+                parameters: new Dictionary<string, object> { { "Name", instanceName } },
+                options: new ModuleCallOptions
+                {
+                    TimeoutSeconds = NormalOperationTimeoutSeconds,
+                    ParseAsJson = true,
+                    UseModuleFallback = _useModuleFallback,
+                    ForceRefresh = true
+                },
+                cancellationToken: cancellationToken);
+
+            if (moduleResult.Success && moduleResult.ParsedObjects != null && moduleResult.ParsedObjects.Count > 0)
+            {
+                var instances = ParseInstancesFromModule(moduleResult.ParsedObjects);
+                if (instances.Count > 0)
+                {
+                    var refreshedInstance = instances.FirstOrDefault();
+                    _logger.LogInformation("Force refresh completed for {InstanceName}, State: {State}", instanceName, refreshedInstance?.State);
+                    return refreshedInstance;
+                }
+            }
+
+            _logger.LogWarning("Force refresh failed for instance {InstanceName}: module returned no results", instanceName);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to force refresh instance {InstanceName}", instanceName);
+            return null;
+        }
     }
 }

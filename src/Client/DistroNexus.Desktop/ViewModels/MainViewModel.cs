@@ -133,6 +133,7 @@ public partial class MainViewModel : ObservableObject
 
     /// <summary>
     /// Refreshes only the instance states without full reload.
+    /// Only updates running instances to avoid auto-starting stopped instances.
     /// </summary>
     private async Task RefreshInstanceStatesAsync()
     {
@@ -147,7 +148,11 @@ public partial class MainViewModel : ObservableObject
                     var updated = instances.FirstOrDefault(i => i.Name == currentInstance.Name);
                     if (updated != null && updated.State != currentInstance.State)
                     {
-                        currentInstance.UpdateState(updated.State);
+                        // Only update running instances to avoid unnecessary refresh
+                        if (updated.IsRunning)
+                        {
+                            currentInstance.UpdateState(updated.State);
+                        }
                     }
                 }
             });
@@ -416,17 +421,42 @@ public partial class WslInstanceViewModel : ObservableObject
     [ObservableProperty]
     private WslInstance _instance;
 
+    [ObservableProperty]
+    private bool _isLoadingDiskSize;
+
+    [ObservableProperty]
+    private bool _isForceRefreshing;
+
     public string Name => Instance.Name;
     public string State => Instance.State;
     public bool IsRunning => Instance.IsRunning;
-    public string InstallPath => Instance.InstallPath;
+    public string InstallPath => WslInstance.NormalizeWindowsPath(Instance.InstallPath);
     public string Distribution => Instance.Distribution;
     public long DiskSize => Instance.Size;
     
     /// <summary>
     /// Gets the disk size formatted for display.
+    /// Shows "Click to load" if size is unknown and instance is running.
     /// </summary>
-    public string DiskSizeDisplay => FormatFileSize(DiskSize);
+    public string DiskSizeDisplay
+    {
+        get
+        {
+            if (IsForceRefreshing)
+                return "Force refreshing...";
+            
+            if (IsLoadingDiskSize)
+                return "Loading...";
+            
+            if (DiskSize <= 0 && IsRunning)
+                return "Click to load";
+            
+            if (DiskSize <= 0)
+                return "Unknown";
+            
+            return FormatFileSize(DiskSize);
+        }
+    }
 
     public WslInstanceViewModel(
         WslInstance instance, 
@@ -455,6 +485,103 @@ public partial class WslInstanceViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Forces a complete refresh of this instance, starting it and loading full information.
+    /// Shows a confirmation dialog before proceeding.
+    /// </summary>
+    [AsyncRelayCommand]
+    private async Task ForceRefreshAsync()
+    {
+        if (IsForceRefreshing)
+            return;
+
+        try
+        {
+            // Show confirmation dialog
+            var result = MessageBox.Show(
+                "This will start the instance and load complete information (including disk size). Continue?",
+                "Force Refresh",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (result != MessageBoxResult.Yes)
+                return;
+
+            IsForceRefreshing = true;
+            OnPropertyChanged(nameof(DiskSizeDisplay));
+
+            _logger.LogInformation("Starting force refresh for instance {Name}", Name);
+
+            // Call force refresh method
+            var refreshedInstance = await _wslManager.ForceRefreshInstanceAsync(Name);
+
+            if (refreshedInstance != null)
+            {
+                Instance = refreshedInstance;
+                OnPropertyChanged(nameof(State));
+                OnPropertyChanged(nameof(IsRunning));
+
+                // Auto-load disk size
+                await LoadDiskSizeAsync();
+
+                _logger.LogInformation("Force refresh completed for {Name}", Name);
+            }
+            else
+            {
+                MessageBox.Show("Failed to refresh instance information.",
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _logger.LogError("Force refresh returned null for instance {Name}", Name);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Force refresh failed for instance {Name}", Name);
+            MessageBox.Show($"Failed to force refresh instance: {ex.Message}",
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsForceRefreshing = false;
+            OnPropertyChanged(nameof(DiskSizeDisplay));
+        }
+    }
+
+    /// <summary>
+    /// Loads the disk size for this instance.
+    /// Only works reliably when the instance is running to avoid auto-starting stopped instances.
+    /// </summary>
+    [RelayCommand]
+    private async Task LoadDiskSizeAsync()
+    {
+        if (IsLoadingDiskSize || DiskSize > 0)
+            return;
+
+        try
+        {
+            IsLoadingDiskSize = true;
+            OnPropertyChanged(nameof(DiskSizeDisplay));
+            
+            _logger.LogInformation("Loading disk size for instance {Name}", Name);
+            
+            var size = await _wslManager.GetInstanceDiskSizeAsync(Name);
+            
+            Instance.Size = size;
+            OnPropertyChanged(nameof(DiskSize));
+            OnPropertyChanged(nameof(DiskSizeDisplay));
+            
+            _logger.LogInformation("Loaded disk size for {Name}: {Size} bytes", Name, size);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load disk size for instance {Name}", Name);
+        }
+        finally
+        {
+            IsLoadingDiskSize = false;
+            OnPropertyChanged(nameof(DiskSizeDisplay));
+        }
+    }
+
+    /// <summary>
     /// Updates the instance state and notifies property changes.
     /// </summary>
     /// <param name="newState">The new state value.</param>
@@ -463,6 +590,7 @@ public partial class WslInstanceViewModel : ObservableObject
         Instance.State = newState;
         OnPropertyChanged(nameof(State));
         OnPropertyChanged(nameof(IsRunning));
+        OnPropertyChanged(nameof(DiskSizeDisplay));
     }
 
     [RelayCommand]

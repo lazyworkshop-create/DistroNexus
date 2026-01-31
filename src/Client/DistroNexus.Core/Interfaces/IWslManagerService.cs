@@ -71,4 +71,22 @@ public interface IWslManagerService
     /// <param name="password">The password.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     Task SetCredentialsAsync(string instanceName, string username, string password, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the disk size of a WSL instance by reading the VHDX file.
+    /// WARNING: This may auto-start a stopped instance. Only call when the instance is already running.
+    /// </summary>
+    /// <param name="instanceName">The name of the instance.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The disk size in bytes, or 0 if unable to determine.</returns>
+    Task<long> GetInstanceDiskSizeAsync(string instanceName, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Forces a complete refresh of a specific instance, including starting it and loading full information.
+    /// This method will start the instance if it is stopped and load its disk size information.
+    /// </summary>
+    /// <param name="instanceName">The name of the instance to refresh.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The refreshed instance information, or null if the operation failed.</returns>
+    Task<WslInstance?> ForceRefreshInstanceAsync(string instanceName, CancellationToken cancellationToken = default);
 }

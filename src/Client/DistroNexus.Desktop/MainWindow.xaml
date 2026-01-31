@@ -150,6 +150,7 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                                                         <ui:MenuItem Header="Move..." Icon="{ui:SymbolIcon Symbol=ArrowMove20}" Command="{Binding MoveCommand}"/>
                                                         <ui:MenuItem Header="Rename..." Icon="{ui:SymbolIcon Symbol=Rename20}" Command="{Binding RenameCommand}"/>
                                                         <ui:MenuItem Header="Set Credentials..." Icon="{ui:SymbolIcon Symbol=Key20}" Command="{Binding SetCredentialsCommand}"/>
+                                                        <ui:MenuItem Header="Force Refresh" Icon="{ui:SymbolIcon Symbol=ArrowSync20}" Command="{Binding ForceRefreshCommand}"/>
                                                         <Separator/>
                                                         <ui:MenuItem Header="Remove" Icon="{ui:SymbolIcon Symbol=Delete20}" Command="{Binding RemoveCommand}"/>
                                                     </ContextMenu>
