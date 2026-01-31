@@ -141,20 +141,7 @@ dotnet build src/Client/DistroNexus.slnx -c Release
 # Output will be in release/
 ```
 
-## 🔧 Legacy Scripts (v1.x)
 
-The `scripts/` directory contains PowerShell scripts from v1.x that are now integrated into the v2.0 PowerShell module. These are kept for reference:
-
-- `install_wsl_custom.ps1` - Custom WSL installation (replaced by `Install-DistroNexusInstance`)
-- `list_distros.ps1` - List distributions (replaced by `Get-WslInstance`)
-- `start_instance.ps1` - Start instance (replaced by `Start-WslInstance`)
-- `stop_instance.ps1` - Stop instance (replaced by `Stop-WslInstance`)
-- `move_instance.ps1` - Move instance (replaced by `Move-WslInstance`)
-- `rename_instance.ps1` - Rename instance (replaced by `Rename-WslInstance`)
-- `set_credentials.ps1` - Set credentials (replaced by `Set-WslCredentials`)
-- `uninstall_wsl_custom.ps1` - Uninstall instance (replaced by `Remove-WslInstance`)
-- `download_all_distros.ps1` - Download distributions (replaced by `Save-DistroNexusPackage`)
-- `update_distros.ps1` - Update catalog (replaced by `Update-DistroNexusCatalog`)
 
 ## 📁 Project Structure
 
@@ -183,11 +170,16 @@ DistroNexus/
 │   └── settings.json                     # Default settings
 ├── docs/                                 # Documentation
 │   ├── release_notes/                    # Version releases
-│   └── archive/                          # Historical docs
-├── scripts/                              # Legacy v1.x scripts (reference)
+│   └── archive/                          # Historical docs and v1 comparison
 ├── tools/
 │   ├── build_v2.ps1                      # Build automation
+│   ├── build-installer.ps1               # Installer builder
+│   ├── package-portable.ps1              # Portable package creator
 │   └── packaging/                        # Installer resources
+├── tests/                                # Test suites
+│   ├── PowerShell/                       # Pester tests
+│   ├── CSharp/                           # xUnit tests
+│   └── TestUtilities/                    # Shared test utilities
 ├── website/                              # Docusaurus documentation site
 ├── README.md                             # English documentation
 └── README_CN.md                          # Chinese documentation

@@ -2,172 +2,199 @@
 
 **中文** | [English](README.md)
 
-**DistroNexus** 是一个功能全面的 GUI 应用程序（由 PowerShell 驱动），旨在简化 Windows Subsystem for Linux (WSL) 发行版的管理、下载和自定义安装。它是你构建 WSL 环境的核心枢纽，让你能够像在工厂中一样定制专属的 Linux 环境。
+> **🎉 版本 2.0 发布！** - 使用 .NET 10 + WPF 完全重写，为 Windows 提供原生体验。
+
+**DistroNexus** 是一个现代化的 Windows 应用程序，用于管理 Windows Subsystem for Linux (WSL) 发行版。采用 .NET 10 和 WPF 构建，提供原生、直观的界面用于下载、安装和管理 WSL 实例。
 
 ## 📘 官方文档
 
 完整的文档、使用指南和发布日志请访问我们的官方网站：
 👉 **[https://lazyworkshop-create.github.io/DistroNexus/zh-Hans/](https://lazyworkshop-create.github.io/DistroNexus/zh-Hans/)**
 
-## 功能特性
+## ✨ 功能特性
 
-*   **现代图形界面 (GUI)**：基于 Fyne 构建的跨平台图形化仪表盘，可视化管理一切。
-*   **集中下载**：自动下载主流发行版（如 Ubuntu, Debian, Kali Linux, Oracle Linux）的最新离线安装包 (Appx/AppxBundle)。
-*   **自定义安装**：将 WSL 发行版安装到你指定的任意目录或驱动器，不再受限于系统盘默认路径。
-*   **高级实例管理**：
-    *   **启动 (Start)**：在后台启动实例。
-    *   **打开终端 (Open Terminal)**：为正在运行的实例打开一个新的终端窗口（支持自定义启动目录下）。
-    *   **停止 (Stop)**：立即终止正在运行的实例。
-    *   **移动 (Move)**：将现有发行版无损迁移到新的驱动器或文件夹。
-    *   **重命名 (Rename)**：更改 WSL 实例的注册名称。
-    *   **凭据 (Credentials)**：重置或设置任何实例的默认用户名和密码。
-*   **安全检查**：内置验证机制，防止覆盖现有实例或安装到非空目录。
-*   **多版本共存**：轻松安装同一发行版的多个版本（例如同时安装 Ubuntu 20.04 和 22.04），或同一版本的多个实例。
-*   **离线支持**：利用本地缓存的安装包，极大加快重装或多实例部署的速度。
-*   **包管理**：查看和管理本地缓存的发行版安装包。
-*   **卸载助手**：一键注销并移除自定义的 WSL 实例文件。
+### v2.0 亮点
+*   **原生 Windows UI**：采用 Fluent Design System 的现代 WPF 界面
+*   **深色模式支持**：根据系统偏好自动切换主题
+*   **PowerShell 模块**：11 个 cmdlet 实现完整自动化能力
+*   **包管理器**：浏览和下载 WSL 发行版目录
+*   **一键操作**：单击启动、停止、移除实例
+*   **进度跟踪**：下载和操作的实时进度显示
 
-## 配置
+### 核心功能
+*   **实例管理**：
+    *   ✅ 启动/停止实例
+    *   ✅ 移动到不同驱动器
+    *   ✅ 重命名实例
+    *   ✅ 移除实例
+    *   ✅ 设置凭据
+*   **自定义安装**：将 WSL 发行版安装到任意目录
+*   **发行版目录**：浏览和下载精选的发行版
+*   **设置管理**：全面的配置选项
+*   **日志系统**：详细的日志便于故障排查
 
-全局设置存储在 `config/settings.json` 文件中：
+## 🚀 快速开始
+
+### 需求
+- Windows 10 版本 2004 或更新版本，或 Windows 11
+- .NET 10 桌面运行时（安装程序已包含）
+- WSL2 已启用（用于使用）
+
+### 安装
+
+#### 选项 1：安装程序（推荐）
+1. 从 [Releases](https://github.com/lazyworkshop-create/DistroNexus/releases) 下载 `DistroNexus-2.0.0-Setup.exe`
+2. 运行安装程序
+3. 从开始菜单启动
+
+#### 选项 2：便携版
+1. 下载 `DistroNexus-v2.0.0-Release.zip`
+2. 解压到任意文件夹
+3. 运行 `DistroNexus.Desktop.exe`
+
+#### 选项 3：自包含版（无需 .NET）
+1. 下载 `DistroNexus-v2.0.0-Release-selfcontained.zip`
+2. 解压到任意文件夹
+3. 运行 `DistroNexus.Desktop.exe`
+
+## 🛠️ PowerShell 模块
+
+DistroNexus 2.0 包含用于自动化的 PowerShell 模块：
+
+```powershell
+# 导入模块
+Import-Module "C:\Program Files\DistroNexus\PowerShell\DistroNexus.psm1"
+
+# 列出所有实例
+Get-WslInstance
+
+# 安装自定义实例
+Install-DistroNexusInstance -DistroName "MyUbuntu" -InstallPath "D:\WSL\MyUbuntu" -Username "admin"
+
+# 启动实例
+Start-WslInstance -DistroName "Ubuntu-22.04"
+```
+
+可用的 cmdlet：
+- `Get-WslInstance` - 列出所有 WSL 实例
+- `Start-WslInstance` - 启动实例
+- `Stop-WslInstance` - 停止实例
+- `Move-WslInstance` - 重定位实例
+- `Rename-WslInstance` - 重命名实例
+- `Remove-WslInstance` - 卸载实例
+- `Install-DistroNexusInstance` - 自定义安装
+- `Set-WslCredentials` - 更新凭据
+- `Get-DistroNexusPackage` - 浏览发行版
+- `Save-DistroNexusPackage` - 下载包
+- `Update-DistroNexusCatalog` - 刷新目录
+
+## ⚙️ 配置
+
+设置存储在 `%APPDATA%\DistroNexus\settings.json`：
 
 ```json
 {
-    "DefaultInstallPath": "D:\\WSL",
-    "PackageCachePath": "D:\\WSL_Cache",
-    "DefaultTerminalStartPath": "~",
-    "DefaultDistro": "Ubuntu-24.04"
+    "DefaultInstallPath": "C:\\WSL",
+    "DefaultWslVersion": 2,
+    "DefaultUsername": "root",
+    "CatalogUrl": "https://raw.githubusercontent.com/yourusername/DistroNexus/main/config/distros.json",
+    "Theme": "Auto",
+    "EnableLogging": true
 }
 ```
 
-*   `DefaultInstallPath`: 如果未提供路径，发行版将被安装到的根目录。
-*   `PackageCachePath`: 下载离线包的存储目录。
-*   `DefaultTerminalStartPath`: 打开终端时的默认启动目录 (例如 `~` 代表用户主目录，或 `/mnt/c/`)。
-*   `DefaultDistro`: 快速模式下默认使用的发行版标识符。
+通过应用程序的设置页面配置，或直接编辑 JSON。
 
-## 图形用户界面 (GUI)
+## 🏗️ 从源码构建
 
-DistroNexus 现已包含一个现代化的图形界面 (`DistroNexus.exe`)，将强大的 PowerShell 脚本封装在用户友好的体验中。
+### 需求
+- .NET 10 SDK
+- PowerShell 7.0 或更新版本
+- Windows 10/11
 
-### 主要功能
-- **安装 (Install)**: 选择发行版家族/版本，配置用户，并实时监控安装日志。支持“快速模式”一键设置。
-- **我的实例 (My Installs)**: 
-    - 查看所有已注册的 WSL 发行版。
-    - **操作面板**: 直接在卡片上停止、移动、重命名、设置凭据和卸载实例。
-    - **磁盘使用量**: 监控每个发行版虚拟磁盘的大小。
-- **包管理器 (Package Manager)**: 查看本地缓存的发行版包，查看其大小，并删除未使用的文件。
-- **设置 (Settings)**: 配置默认路径（安装、缓存、终端）并支持重置配置。
+### 构建步骤
 
-![App Icon](tools/icon.png)
-
-## 从源码构建
-
-## 脚本说明
-
-所有脚本均位于 `scripts/` 目录下：
-
-### 1. `download_all_distros.ps1`
-
-将所有支持的 WSL 发行版安装包下载到本地的 `distro` 目录中。这非常适合建立离线仓库或确保本地拥有最新版本。
-
-**使用方法：**
 ```powershell
-.\scripts\download_all_distros.ps1
+# 克隆仓库
+git clone https://github.com/lazyworkshop-create/DistroNexus.git
+cd DistroNexus
+
+# 使用提供的脚本构建
+.\tools\build.ps1 -Configuration Release
+
+# 或直接使用 dotnet CLI
+dotnet build src/Client/DistroNexus.slnx -c Release
 ```
 
-### 2. `install_wsl_custom.ps1`
+### 发布分发
 
-核心安装脚本。支持交互式菜单操作，也支持命令行参数调用。
-
-**查看可用发行版列表：**
-列出所有支持的发行版及其标识符（用于配置默认发行版或手动选择）。
 ```powershell
-.\scripts\install_wsl_custom.ps1 -ls
+# 创建便携 ZIP 包（框架依赖）
+.\tools\build.ps1 -Publish -CreateZip -Configuration Release
+
+# 创建自包含包（无需 .NET 运行时）
+.\tools\build.ps1 -Publish -SelfContained -CreateZip -Configuration Release
+
+# 构建 Windows 安装程序（需要 Inno Setup）
+.\tools\build-installer.ps1 -Version 2.0.0
+
+# 输出将在 release/ 目录中
 ```
 
-**交互模式：**
-直接运行脚本，按照提示通过菜单选择发行版家族、版本，并设置名称和安装路径。
-```powershell
-.\scripts\install_wsl_custom.ps1
-```
-
-**命令行模式 (静默/自动化)：**
-使用参数跳过交互步骤。
-
-*   **一键安装 (包含用户配置):**
-    ```powershell
-    .\scripts\install_wsl_custom.ps1 -name "MyDevEnv" -user "devops" -pass "securepass"
-    ```
-
-*   **通过选择发行版和版本安装：**
-    ```powershell
-    .\scripts\install_wsl_custom.ps1 -SelectFamily "Ubuntu" -SelectVersion "22.04"
-    ```
-
-*   **完全自定义安装（指定名称、路径和发行版）：**
-    ```powershell
-    .\scripts\install_wsl_custom.ps1 -SelectFamily "Debian" -SelectVersion "GNU/Linux" -DistroName "Debian-Dev" -InstallPath "D:\WSL\Debian-Dev"
-    ```
-
-*   **参数列表：**
-    *   `-DistroName`: 手动指定 WSL 注册名称。
-    *   `-InstallPath`: 手动指定安装目录。
-    *   `-SelectFamily`: 发行版家族名称 (例如 "Ubuntu", "Debian")。
-    *   `-SelectVersion`: 版本匹配字符串 (例如 "24.04")。
-    *   `-name`: 快速模式：指定实例名称（使用默认发行版类型）。
-    *   `-user`: 默认创建的用户名。
-    *   `-pass`: 默认用户的密码。
-
-### 3. 管理脚本
-
-*   **`move_instance.ps1`**: 将 WSL 实例移动到新位置（安全导出 -> 注销 -> 导入）。
-*   **`rename_instance.ps1`**: 重命名 WSL 实例的注册表项。
-*   **`start_instance.ps1`**: 启动发行版，可选指定启动目录 (`-StartPath`)。
-*   **`stop_instance.ps1`**: 终止正在运行的实例。
-*   **`set_credentials.ps1`**: 配置发行版内的默认用户和密码。
-
-### 4. `download_all_distros.ps1`
-
-将所有（或指定的）WSL 发行版安装包下载到配置的缓存路径。
-
-### 5. `scan_wsl_instances.ps1`
-
-扫描 `wsl -l -v` 的输出并同步内部的 `config/instances.json` 注册表。
-
-### 基础架构
-
-*   **`pwsh_utils.ps1`**: 用于日志记录和通用功能的共享库。日志存储在 `logs/` 目录中，支持轮转。
-
-## 项目结构
+## 📁 项目结构
 
 ```
 DistroNexus/
-├── build/                        # 编译后的可执行文件输出
-├── config/                       # JSON 配置
-│   ├── distros.json              # 发行版定义
-│   └── settings.json             # 用户设置
-├── scripts/                      # PowerShell 后端脚本
-│   ├── download_all_distros.ps1  # 下载器
-│   ├── install_wsl_custom.ps1    # 安装器
-│   ├── move_instance.ps1         # 移动逻辑
-│   ├── pwsh_utils.ps1            # 日志与工具
-│   ├── rename_instance.ps1       # 重命名逻辑
-│   ├── scan_wsl_instances.ps1    # 注册表同步
-│   ├── set_credentials.ps1       # 用户/密码逻辑
-│   ├── start_instance.ps1        # 启动器
-│   ├── stop_instance.ps1         # 终止器
-│   └── uninstall_wsl_custom.ps1  # 卸载器
-├── src/                          # Go 源代码
-│   ├── cmd/                      # 入口点
-│   ├── internal/                 # 应用逻辑 & UI
-│   │   ├── config/               # 配置加载器
-│   │   ├── logic/                # 后端逻辑
-│   │   ├── model/                # 数据类型
-│   │   └── ui/                   # Fyne UI 组件
-│   ├── go.mod                    # Go 依赖定义
-│   └── vendor/                   # 依赖包副本
-├── tools/                        # 构建工具和资源
-├── docs/                         # 文档与归档
-├── README.md                     # 英文说明文档
-└── README_CN.md                  # 中文说明文档
+├── src/
+│   ├── Client/
+│   │   ├── DistroNexus.Desktop/          # WPF 应用程序
+│   │   │   ├── Views/                    # XAML 视图
+│   │   │   ├── ViewModels/               # ViewModels (MVVM)
+│   │   │   ├── Converters/               # 值转换器
+│   │   │   ├── Resources/                # 图像、图标
+│   │   │   └── App.xaml                  # 应用入口
+│   │   ├── DistroNexus.Core/             # 核心库
+│   │   │   ├── Services/                 # 服务实现
+│   │   │   ├── Models/                   # 数据模型
+│   │   │   └── Interfaces/               # 服务接口
+│   │   └── DistroNexus.Tests/            # 单元测试
+│   └── PowerShell/
+│       ├── Public/                       # 公开 cmdlet（11 个）
+│       ├── Private/                      # 内部工具函数
+│       ├── DistroNexus.psd1              # 模块清单
+│       └── DistroNexus.psm1              # 模块脚本
+├── config/
+│   ├── distros.json                      # 发行版目录
+│   └── settings.json                     # 默认设置
+├── docs/                                 # 文档
+│   ├── release_notes/                    # 版本发布说明
+│   └── archive/                          # 历史文档和 v1 比对
+├── tools/
+│   ├── build_v2.ps1                      # 构建自动化
+│   ├── build-installer.ps1               # 安装程序构建器
+│   ├── package-portable.ps1              # 便携包创建器
+│   └── packaging/                        # 安装程序资源
+├── tests/                                # 测试套件
+│   ├── PowerShell/                       # Pester 测试
+│   ├── CSharp/                           # xUnit 测试
+│   └── TestUtilities/                    # 共享测试工具
+├── website/                              # Docusaurus 文档网站
+├── README.md                             # 英文文档
+└── README_CN.md                          # 中文文档
 ```
+
+## 🔍 故障排查
+
+### 应用程序无法启动
+- 确保安装了 .NET 10 桌面运行时
+- 检查 `%APPDATA%\DistroNexus\logs\` 中的错误信息
+- 确保 Windows 10/11 已启用 WSL2
+
+### PowerShell 模块相关问题
+- 确保 PowerShell 7.0 或更新版本已安装
+- 使用管理员权限运行 PowerShell
+- 验证模块路径是否正确
+
+## 📄 许可证
+
+本项目采用 MIT 许可证。详见 [LICENSE](LICENSE) 文件。

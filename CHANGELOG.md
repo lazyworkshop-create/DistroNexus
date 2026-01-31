@@ -5,6 +5,18 @@ All notable changes to DistroNexus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-01-31
+
+### Cleanup
+
+- **Removed v1.0 Go/Fyne artifacts**:
+  - Deleted all Go source code (`src/go.mod`, `src/cmd/`, `src/internal/`)
+  - Removed Go build scripts (`tools/build.sh`, `tools/windows_release.ps1`, `tools/setup_go_env.sh`, `tools/gen_gear.go`)
+  - Deleted legacy standalone PowerShell scripts from `scripts/` directory (11 management scripts, 2 test utilities, 3 helper scripts) - all replaced by PowerShell module cmdlets
+  - Removed empty v1.0 release directory
+- **Archived v1 comparison documents** to `docs/archive/v1-comparison/` for historical reference
+- **Updated documentation**: Removed v1.0 references from README.md and README_CN.md, kept only v2.0 .NET/WPF + PowerShell module architecture
+
 ## [2.0.0] - 2026-01-27
 
 ### 🎉 Major Release - Complete Rewrite
