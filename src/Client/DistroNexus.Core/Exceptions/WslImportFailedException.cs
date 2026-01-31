@@ -22,16 +22,6 @@ public class WslImportFailedException : WslOperationException
     /// Initializes a new instance of the <see cref="WslImportFailedException"/> class.
     /// </summary>
     /// <param name="message">The error message that explains the reason for the exception.</param>
-    /// <param name="instanceName">The name of the instance being imported.</param>
-    public WslImportFailedException(string message, string instanceName)
-        : base(message, operation: "ImportInstance", instanceName: instanceName)
-    {
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="WslImportFailedException"/> class.
-    /// </summary>
-    /// <param name="message">The error message that explains the reason for the exception.</param>
     /// <param name="innerException">The exception that is the cause of the current exception.</param>
     /// <param name="instanceName">The name of the instance being imported.</param>
     public WslImportFailedException(string message, Exception? innerException, string? instanceName = null)

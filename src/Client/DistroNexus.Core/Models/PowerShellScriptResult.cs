@@ -36,4 +36,9 @@ public class PowerShellScriptResult
     /// Gets or sets whether the command was executed via module (true) or inline script (false).
     /// </summary>
     public bool UsedModule { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets the exception that occurred during script execution.
+    /// </summary>
+    public Exception? Exception { get; set; }
 }

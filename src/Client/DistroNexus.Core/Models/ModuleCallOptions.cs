@@ -29,4 +29,9 @@ public class ModuleCallOptions
     /// Gets or sets a value indicating whether to force refresh cache (applies to Get-DistroNexusInstance).
     /// </summary>
     public bool ForceRefresh { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets the progress reporter for tracking operation progress.
+    /// </summary>
+    public IProgress<double>? ProgressTracker { get; set; } = null;
 }

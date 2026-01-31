@@ -22,16 +22,6 @@ public class WslExportFailedException : WslOperationException
     /// Initializes a new instance of the <see cref="WslExportFailedException"/> class.
     /// </summary>
     /// <param name="message">The error message that explains the reason for the exception.</param>
-    /// <param name="instanceName">The name of the instance being exported.</param>
-    public WslExportFailedException(string message, string instanceName)
-        : base(message, operation: "ExportInstance", instanceName: instanceName)
-    {
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="WslExportFailedException"/> class.
-    /// </summary>
-    /// <param name="message">The error message that explains the reason for the exception.</param>
     /// <param name="innerException">The exception that is the cause of the current exception.</param>
     /// <param name="instanceName">The name of the instance being exported.</param>
     public WslExportFailedException(string message, Exception? innerException, string? instanceName = null)

@@ -16,14 +16,24 @@ namespace DistroNexus.Tests.Services;
 public class TerminalServiceTests
 {
     private readonly Mock<IPowerShellService> _mockPowerShell;
+    private readonly Mock<ISettingsService> _mockSettingsService;
     private readonly Mock<ILogger<TerminalService>> _mockLogger;
     private readonly TerminalService _terminalService;
 
     public TerminalServiceTests()
     {
         _mockPowerShell = new Mock<IPowerShellService>();
+        _mockSettingsService = new Mock<ISettingsService>();
         _mockLogger = new Mock<ILogger<TerminalService>>();
-        _terminalService = new TerminalService(_mockPowerShell.Object, _mockLogger.Object);
+        
+        // Setup default settings
+        _mockSettingsService.Setup(x => x.LoadSettingsAsync())
+            .ReturnsAsync(new GlobalSettings { TerminalStartPath = "~" });
+        
+        _terminalService = new TerminalService(
+            _mockPowerShell.Object, 
+            _mockSettingsService.Object,
+            _mockLogger.Object);
     }
 
     [Fact]

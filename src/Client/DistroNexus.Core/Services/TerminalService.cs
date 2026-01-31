@@ -10,12 +10,17 @@ namespace DistroNexus.Core.Services;
 public class TerminalService : ITerminalService
 {
     private readonly IPowerShellService _powerShell;
+    private readonly ISettingsService _settingsService;
     private readonly ILogger<TerminalService> _logger;
 
-    public TerminalService(IPowerShellService powerShell, ILogger<TerminalService> logger)
+    public TerminalService(
+        IPowerShellService powerShell, 
+        ISettingsService settingsService,
+        ILogger<TerminalService> logger)
     {
-        _powerShell = powerShell;
-        _logger = logger;
+        _powerShell = powerShell ?? throw new ArgumentNullException(nameof(powerShell));
+        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <inheritdoc/>
@@ -23,20 +28,27 @@ public class TerminalService : ITerminalService
     {
         try
         {
+            // Load settings to get the default terminal start path
+            var settings = await _settingsService.LoadSettingsAsync();
+            var startPath = settings.TerminalStartPath ?? "~";
+            
             var escapedName = EscapePowerShellString(instanceName);
+            var escapedPath = EscapePowerShellString(startPath);
             
             var script = $@"
                 $distroName = '{escapedName}'
+                $startPath = '{escapedPath}'
                 
                 # Try Windows Terminal first
                 if (Get-Command wt.exe -ErrorAction SilentlyContinue) {{
-                    Start-Process wt.exe -ArgumentList '-w', '0', 'wsl', '-d', $distroName
+                    Start-Process wt.exe -ArgumentList '-w', '0', 'wsl', '-d', $distroName, '--cd', $startPath
                     return $true
                 }}
                 
                 # Fallback to cmd.exe
                 if (Get-Command cmd.exe -ErrorAction SilentlyContinue) {{
-                    Start-Process cmd.exe -ArgumentList '/k', 'wsl', '-d', $distroName
+                    $args = ""/k wsl -d $distroName --cd $startPath""
+                    Start-Process cmd.exe -ArgumentList $args
                     return $true
                 }}
                 
@@ -48,7 +60,8 @@ public class TerminalService : ITerminalService
             
             if (result.ExitCode == 0)
             {
-                _logger.LogInformation("Successfully opened terminal for instance: {InstanceName}", instanceName);
+                _logger.LogInformation("Successfully opened terminal for instance: {InstanceName} with start path: {StartPath}", 
+                    instanceName, startPath);
                 return true;
             }
             

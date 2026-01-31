@@ -37,9 +37,10 @@ public class WslManagerServiceIntegrationTests
     public async Task GetInstancesAsync_Should_Use_PowerShell_Module()
     {
         // Arrange
-        var mockModuleResult = new ModuleCallResult
+        var mockModuleResult = new PowerShellScriptResult
         {
-            Success = true,
+            ExitCode = 0,
+            Error = string.Empty,
             UsedModule = true,
             ParsedObjects = new System.Collections.Generic.List<System.Text.Json.JsonElement>()
         };
@@ -71,9 +72,10 @@ public class WslManagerServiceIntegrationTests
     {
         // Arrange
         var instanceName = "Ubuntu-22.04";
-        var mockResult = new ModuleCallResult
+        var mockResult = new PowerShellScriptResult
         {
-            Success = true,
+            ExitCode = 0,
+            Error = string.Empty,
             UsedModule = true
         };
 
@@ -104,9 +106,10 @@ public class WslManagerServiceIntegrationTests
     {
         // Arrange
         var instanceName = "Ubuntu-22.04";
-        var mockResult = new ModuleCallResult
+        var mockResult = new PowerShellScriptResult
         {
-            Success = true,
+            ExitCode = 0,
+            Error = string.Empty,
             UsedModule = true
         };
 
@@ -137,9 +140,10 @@ public class WslManagerServiceIntegrationTests
     {
         // Arrange
         var instanceName = "Ubuntu-22.04";
-        var mockResult = new ModuleCallResult
+        var mockResult = new PowerShellScriptResult
         {
-            Success = true,
+            ExitCode = 0,
+            Error = string.Empty,
             UsedModule = true
         };
 
@@ -171,9 +175,10 @@ public class WslManagerServiceIntegrationTests
         // Arrange
         var instanceName = "Ubuntu-22.04";
         var newPath = "E:\\WSL\\Ubuntu";
-        var mockResult = new ModuleCallResult
+        var mockResult = new PowerShellScriptResult
         {
-            Success = true,
+            ExitCode = 0,
+            Error = string.Empty,
             UsedModule = true
         };
 
@@ -205,9 +210,10 @@ public class WslManagerServiceIntegrationTests
         // Arrange
         var oldName = "Ubuntu-22.04";
         var newName = "Ubuntu-Custom";
-        var mockResult = new ModuleCallResult
+        var mockResult = new PowerShellScriptResult
         {
-            Success = true,
+            ExitCode = 0,
+            Error = string.Empty,
             UsedModule = true
         };
 
@@ -240,9 +246,10 @@ public class WslManagerServiceIntegrationTests
         var instanceName = "Ubuntu-22.04";
         var username = "customuser";
         var password = "password123";
-        var mockResult = new ModuleCallResult
+        var mockResult = new PowerShellScriptResult
         {
-            Success = true,
+            ExitCode = 0,
+            Error = string.Empty,
             UsedModule = true
         };
 
@@ -285,9 +292,10 @@ public class WslManagerServiceIntegrationTests
             }
         };
 
-        var mockResult = new ModuleCallResult
+        var mockResult = new PowerShellScriptResult
         {
-            Success = true,
+            ExitCode = 0,
+            Error = string.Empty,
             UsedModule = true
         };
 
@@ -316,9 +324,10 @@ public class WslManagerServiceIntegrationTests
     public async Task Service_Should_Handle_Module_Failure_With_Fallback()
     {
         // Arrange - Module call fails, fallback should be used
-        var mockFailedResult = new ModuleCallResult
+        var mockFailedResult = new PowerShellScriptResult
         {
-            Success = false,
+            ExitCode = 1,
+            Error = "Module not found",
             UsedModule = false,
             Exception = new Exception("Module not found")
         };

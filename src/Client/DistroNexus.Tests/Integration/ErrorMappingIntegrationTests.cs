@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
+using DistroNexus.Core.Models;
 using DistroNexus.Core.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -61,6 +63,12 @@ public class ErrorMappingIntegrationTests
             ["DestinationPath"] = "C:\\ProgramFiles\\ProtectedPath"
         };
 
+        var cmdletParams = new Dictionary<string, object> { ["Name"] = "TestInstance" };
+        foreach (var kvp in parameters)
+        {
+            cmdletParams[kvp.Key] = kvp.Value;
+        }
+
         var options = new ModuleCallOptions
         {
             TimeoutSeconds = 10,
@@ -71,7 +79,7 @@ public class ErrorMappingIntegrationTests
         // Act
         var result = await _powerShellService.ExecuteModuleCmdletAsync(
             "Move-DistroNexusInstance",
-            new Dictionary<string, object> { ["Name"] = "TestInstance", ...parameters },
+            cmdletParams,
             options);
 
         // Assert
@@ -84,13 +92,10 @@ public class ErrorMappingIntegrationTests
     {
         // Arrange
         var instanceName = "TestInstance";
-        var message = "Operation failed";
+        var packagePath = "C:\\packages\\test.tar.gz";
 
         // Act
-        var exception = new WslOperationException(
-            message,
-            operation: "TestOperation",
-            instanceName: instanceName);
+        var exception = new WslImportFailedException(instanceName, packagePath);
 
         // Assert
         Assert.NotNull(exception);
@@ -151,12 +156,10 @@ public class ErrorMappingIntegrationTests
         // Arrange
         var message = "Outer exception";
         var innerException = new InvalidOperationException("Inner exception");
+        var instanceName = "TestInstance";
 
         // Act
-        var exception = new WslOperationException(
-            message,
-            innerException,
-            operation: "TestOp");
+        var exception = new WslImportFailedException(message, innerException, instanceName);
 
         // Assert
         Assert.NotNull(exception);
@@ -210,10 +213,9 @@ public class ErrorMappingIntegrationTests
         var errorOutput = "Detailed PowerShell error output";
 
         // Act
-        var exception = new WslOperationException(
+        var exception = new WslImportFailedException(
             "Installation failed",
-            operation: operation,
-            instanceName: instanceName);
+            "C:\\packages\\test.tar.gz");
 
         // Assert
         Assert.NotNull(exception);
@@ -236,16 +238,16 @@ public class ErrorMappingIntegrationTests
     public void Error_Serialization_Should_Be_Safe()
     {
         // Arrange
-        var exception = new WslOperationException(
-            "Test error with <html>special</html> & characters",
-            operation: "TestOp");
+        var exception = new WslImportFailedException(
+            "TestInstance",
+            "C:\\packages\\test.tar.gz");
 
         // Act
         var serialized = exception.ToString();
 
         // Assert
         Assert.NotNull(serialized);
-        // Should safely handle HTML and special characters
+        // Should safely handle special characters
     }
 
     [Fact]
@@ -253,8 +255,8 @@ public class ErrorMappingIntegrationTests
     {
         // Arrange
         var innermost = new Exception("Innermost error");
-        var middle = new WslOperationException("Middle error", innermost);
-        var outer = new WslOperationException("Outer error", middle);
+        var middle = new WslImportFailedException("Middle error", innermost, "TestInstance");
+        var outer = new WslExportFailedException("Outer error", middle, "TestInstance");
 
         // Act & Assert
         Assert.Equal("Innermost error", outer.InnerException?.InnerException?.Message);

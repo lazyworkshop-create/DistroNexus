@@ -49,4 +49,23 @@ public class WslInstance
     /// Gets a value indicating whether the instance is currently running.
     /// </summary>
     public bool IsRunning => State?.Equals("Running", StringComparison.OrdinalIgnoreCase) ?? false;
+
+    /// <summary>
+    /// Normalizes a Windows path by removing the long path prefix (\\?\) if present.
+    /// </summary>
+    /// <param name="path">The path to normalize.</param>
+    /// <returns>The normalized path.</returns>
+    public static string NormalizeWindowsPath(string? path)
+    {
+        if (string.IsNullOrEmpty(path))
+            return string.Empty;
+
+        // Remove the \\?\ prefix used for long paths in Windows
+        if (path.StartsWith(@"\\?\", StringComparison.Ordinal))
+        {
+            return path.Substring(4);
+        }
+
+        return path;
+    }
 }
