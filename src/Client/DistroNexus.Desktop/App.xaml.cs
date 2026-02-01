@@ -10,6 +10,8 @@ using DistroNexus.Desktop.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using NLog;
+using NLog.Extensions.Logging;
 
 namespace DistroNexus.Desktop;
 
@@ -27,7 +29,11 @@ public partial class App : System.Windows.Application
         {
             System.Diagnostics.Debug.WriteLine("=== Application OnStartup Begin ===");
 
-            // Set up global exception handlers before anything else
+            // Configure NLog before anything else
+            ConfigureNLog();
+            System.Diagnostics.Debug.WriteLine("NLog configured successfully");
+
+            // Set up global exception handlers after NLog
             SetupExceptionHandling();
             System.Diagnostics.Debug.WriteLine("Exception handling setup complete");
 
@@ -92,12 +98,12 @@ public partial class App : System.Windows.Application
                     services.AddTransient<InstallWizardDialog>();
                     services.AddTransient<InstallWizardDialogNew>();
 
-                    // Configure logging
+                    // Configure logging with NLog
                     services.AddLogging(builder =>
                     {
-                        builder.AddConsole();
-                        builder.AddDebug();
-                        builder.SetMinimumLevel(LogLevel.Information);
+                        builder.ClearProviders();
+                        builder.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Trace);
+                        builder.AddNLog();
                     });
                 })
                 .Build();
@@ -282,7 +288,120 @@ public partial class App : System.Windows.Application
     protected void OnExit(object sender, ExitEventArgs e)
     {
         _logger?.LogInformation("DistroNexus application exiting");
+
+        // Flush and shutdown NLog
+        LogManager.Shutdown();
+
         _host?.Dispose();
+    }
+
+    /// <summary>
+    /// Configures NLog with dynamic log path based on settings.
+    /// </summary>
+    private void ConfigureNLog()
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine("=== ConfigureNLog Start ===");
+
+            // Determine log directory from settings or use default ApplicationData (Roaming) location
+            string logDirectory;
+
+            try
+            {
+                // Try to load log path from settings (stored in ApplicationData/Roaming)
+                var settingsPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "DistroNexus",
+                    "settings.json");
+
+                System.Diagnostics.Debug.WriteLine($"Checking for settings at: {settingsPath}");
+                System.Diagnostics.Debug.WriteLine($"Settings file exists: {File.Exists(settingsPath)}");
+
+                if (File.Exists(settingsPath))
+                {
+                    var settingsJson = File.ReadAllText(settingsPath);
+                    System.Diagnostics.Debug.WriteLine($"Settings JSON length: {settingsJson.Length}");
+
+                    var settings = System.Text.Json.JsonSerializer.Deserialize<GlobalSettings>(settingsJson);
+
+                    if (!string.IsNullOrWhiteSpace(settings?.LogPath))
+                    {
+                        logDirectory = settings.LogPath;
+                        System.Diagnostics.Debug.WriteLine($"Using log path from settings: {logDirectory}");
+                    }
+                    else
+                    {
+                        // Use default ApplicationData (Roaming) location
+                        logDirectory = Path.Combine(
+                            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                            "DistroNexus",
+                            "Logs");
+                        System.Diagnostics.Debug.WriteLine($"Settings.LogPath is empty, using default: {logDirectory}");
+                    }
+                }
+                else
+                {
+                    // Settings file doesn't exist, use default
+                    logDirectory = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                        "DistroNexus",
+                        "Logs");
+                    System.Diagnostics.Debug.WriteLine($"Settings file not found, using default: {logDirectory}");
+                }
+            }
+            catch (Exception ex)
+            {
+                // If anything fails, use default ApplicationData (Roaming) location
+                logDirectory = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "DistroNexus",
+                    "Logs");
+                System.Diagnostics.Debug.WriteLine($"Error loading settings: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Using default log path: {logDirectory}");
+            }
+
+            // Ensure log directory exists
+            System.Diagnostics.Debug.WriteLine($"Creating log directory: {logDirectory}");
+            Directory.CreateDirectory(logDirectory);
+            System.Diagnostics.Debug.WriteLine($"Log directory created/verified");
+
+            // Configure NLog with dynamic log directory
+            var config = LogManager.Configuration ?? new NLog.Config.LoggingConfiguration();
+
+            System.Diagnostics.Debug.WriteLine($"NLog Configuration loaded: {config != null}");
+
+            // Update log directory variable
+            config.Variables["logDirectory"] = logDirectory;
+
+            System.Diagnostics.Debug.WriteLine($"Updated NLog variable 'logDirectory' to: {logDirectory}");
+
+            // Apply configuration
+            LogManager.Configuration = config;
+
+            System.Diagnostics.Debug.WriteLine($"NLog configuration applied");
+
+            // Write a test log entry to verify NLog is working
+            var testLogger = LogManager.GetLogger("DistroNexus.Startup");
+            testLogger.Info($"NLog initialized successfully. Log directory: {logDirectory}");
+            testLogger.Info($"Application starting at: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+
+            System.Diagnostics.Debug.WriteLine($"Test log written");
+            System.Diagnostics.Debug.WriteLine($"=== ConfigureNLog Complete ===");
+            System.Diagnostics.Debug.WriteLine($"Final log path: {logDirectory}");
+
+            // Force flush to ensure test log is written
+            LogManager.Flush();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"=== ConfigureNLog FAILED ===");
+            System.Diagnostics.Debug.WriteLine($"Exception Type: {ex.GetType().Name}");
+            System.Diagnostics.Debug.WriteLine($"Exception Message: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Stack Trace: {ex.StackTrace}");
+
+            // Don't throw - allow app to continue even if logging fails
+        }
     }
 
     private void SetupExceptionHandling()

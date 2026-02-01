@@ -60,6 +60,7 @@
             <converters:DownloadStatusToActionVisibilityConverter x:Key="DownloadStatusToActionVisibilityConverter"/>
             <converters:DownloadStatusToRetryVisibilityConverter x:Key="DownloadStatusToRetryVisibilityConverter"/>
             <converters:MultiConditionVisibilityConverter x:Key="MultiConditionVisibilityConverter"/>
+            <converters:CachedNotDownloadingVisibilityConverter x:Key="CachedNotDownloadingVisibilityConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
