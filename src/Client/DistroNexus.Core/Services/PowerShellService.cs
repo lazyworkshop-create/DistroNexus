@@ -18,129 +18,40 @@ public class PowerShellService : IPowerShellService, IDisposable
     private readonly string? _moduleBasePath;
     private bool _disposed;
 
-    public PowerShellService(ILogger<PowerShellService> logger)
+    public PowerShellService(ILogger<PowerShellService> logger, string? customModulePath = null)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        
+
         // Find the PowerShell executable (prefer pwsh.exe for PowerShell Core, fallback to powershell.exe)
         _powerShellPath = FindPowerShellPath();
-        
-        // Detect DistroNexus module path (src/PowerShell relative to workspace root)
-        var moduleSearchResult = FindDistroNexusModulePathWithDebug();
-        _moduleBasePath = moduleSearchResult.ModulePath;
-        
-        _logger.LogInformation("PowerShell service initialized using: {PowerShellPath}", _powerShellPath);
-        
-        if (_moduleBasePath != null)
+
+        // Only use module path from configuration - no auto-detection
+        if (!string.IsNullOrWhiteSpace(customModulePath))
         {
-            _logger.LogInformation("DistroNexus module detected at: {ModulePath}", _moduleBasePath);
+            _logger.LogInformation("Using PowerShell module path from configuration: {ModulePath}", customModulePath);
+
+            // Validate the configured path
+            var manifestPath = Path.Combine(customModulePath, "DistroNexus.psd1");
+            if (File.Exists(manifestPath))
+            {
+                _moduleBasePath = customModulePath;
+                _logger.LogInformation("PowerShell module path validated successfully");
+            }
+            else
+            {
+                _logger.LogError("PowerShell module not found at configured path: {Path}", manifestPath);
+                _logger.LogError("Please configure the correct module path in settings (stored in AppData\\DistroNexus\\settings.json)");
+                _moduleBasePath = null;
+            }
         }
         else
         {
-            _logger.LogWarning("DistroNexus PowerShell module not found after checking {PathCount} locations", moduleSearchResult.CheckedPathsCount);
-            _logger.LogDebug("Checked module paths: {Paths}", string.Join("; ", moduleSearchResult.CheckedPaths));
-        }
-    }
-
-    private static string? FindDistroNexusModulePath()
-    {
-        var result = FindDistroNexusModulePathWithDebug();
-        return result.ModulePath;
-    }
-
-    private static ModuleSearchResult FindDistroNexusModulePathWithDebug()
-    {
-        var checkedPaths = new List<string>();
-
-        // 1. Check environment variable first
-        var envModulePath = Environment.GetEnvironmentVariable("DISTRONEXUS_MODULE_PATH");
-        if (!string.IsNullOrWhiteSpace(envModulePath))
-        {
-            var envPath = Path.Combine(envModulePath, "DistroNexus.psd1");
-            checkedPaths.Add(envPath);
-            if (File.Exists(envPath))
-            {
-                return new ModuleSearchResult 
-                { 
-                    ModulePath = Path.GetDirectoryName(envPath), 
-                    CheckedPaths = checkedPaths 
-                };
-            }
+            _logger.LogWarning("PowerShell module path not configured");
+            _logger.LogWarning("Please set PowerShellModulePath in settings (AppData\\DistroNexus\\settings.json)");
+            _moduleBasePath = null;
         }
 
-        // 2. Development paths (relative to bin directory)
-        var devPaths = new[]
-        {
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\..\..\PowerShell\DistroNexus.psd1"),
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\..\PowerShell\DistroNexus.psd1"),
-        };
-
-        foreach (var devPath in devPaths)
-        {
-            checkedPaths.Add(devPath);
-            var fullPath = Path.GetFullPath(devPath);
-            if (File.Exists(fullPath))
-            {
-                return new ModuleSearchResult 
-                { 
-                    ModulePath = Path.GetDirectoryName(fullPath), 
-                    CheckedPaths = checkedPaths 
-                };
-            }
-        }
-
-        // 3. Installed paths
-        var installedPaths = new[]
-        {
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), @"DistroNexus\PowerShell\DistroNexus.psd1"),
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"DistroNexus\PowerShell\DistroNexus.psd1"),
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), @"PowerShell\Modules\DistroNexus\DistroNexus.psd1"),
-        };
-
-        foreach (var installedPath in installedPaths)
-        {
-            checkedPaths.Add(installedPath);
-            var fullPath = Path.GetFullPath(installedPath);
-            if (File.Exists(fullPath))
-            {
-                return new ModuleSearchResult 
-                { 
-                    ModulePath = Path.GetDirectoryName(fullPath), 
-                    CheckedPaths = checkedPaths 
-                };
-            }
-        }
-
-        // 4. PowerShell Gallery paths (user profile modules)
-        var psProfileModules = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-            @"PowerShell\Modules\DistroNexus");
-        if (Directory.Exists(psProfileModules))
-        {
-            var psdPath = Path.Combine(psProfileModules, "DistroNexus.psd1");
-            checkedPaths.Add(psdPath);
-            if (File.Exists(psdPath))
-            {
-                return new ModuleSearchResult 
-                { 
-                    ModulePath = psProfileModules, 
-                    CheckedPaths = checkedPaths 
-                };
-            }
-        }
-
-        return new ModuleSearchResult 
-        { 
-            ModulePath = null, 
-            CheckedPaths = checkedPaths 
-        };
-    }
-
-    private class ModuleSearchResult
-    {
-        public string? ModulePath { get; set; }
-        public List<string> CheckedPaths { get; set; } = new();
-        public int CheckedPathsCount => CheckedPaths.Count;
+        _logger.LogInformation("PowerShell service initialized using: {PowerShellPath}", _powerShellPath);
     }
 
     private static string FindPowerShellPath()
@@ -469,108 +380,181 @@ public class PowerShellService : IPowerShellService, IDisposable
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(cmdletName);
-        
+
         options ??= new ModuleCallOptions();
+
+        // DIAGNOSTIC: Log cmdlet call details
+        _logger.LogDebug("ExecuteModuleCmdletAsync called: Cmdlet={Cmdlet}, ParameterCount={ParamCount}, ModulePath={ModulePath}",
+            cmdletName, parameters?.Count ?? 0, _moduleBasePath ?? "<null>");
 
         // Check if module is available
         if (_moduleBasePath == null)
         {
-            _logger.LogWarning("DistroNexus module not available, cannot execute cmdlet: {Cmdlet}", cmdletName);
+            _logger.LogError("DistroNexus PowerShell module path not configured");
+            _logger.LogError("Please configure PowerShellModulePath in settings file located at: %AppData%\\DistroNexus\\settings.json");
+
+            var settingsPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "DistroNexus",
+                "settings.json");
             
-            if (options.UseModuleFallback)
-            {
-                _logger.LogInformation("Module fallback is disabled or not implemented for {Cmdlet}", cmdletName);
-            }
-            
+            var errorMessage = $"PowerShell module path not configured. Please set PowerShellModulePath in settings: {settingsPath}";
+
             return new PowerShellScriptResult
             {
                 ExitCode = 1,
-                Error = "DistroNexus PowerShell module not found",
-                UsedModule = false
+                Error = errorMessage,
+                UsedModule = false,
+                Exception = new InvalidOperationException(errorMessage)
             };
         }
 
         try
         {
+            // DIAGNOSTIC: Verify module file exists
+            var moduleManifestPath = Path.Combine(_moduleBasePath, "DistroNexus.psd1");
+            if (!File.Exists(moduleManifestPath))
+            {
+                _logger.LogError("Module manifest not found at: {Path}", moduleManifestPath);
+                return new PowerShellScriptResult
+                {
+                    ExitCode = 1,
+                    Error = $"Module manifest not found: {moduleManifestPath}",
+                    UsedModule = false,
+                    Exception = new FileNotFoundException("Module manifest not found", moduleManifestPath)
+                };
+            }
+
             // Build the cmdlet invocation script
             var scriptBuilder = new StringBuilder();
-            
-            // Import module
-            scriptBuilder.AppendLine($"Import-Module '{_moduleBasePath}' -ErrorAction Stop");
-            
+
+            // Import module with verbose error handling - use full path to manifest file
+            scriptBuilder.AppendLine("$ErrorActionPreference = 'Stop'");
+            scriptBuilder.AppendLine($"Import-Module '{moduleManifestPath}' -Force -ErrorAction Stop");
+
+            // DIAGNOSTIC: Verify module imported
+            scriptBuilder.AppendLine("if (-not (Get-Module -Name DistroNexus)) { throw 'Module DistroNexus failed to import' }");
+
             // Execute cmdlet
             scriptBuilder.Append(cmdletName);
-            
+
             // Add parameters
             if (parameters != null)
             {
                 foreach (var param in parameters)
                 {
-                    scriptBuilder.Append($" -{param.Key} ");
-                    scriptBuilder.Append(FormatParameterValue(param.Value));
+                    // Handle switch parameters (boolean true) - don't add value
+                    if (param.Value is bool boolValue)
+                    {
+                        if (boolValue)
+                        {
+                            scriptBuilder.Append($" -{param.Key}");
+                        }
+                        // If false, don't add the parameter at all
+                    }
+                    else
+                    {
+                        scriptBuilder.Append($" -{param.Key} ");
+                        scriptBuilder.Append(FormatParameterValue(param.Value));
+                    }
                 }
             }
-            
+
             // Add common parameters
             if (options.ForceRefresh && cmdletName == "Get-DistroNexusInstance")
             {
                 scriptBuilder.Append(" -ForceUpdate");
             }
-            
+
             if (options.LogVerbose)
             {
                 scriptBuilder.Append(" -Verbose");
             }
-            
+
             // Convert output to JSON if requested
             if (options.ParseAsJson)
             {
                 scriptBuilder.AppendLine(" | ConvertTo-Json -Depth 10 -Compress");
             }
-            
-            _logger.LogDebug("Executing module cmdlet: {Cmdlet}", cmdletName);
-            
+
+            var script = scriptBuilder.ToString();
+            _logger.LogDebug("Executing module cmdlet: {Cmdlet} from module path: {ModulePath}", cmdletName, _moduleBasePath);
+            _logger.LogDebug("Generated PowerShell script (first 200 chars): {Script}",
+                script.Length > 200 ? script[..200] : script);
+
             // Execute with timeout
             using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(options.TimeoutSeconds));
             using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
-            
-            var result = await ExecuteScriptWithResultAsync(scriptBuilder.ToString(), combinedCts.Token);
+
+            var result = await ExecuteScriptWithResultAsync(script, combinedCts.Token);
             result.UsedModule = true;
+
+            // DIAGNOSTIC: Log execution result
+            _logger.LogDebug("Cmdlet execution completed: ExitCode={ExitCode}, OutputLength={OutputLen}, ErrorLength={ErrorLen}",
+                result.ExitCode, result.Output?.Length ?? 0, result.Error?.Length ?? 0);
             
             // Parse JSON output if available
             if (options.ParseAsJson && result.Success && !string.IsNullOrWhiteSpace(result.Output))
             {
                 try
                 {
+                    _logger.LogDebug("Parsing JSON output (length={Length})...", result.Output.Length);
                     var jsonElement = JsonSerializer.Deserialize<JsonElement>(result.Output);
-                    
+
                     // Handle both single object and array results
                     if (jsonElement.ValueKind == JsonValueKind.Array)
                     {
                         result.ParsedObjects = jsonElement.EnumerateArray().ToList();
+                        _logger.LogDebug("Parsed JSON array with {Count} elements", result.ParsedObjects.Count);
                     }
                     else
                     {
                         result.ParsedObjects = [jsonElement];
+                        _logger.LogDebug("Parsed single JSON object");
                     }
                 }
                 catch (JsonException ex)
                 {
-                    _logger.LogWarning(ex, "Failed to parse cmdlet output as JSON");
+                    _logger.LogWarning(ex, "Failed to parse cmdlet output as JSON. Output (first 500 chars): {Output}",
+                        result.Output?.Length > 500 ? result.Output[..500] : result.Output);
                 }
             }
-            
+            else if (options.ParseAsJson && result.Success)
+            {
+                _logger.LogWarning("Expected JSON output but received empty/null output from cmdlet {Cmdlet}", cmdletName);
+            }
+            else if (!result.Success)
+            {
+                _logger.LogError("Cmdlet {Cmdlet} failed with exit code {ExitCode}. Error: {Error}",
+                    cmdletName, result.ExitCode, result.Error);
+            }
+
             return result;
+        }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogWarning("Module cmdlet {Cmdlet} execution canceled or timed out after {Timeout}s",
+                cmdletName, options.TimeoutSeconds);
+
+            return new PowerShellScriptResult
+            {
+                ExitCode = 1,
+                Error = $"Operation timed out after {options.TimeoutSeconds} seconds",
+                UsedModule = false,
+                Exception = ex
+            };
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error executing module cmdlet: {Cmdlet}", cmdletName);
-            
+            _logger.LogError(ex, "Error executing module cmdlet: {Cmdlet}. Exception type: {ExceptionType}, Message: {Message}",
+                cmdletName, ex.GetType().Name, ex.Message);
+
             return new PowerShellScriptResult
             {
                 ExitCode = 1,
                 Error = ex.Message,
-                UsedModule = false
+                UsedModule = false,
+                Exception = ex
             };
         }
     }
@@ -588,5 +572,105 @@ public class PowerShellService : IPowerShellService, IDisposable
             int or long or double or float or decimal => value.ToString()!,
             _ => $"'{value}'"
         };
+    }
+
+    /// <inheritdoc/>
+    public async Task<string> GetDiagnosticInfoAsync(CancellationToken cancellationToken = default)
+    {
+        var diagnostics = new StringBuilder();
+        diagnostics.AppendLine("=== PowerShell Service Diagnostics ===");
+        diagnostics.AppendLine();
+
+        // PowerShell executable
+        diagnostics.AppendLine($"PowerShell Path: {_powerShellPath}");
+        diagnostics.AppendLine($"PowerShell Exists: {File.Exists(_powerShellPath)}");
+
+        try
+        {
+            var versionScript = "$PSVersionTable.PSVersion.ToString()";
+            var version = await ExecuteScriptAsync(versionScript, cancellationToken);
+            diagnostics.AppendLine($"PowerShell Version: {version}");
+        }
+        catch (Exception ex)
+        {
+            diagnostics.AppendLine($"PowerShell Version: ERROR - {ex.Message}");
+        }
+
+        diagnostics.AppendLine();
+
+        // Module path detection
+        diagnostics.AppendLine($"Module Base Path: {_moduleBasePath ?? "<NULL - Module Not Found>"}");
+
+        if (_moduleBasePath != null)
+        {
+            var manifestPath = Path.Combine(_moduleBasePath, "DistroNexus.psd1");
+            diagnostics.AppendLine($"Module Manifest: {manifestPath}");
+            diagnostics.AppendLine($"Manifest Exists: {File.Exists(manifestPath)}");
+
+            if (File.Exists(manifestPath))
+            {
+                try
+                {
+                    var manifestInfo = new FileInfo(manifestPath);
+                    diagnostics.AppendLine($"Manifest Size: {manifestInfo.Length} bytes");
+                    diagnostics.AppendLine($"Manifest Modified: {manifestInfo.LastWriteTime}");
+                }
+                catch (Exception ex)
+                {
+                    diagnostics.AppendLine($"Manifest Info Error: {ex.Message}");
+                }
+            }
+
+            // Try to import the module
+            try
+            {
+                diagnostics.AppendLine();
+                diagnostics.AppendLine("Attempting to import module...");
+                var importScript = $@"
+                    $ErrorActionPreference = 'Stop'
+                    Import-Module '{_moduleBasePath}' -Force
+                    $module = Get-Module -Name DistroNexus
+                    if ($module) {{
+                        [PSCustomObject]@{{
+                            Name = $module.Name
+                            Version = $module.Version.ToString()
+                            Path = $module.Path
+                            ExportedCommands = ($module.ExportedCommands.Keys -join ', ')
+                        }} | ConvertTo-Json
+                    }} else {{
+                        throw 'Module not loaded'
+                    }}
+                ";
+
+                var moduleInfo = await ExecuteScriptAsync(importScript, cancellationToken);
+                diagnostics.AppendLine("Module Import: SUCCESS");
+                diagnostics.AppendLine($"Module Info: {moduleInfo}");
+            }
+            catch (Exception ex)
+            {
+                diagnostics.AppendLine($"Module Import: FAILED - {ex.Message}");
+            }
+        }
+        else
+        {
+            diagnostics.AppendLine();
+            diagnostics.AppendLine("Module path detection FAILED. Checked paths:");
+
+            var appDirectory = AppDomain.CurrentDomain.BaseDirectory;
+            var appModulePath = Path.Combine(appDirectory, "PowerShell");
+            var appManifestPath = Path.Combine(appModulePath, "DistroNexus.psd1");
+
+            diagnostics.AppendLine($"  1. Application Directory: {appManifestPath} (Exists: {File.Exists(appManifestPath)})");
+
+            diagnostics.AppendLine();
+            diagnostics.AppendLine("Directories:");
+            diagnostics.AppendLine($"  AppDomain.BaseDirectory: {appDirectory}");
+            diagnostics.AppendLine($"  Expected Module Path: {appModulePath}");
+        }
+
+        diagnostics.AppendLine();
+        diagnostics.AppendLine("=== End Diagnostics ===");
+
+        return diagnostics.ToString();
     }
 }

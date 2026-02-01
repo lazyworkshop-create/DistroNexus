@@ -31,6 +31,14 @@ public interface IWslManagerService
     Task<bool> StartInstanceAsync(string instanceName, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Starts a WSL instance with a background keep-alive process to prevent auto-shutdown.
+    /// </summary>
+    /// <param name="instanceName">The name of the instance to start.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>True if the instance was started successfully, otherwise false.</returns>
+    Task<bool> StartInstanceWithKeepAliveAsync(string instanceName, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Stops a running WSL instance.
     /// </summary>
     /// <param name="instanceName">The name of the instance to stop.</param>

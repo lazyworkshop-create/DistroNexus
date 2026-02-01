@@ -38,11 +38,38 @@ public partial class App : System.Windows.Application
                     // Register HttpClient
                     services.AddHttpClient();
 
-                    // Register Core services
-                    services.AddSingleton<IPowerShellService, PowerShellService>();
+                    // Register SettingsService first as it's needed for PowerShellService
+                    services.AddSingleton<ISettingsService, SettingsService>();
+
+                    // Register PowerShellService with factory to inject custom module path from settings
+                    services.AddSingleton<IPowerShellService>(sp =>
+                    {
+                        var logger = sp.GetRequiredService<ILogger<PowerShellService>>();
+                        var settingsService = sp.GetRequiredService<ISettingsService>();
+
+                        // Load settings to get PowerShell module path
+                        string? customModulePath = null;
+                        try
+                        {
+                            var settings = settingsService.LoadSettings();
+                            customModulePath = settings.PowerShellModulePath;
+
+                            if (!string.IsNullOrWhiteSpace(customModulePath))
+                            {
+                                logger.LogInformation("Loaded custom PowerShell module path from settings: {Path}", customModulePath);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogWarning(ex, "Failed to load settings during PowerShellService initialization. Using auto-detection.");
+                        }
+
+                        return new PowerShellService(logger, customModulePath);
+                    });
+
+                    // Register other Core services
                     services.AddSingleton<IWslManagerService, WslManagerService>();
                     services.AddSingleton<IDownloadService, DownloadService>();
-                    services.AddSingleton<ISettingsService, SettingsService>();
                     services.AddSingleton<ICatalogService, CatalogService>();
                     services.AddSingleton<ICatalogSourceManager, CatalogSourceManager>();
                     services.AddSingleton<INavigationService, NavigationService>();
@@ -205,7 +232,7 @@ public partial class App : System.Windows.Application
                 return;
 
             var settingsService = _host.Services.GetRequiredService<ISettingsService>();
-            var settings = await settingsService.LoadSettingsAsync();
+            var settings = settingsService.LoadSettings();
 
             if (!settings.CheckUpdatesOnStartup)
             {

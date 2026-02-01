@@ -25,11 +25,11 @@ public class TerminalServiceTests
         _mockPowerShell = new Mock<IPowerShellService>();
         _mockSettingsService = new Mock<ISettingsService>();
         _mockLogger = new Mock<ILogger<TerminalService>>();
-        
+
         // Setup default settings
-        _mockSettingsService.Setup(x => x.LoadSettingsAsync())
-            .ReturnsAsync(new GlobalSettings { TerminalStartPath = "~" });
-        
+        _mockSettingsService.Setup(x => x.LoadSettings())
+            .Returns(new GlobalSettings { TerminalStartPath = "~" });
+
         _terminalService = new TerminalService(
             _mockPowerShell.Object, 
             _mockSettingsService.Object,

@@ -65,6 +65,14 @@ function Remove-DistroNexusInstance {
             if ($LASTEXITCODE -eq 0) {
                 Write-DistroNexusLog "Successfully unregistered instance: $Name"
                 
+                # Update configuration
+                try {
+                    Get-DistroNexusInstance -ForceUpdate | Out-Null
+                }
+                catch {
+                    Write-Verbose "Failed to update instance configuration: $_"
+                }
+                
                 # Optionally delete files
                 if (-not $KeepFiles -and $basePath -and (Test-Path $basePath)) {
                     Write-DistroNexusLog "Cleaning up files at: $basePath"

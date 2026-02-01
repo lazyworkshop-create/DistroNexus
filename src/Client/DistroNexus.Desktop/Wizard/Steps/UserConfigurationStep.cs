@@ -48,7 +48,7 @@ public partial class UserConfigurationStep : WizardStepBase
         // Load default settings if username not set
         if (Context != null && string.IsNullOrEmpty(Context.Username))
         {
-            var settings = await _settingsService.LoadSettingsAsync();
+            var settings = _settingsService.LoadSettings();
             Context.Username = settings.DefaultUsername;
             Context.WslVersion = settings.DefaultWslVersion;
             OnPropertyChanged(nameof(WslVersionIndex));
@@ -127,15 +127,15 @@ public partial class UserConfigurationStep : WizardStepBase
             return;
 
         // Load default settings
-        var settings = await _settingsService.LoadSettingsAsync();
-        
+        var settings = _settingsService.LoadSettings();
+
         // Use root user for quick install (no password needed)
         Context.Username = "root";
         Context.Password = string.Empty;
         Context.ConfirmPassword = string.Empty;
         Context.CreateUser = false;
         Context.WslVersion = settings.DefaultWslVersion;
-        
+
         _logger.LogInformation("Applied quick install user defaults: Username=root, WSL Version={Version}", 
             Context.WslVersion);
     }

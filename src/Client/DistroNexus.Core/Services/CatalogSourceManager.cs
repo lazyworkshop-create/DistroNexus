@@ -32,7 +32,7 @@ public class CatalogSourceManager : ICatalogSourceManager
         {
             _logger.LogInformation("Loading catalog sources");
 
-            var settings = await _settingsService.LoadSettingsAsync();
+            var settings = _settingsService.LoadSettings();
             var sourcesJson = settings.CustomData.GetValueOrDefault(SourcesKey, "[]");
             
             var sources = JsonSerializer.Deserialize<List<CatalogSource>>(sourcesJson) ?? GetDefaultSources();
@@ -326,8 +326,8 @@ public class CatalogSourceManager : ICatalogSourceManager
             WriteIndented = true 
         });
 
-        var settings = await _settingsService.LoadSettingsAsync();
+        var settings = _settingsService.LoadSettings();
         settings.CustomData[SourcesKey] = sourcesJson;
-        await _settingsService.SaveSettingsAsync(settings);
+        _settingsService.SaveSettings(settings);
     }
 }

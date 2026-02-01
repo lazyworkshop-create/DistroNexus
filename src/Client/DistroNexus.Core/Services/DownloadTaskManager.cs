@@ -32,12 +32,12 @@ public class DownloadTaskManager : IDownloadTaskManager
         _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        
+
         // Load settings and configure max concurrent downloads
-        var settings = _settingsService.LoadSettingsAsync().GetAwaiter().GetResult();
+        var settings = _settingsService.LoadSettings();
         var maxConcurrent = settings.MaxConcurrentDownloads > 0 ? settings.MaxConcurrentDownloads : 3;
         _semaphore = new SemaphoreSlim(maxConcurrent, maxConcurrent);
-        
+
         _logger.LogInformation("DownloadTaskManager initialized with max concurrent downloads: {MaxConcurrent}", maxConcurrent);
     }
     
@@ -72,8 +72,8 @@ public class DownloadTaskManager : IDownloadTaskManager
     public List<DownloadTask> AddTasks(IEnumerable<DistroPackage> packages)
     {
         var tasks = new List<DownloadTask>();
-        var settings = _settingsService.LoadSettingsAsync().GetAwaiter().GetResult();
-        
+        var settings = _settingsService.LoadSettings();
+
         foreach (var package in packages)
         {
             // Skip already cached packages
@@ -117,7 +117,7 @@ public class DownloadTaskManager : IDownloadTaskManager
                 task.DownloadedBytes = (long)(task.TotalBytes * percent / 100.0);
             });
             
-            var settings = await _settingsService.LoadSettingsAsync();
+            var settings = _settingsService.LoadSettings();
             var maxRetries = settings.MaxRetryAttempts;
             bool success = false;
             Exception? lastException = null;

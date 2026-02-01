@@ -73,6 +73,14 @@ function Rename-DistroNexusInstance {
             wsl --import $NewName $newPath $tempExport
             if ($LASTEXITCODE -ne 0) { throw "Import failed" }
             
+            # Update configuration
+            try {
+                Get-DistroNexusInstance -ForceUpdate | Out-Null
+            }
+            catch {
+                Write-Verbose "Failed to update instance configuration: $_"
+            }
+            
             Write-DistroNexusLog "Successfully renamed instance to: $NewName"
             return $true
         }

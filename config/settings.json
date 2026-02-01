@@ -1,6 +1,0 @@
-{
-    "DefaultInstallPath": "D:\\WSL",
-    "DefaultDistro": "Ubuntu-24.04",
-    "DistroCachePath": "D:\\wsl\\distro",
-    "CustomPackages": null
-}

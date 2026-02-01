@@ -99,4 +99,10 @@ public class GlobalSettings
     /// Gets or sets custom data storage for extensions and plugins.
     /// </summary>
     public Dictionary<string, string> CustomData { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the custom path to the PowerShell module.
+    /// If not set, the service will auto-detect the module path.
+    /// </summary>
+    public string? PowerShellModulePath { get; set; }
 }

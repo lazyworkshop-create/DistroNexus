@@ -35,6 +35,15 @@ function Start-DistroNexusInstance {
             
             if ($LASTEXITCODE -eq 0) {
                 Write-DistroNexusLog "Successfully started instance: $Name"
+                
+                # Update configuration to refresh instance state
+                try {
+                    Get-DistroNexusInstance -Name $Name -SkipDiskSize -ForceUpdate | Out-Null
+                }
+                catch {
+                    Write-Verbose "Failed to update instance configuration: $_"
+                }
+                
                 return $true
             }
             else {

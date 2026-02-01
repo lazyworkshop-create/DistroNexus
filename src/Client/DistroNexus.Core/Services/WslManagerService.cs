@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using DistroNexus.Core.Interfaces;
@@ -45,69 +46,151 @@ public partial class WslManagerService : IWslManagerService
     /// <inheritdoc/>
     public async Task<List<WslInstance>> GetInstancesAsync(CancellationToken cancellationToken = default)
     {
-        try
-        {
-            _logger.LogInformation("Retrieving WSL instances using PowerShell module");
+        _logger.LogInformation("Retrieving WSL instances using PowerShell module");
 
-            // Try using PowerShell module first
-            var moduleResult = await _powerShellService.ExecuteModuleCmdletAsync(
-                "Get-DistroNexusInstance",
-                parameters: null,
-                options: new ModuleCallOptions
-                {
-                    TimeoutSeconds = QuickOperationTimeoutSeconds,
-                    ParseAsJson = true,
-                    UseModuleFallback = _useModuleFallback
-                },
-                cancellationToken: cancellationToken);
-
-            if (moduleResult.Success && moduleResult.UsedModule && moduleResult.ParsedObjects != null)
+        // Always use PowerShell module with SkipDiskSize to avoid auto-starting stopped instances
+        // Use ForceUpdate to ensure we get the latest running state from wsl --list, 
+        // while preserving cached disk sizes (via SkipDiskSize)
+        var moduleResult = await _powerShellService.ExecuteModuleCmdletAsync(
+            "Get-DistroNexusInstance",
+            parameters: new Dictionary<string, object>
             {
-                _logger.LogInformation("Successfully retrieved {Count} instances using module", moduleResult.ParsedObjects.Count);
-                return ParseInstancesFromModule(moduleResult.ParsedObjects);
-            }
+                { "SkipDiskSize", true },
+                { "ForceUpdate", true }
+            },
+            options: new ModuleCallOptions
+            {
+                TimeoutSeconds = QuickOperationTimeoutSeconds,
+                ParseAsJson = true,
+                UseModuleFallback = false  // Do not use fallback, always require module
+            },
+            cancellationToken: cancellationToken);
 
-            // Fallback to inline script if module is not available
-            _logger.LogWarning("Module call failed, falling back to inline script");
-            return await GetInstancesInlineAsync(cancellationToken);
-        }
-        catch (Exception ex)
+        // Check if module call succeeded
+        if (!moduleResult.Success)
         {
-            _logger.LogError(ex, "Failed to retrieve WSL instances");
+            var errorMessage = moduleResult.Exception != null 
+                ? $"PowerShell module error: {moduleResult.Exception.Message}" 
+                : "Failed to retrieve WSL instances using PowerShell module.";
+
+            _logger.LogError(moduleResult.Exception, "Module call failed for Get-DistroNexusInstance");
+            throw new InvalidOperationException(errorMessage, moduleResult.Exception);
+        }
+
+        if (!moduleResult.UsedModule)
+        {
+            _logger.LogError("PowerShell module was not used for Get-DistroNexusInstance");
+            throw new InvalidOperationException(
+                "DistroNexus PowerShell module is not available. Please ensure the module is properly installed.");
+        }
+
+        if (moduleResult.ParsedObjects == null || moduleResult.ParsedObjects.Count == 0)
+        {
+            _logger.LogInformation("No WSL instances found");
             return [];
         }
+
+        _logger.LogInformation("Successfully retrieved {Count} instances using module", moduleResult.ParsedObjects.Count);
+
+        // DIAGNOSTIC: Log raw module output
+        if (!string.IsNullOrWhiteSpace(moduleResult.Output))
+        {
+            _logger.LogDebug("Raw module output (first 500 chars): {Output}", 
+                moduleResult.Output.Length > 500 ? moduleResult.Output[..500] : moduleResult.Output);
+        }
+
+        var instances = ParseInstancesFromModule(moduleResult.ParsedObjects);
+
+        // DIAGNOSTIC: Log parsed instances with disk sizes
+        foreach (var instance in instances)
+        {
+            _logger.LogDebug("Parsed instance: Name={Name}, State={State}, Size={Size} bytes, Path={Path}", 
+                instance.Name, instance.State, instance.Size, instance.InstallPath);
+        }
+
+        _logger.LogInformation("Parsed {Count} instances from module, returning to caller", instances.Count);
+        return instances;
     }
 
     private List<WslInstance> ParseInstancesFromModule(List<JsonElement> parsedObjects)
     {
         var instances = new List<WslInstance>();
 
+        _logger.LogDebug("Parsing {Count} instance objects from module", parsedObjects.Count);
+
         foreach (var element in parsedObjects)
         {
             try
             {
+                // DIAGNOSTIC: Log available properties in this element
+                var propertyNames = new List<string>();
+                foreach (var prop in element.EnumerateObject())
+                {
+                    propertyNames.Add(prop.Name);
+                }
+                _logger.LogDebug("Instance JSON properties: {Properties}", string.Join(", ", propertyNames));
+
+                var instanceName = element.GetProperty("Name").GetString() ?? "";
+
+                // DIAGNOSTIC: Check if DiskSize property exists and log its value
+                long diskSize = 0;
+                if (element.TryGetProperty("DiskSize", out var sizeElement))
+                {
+                    if (sizeElement.ValueKind == JsonValueKind.Number)
+                    {
+                        diskSize = sizeElement.GetInt64();
+                        _logger.LogDebug("Instance '{Name}': Found DiskSize property = {Size} bytes", instanceName, diskSize);
+                    }
+                    else if (sizeElement.ValueKind == JsonValueKind.String)
+                    {
+                        var sizeStr = sizeElement.GetString();
+                        if (long.TryParse(sizeStr, out var parsedSize))
+                        {
+                            diskSize = parsedSize;
+                            _logger.LogDebug("Instance '{Name}': Parsed DiskSize from string = {Size} bytes", instanceName, diskSize);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Instance '{Name}': DiskSize is string but cannot parse: '{Value}'", instanceName, sizeStr);
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Instance '{Name}': DiskSize has unexpected type: {Type}", instanceName, sizeElement.ValueKind);
+                    }
+                }
+                else
+                {
+                    _logger.LogDebug("Instance '{Name}': DiskSize property not found in JSON (SkipDiskSize=true)", instanceName);
+                }
+
                 var instance = new WslInstance
                 {
-                    Name = element.GetProperty("Name").GetString() ?? "",
+                    Name = instanceName,
                     State = element.GetProperty("State").GetString() ?? "Unknown",
                     Version = element.TryGetProperty("Version", out var ver) ? 
                         int.Parse(ver.GetString() ?? "2") : 2,
                     InstallPath = element.GetProperty("BasePath").GetString() ?? "",
-                    Size = element.TryGetProperty("DiskSize", out var size) ? size.GetInt64() : 0,
-                    Distribution = element.GetProperty("Name").GetString() ?? "",
+                    Size = diskSize,
+                    Distribution = instanceName,
                     IsDefault = false, // Will be determined from wsl --list
                     LastAccessed = element.TryGetProperty("InstallTime", out var time) && 
                         DateTime.TryParse(time.GetString(), out var dt) ? dt : (DateTime?)null
                 };
 
+                _logger.LogDebug("Created WslInstance object: Name={Name}, Size={Size}, State={State}", 
+                    instance.Name, instance.Size, instance.State);
+
                 instances.Add(instance);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to parse instance from module output");
+                _logger.LogWarning(ex, "Failed to parse instance from module output. Element: {Element}", 
+                    element.ToString());
             }
         }
 
+        _logger.LogInformation("Successfully parsed {Count} instances from module output", instances.Count);
         return instances;
     }
 
@@ -432,8 +515,9 @@ public partial class WslManagerService : IWslManagerService
             _logger.LogWarning("Module execution failed for StartInstanceAsync, falling back to inline script");
             var escapedName = EscapePowerShellString(instanceName);
             var script = 
-                $"$result = (wsl --distribution {escapedName} -- echo 'started' 2>&1) -replace \"`0\", ''; " +
-                $"if ($LASTEXITCODE -ne 0) {{ throw \"Failed to start WSL instance: $result\" }}; " +
+                $"$result = wsl --distribution {escapedName} -- echo 'started' 2>&1; " +
+                $"$exitCode = $LASTEXITCODE; " +
+                $"if ($exitCode -ne 0) {{ throw \"Failed to start WSL instance: $result\" }}; " +
                 "'success'";
 
             await _powerShellService.ExecuteScriptAsync(script, cancellationToken);
@@ -444,6 +528,57 @@ public partial class WslManagerService : IWslManagerService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to start WSL instance '{InstanceName}'", instanceName);
+            return false;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> StartInstanceWithKeepAliveAsync(string instanceName, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(instanceName);
+
+        try
+        {
+            _logger.LogInformation("Starting WSL instance '{InstanceName}' with keep-alive process", instanceName);
+
+            // Start the keep-alive process directly from C# (not through PowerShell)
+            // This ensures the background process actually starts
+            var processStartInfo = new ProcessStartInfo
+            {
+                FileName = "wsl",
+                Arguments = $"-d {instanceName} --exec sleep infinity",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden
+            };
+
+            var keepAliveProcess = Process.Start(processStartInfo);
+            if (keepAliveProcess == null)
+            {
+                throw new InvalidOperationException($"Failed to start keep-alive process for instance '{instanceName}'");
+            }
+
+            _logger.LogDebug("Keep-alive process started with PID {ProcessId}", keepAliveProcess.Id);
+
+            // Wait for instance to fully start
+            await Task.Delay(1500, cancellationToken);
+
+            // Verify instance is running
+            var instances = await GetInstancesAsync(cancellationToken);
+            var instance = instances.FirstOrDefault(i => i.Name.Equals(instanceName, StringComparison.OrdinalIgnoreCase));
+
+            if (instance == null || instance.State != "Running")
+            {
+                _logger.LogWarning("Instance '{InstanceName}' is not in running state after start attempt", instanceName);
+                return false;
+            }
+
+            _logger.LogInformation("WSL instance '{InstanceName}' started successfully with keep-alive process", instanceName);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to start WSL instance '{InstanceName}' with keep-alive", instanceName);
             return false;
         }
     }
@@ -479,8 +614,9 @@ public partial class WslManagerService : IWslManagerService
             _logger.LogWarning("Module execution failed for StopInstanceAsync, falling back to inline script");
             var escapedName = EscapePowerShellString(instanceName);
             var script = 
-                $"$result = (wsl --terminate {escapedName} 2>&1) -replace \"`0\", ''; " +
-                $"if ($LASTEXITCODE -ne 0) {{ throw \"Failed to stop WSL instance: $result\" }}; " +
+                $"$result = wsl --terminate {escapedName} 2>&1; " +
+                $"$exitCode = $LASTEXITCODE; " +
+                $"if ($exitCode -ne 0) {{ throw \"Failed to stop WSL instance: $result\" }}; " +
                 "'success'";
 
             await _powerShellService.ExecuteScriptAsync(script, cancellationToken);
@@ -526,8 +662,9 @@ public partial class WslManagerService : IWslManagerService
             _logger.LogWarning("Module execution failed for RemoveInstanceAsync, falling back to inline script");
             var escapedName = EscapePowerShellString(instanceName);
             var script = 
-                $"$result = (wsl --unregister {escapedName} 2>&1) -replace \"`0\", ''; " +
-                $"if ($LASTEXITCODE -ne 0) {{ throw \"Failed to remove WSL instance: $result\" }}; " +
+                $"$result = wsl --unregister {escapedName} 2>&1; " +
+                $"$exitCode = $LASTEXITCODE; " +
+                $"if ($exitCode -ne 0) {{ throw \"Failed to remove WSL instance: $result\" }}; " +
                 "'success'";
 
             await _powerShellService.ExecuteScriptAsync(script, cancellationToken);
@@ -596,14 +733,17 @@ public partial class WslManagerService : IWslManagerService
             // Export, unregister, and import to new location
             // Note: WSL outputs UTF-16 text, so we clean null characters
             var script = 
-                $"$result = (wsl --export {escapedName} {tempExportPath} 2>&1) -replace \"`0\", ''; " +
-                $"if ($LASTEXITCODE -ne 0) {{ throw \"Export failed: $result\" }}; " +
+                $"$result = wsl --export {escapedName} {tempExportPath} 2>&1; " +
+                $"$exitCode = $LASTEXITCODE; " +
+                $"if ($exitCode -ne 0) {{ throw \"Export failed: $result\" }}; " +
                 $"if (-not (Test-Path {escapedPath})) {{ New-Item -ItemType Directory -Path {escapedPath} -Force | Out-Null }}; " +
-                $"$result = (wsl --unregister {escapedName} 2>&1) -replace \"`0\", ''; " +
-                $"if ($LASTEXITCODE -ne 0) {{ Remove-Item {tempExportPath} -Force -ErrorAction SilentlyContinue; throw \"Unregister failed: $result\" }}; " +
-                $"$result = (wsl --import {escapedName} {escapedPath} {tempExportPath} 2>&1) -replace \"`0\", ''; " +
+                $"$result = wsl --unregister {escapedName} 2>&1; " +
+                $"$exitCode = $LASTEXITCODE; " +
+                $"if ($exitCode -ne 0) {{ Remove-Item {tempExportPath} -Force -ErrorAction SilentlyContinue; throw \"Unregister failed: $result\" }}; " +
+                $"$result = wsl --import {escapedName} {escapedPath} {tempExportPath} 2>&1; " +
+                $"$exitCode = $LASTEXITCODE; " +
                 $"Remove-Item {tempExportPath} -Force -ErrorAction SilentlyContinue; " +
-                $"if ($LASTEXITCODE -ne 0) {{ throw \"Import failed: $result\" }}; " +
+                $"if ($exitCode -ne 0) {{ throw \"Import failed: $result\" }}; " +
                 "'success'";
 
             progress?.Report(50);
@@ -666,13 +806,16 @@ public partial class WslManagerService : IWslManagerService
                 "$installPath = $null; " +
                 $"Get-ChildItem -Path $lxssPath | ForEach-Object {{ $props = Get-ItemProperty -Path $_.PSPath; if ($props.DistributionName -eq {escapedOldName}) {{ $installPath = $props.BasePath }} }}; " +
                 $"if (-not $installPath) {{ throw 'Instance not found: {oldName}' }}; " +
-                $"$result = (wsl --export {escapedOldName} {tempExportPath} 2>&1) -replace \"`0\", ''; " +
-                $"if ($LASTEXITCODE -ne 0) {{ throw \"Export failed: $result\" }}; " +
-                $"$result = (wsl --unregister {escapedOldName} 2>&1) -replace \"`0\", ''; " +
-                $"if ($LASTEXITCODE -ne 0) {{ Remove-Item {tempExportPath} -Force -ErrorAction SilentlyContinue; throw \"Unregister failed: $result\" }}; " +
-                $"$result = (wsl --import {escapedNewName} $installPath {tempExportPath} 2>&1) -replace \"`0\", ''; " +
+                $"$result = wsl --export {escapedOldName} {tempExportPath} 2>&1; " +
+                $"$exitCode = $LASTEXITCODE; " +
+                $"if ($exitCode -ne 0) {{ throw \"Export failed: $result\" }}; " +
+                $"$result = wsl --unregister {escapedOldName} 2>&1; " +
+                $"$exitCode = $LASTEXITCODE; " +
+                $"if ($exitCode -ne 0) {{ Remove-Item {tempExportPath} -Force -ErrorAction SilentlyContinue; throw \"Unregister failed: $result\" }}; " +
+                $"$result = wsl --import {escapedNewName} $installPath {tempExportPath} 2>&1; " +
+                $"$exitCode = $LASTEXITCODE; " +
                 $"Remove-Item {tempExportPath} -Force -ErrorAction SilentlyContinue; " +
-                $"if ($LASTEXITCODE -ne 0) {{ throw \"Import failed: $result\" }}; " +
+                $"if ($exitCode -ne 0) {{ throw \"Import failed: $result\" }}; " +
                 "'success'";
 
             await _powerShellService.ExecuteScriptAsync(script, cancellationToken);
@@ -725,11 +868,16 @@ public partial class WslManagerService : IWslManagerService
             // Fallback to inline script if module failed
             _logger.LogWarning("Module execution failed for SetCredentialsAsync, falling back to inline script");
             var escapedName = EscapePowerShellString(instanceName);
+            var escapedUsername = EscapePowerShellString(username);
+            var escapedPassword = EscapePowerShellString(password);
             
             var script = 
-                $"wsl --distribution {escapedName} -- bash -c \"id -u {username} 2>/dev/null || useradd -m -s /bin/bash {username}\"; " +
-                $"wsl --distribution {escapedName} -- bash -c \"echo '{username}:{password}' | chpasswd\"; " +
-                $"wsl --distribution {escapedName} -- bash -c \"echo -e '[user]\\ndefault={username}' > /etc/wsl.conf\"; " +
+                $"wsl --distribution {escapedName} -- bash -c \"id -u {escapedUsername} 2>/dev/null || useradd -m -s /bin/bash {escapedUsername}\"; " +
+                $"if ($LASTEXITCODE -ne 0) {{ throw \"Failed to create user\" }}; " +
+                $"wsl --distribution {escapedName} -- bash -c \"echo {escapedPassword} | chpasswd\"; " +
+                $"if ($LASTEXITCODE -ne 0) {{ throw \"Failed to set password\" }}; " +
+                $"wsl --distribution {escapedName} -- bash -c \"echo -e '[user]\\ndefault={escapedUsername}' > /etc/wsl.conf\"; " +
+                $"if ($LASTEXITCODE -ne 0) {{ throw \"Failed to configure default user\" }}; " +
                 "'success'";
 
             await _powerShellService.ExecuteScriptAsync(script, cancellationToken);
@@ -897,32 +1045,79 @@ public partial class WslManagerService : IWslManagerService
         {
             _logger.LogInformation("Force refreshing instance {InstanceName}", instanceName);
 
-            // Call PowerShell module with ForceUpdate and filter by instance name
-            var moduleResult = await _powerShellService.ExecuteModuleCmdletAsync(
+            // First, get current state to check if instance is running
+            var currentInstancesResult = await _powerShellService.ExecuteModuleCmdletAsync(
                 "Get-DistroNexusInstance",
-                parameters: new Dictionary<string, object> { { "Name", instanceName } },
+                parameters: new Dictionary<string, object> 
+                { 
+                    { "Name", instanceName },
+                    { "SkipDiskSize", true },
+                    { "ForceUpdate", true }
+                },
                 options: new ModuleCallOptions
                 {
-                    TimeoutSeconds = NormalOperationTimeoutSeconds,
+                    TimeoutSeconds = QuickOperationTimeoutSeconds,
                     ParseAsJson = true,
-                    UseModuleFallback = _useModuleFallback,
-                    ForceRefresh = true
+                    UseModuleFallback = _useModuleFallback
                 },
                 cancellationToken: cancellationToken);
 
-            if (moduleResult.Success && moduleResult.ParsedObjects != null && moduleResult.ParsedObjects.Count > 0)
+            if (!currentInstancesResult.Success || currentInstancesResult.ParsedObjects == null || currentInstancesResult.ParsedObjects.Count == 0)
             {
-                var instances = ParseInstancesFromModule(moduleResult.ParsedObjects);
-                if (instances.Count > 0)
-                {
-                    var refreshedInstance = instances.FirstOrDefault();
-                    _logger.LogInformation("Force refresh completed for {InstanceName}, State: {State}", instanceName, refreshedInstance?.State);
-                    return refreshedInstance;
-                }
+                _logger.LogWarning("Force refresh failed: instance {InstanceName} not found", instanceName);
+                return null;
             }
 
-            _logger.LogWarning("Force refresh failed for instance {InstanceName}: module returned no results", instanceName);
-            return null;
+            var currentInstances = ParseInstancesFromModule(currentInstancesResult.ParsedObjects);
+            var currentInstance = currentInstances.FirstOrDefault();
+            
+            if (currentInstance == null)
+            {
+                _logger.LogWarning("Force refresh failed: could not parse instance {InstanceName}", instanceName);
+                return null;
+            }
+
+            // Only calculate disk size if instance is currently running
+            // This prevents auto-starting stopped instances when accessing VHDX files
+            if (currentInstance.State == "Running")
+            {
+                _logger.LogInformation("Instance {InstanceName} is running, calculating disk size", instanceName);
+                
+                var moduleResult = await _powerShellService.ExecuteModuleCmdletAsync(
+                    "Get-DistroNexusInstance",
+                    parameters: new Dictionary<string, object> 
+                    { 
+                        { "Name", instanceName },
+                        { "ForceUpdate", true }
+                        // Do NOT use SkipDiskSize - we want to calculate it
+                    },
+                    options: new ModuleCallOptions
+                    {
+                        TimeoutSeconds = NormalOperationTimeoutSeconds,
+                        ParseAsJson = true,
+                        UseModuleFallback = _useModuleFallback
+                    },
+                    cancellationToken: cancellationToken);
+
+                if (moduleResult.Success && moduleResult.ParsedObjects != null && moduleResult.ParsedObjects.Count > 0)
+                {
+                    var instances = ParseInstancesFromModule(moduleResult.ParsedObjects);
+                    if (instances.Count > 0)
+                    {
+                        var refreshedInstance = instances.FirstOrDefault();
+                        _logger.LogInformation("Force refresh completed for {InstanceName}, DiskSize: {Size} bytes", instanceName, refreshedInstance?.Size);
+                        return refreshedInstance;
+                    }
+                }
+            }
+            else
+            {
+                _logger.LogInformation("Instance {InstanceName} is {State}, skipping disk size calculation to prevent auto-start", 
+                    instanceName, currentInstance.State);
+            }
+
+            // Return current instance data (without updated disk size if stopped)
+            return currentInstance;
         }
         catch (Exception ex)
         {

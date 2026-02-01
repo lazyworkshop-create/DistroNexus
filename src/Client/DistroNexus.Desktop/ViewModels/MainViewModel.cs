@@ -81,9 +81,6 @@ public partial class MainViewModel : ObservableObject
         // NOTE: LoadUserPreferencesAsync is now called explicitly from MainWindow.OnLoaded
         // to avoid async operations in constructor which can block DI resolution
 
-        // Start auto-refresh timer
-        StartAutoRefresh();
-
         // Update active downloads count initially
         UpdateActiveDownloadsCount();
     }
@@ -96,16 +93,14 @@ public partial class MainViewModel : ObservableObject
         await LoadUserPreferencesAsync();
     }
 
-    private System.Timers.Timer? _refreshTimer;
-
     /// <summary>
     /// Loads user preferences from settings.
     /// </summary>
-    private async Task LoadUserPreferencesAsync()
+    private Task LoadUserPreferencesAsync()
     {
         try
         {
-            var settings = await _settingsService.LoadSettingsAsync();
+            var settings = _settingsService.LoadSettings();
             CurrentTheme = settings.Theme ?? "Dark";
             CurrentLanguage = settings.Language ?? "en-US";
 
@@ -116,51 +111,8 @@ public partial class MainViewModel : ObservableObject
         {
             _logger.LogWarning(ex, "Failed to load user preferences, using defaults");
         }
-    }
 
-    private void StartAutoRefresh()
-    {
-        _refreshTimer = new System.Timers.Timer(10000); // Refresh every 10 seconds
-        _refreshTimer.Elapsed += async (s, e) =>
-        {
-            if (IsOnDashboard && !IsLoading)
-            {
-                await RefreshInstanceStatesAsync();
-            }
-        };
-        _refreshTimer.Start();
-    }
-
-    /// <summary>
-    /// Refreshes only the instance states without full reload.
-    /// Only updates running instances to avoid auto-starting stopped instances.
-    /// </summary>
-    private async Task RefreshInstanceStatesAsync()
-    {
-        try
-        {
-            var instances = await _wslManager.GetInstancesAsync();
-            
-            await Application.Current.Dispatcher.InvokeAsync(() =>
-            {
-                foreach (var currentInstance in Instances)
-                {
-                    var updated = instances.FirstOrDefault(i => i.Name == currentInstance.Name);
-                    if (updated != null && updated.State != currentInstance.State)
-                    {
-                        // Only update running instances to avoid unnecessary refresh
-                        if (updated.IsRunning)
-                        {
-                            currentInstance.UpdateState(updated.State);
-                        }
-                    }
-                }
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to refresh instance states");
-        }
+        return Task.CompletedTask;
     }
 
     [RelayCommand]
@@ -205,6 +157,38 @@ public partial class MainViewModel : ObservableObject
     private async Task RefreshAsync()
     {
         await LoadInstancesAsync();
+        
+        // Load disk size only for running instances after refresh
+        try
+        {
+            var runningInstances = Instances.Where(i => i.IsRunning).ToList();
+            if (runningInstances.Any())
+            {
+                _logger.LogInformation("Loading disk size for {Count} running instance(s)", runningInstances.Count);
+                
+                // Use ForceRefreshInstanceAsync for each running instance
+                // This will calculate disk size and update configuration
+                foreach (var instance in runningInstances)
+                {
+                    try
+                    {
+                        var refreshedInstance = await _wslManager.ForceRefreshInstanceAsync(instance.Name);
+                        if (refreshedInstance != null)
+                        {
+                            instance.UpdateDiskSize(refreshedInstance.Size);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to refresh instance {Name}", instance.Name);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to load disk sizes for running instances");
+        }
     }
 
     [RelayCommand]
@@ -355,9 +339,9 @@ public partial class MainViewModel : ObservableObject
             app.ApplyThemeFromSettings(CurrentTheme);
 
             // Save theme preference
-            var settings = _settingsService.LoadSettingsAsync().Result;
+            var settings = _settingsService.LoadSettings();
             settings.Theme = CurrentTheme;
-            _ = _settingsService.SaveSettingsAsync(settings);
+            _settingsService.SaveSettings(settings);
 
             StatusMessage = $"Theme changed to {CurrentTheme}";
             _logger.LogInformation("Theme changed to {Theme}", CurrentTheme);
@@ -383,11 +367,11 @@ public partial class MainViewModel : ObservableObject
             CurrentLanguage = CurrentLanguage == "en-US" ? "zh-CN" : "en-US";
 
             // Save language preference
-            var settings = _settingsService.LoadSettingsAsync().Result;
+            var settings = _settingsService.LoadSettings();
             settings.Language = CurrentLanguage;
-            _ = _settingsService.SaveSettingsAsync(settings);
+            _settingsService.SaveSettings(settings);
 
-            StatusMessage = CurrentLanguage == "en-US" 
+            StatusMessage = CurrentLanguage == "en-US"
                 ? "Language changed to English" 
                 : "语言已切换为中文";
 
@@ -405,6 +389,64 @@ public partial class MainViewModel : ObservableObject
         {
             _logger.LogError(ex, "Failed to toggle language");
             StatusMessage = "Failed to change language";
+        }
+    }
+
+    /// <summary>
+    /// Shows PowerShell service diagnostic information.
+    /// </summary>
+    [RelayCommand]
+    private async Task ShowDiagnosticsAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Generating PowerShell diagnostics");
+            StatusMessage = "Generating diagnostics...";
+
+            var powerShellService = _serviceProvider.GetService(typeof(IPowerShellService)) as IPowerShellService;
+            if (powerShellService == null)
+            {
+                MessageBox.Show("PowerShell service not available",
+                    "Diagnostics Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            var diagnostics = await powerShellService.GetDiagnosticInfoAsync();
+
+            _logger.LogInformation("Diagnostics generated successfully");
+            _logger.LogInformation(diagnostics);
+
+            // Show in a message box
+            var window = new Window
+            {
+                Title = "PowerShell Diagnostics",
+                Width = 800,
+                Height = 600,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Owner = Application.Current.MainWindow,
+                Content = new System.Windows.Controls.ScrollViewer
+                {
+                    Content = new System.Windows.Controls.TextBox
+                    {
+                        Text = diagnostics,
+                        IsReadOnly = true,
+                        TextWrapping = TextWrapping.Wrap,
+                        VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto,
+                        FontFamily = new System.Windows.Media.FontFamily("Consolas"),
+                        Padding = new Thickness(10)
+                    }
+                }
+            };
+            window.ShowDialog();
+
+            StatusMessage = "Ready";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to generate diagnostics");
+            MessageBox.Show($"Failed to generate diagnostics: {ex.Message}",
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            StatusMessage = "Failed to generate diagnostics";
         }
     }
 }
@@ -488,7 +530,7 @@ public partial class WslInstanceViewModel : ObservableObject
     /// Forces a complete refresh of this instance, starting it and loading full information.
     /// Shows a confirmation dialog before proceeding.
     /// </summary>
-    [AsyncRelayCommand]
+    [RelayCommand]
     private async Task ForceRefreshAsync()
     {
         if (IsForceRefreshing)
@@ -550,7 +592,7 @@ public partial class WslInstanceViewModel : ObservableObject
     /// Only works reliably when the instance is running to avoid auto-starting stopped instances.
     /// </summary>
     [RelayCommand]
-    private async Task LoadDiskSizeAsync()
+    public async Task LoadDiskSizeAsync()
     {
         if (IsLoadingDiskSize || DiskSize > 0)
             return;
@@ -593,20 +635,39 @@ public partial class WslInstanceViewModel : ObservableObject
         OnPropertyChanged(nameof(DiskSizeDisplay));
     }
 
+    /// <summary>
+    /// Updates the disk size and notifies property changes.
+    /// </summary>
+    /// <param name="newSize">The new disk size in bytes.</param>
+    public void UpdateDiskSize(long newSize)
+    {
+        Instance.Size = newSize;
+        OnPropertyChanged(nameof(Instance));
+        OnPropertyChanged(nameof(DiskSize));
+        OnPropertyChanged(nameof(DiskSizeDisplay));
+    }
+
     [RelayCommand]
     private async Task StartAsync()
     {
         try
         {
-            _logger.LogInformation("Starting instance {Name}", Name);
+            _logger.LogInformation("Starting instance {Name} with keep-alive task", Name);
             
-            var success = await _wslManager.StartInstanceAsync(Name);
+            // Start instance with a background keep-alive process
+            var success = await _wslManager.StartInstanceWithKeepAliveAsync(Name);
             
             if (success)
             {
                 Instance.State = "Running";
                 OnPropertyChanged(nameof(State));
                 OnPropertyChanged(nameof(IsRunning));
+                _logger.LogInformation("Instance {Name} started with keep-alive task", Name);
+            }
+            else
+            {
+                MessageBox.Show($"Failed to start instance '{Name}'", 
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
         catch (Exception ex)
@@ -622,6 +683,18 @@ public partial class WslInstanceViewModel : ObservableObject
     {
         try
         {
+            // Show custom confirmation dialog
+            var confirmed = DistroNexus.Desktop.Views.ConfirmDialog.Show(
+                "Stop Instance",
+                $"Are you sure you want to stop '{Name}'?\n\nAll running processes in this instance will be terminated.",
+                "Stop");
+
+            if (!confirmed)
+            {
+                _logger.LogInformation("User canceled stop operation for instance {Name}", Name);
+                return;
+            }
+
             _logger.LogInformation("Stopping instance {Name}", Name);
             
             var success = await _wslManager.StopInstanceAsync(Name);
@@ -631,6 +704,11 @@ public partial class WslInstanceViewModel : ObservableObject
                 Instance.State = "Stopped";
                 OnPropertyChanged(nameof(State));
                 OnPropertyChanged(nameof(IsRunning));
+            }
+            else
+            {
+                MessageBox.Show($"Failed to stop instance '{Name}'", 
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
         catch (Exception ex)
@@ -644,13 +722,13 @@ public partial class WslInstanceViewModel : ObservableObject
     [RelayCommand]
     private async Task RemoveAsync()
     {
-        var result = MessageBox.Show(
-            $"Are you sure you want to remove instance '{Name}'? This action cannot be undone.",
-            "Confirm Remove",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
+        // Use custom confirmation dialog
+        var confirmed = DistroNexus.Desktop.Views.ConfirmDialog.Show(
+            "Remove Instance",
+            $"Are you sure you want to remove '{Name}'?\n\nThis action cannot be undone. All data in this instance will be permanently deleted.",
+            "Remove");
 
-        if (result != MessageBoxResult.Yes)
+        if (!confirmed)
             return;
 
         try

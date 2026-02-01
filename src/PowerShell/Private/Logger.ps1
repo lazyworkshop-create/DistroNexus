@@ -16,25 +16,9 @@ function Initialize-DistroNexusLogger {
         [string]$LogFileName = 'distronexus.log'
     )
     
-    $localLogDir = Join-Path $script:ProjectRoot "logs"
-    
-    # Try local logs folder (portable mode)
-    try {
-        if (-not (Test-Path $localLogDir)) {
-            New-Item -ItemType Directory -Path $localLogDir -ErrorAction Stop | Out-Null
-        }
-        
-        # Test write permission
-        $testFile = Join-Path $localLogDir "write_test.tmp"
-        New-Item -Path $testFile -ItemType File -Force -ErrorAction Stop | Out-Null
-        Remove-Item $testFile -Force
-        
-        $script:LogDir = $localLogDir
-    }
-    catch {
-        # Fallback to LocalAppData
-        $script:LogDir = Join-Path $env:LOCALAPPDATA "DistroNexus\logs"
-    }
+    # Standard Mode: Always use Roaming AppData for logs
+    $script:LogDir = Join-Path $env:APPDATA "DistroNexus\logs"
+    Write-Verbose "Logging to: $script:LogDir"
     
     if (-not (Test-Path $script:LogDir)) {
         New-Item -ItemType Directory -Path $script:LogDir -Force | Out-Null

@@ -140,7 +140,7 @@ public partial class InstallWizardViewModel : ObservableObject
             _logger.LogInformation("Initializing install wizard");
 
             // Load default settings
-            var settings = await _settingsService.LoadSettingsAsync();
+            var settings = _settingsService.LoadSettings();
             InstallPath = settings.DefaultInstallPath;
             WslVersion = settings.DefaultWslVersion;
             Username = settings.DefaultUsername;

@@ -113,15 +113,15 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                                                 <TextBlock Text="{Binding State}" 
                                                           FontWeight="SemiBold"
                                                           Foreground="{Binding State, Converter={StaticResource InstanceStateToColorConverter}}"/>
-                                                <TextBlock Text=" | " 
-                                                          Margin="10,0"
-                                                          Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
-                                                <TextBlock Text="{Binding InstallPath}" 
-                                                          Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
                                                 <TextBlock Text=" | Disk: " 
                                                           Margin="10,0,0,0"
                                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
                                                 <TextBlock Text="{Binding DiskSizeDisplay}" 
+                                                          Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+                                                <TextBlock Text=" | " 
+                                                          Margin="10,0"
+                                                          Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+                                                <TextBlock Text="{Binding InstallPath}" 
                                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
                                             </StackPanel>
                                         </StackPanel>

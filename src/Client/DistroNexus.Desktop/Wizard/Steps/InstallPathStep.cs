@@ -54,7 +54,7 @@ public partial class InstallPathStep : WizardStepBase
         // Load default path from settings if not already set
         if (Context != null && string.IsNullOrEmpty(Context.InstallPath))
         {
-            var settings = await _settingsService.LoadSettingsAsync();
+            var settings = _settingsService.LoadSettings();
             Context.InstallPath = settings.DefaultInstallPath;
         }
 
@@ -404,7 +404,7 @@ public partial class InstallPathStep : WizardStepBase
             return;
 
         // Load default path from settings
-        var settings = await _settingsService.LoadSettingsAsync();
+        var settings = _settingsService.LoadSettings();
         Context.InstallPath = settings.DefaultInstallPath;
 
         // Generate a unique instance name based on the selected distribution

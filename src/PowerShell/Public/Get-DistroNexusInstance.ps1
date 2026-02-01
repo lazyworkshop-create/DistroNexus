@@ -57,25 +57,35 @@ function Get-DistroNexusInstance {
         [switch]$IncludeRelease,
         
         [Parameter(Mandatory = $false)]
-        [switch]$IncludeUser
+        [switch]$IncludeUser,
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$SkipDiskSize
     )
     
     begin {
         Initialize-DistroNexusLogger
         
-        # Try to use cache if ForceUpdate is not specified
-        if (-not $ForceUpdate -and -not $IncludeRelease -and -not $IncludeUser) {
-            $cachedInstances = Get-InstanceCache
-            if ($cachedInstances) {
-                Write-DistroNexusLog "Using cached instance data" -FileOnly
-                
-                # Apply name filter if specified
-                if ($Name) {
-                    $cachedInstances = $cachedInstances | Where-Object { $_.Name -like $Name }
-                }
-                
-                return $cachedInstances
+        # Load stored configuration for metadata (disk size, install time, etc.)
+        $storedConfig = Get-InstanceCache
+        $configMap = @{}
+        if ($storedConfig) {
+            foreach ($instance in $storedConfig) {
+                $configMap[$instance.Name] = $instance
             }
+            Write-Verbose "Loaded configuration for $($storedConfig.Count) instance(s)"
+        }
+        
+        # Use cache only if ForceUpdate is not specified and additional data not requested
+        if (-not $ForceUpdate -and -not $IncludeRelease -and -not $IncludeUser -and $storedConfig) {
+            Write-DistroNexusLog "Using stored instance configuration" -FileOnly
+            
+            # Apply name filter if specified
+            if ($Name) {
+                $storedConfig = $storedConfig | Where-Object { $_.Name -like $Name }
+            }
+            
+            return $storedConfig
         }
         
         Write-DistroNexusLog "Scanning WSL instances..." -FileOnly
@@ -129,19 +139,50 @@ function Get-DistroNexusInstance {
                 
                 $basePath = $props.BasePath
                 
-                # Get filesystem info
+                # Normalize path by removing long path prefix which breaks Join-Path
+                if ($basePath -and $basePath.StartsWith("\\?\")) {
+                    $basePath = $basePath.Substring(4)
+                }
+                
+                # Get metadata from stored configuration or filesystem
                 $installTime = $null
                 $diskSize = 0
+                
+                # First, try to get data from stored configuration
+                if ($configMap.ContainsKey($distroName)) {
+                    $stored = $configMap[$distroName]
+                    if ($stored.InstallTime) {
+                        $installTime = $stored.InstallTime
+                    }
+                    if ($stored.DiskSize -gt 0) {
+                        $diskSize = $stored.DiskSize
+                    }
+                }
+                
                 if ($basePath -and (Test-Path $basePath)) {
                     try {
                         $dirInfo = Get-Item $basePath
-                        $installTime = $dirInfo.CreationTime
                         
-                        # Calculate disk usage (VHDX file size)
-                        $vhdxPath = Join-Path $basePath "ext4.vhdx"
-                        if (Test-Path $vhdxPath) {
-                            $vhdxInfo = Get-Item $vhdxPath
-                            $diskSize = $vhdxInfo.Length
+                        # Update install time if not already set from config
+                        if (-not $installTime) {
+                            $installTime = $dirInfo.CreationTime
+                        }
+                        
+                        # Calculate disk usage only if SkipDiskSize is not set
+                        # WARNING: Accessing VHDX file may auto-start stopped instances
+                        if (-not $SkipDiskSize) {
+                            $vhdxPath = Join-Path $basePath "ext4.vhdx"
+                            if (Test-Path $vhdxPath) {
+                                $vhdxInfo = Get-Item $vhdxPath
+                                $diskSize = $vhdxInfo.Length
+                            } else {
+                                # Fallback: try to find any vhdx file in the directory
+                                $anyVhdx = Get-ChildItem -Path $basePath -Filter "*.vhdx" -File -ErrorAction SilentlyContinue | Sort-Object Length -Descending | Select-Object -First 1
+                                if ($anyVhdx) {
+                                    $diskSize = $anyVhdx.Length
+                                    Write-Verbose "Found VHDX at $($anyVhdx.FullName) for $distroName"
+                                }
+                            }
                         }
                     }
                     catch {
@@ -217,9 +258,42 @@ function Get-DistroNexusInstance {
         
         Write-DistroNexusLog "Found $($instances.Count) WSL instance(s)" -FileOnly
         
-        # Update cache if not using IncludeRelease/IncludeUser (those require instance startup)
+        # Clean up orphaned instances in configuration (ONLY when doing full scan)
+        if (-not $Name -and $storedConfig -and $instances.Count -ge 0) {
+            $currentNames = $instances | ForEach-Object { $_.Name }
+            $orphaned = $storedConfig | Where-Object { $currentNames -notcontains $_.Name }
+            if ($orphaned) {
+                Write-Verbose "Removing $($orphaned.Count) orphaned instance(s) from configuration"
+                foreach ($orphan in $orphaned) {
+                    Write-DistroNexusLog "Removed orphaned instance from config: $($orphan.Name)" -FileOnly
+                }
+            }
+        }
+        
+        # Update configuration if not using IncludeRelease/IncludeUser (those require instance startup)
         if (-not $IncludeRelease -and -not $IncludeUser -and $instances.Count -gt 0) {
-            Set-InstanceCache -Instances $instances
+            if ($Name) {
+                # Partial update: merge with existing configuration
+                if (-not $storedConfig) { $storedConfig = @() }
+                
+                # Create a dictionary for easier merging
+                $mergedConfig = @{}
+                foreach ($stored in $storedConfig) {
+                    $mergedConfig[$stored.Name] = $stored
+                }
+                
+                # Update with new instances
+                foreach ($new in $instances) {
+                    $mergedConfig[$new.Name] = $new
+                }
+                
+                $finalList = $mergedConfig.Values | Sort-Object Name
+                Set-InstanceCache -Instances $finalList
+            }
+            else {
+                # Full update: replace configuration
+                Set-InstanceCache -Instances $instances
+            }
         }
         
         return $instances

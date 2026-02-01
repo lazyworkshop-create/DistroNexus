@@ -36,8 +36,8 @@ public class DownloadTaskManagerTests : IDisposable
             MaxRetryAttempts = 3
         };
 
-        _mockSettingsService.Setup(x => x.LoadSettingsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(settings);
+        _mockSettingsService.Setup(x => x.LoadSettings())
+            .Returns(settings);
 
         _downloadTaskManager = new DownloadTaskManager(
             _mockDownloadService.Object,

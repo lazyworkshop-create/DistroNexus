@@ -29,7 +29,7 @@ public class TerminalService : ITerminalService
         try
         {
             // Load settings to get the default terminal start path
-            var settings = await _settingsService.LoadSettingsAsync();
+            var settings = _settingsService.LoadSettings();
             var startPath = settings.TerminalStartPath ?? "~";
             
             var escapedName = EscapePowerShellString(instanceName);

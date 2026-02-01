@@ -5,6 +5,7 @@ using DistroNexus.Core.Models;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using System.Threading;
 using System.Timers;
 using System.Windows;
@@ -107,6 +108,9 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private ObservableCollection<CachedPackageInfo> _cachedPackages = [];
 
+    [ObservableProperty]
+    private string? _powerShellModulePath;
+
     public SettingsViewModel(
         ISettingsService settingsService, 
         ICatalogService catalogService,
@@ -129,7 +133,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             _logger.LogInformation("Loading settings");
 
-            var settings = await _settingsService.LoadSettingsAsync();
+            var settings = _settingsService.LoadSettings();
 
             DefaultInstallPath = settings.DefaultInstallPath;
             PackageCachePath = settings.PackageCachePath;
@@ -148,6 +152,7 @@ public partial class SettingsViewModel : ObservableObject
             MaxRetryAttempts = settings.MaxRetryAttempts;
             AutoSaveEnabled = settings.AutoSaveEnabled;
             AutoSaveInterval = settings.AutoSaveInterval;
+            PowerShellModulePath = settings.PowerShellModulePath;
 
             // Load available distributions for default selection
             await LoadDistributionsAsync();
@@ -209,10 +214,11 @@ public partial class SettingsViewModel : ObservableObject
                 AutoRetryDownloads = AutoRetryDownloads,
                 MaxRetryAttempts = MaxRetryAttempts,
                 AutoSaveEnabled = AutoSaveEnabled,
-                AutoSaveInterval = AutoSaveInterval
+                AutoSaveInterval = AutoSaveInterval,
+                PowerShellModulePath = PowerShellModulePath
             };
 
-            await _settingsService.SaveSettingsAsync(settings);
+            _settingsService.SaveSettings(settings);
 
             // Apply theme immediately
             ApplyTheme(Theme);
@@ -247,7 +253,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             _logger.LogInformation("Resetting settings to defaults");
 
-            await _settingsService.ResetSettingsAsync();
+            _settingsService.ResetSettings();
             await LoadSettingsAsync();
 
             MessageBox.Show("Settings reset to defaults", 
@@ -348,6 +354,49 @@ public partial class SettingsViewModel : ObservableObject
             TerminalStartPath = dialog.FolderName;
             IsDirty = true;
         }
+    }
+
+    [RelayCommand]
+    private void BrowsePowerShellModulePath()
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = "Select PowerShell Module Directory (containing DistroNexus.psd1)",
+            InitialDirectory = !string.IsNullOrEmpty(PowerShellModulePath) && Directory.Exists(PowerShellModulePath)
+                ? PowerShellModulePath
+                : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            var selectedPath = dialog.FolderName;
+
+            // Validate that the directory contains DistroNexus.psd1
+            var manifestPath = Path.Combine(selectedPath, "DistroNexus.psd1");
+            if (File.Exists(manifestPath))
+            {
+                PowerShellModulePath = selectedPath;
+                IsDirty = true;
+                _logger.LogInformation("PowerShell module path set to: {Path}", selectedPath);
+            }
+            else
+            {
+                MessageBox.Show(
+                    $"The selected directory does not contain 'DistroNexus.psd1'.\n\nPlease select the directory that contains the PowerShell module manifest file.",
+                    "Invalid Module Path",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                _logger.LogWarning("Invalid PowerShell module path selected: {Path}", selectedPath);
+            }
+        }
+    }
+
+    [RelayCommand]
+    private void ClearPowerShellModulePath()
+    {
+        PowerShellModulePath = null;
+        IsDirty = true;
+        _logger.LogInformation("PowerShell module path cleared. Will use auto-detection.");
     }
 
     partial void OnDefaultInstallPathChanged(string value) => IsDirty = true;
@@ -582,11 +631,11 @@ public partial class SettingsViewModel : ObservableObject
                     AutoSaveInterval = AutoSaveInterval
                 };
 
-                await _settingsService.SaveSettingsAsync(settings);
+                _settingsService.SaveSettings(settings);
 
                 IsDirty = false;
                 AutoSaveStatus = $"Last auto-saved: {DateTime.Now:HH:mm:ss}";
-                
+
                 _logger.LogInformation("Auto-save completed successfully");
             }
             catch (Exception ex)

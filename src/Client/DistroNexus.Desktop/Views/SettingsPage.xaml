@@ -292,6 +292,62 @@
                     </StackPanel>
                 </ui:Card>
 
+                <!-- Advanced Settings -->
+                <ui:Card Margin="0,0,0,15">
+                    <StackPanel>
+                        <TextBlock Text="Advanced Settings" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
+
+                        <TextBlock Text="PowerShell Module Path (Optional)" Margin="0,0,0,5"/>
+                        <TextBlock Text="Leave empty to use automatic detection. Set this if the module is in a custom location." 
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   FontSize="11"
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,0,5"/>
+                        <Grid Margin="0,0,0,15">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBox Grid.Column="0" 
+                                       Text="{Binding PowerShellModulePath, UpdateSourceTrigger=PropertyChanged}"
+                                       PlaceholderText="Auto-detect module path"
+                                       Margin="0,0,10,0"/>
+                            <ui:Button Grid.Column="1" 
+                                      Content="Browse..."
+                                      Icon="{ui:SymbolIcon Symbol=Folder20}"
+                                      Command="{Binding BrowsePowerShellModulePathCommand}"
+                                      Margin="0,0,10,0"/>
+                            <ui:Button Grid.Column="2" 
+                                      Content="Clear"
+                                      Icon="{ui:SymbolIcon Symbol=Delete20}"
+                                      Command="{Binding ClearPowerShellModulePathCommand}"
+                                      Appearance="Secondary"/>
+                        </Grid>
+
+                        <ui:InfoBar Title="Module Path Configuration" 
+                                    Severity="Informational"
+                                    IsOpen="True"
+                                    IsClosable="False">
+                            <ui:InfoBar.Content>
+                                <TextBlock TextWrapping="Wrap">
+                                    <Run Text="The PowerShell module is required for DistroNexus to manage WSL instances."/>
+                                    <LineBreak/>
+                                    <Run Text="If not specified, the application will search in these locations:"/>
+                                    <LineBreak/>
+                                    <Run Text="• Environment variable: DISTRONEXUS_MODULE_PATH"/>
+                                    <LineBreak/>
+                                    <Run Text="• Development: src/PowerShell (relative to application)"/>
+                                    <LineBreak/>
+                                    <Run Text="• Installed: %ProgramFiles%\DistroNexus\PowerShell"/>
+                                    <LineBreak/>
+                                    <Run Text="• User modules: %USERPROFILE%\Documents\PowerShell\Modules\DistroNexus"/>
+                                </TextBlock>
+                            </ui:InfoBar.Content>
+                        </ui:InfoBar>
+                    </StackPanel>
+                </ui:Card>
+
                 <!-- Behavior Settings -->
                 <ui:Card Margin="0,0,0,15">
                     <StackPanel>

@@ -312,8 +312,13 @@ generateResolvConf=true
             
             Write-DistroNexusLog "Successfully installed instance: $InstanceName"
             
-            # Update cache
-            Update-InstanceCache -Action "Add" -InstanceName $InstanceName
+            # Update configuration by rescanning instances
+            try {
+                Get-DistroNexusInstance -ForceUpdate | Out-Null
+            }
+            catch {
+                Write-Verbose "Failed to update instance configuration: $_"
+            }
             
             # Open terminal if requested
             if ($OpenTerminal) {

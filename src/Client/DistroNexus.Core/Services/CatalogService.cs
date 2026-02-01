@@ -110,11 +110,11 @@ public class CatalogService : ICatalogService
     public async Task RefreshCatalogAsync(CancellationToken cancellationToken = default)
     {
         string? json = null;
-        
+
         // Try remote URL first
         try
         {
-            var settings = await _settingsService.LoadSettingsAsync(cancellationToken);
+            var settings = _settingsService.LoadSettings();
             var catalogUrl = settings.CatalogUrl;
 
             _logger.LogInformation("Refreshing catalog from {CatalogUrl}", catalogUrl);
@@ -285,7 +285,7 @@ public class CatalogService : ICatalogService
         {
             _logger.LogInformation("Deleting cached package {PackageId}", packageId);
 
-            var settings = await _settingsService.LoadSettingsAsync(cancellationToken);
+            var settings = _settingsService.LoadSettings();
             var cachePath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 "DistroNexus",

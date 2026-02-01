@@ -74,4 +74,10 @@ public interface IPowerShellService
         Dictionary<string, object>? parameters = null,
         ModuleCallOptions? options = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets diagnostic information about the PowerShell environment and module status.
+    /// </summary>
+    /// <returns>Diagnostic information string.</returns>
+    Task<string> GetDiagnosticInfoAsync(CancellationToken cancellationToken = default);
 }

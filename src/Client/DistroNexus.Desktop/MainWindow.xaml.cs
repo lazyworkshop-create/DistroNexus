@@ -106,7 +106,8 @@ public partial class MainWindow : FluentWindow
 
             try
             {
-                await _viewModel.LoadInstancesCommand.ExecuteAsync(cts.Token);
+                // Use Refresh instead of LoadInstances to automatically load disk sizes
+                await _viewModel.RefreshCommand.ExecuteAsync(null);
 
                 // Success - hide loading overlay on UI thread
                 await Dispatcher.InvokeAsync(() =>

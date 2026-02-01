@@ -10,22 +10,19 @@ public interface ISettingsService
     /// <summary>
     /// Loads the global application settings.
     /// </summary>
-    /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>The loaded settings, or default settings if none exist.</returns>
-    Task<GlobalSettings> LoadSettingsAsync(CancellationToken cancellationToken = default);
+    GlobalSettings LoadSettings();
 
     /// <summary>
     /// Saves the global application settings.
     /// </summary>
     /// <param name="settings">The settings to save.</param>
-    /// <param name="cancellationToken">Token to cancel the operation.</param>
-    Task SaveSettingsAsync(GlobalSettings settings, CancellationToken cancellationToken = default);
+    void SaveSettings(GlobalSettings settings);
 
     /// <summary>
     /// Resets settings to default values.
     /// </summary>
-    /// <param name="cancellationToken">Token to cancel the operation.</param>
-    Task ResetSettingsAsync(CancellationToken cancellationToken = default);
+    void ResetSettings();
 
     /// <summary>
     /// Gets the path to the settings file.

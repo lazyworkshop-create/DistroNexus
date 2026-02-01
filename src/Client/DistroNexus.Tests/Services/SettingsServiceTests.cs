@@ -16,13 +16,13 @@ public class SettingsServiceTests
     }
 
     [Fact]
-    public async Task LoadSettingsAsync_WhenFileNotExists_ReturnsDefaultSettings()
+    public void LoadSettings_WhenFileNotExists_ReturnsDefaultSettings()
     {
         // Arrange
         var service = new SettingsService(_mockLogger.Object);
 
         // Act
-        var settings = await service.LoadSettingsAsync();
+        var settings = service.LoadSettings();
 
         // Assert
         Assert.NotNull(settings);
@@ -31,14 +31,14 @@ public class SettingsServiceTests
     }
 
     [Fact]
-    public async Task LoadSettingsAsync_CalledTwice_ReturnsCachedSettings()
+    public void LoadSettings_CalledTwice_ReturnsCachedSettings()
     {
         // Arrange
         var service = new SettingsService(_mockLogger.Object);
 
         // Act
-        var settings1 = await service.LoadSettingsAsync();
-        var settings2 = await service.LoadSettingsAsync();
+        var settings1 = service.LoadSettings();
+        var settings2 = service.LoadSettings();
 
         // Assert
         Assert.Same(settings1, settings2);
@@ -60,18 +60,18 @@ public class SettingsServiceTests
     }
 
     [Fact]
-    public async Task SaveSettingsAsync_WithNullSettings_ThrowsArgumentNullException()
+    public void SaveSettings_WithNullSettings_ThrowsArgumentNullException()
     {
         // Arrange
         var service = new SettingsService(_mockLogger.Object);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() => 
-            service.SaveSettingsAsync(null!));
+        Assert.Throws<ArgumentNullException>(() => 
+            service.SaveSettings(null!));
     }
 
     [Fact]
-    public async Task SaveSettingsAsync_WithValidSettings_CompletesSuccessfully()
+    public void SaveSettings_WithValidSettings_CompletesSuccessfully()
     {
         // Arrange
         var service = new SettingsService(_mockLogger.Object);
@@ -82,16 +82,16 @@ public class SettingsServiceTests
         };
 
         // Act - should not throw
-        await service.SaveSettingsAsync(settings);
+        service.SaveSettings(settings);
 
         // Assert - Load and verify
-        var loadedSettings = await service.LoadSettingsAsync();
+        var loadedSettings = service.LoadSettings();
         Assert.Equal(@"D:\Test", loadedSettings.DefaultInstallPath);
         Assert.Equal("testuser", loadedSettings.DefaultUsername);
     }
 
     [Fact]
-    public async Task ResetSettingsAsync_ResetsToDefaults()
+    public void ResetSettings_ResetsToDefaults()
     {
         // Arrange
         var service = new SettingsService(_mockLogger.Object);
@@ -100,11 +100,11 @@ public class SettingsServiceTests
             DefaultInstallPath = @"X:\Custom\Path",
             DefaultUsername = "custom"
         };
-        await service.SaveSettingsAsync(customSettings);
+        service.SaveSettings(customSettings);
 
         // Act
-        await service.ResetSettingsAsync();
-        var settings = await service.LoadSettingsAsync();
+        service.ResetSettings();
+        var settings = service.LoadSettings();
 
         // Assert
         Assert.Equal(@"C:\WSL", settings.DefaultInstallPath);

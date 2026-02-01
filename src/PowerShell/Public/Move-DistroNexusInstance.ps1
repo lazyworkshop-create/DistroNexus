@@ -70,6 +70,14 @@ function Move-DistroNexusInstance {
             wsl --import $Name $newPath $tempExport
             if ($LASTEXITCODE -ne 0) { throw "Import failed" }
             
+            # Update configuration
+            try {
+                Get-DistroNexusInstance -ForceUpdate | Out-Null
+            }
+            catch {
+                Write-Verbose "Failed to update instance configuration: $_"
+            }
+            
             Write-Progress -Activity "Moving $Name" -Status "Complete" -PercentComplete 100 -Completed
             Write-DistroNexusLog "Successfully moved instance to: $newPath"
             
