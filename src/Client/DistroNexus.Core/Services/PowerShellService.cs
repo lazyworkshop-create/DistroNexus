@@ -25,33 +25,59 @@ public class PowerShellService : IPowerShellService, IDisposable
         // Find the PowerShell executable (prefer pwsh.exe for PowerShell Core, fallback to powershell.exe)
         _powerShellPath = FindPowerShellPath();
 
-        // Only use module path from configuration - no auto-detection
+        // 1. Try configuration first
         if (!string.IsNullOrWhiteSpace(customModulePath))
         {
-            _logger.LogInformation("Using PowerShell module path from configuration: {ModulePath}", customModulePath);
-
-            // Validate the configured path
             var manifestPath = Path.Combine(customModulePath, "DistroNexus.psd1");
             if (File.Exists(manifestPath))
             {
                 _moduleBasePath = customModulePath;
-                _logger.LogInformation("PowerShell module path validated successfully");
+                _logger.LogInformation("Using configured PowerShell module path: {Path}", customModulePath);
             }
             else
             {
-                _logger.LogError("PowerShell module not found at configured path: {Path}", manifestPath);
-                _logger.LogError("Please configure the correct module path in settings (stored in AppData\\DistroNexus\\settings.json)");
-                _moduleBasePath = null;
+                _logger.LogWarning("Configured PowerShell module not found at: {Path}", manifestPath);
             }
         }
-        else
+
+        // 2. Auto-detection if not found yet
+        if (string.IsNullOrEmpty(_moduleBasePath))
         {
-            _logger.LogWarning("PowerShell module path not configured");
-            _logger.LogWarning("Please set PowerShellModulePath in settings (AppData\\DistroNexus\\settings.json)");
-            _moduleBasePath = null;
+            _moduleBasePath = FindModulePath();
+            if (!string.IsNullOrEmpty(_moduleBasePath))
+            {
+                _logger.LogInformation("Auto-detected PowerShell module at: {Path}", _moduleBasePath);
+            }
+            else
+            {
+                _logger.LogWarning("PowerShell module path could not be determined. Functionality may be limited.");
+            }
         }
 
         _logger.LogInformation("PowerShell service initialized using: {PowerShellPath}", _powerShellPath);
+    }
+
+    private string? FindModulePath()
+    {
+        var baseDir = AppContext.BaseDirectory;
+        var searchPaths = new[]
+        {
+            Path.Combine(baseDir, "PowerShell"), // Release layout
+            Path.Combine(baseDir, "..", "..", "..", "..", "PowerShell"), // Source layout (Dev)
+            Path.Combine(baseDir, "..", "..", "..", "..", "..", "PowerShell") // Alternative Source layout
+        };
+
+        foreach (var path in searchPaths)
+        {
+            var fullPath = Path.GetFullPath(path);
+            var manifestPath = Path.Combine(fullPath, "DistroNexus.psd1");
+            if (File.Exists(manifestPath))
+            {
+                return fullPath;
+            }
+        }
+
+        return null;
     }
 
     private static string FindPowerShellPath()
@@ -131,15 +157,30 @@ public class PowerShellService : IPowerShellService, IDisposable
         {
             foreach (var param in parameters)
             {
-                var value = param.Value switch
+                if (param.Value is bool b)
                 {
-                    string s => $"'{s.Replace("'", "''")}'",
-                    bool b => b ? "$true" : "$false",
-                    null => "$null",
-                    _ => param.Value.ToString()
-                };
-                scriptBuilder.Append($" -{param.Key} {value}");
+                    // Use colon syntax for booleans to support both [bool] and [switch] parameters
+                    // e.g. -Force:$true works for both switch can bool types
+                    scriptBuilder.Append($" -{param.Key}:{(b ? "$true" : "$false")}");
+                }
+                else
+                {
+                    var value = param.Value switch
+                    {
+                        string s => $"'{s.Replace("'", "''")}'",
+                        null => "$null",
+                        _ => param.Value.ToString()
+                    };
+                    scriptBuilder.Append($" -{param.Key} {value}");
+                }
             }
+        }
+
+        // If generic type is not string, we expect JSON output
+        if (typeof(T) != typeof(string))
+        {
+             // Use depth to ensure nested objects are serialized (though our structure is flat now)
+             scriptBuilder.Append(" | ConvertTo-Json -Depth 10 -Compress");
         }
 
         var result = await ExecuteScriptAsync(scriptBuilder.ToString(), cancellationToken);
@@ -155,15 +196,31 @@ public class PowerShellService : IPowerShellService, IDisposable
         return System.Text.Json.JsonSerializer.Deserialize<T>(result);
     }
 
+    private string PrepareScript(string script)
+    {
+        if (string.IsNullOrEmpty(_moduleBasePath))
+            return script;
+
+        var sb = new StringBuilder();
+        var manifestPath = Path.Combine(_moduleBasePath, "DistroNexus.psd1");
+        // Import-Module -Force to reload if changed, -ErrorAction Stop to fail immediately if missing
+        sb.AppendLine($"Import-Module '{manifestPath}' -Force -ErrorAction Stop;");
+        sb.AppendLine(script);
+        return sb.ToString();
+    }
+
     /// <inheritdoc/>
     public async Task<string> ExecuteScriptAsync(string script, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(script);
 
+        // Prepend module import if available
+        var fullScript = PrepareScript(script);
+
         try
         {
             // Encode the script as Base64 to avoid escaping issues
-            var bytes = Encoding.Unicode.GetBytes(script);
+            var bytes = Encoding.Unicode.GetBytes(fullScript);
             var encodedCommand = Convert.ToBase64String(bytes);
 
             var startInfo = new ProcessStartInfo
@@ -232,10 +289,13 @@ public class PowerShellService : IPowerShellService, IDisposable
     {
         ArgumentNullException.ThrowIfNull(script);
 
+        // Prepend module import if available
+        var fullScript = PrepareScript(script);
+
         try
         {
             // Encode the script as Base64 to avoid escaping issues
-            var bytes = Encoding.Unicode.GetBytes(script);
+            var bytes = Encoding.Unicode.GetBytes(fullScript);
             var encodedCommand = Convert.ToBase64String(bytes);
 
             var startInfo = new ProcessStartInfo
@@ -391,13 +451,14 @@ public class PowerShellService : IPowerShellService, IDisposable
         if (_moduleBasePath == null)
         {
             _logger.LogError("DistroNexus PowerShell module path not configured");
-            _logger.LogError("Please configure PowerShellModulePath in settings file located at: %AppData%\\DistroNexus\\settings.json");
 
             var settingsPath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 "DistroNexus",
                 "settings.json");
-            
+
+            _logger.LogError("Please configure PowerShellModulePath in settings file located at: {SettingsPath}", settingsPath);
+
             var errorMessage = $"PowerShell module path not configured. Please set PowerShellModulePath in settings: {settingsPath}";
 
             return new PowerShellScriptResult
@@ -416,12 +477,15 @@ public class PowerShellService : IPowerShellService, IDisposable
             if (!File.Exists(moduleManifestPath))
             {
                 _logger.LogError("Module manifest not found at: {Path}", moduleManifestPath);
+
+                var friendlyError = $"PowerShell module files are missing. Please ensure the module is installed at: {_moduleBasePath}";
+
                 return new PowerShellScriptResult
                 {
                     ExitCode = 1,
-                    Error = $"Module manifest not found: {moduleManifestPath}",
+                    Error = friendlyError,
                     UsedModule = false,
-                    Exception = new FileNotFoundException("Module manifest not found", moduleManifestPath)
+                    Exception = new FileNotFoundException(friendlyError, moduleManifestPath)
                 };
             }
 
@@ -492,7 +556,20 @@ public class PowerShellService : IPowerShellService, IDisposable
             // DIAGNOSTIC: Log execution result
             _logger.LogDebug("Cmdlet execution completed: ExitCode={ExitCode}, OutputLength={OutputLen}, ErrorLength={ErrorLen}",
                 result.ExitCode, result.Output?.Length ?? 0, result.Error?.Length ?? 0);
-            
+
+            // If execution failed, process the error to make it user-friendly
+            if (!result.Success && !string.IsNullOrWhiteSpace(result.Error))
+            {
+                // Log the raw error for debugging
+                _logger.LogError("Raw PowerShell error: {RawError}", result.Error);
+
+                // Extract friendly error message
+                var friendlyError = ExtractFriendlyErrorMessage(result.Error, cmdletName);
+                result.Error = friendlyError;
+
+                _logger.LogError("User-friendly error: {FriendlyError}", friendlyError);
+            }
+
             // Parse JSON output if available
             if (options.ParseAsJson && result.Success && !string.IsNullOrWhiteSpace(result.Output))
             {
@@ -536,10 +613,12 @@ public class PowerShellService : IPowerShellService, IDisposable
             _logger.LogWarning("Module cmdlet {Cmdlet} execution canceled or timed out after {Timeout}s",
                 cmdletName, options.TimeoutSeconds);
 
+            var friendlyError = $"The operation timed out after {options.TimeoutSeconds} seconds. This may be due to a slow network connection or a large file download. Please try again.";
+
             return new PowerShellScriptResult
             {
                 ExitCode = 1,
-                Error = $"Operation timed out after {options.TimeoutSeconds} seconds",
+                Error = friendlyError,
                 UsedModule = false,
                 Exception = ex
             };
@@ -549,14 +628,151 @@ public class PowerShellService : IPowerShellService, IDisposable
             _logger.LogError(ex, "Error executing module cmdlet: {Cmdlet}. Exception type: {ExceptionType}, Message: {Message}",
                 cmdletName, ex.GetType().Name, ex.Message);
 
+            var friendlyError = ExtractFriendlyErrorMessage(ex.Message, cmdletName);
+
             return new PowerShellScriptResult
             {
                 ExitCode = 1,
-                Error = ex.Message,
+                Error = friendlyError,
                 UsedModule = false,
                 Exception = ex
             };
         }
+    }
+
+    /// <summary>
+    /// Extracts a user-friendly error message from PowerShell error output.
+    /// </summary>
+    /// <param name="errorMessage">The raw error message from PowerShell.</param>
+    /// <param name="cmdletName">The name of the cmdlet that failed.</param>
+    /// <returns>A user-friendly error message.</returns>
+    private static string ExtractFriendlyErrorMessage(string errorMessage, string cmdletName)
+    {
+        if (string.IsNullOrWhiteSpace(errorMessage))
+            return "An unknown error occurred. Please check the logs for details.";
+
+        // Remove CLIXML tags and XML noise
+        var cleaned = System.Text.RegularExpressions.Regex.Replace(
+            errorMessage,
+            @"#< CLIXML.*?<Objs.*?</Objs>",
+            "",
+            System.Text.RegularExpressions.RegexOptions.Singleline);
+
+        // Remove color codes and escape sequences
+        cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"\x1b\[[0-9;]*m", "");
+
+        // Remove "At line:" and stack trace information
+        cleaned = System.Text.RegularExpressions.Regex.Replace(
+            cleaned,
+            @"At line:\d+.*?(\r?\n|$)",
+            "",
+            System.Text.RegularExpressions.RegexOptions.Multiline);
+
+        // Remove "+ CategoryInfo" and similar PowerShell diagnostic info
+        cleaned = System.Text.RegularExpressions.Regex.Replace(
+            cleaned,
+            @"\+\s+(CategoryInfo|FullyQualifiedErrorId).*?(\r?\n|$)",
+            "",
+            System.Text.RegularExpressions.RegexOptions.Multiline);
+
+        // Check for common error patterns and provide friendly messages
+
+        // Module import errors
+        if (errorMessage.Contains("failed to import", StringComparison.OrdinalIgnoreCase) ||
+            errorMessage.Contains("Module DistroNexus failed to import", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Failed to load the PowerShell module. Please verify that the module files are not corrupted and try restarting the application.";
+        }
+
+        // Access denied / permission errors
+        if (errorMessage.Contains("access denied", StringComparison.OrdinalIgnoreCase) ||
+            errorMessage.Contains("access to the path", StringComparison.OrdinalIgnoreCase) ||
+            errorMessage.Contains("permission", StringComparison.OrdinalIgnoreCase) ||
+            errorMessage.Contains("unauthorized", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Access denied. Please ensure you have administrator privileges or the required permissions to perform this operation.";
+        }
+
+        // File not found errors
+        if (errorMessage.Contains("cannot find path", StringComparison.OrdinalIgnoreCase) ||
+            errorMessage.Contains("does not exist", StringComparison.OrdinalIgnoreCase) ||
+            errorMessage.Contains("file not found", StringComparison.OrdinalIgnoreCase))
+        {
+            return "A required file or directory was not found. Please verify the installation path and try again.";
+        }
+
+        // Network/download errors
+        if (errorMessage.Contains("download", StringComparison.OrdinalIgnoreCase) ||
+            errorMessage.Contains("network", StringComparison.OrdinalIgnoreCase) ||
+            errorMessage.Contains("unable to connect", StringComparison.OrdinalIgnoreCase) ||
+            errorMessage.Contains("timeout", StringComparison.OrdinalIgnoreCase) ||
+            errorMessage.Contains("404", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Failed to download the required files. Please check your internet connection and try again.";
+        }
+
+        // Disk space errors
+        if (errorMessage.Contains("disk", StringComparison.OrdinalIgnoreCase) ||
+            errorMessage.Contains("space", StringComparison.OrdinalIgnoreCase) ||
+            errorMessage.Contains("not enough", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Insufficient disk space. Please free up some space and try again.";
+        }
+
+        // WSL-specific errors
+        if (errorMessage.Contains("wsl", StringComparison.OrdinalIgnoreCase))
+        {
+            if (errorMessage.Contains("not installed", StringComparison.OrdinalIgnoreCase))
+            {
+                return "WSL is not installed or not properly configured. Please install WSL2 from Windows Features.";
+            }
+            if (errorMessage.Contains("already exists", StringComparison.OrdinalIgnoreCase) ||
+                errorMessage.Contains("already in use", StringComparison.OrdinalIgnoreCase))
+            {
+                return "A WSL distribution with this name already exists. Please choose a different name.";
+            }
+            if (errorMessage.Contains("invalid", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Invalid WSL operation. Please ensure WSL2 is properly installed and configured.";
+            }
+        }
+
+        // Parameter validation errors
+        if (errorMessage.Contains("parameter", StringComparison.OrdinalIgnoreCase) &&
+            (errorMessage.Contains("invalid", StringComparison.OrdinalIgnoreCase) ||
+             errorMessage.Contains("cannot validate", StringComparison.OrdinalIgnoreCase)))
+        {
+            return "Invalid input provided. Please check your settings and try again.";
+        }
+
+        // Extract the main error message (first meaningful line)
+        var lines = cleaned.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+        var meaningfulLines = lines
+            .Where(line => 
+                !string.IsNullOrWhiteSpace(line) &&
+                !line.StartsWith("+", StringComparison.Ordinal) &&
+                !line.StartsWith("At ", StringComparison.Ordinal) &&
+                !line.Contains("CategoryInfo", StringComparison.OrdinalIgnoreCase) &&
+                !line.Contains("FullyQualifiedErrorId", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (meaningfulLines.Count > 0)
+        {
+            var mainError = meaningfulLines[0].Trim();
+
+            // If the message is too technical, provide a generic friendly message
+            if (mainError.Length > 200 || 
+                mainError.Contains("Exception", StringComparison.OrdinalIgnoreCase) ||
+                mainError.Contains("StackTrace", StringComparison.OrdinalIgnoreCase))
+            {
+                return $"Operation '{cmdletName}' failed. Please check the logs for detailed error information.";
+            }
+
+            return mainError;
+        }
+
+        // Last resort: provide a generic message
+        return $"Operation '{cmdletName}' failed. Please check the logs for detailed error information.";
     }
 
     /// <summary>

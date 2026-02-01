@@ -56,13 +56,18 @@ function Update-DistroNexusCatalog {
                 # Validate JSON
                 $testJson = Get-Content -Raw -Path $tempFile | ConvertFrom-Json
                 
-                # Replace local catalog
-                $configRoot = Join-Path $script:ModuleRoot "..\config"
-                $catalogPath = Join-Path $configRoot "distros.json"
+                # Update catalog in AppData
+                $appDataRoot = [System.Environment]::GetFolderPath([System.Environment+SpecialFolder]::ApplicationData)
+                $configRoot = Join-Path $appDataRoot "DistroNexus"
+                if (-not (Test-Path $configRoot)) {
+                    New-Item -Path $configRoot -ItemType Directory -Force | Out-Null
+                }
+                
+                $catalogPath = Join-Path $configRoot "catalog.json"
                 
                 Copy-Item -Path $tempFile -Destination $catalogPath -Force
                 
-                Write-DistroNexusLog "Catalog updated successfully"
+                Write-DistroNexusLog "Catalog updated successfully to $catalogPath"
                 return $true
             }
             catch {

@@ -28,7 +28,7 @@ public class CatalogServiceTests
         };
 
         _mockCatalogService
-            .Setup(x => x.LoadCatalogAsync(It.IsAny<CancellationToken>()))
+            .Setup(x => x.LoadCatalogAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedPackages);
 
         // Act
@@ -176,7 +176,7 @@ public class CatalogServiceTests
         };
 
         _mockCatalogService
-            .Setup(x => x.LoadCatalogAsync(It.IsAny<CancellationToken>()))
+            .Setup(x => x.LoadCatalogAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(packages);
 
         // Act

@@ -23,6 +23,11 @@ public partial class DistroPackage : ObservableObject
     public string Version { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the default name of the distribution (used for internal identification).
+    /// </summary>
+    public string DefaultName { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the description of the distribution.
     /// </summary>
     public string Description { get; set; } = string.Empty;
@@ -35,7 +40,8 @@ public partial class DistroPackage : ObservableObject
     /// <summary>
     /// Gets or sets the file size in bytes.
     /// </summary>
-    public long FileSize { get; set; }
+    [ObservableProperty]
+    private long _fileSize;
 
     /// <summary>
     /// Gets or sets the SHA256 checksum for verification.

@@ -4,6 +4,8 @@ using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
+using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Windows;
 
@@ -183,10 +185,15 @@ public partial class PackageManagerViewModel : ObservableObject
             // Set downloading state
             package.IsDownloading = true;
 
-            // Queue the download task
-            var destinationPath = System.IO.Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                "DistroNexus", "Downloads", package.Id);
+            // Use the configured cache path from catalog service
+            var cachePath = _catalogService.GetPackageCachePath();
+            var fileName = !string.IsNullOrWhiteSpace(package.DownloadUrl)
+                ? Path.GetFileName(new Uri(package.DownloadUrl).LocalPath)
+                : $"{package.Id}.tar.gz";
+            
+            var destinationPath = Path.Combine(cachePath, fileName);
+            
+            _logger.LogInformation("Downloading {PackageName} to cache path: {Path}", package.Name, destinationPath);
             
             var downloadTask = _downloadTaskManager.AddTask(package, destinationPath);
             
@@ -262,7 +269,12 @@ public partial class PackageManagerViewModel : ObservableObject
                 case DownloadStatus.Completed:
                     package.IsDownloading = false;
                     package.IsCached = true;
-                    _logger.LogInformation("Download completed for {PackageName}", package.Name);
+                    package.LocalPath = downloadTask.DestinationPath;
+                    _logger.LogInformation("Download completed for {PackageName} to {Path}", package.Name, downloadTask.DestinationPath);
+                    
+                    // Refresh catalog to update cache status for all packages
+                    // This ensures other packages with the same URL also show as cached
+                    await RefreshCatalogCacheStatusAsync();
                     break;
                     
                 case DownloadStatus.Failed:
@@ -289,6 +301,36 @@ public partial class PackageManagerViewModel : ObservableObject
         {
             _logger.LogError(ex, "Error monitoring download task for {PackageName}", package.Name);
             package.IsDownloading = false;
+        }
+    }
+
+    /// <summary>
+    /// Refreshes cache status for all packages after a download completes.
+    /// </summary>
+    private async Task RefreshCatalogCacheStatusAsync()
+    {
+        try
+        {
+            // Reload catalog to get updated cache status and file sizes
+            var refreshedPackages = await _catalogService.LoadCatalogAsync(forceReload: true);
+            
+            // Update existing package objects with new cache status
+            foreach (var pkg in Packages)
+            {
+                var refreshed = refreshedPackages.FirstOrDefault(p => p.Id == pkg.Id);
+                if (refreshed != null)
+                {
+                    pkg.IsCached = refreshed.IsCached;
+                    pkg.LocalPath = refreshed.LocalPath;
+                    pkg.FileSize = refreshed.FileSize;
+                }
+            }
+            
+            _logger.LogInformation("Refreshed cache status for {Count} packages", Packages.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to refresh cache status");
         }
     }
 
@@ -383,9 +425,60 @@ public partial class PackageManagerViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to delete cached package");
-            MessageBox.Show($"Failed to delete package: {ex.Message}", 
+            
+            // Extract user-friendly error message
+            var errorMessage = ExtractUserFriendlyError(ex.Message);
+            
+            MessageBox.Show($"Failed to delete package: {errorMessage}", 
                 "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    /// <summary>
+    /// Extracts a user-friendly error message from technical error output.
+    /// Duplicated from WslManagerService to keep ViewModel independent.
+    /// </summary>
+    private static string ExtractUserFriendlyError(string errorMessage)
+    {
+        if (string.IsNullOrWhiteSpace(errorMessage))
+            return "Operation failed with an unknown error.";
+
+        // Remove CLIXML tags
+        var cleaned = System.Text.RegularExpressions.Regex.Replace(
+            errorMessage, 
+            @"#< CLIXML.*?<Objs.*?</Objs>", 
+            "", 
+            System.Text.RegularExpressions.RegexOptions.Singleline);
+
+        // Check for common error patterns
+        if (errorMessage.Contains("recognized as a name of a cmdlet", StringComparison.OrdinalIgnoreCase))
+        {
+            return "The required functionality is missing from the PowerShell module. Please restart the application.";
+        }
+        
+        if (errorMessage.Contains("access denied", StringComparison.OrdinalIgnoreCase) ||
+            errorMessage.Contains("permission", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Access denied. Please ensure you have administrator privileges or the file is not in use.";
+        }
+
+        if (errorMessage.Contains("not found", StringComparison.OrdinalIgnoreCase))
+        {
+            return "The package file could not be found. It may have been already deleted.";
+        }
+
+        // Return first valid line of the cleaned error
+        var firstLine = cleaned.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(firstLine))
+        {
+            // Remove ANSI color codes if present
+            firstLine = System.Text.RegularExpressions.Regex.Replace(firstLine, @"\x1B\[[^@-~]*[@-~]", "");
+            
+            if (firstLine.Length < 200)
+                return firstLine.Trim();
+        }
+
+        return "An unexpected error occurred while deleting the package.";
     }
 
     /// <summary>
@@ -504,38 +597,98 @@ public partial class PackageManagerViewModel : ObservableObject
     [RelayCommand]
     private async Task DownloadAllAsync()
     {
-        _logger.LogInformation("Downloading all uncached packages");
-        
         try
         {
-            StatusMessage = "Starting download of all packages...";
-            var downloadCount = 0;
+            _logger.LogInformation("Preparing to download all uncached packages");
+            
+            // Find all packages that need to be downloaded (not cached and not downloading)
+            var packagesToDownload = new List<DistroPackage>();
             
             foreach (var group in GroupedPackages)
             {
                 foreach (var package in group.Packages)
                 {
-                    if (!package.IsCached)
+                    if (!package.IsCached && !package.IsDownloading)
                     {
-                        // Create download task instead of directly downloading
-                        var destination = System.IO.Path.Combine(
-                            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                            "DistroNexus", "Downloads", package.Id);
-                        
-                        var task = _downloadTaskManager.AddTask(package, destination);
-                        downloadCount++;
-                        StatusMessage = $"Queued {downloadCount} packages for download...";
+                        packagesToDownload.Add(package);
                     }
                 }
             }
             
-            StatusMessage = $"Successfully queued {downloadCount} packages for download";
+            if (packagesToDownload.Count == 0)
+            {
+                MessageBox.Show("All packages are already cached or currently downloading.", 
+                    "Download All", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // Show confirmation dialog with package list
+            var packageList = string.Join("\n", packagesToDownload.Select((p, i) => $"{i + 1}. {p.Name} ({p.Version})"));
+            var message = $"The following {packagesToDownload.Count} package(s) will be downloaded:\n\n{packageList}\n\nDo you want to continue?";
+            
+            var result = MessageBox.Show(message, 
+                "Confirm Download All", 
+                MessageBoxButton.YesNo, 
+                MessageBoxImage.Question);
+
+            if (result != MessageBoxResult.Yes)
+            {
+                _logger.LogInformation("Download all cancelled by user");
+                StatusMessage = "Download cancelled by user";
+                return;
+            }
+
+            // Queue all downloads using the same logic as single download
+            _logger.LogInformation("Starting download all: {Count} packages", packagesToDownload.Count);
+            StatusMessage = "Starting download of all packages...";
+            
+            int successCount = 0;
+            foreach (var package in packagesToDownload)
+            {
+                try
+                {
+                    // Set downloading state
+                    package.IsDownloading = true;
+
+                    // Use the configured cache path from catalog service
+                    var cachePath = _catalogService.GetPackageCachePath();
+                    var fileName = !string.IsNullOrWhiteSpace(package.DownloadUrl)
+                        ? Path.GetFileName(new Uri(package.DownloadUrl).LocalPath)
+                        : $"{package.Id}.tar.gz";
+                    
+                    var destinationPath = Path.Combine(cachePath, fileName);
+                    
+                    _logger.LogInformation("Queuing download for {PackageName} to {Path}", package.Name, destinationPath);
+                    
+                    var downloadTask = _downloadTaskManager.AddTask(package, destinationPath);
+                    
+                    // Track the download
+                    lock (_activeDownloads)
+                    {
+                        _activeDownloads[package.Id] = downloadTask;
+                    }
+                    
+                    // Subscribe to status changes to update UI
+                    _ = MonitorDownloadTaskAsync(downloadTask, package);
+                    
+                    successCount++;
+                    StatusMessage = $"Queued {successCount} of {packagesToDownload.Count} packages for download...";
+                }
+                catch (Exception ex)
+                {
+                    package.IsDownloading = false;
+                    _logger.LogError(ex, "Failed to queue download for {PackageName}", package.Name);
+                }
+            }
+            
+            StatusMessage = $"Successfully queued {successCount} of {packagesToDownload.Count} packages for download";
+            _logger.LogInformation("Download all completed: {SuccessCount}/{TotalCount} queued", successCount, packagesToDownload.Count);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to queue downloads");
+            _logger.LogError(ex, "Failed to download all packages");
             StatusMessage = "Failed to queue downloads";
-            MessageBox.Show($"Failed to queue downloads: {ex.Message}", 
+            MessageBox.Show($"Failed to start download all: {ex.Message}", 
                 "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }

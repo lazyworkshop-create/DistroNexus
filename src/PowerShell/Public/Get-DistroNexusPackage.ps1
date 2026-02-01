@@ -43,47 +43,68 @@ function Get-DistroNexusPackage {
             $packages = @()
             $cachePath = $config.Settings.PackageCachePath
             
-            foreach ($familyProp in $config.Distros.PSObject.Properties) {
-                $familyName = $familyProp.Value.Name
-                
+            # Assume flat array format
+            $distroList = @()
+            if ($config.Distros -is [Array]) {
+                $distroList = $config.Distros
+            }
+            else {
+                # Single object or unexpected format, wrap in array if possible
+                if ($config.Distros) {
+                    $distroList = @($config.Distros)
+                }
+            }
+
+            foreach ($distro in $distroList) {
                 # Apply family filter
-                if ($Family -and $familyName -ne $Family) {
+                if ($Family -and $distro.Category -ne $Family) {
                     continue
                 }
                 
-                foreach ($versionProp in $familyProp.Value.Versions.PSObject.Properties) {
-                    $version = $versionProp.Value
-                    
-                    # Check if cached
-                    $isCached = $false
-                    $localPath = $null
-                    
-                    if ($version.LocalPath -and (Test-Path $version.LocalPath)) {
+                # Update status for the flat object
+                $isCached = $false
+                $localPath = $null
+                
+                # Initialize fileSize from existing property if available, otherwise 0
+                $fileSize = 0
+                if ($distro.FileSize) { $fileSize = $distro.FileSize }
+
+                # Check cache based on LocalPath or reconstruct path from DownloadUrl
+                if ($distro.LocalPath -and (Test-Path $distro.LocalPath)) {
+                    $fileInfo = Get-Item $distro.LocalPath
+                    if ($fileInfo.Length -gt 0) {
                         $isCached = $true
-                        $localPath = $version.LocalPath
+                        $localPath = $distro.LocalPath
+                        $fileSize = $fileInfo.Length
                     }
-                    elseif ($cachePath -and $version.Filename) {
-                        $cachedFile = Join-Path $cachePath $version.Filename
+                }
+                elseif ($cachePath -and $distro.DownloadUrl) {
+                    $filename = Split-Path $distro.DownloadUrl -Leaf
+                    if ($filename) {
+                        $cachedFile = Join-Path $cachePath $filename
                         if (Test-Path $cachedFile) {
-                            $isCached = $true
-                            $localPath = $cachedFile
+                            $fileInfo = Get-Item $cachedFile
+                            if ($fileInfo.Length -gt 0) {
+                                $isCached = $true
+                                $localPath = $cachedFile
+                                $fileSize = $fileInfo.Length
+                            }
                         }
                     }
-                    
-                    $package = [PSCustomObject]@{
-                        PSTypeName = 'DistroNexus.Package'
-                        Family = $familyName
-                        Name = $version.Name
-                        DefaultName = $version.DefaultName
-                        Url = $version.Url
-                        Filename = $version.Filename
-                        Source = $version.Source
-                        IsCached = $isCached
-                        LocalPath = $localPath
-                    }
-                    
-                    $packages += $package
                 }
+                
+                # Clone the object deeply using JSON serialization/deserialization
+                $package = $distro | ConvertTo-Json -Depth 5 | ConvertFrom-Json
+                
+                # Add PSTypeName manually
+                $package.PSObject.TypeNames.Insert(0, 'DistroNexus.Package')
+                
+                # Update properties
+                $package.IsCached = $isCached
+                $package.LocalPath = if ($localPath) { $localPath } else { '' }
+                $package.FileSize = $fileSize
+                
+                $packages += $package
             }
             
             Write-DistroNexusLog "Found $($packages.Count) package(s)" -FileOnly

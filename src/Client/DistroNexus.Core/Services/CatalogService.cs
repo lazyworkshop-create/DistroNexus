@@ -12,6 +12,7 @@ public class CatalogService : ICatalogService
 {
     private readonly ILogger<CatalogService> _logger;
     private readonly ISettingsService _settingsService;
+    private readonly IPowerShellService _powerShellService;
     private readonly HttpClient _httpClient;
     private List<DistroPackage>? _cachedCatalog;
     private readonly string _catalogCachePath;
@@ -19,11 +20,13 @@ public class CatalogService : ICatalogService
 
     public CatalogService(
         ILogger<CatalogService> logger, 
-        ISettingsService settingsService, 
+        ISettingsService settingsService,
+        IPowerShellService powerShellService,
         HttpClient httpClient)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _powerShellService = powerShellService ?? throw new ArgumentNullException(nameof(powerShellService));
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
 
         var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
@@ -73,35 +76,39 @@ public class CatalogService : ICatalogService
     }
 
     /// <inheritdoc/>
-    public async Task<List<DistroPackage>> LoadCatalogAsync(CancellationToken cancellationToken = default)
+    public async Task<List<DistroPackage>> LoadCatalogAsync(bool forceReload = false, CancellationToken cancellationToken = default)
     {
-        if (_cachedCatalog != null)
+        if (!forceReload && _cachedCatalog != null)
+        {
             return _cachedCatalog;
+        }
 
         try
         {
-            // Try to load from cache first
-            if (File.Exists(_catalogCachePath))
+            _logger.LogInformation("Loading catalog via PowerShell Get-DistroNexusPackage");
+            
+            // Call PowerShell module to get packages
+            var packages = await _powerShellService.ExecuteAsync<List<DistroPackage>>(
+                "Get-DistroNexusPackage",
+                null,
+                cancellationToken);
+            
+            if (packages != null && packages.Count > 0)
             {
-                _logger.LogInformation("Loading catalog from cache: {CachePath}", _catalogCachePath);
+                _cachedCatalog = packages;
+                _logger.LogInformation("Loaded {Count} distributions from PowerShell module", _cachedCatalog.Count);
                 
-                var json = await File.ReadAllTextAsync(_catalogCachePath, cancellationToken);
-                _cachedCatalog = JsonSerializer.Deserialize<List<DistroPackage>>(json) ?? [];
-                
-                if (_cachedCatalog.Count > 0)
-                {
-                    _logger.LogInformation("Loaded {Count} distributions from cache", _cachedCatalog.Count);
-                    return _cachedCatalog;
-                }
+                // Cache the result for future use
+                await CacheCatalogAsync(_cachedCatalog, cancellationToken);
+                return _cachedCatalog;
             }
-
-            // If no cache or empty, try local file first, then remote
-            await RefreshCatalogAsync(cancellationToken);
-            return _cachedCatalog ?? [];
+            
+            _logger.LogWarning("No packages returned from PowerShell module");
+            return [];
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to load catalog");
+            _logger.LogError(ex, "Failed to load catalog from PowerShell module");
             return [];
         }
     }
@@ -109,47 +116,58 @@ public class CatalogService : ICatalogService
     /// <inheritdoc/>
     public async Task RefreshCatalogAsync(CancellationToken cancellationToken = default)
     {
-        string? json = null;
-
-        // Try remote URL first
         try
         {
-            var settings = _settingsService.LoadSettings();
-            var catalogUrl = settings.CatalogUrl;
-
-            _logger.LogInformation("Refreshing catalog from {CatalogUrl}", catalogUrl);
-            json = await _httpClient.GetStringAsync(catalogUrl, cancellationToken);
+            _logger.LogInformation("Refreshing catalog via PowerShell Update-DistroNexusCatalog");
+            
+            // Call PowerShell module to update catalog
+            var success = await _powerShellService.ExecuteAsync<bool>(
+                "Update-DistroNexusCatalog",
+                null,
+                cancellationToken);
+            
+            if (success)
+            {
+                _logger.LogInformation("Catalog updated successfully");
+                
+                // Clear cache to force reload
+                _cachedCatalog = null;
+                
+                // Reload from PowerShell
+                await LoadCatalogAsync(false, cancellationToken);
+            }
+            else
+            {
+                _logger.LogWarning("Catalog update returned false, using existing catalog");
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to fetch catalog from remote, trying local file");
+            _logger.LogError(ex, "Failed to refresh catalog via PowerShell module");
         }
+    }
 
-        // Fallback to local file if remote fails
-        if (string.IsNullOrEmpty(json) && File.Exists(_localCatalogPath))
+    /// <summary>
+    /// Caches the catalog to local storage for offline use.
+    /// </summary>
+    private async Task CacheCatalogAsync(List<DistroPackage> catalog, CancellationToken cancellationToken = default)
+    {
+        try
         {
-            _logger.LogInformation("Loading catalog from local file: {LocalPath}", _localCatalogPath);
-            json = await File.ReadAllTextAsync(_localCatalogPath, cancellationToken);
+            var cacheOptions = new JsonSerializerOptions { WriteIndented = true };
+            var cacheJson = JsonSerializer.Serialize(catalog, cacheOptions);
+            await File.WriteAllTextAsync(_catalogCachePath, cacheJson, cancellationToken);
+            _logger.LogDebug("Catalog cached to {Path}", _catalogCachePath);
         }
-
-        if (string.IsNullOrEmpty(json))
+        catch (Exception ex)
         {
-            throw new InvalidOperationException("Failed to load catalog from both remote URL and local file");
+            _logger.LogWarning(ex, "Failed to cache catalog");
         }
-
-        // Parse the nested JSON format and convert to DistroPackage list
-        _cachedCatalog = ParseCatalogJson(json);
-
-        // Save to cache in flat format
-        var cacheOptions = new JsonSerializerOptions { WriteIndented = true };
-        var cacheJson = JsonSerializer.Serialize(_cachedCatalog, cacheOptions);
-        await File.WriteAllTextAsync(_catalogCachePath, cacheJson, cancellationToken);
-
-        _logger.LogInformation("Catalog refreshed successfully with {Count} distributions", _cachedCatalog.Count);
     }
 
     /// <summary>
     /// Parses the nested catalog JSON format and converts to a flat list of DistroPackage.
+    /// This method is now deprecated as PowerShell module handles catalog loading.
     /// </summary>
     private List<DistroPackage> ParseCatalogJson(string json)
     {
@@ -220,11 +238,11 @@ public class CatalogService : ICatalogService
     public async Task<List<DistroPackage>> SearchDistributionsAsync(string query, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(query))
-            return await LoadCatalogAsync(cancellationToken);
+            return await LoadCatalogAsync(false, cancellationToken);
 
         try
         {
-            var catalog = await LoadCatalogAsync(cancellationToken);
+            var catalog = await LoadCatalogAsync(false, cancellationToken);
             var normalizedQuery = query.Trim().ToLowerInvariant();
 
             var results = catalog.Where(d =>
@@ -252,7 +270,7 @@ public class CatalogService : ICatalogService
 
         try
         {
-            var catalog = await LoadCatalogAsync(cancellationToken);
+            var catalog = await LoadCatalogAsync(false, cancellationToken);
             var distro = catalog.FirstOrDefault(d => d.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
 
             if (distro == null)
@@ -283,39 +301,60 @@ public class CatalogService : ICatalogService
 
         try
         {
-            _logger.LogInformation("Deleting cached package {PackageId}", packageId);
+            _logger.LogInformation("Deleting cached package {PackageId} via PowerShell", packageId);
 
-            var settings = _settingsService.LoadSettings();
-            var cachePath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "DistroNexus",
-                "packages");
-
-            if (!Directory.Exists(cachePath))
+            // Find the package in catalog to get its DefaultName or LocalPath
+            var package = _cachedCatalog?.FirstOrDefault(p => p.Id == packageId);
+            if (package == null)
             {
-                _logger.LogWarning("Package cache directory does not exist");
+                _logger.LogWarning("Package {PackageId} not found in catalog", packageId);
                 return;
             }
 
-            // Find and delete files matching the package ID
-            var packageFiles = Directory.GetFiles(cachePath, $"{packageId}*");
-            foreach (var file in packageFiles)
+            Dictionary<string, object>? parameters = null;
+            
+            // Use LocalPath if available, otherwise use DefaultName
+            if (!string.IsNullOrWhiteSpace(package.LocalPath) && File.Exists(package.LocalPath))
             {
-                File.Delete(file);
-                _logger.LogInformation("Deleted cached file: {FilePath}", file);
-            }
-
-            // Update cached catalog to mark as not cached
-            if (_cachedCatalog != null)
-            {
-                var package = _cachedCatalog.FirstOrDefault(p => p.Id == packageId);
-                if (package != null)
+                parameters = new Dictionary<string, object>
                 {
-                    package.IsCached = false;
-                }
+                    { "LocalPath", package.LocalPath },
+                    { "Force", true }
+                };
+            }
+            else if (!string.IsNullOrWhiteSpace(package.DefaultName))
+            {
+                parameters = new Dictionary<string, object>
+                {
+                    { "DefaultName", package.DefaultName },
+                    { "Force", true }
+                };
+            }
+            else
+            {
+                _logger.LogWarning("Cannot delete package {PackageId}: no LocalPath or DefaultName", packageId);
+                return;
             }
 
-            _logger.LogInformation("Deleted cached package {PackageId}", packageId);
+            // Call PowerShell module to remove package
+            var success = await _powerShellService.ExecuteAsync<bool>(
+                "Remove-DistroNexusPackage",
+                parameters,
+                cancellationToken);
+
+            if (success)
+            {
+                _logger.LogInformation("Successfully deleted cached package {PackageId}", packageId);
+                
+                // Update cached catalog to mark as not cached
+                package.IsCached = false;
+                package.LocalPath = string.Empty;
+                package.FileSize = 0;
+            }
+            else
+            {
+                _logger.LogWarning("Failed to delete cached package {PackageId}", packageId);
+            }
         }
         catch (Exception ex)
         {
@@ -370,10 +409,18 @@ public class CatalogService : ICatalogService
     /// <inheritdoc/>
     public string GetPackageCachePath()
     {
-        var cachePath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "DistroNexus",
-            "packages");
+        // Load settings to get configured cache path
+        var settings = _settingsService.LoadSettings();
+        var cachePath = settings.PackageCachePath;
+
+        // Fallback to default AppData path if not configured
+        if (string.IsNullOrWhiteSpace(cachePath))
+        {
+            cachePath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "DistroNexus",
+                "packages");
+        }
 
         if (!Directory.Exists(cachePath))
         {
@@ -489,4 +536,77 @@ public class CatalogService : ICatalogService
             throw;
         }
     }
-}
+
+    /// <summary>
+    /// Updates the IsCached property for all packages based on actual file existence.
+    /// </summary>
+    private void UpdatePackageCacheStatus(List<DistroPackage> packages)
+    {
+        try
+        {
+            var cachePath = GetPackageCachePath();
+            
+            if (!Directory.Exists(cachePath))
+            {
+                _logger.LogDebug("Cache directory does not exist: {CachePath}", cachePath);
+                foreach (var package in packages)
+                {
+                    package.IsCached = false;
+                    package.LocalPath = string.Empty;
+                }
+                return;
+            }
+
+            // Build a dictionary of cached files with their paths and sizes (files > 0 bytes only)
+            var cachedFiles = Directory.GetFiles(cachePath, "*.*", SearchOption.AllDirectories)
+                .Select(f => new { Path = f, Name = Path.GetFileName(f).ToLowerInvariant(), Size = new FileInfo(f).Length })
+                .Where(f => f.Size > 0) // Ignore zero-byte files
+                .ToDictionary(f => f.Name, f => new { f.Path, f.Size });
+
+            _logger.LogDebug("Checking cache status for {Count} packages against {FileCount} cached files", 
+                packages.Count, cachedFiles.Count);
+
+            foreach (var package in packages)
+            {
+                // Extract filename from download URL if not already set
+                var expectedFileName = !string.IsNullOrWhiteSpace(package.LocalPath)
+                    ? Path.GetFileName(package.LocalPath)
+                    : !string.IsNullOrWhiteSpace(package.DownloadUrl)
+                        ? Path.GetFileName(new Uri(package.DownloadUrl).LocalPath)
+                        : null;
+
+                if (!string.IsNullOrWhiteSpace(expectedFileName))
+                {
+                    var normalizedFileName = expectedFileName.ToLowerInvariant();
+                    if (cachedFiles.TryGetValue(normalizedFileName, out var fileInfo))
+                    {
+                        package.IsCached = true;
+                        package.LocalPath = fileInfo.Path;
+                        package.FileSize = fileInfo.Size;
+                        _logger.LogDebug("Package {Name} is cached at {Path} with size {Size} bytes", 
+                            package.Name, package.LocalPath, package.FileSize);
+                    }
+                    else
+                    {
+                        package.IsCached = false;
+                        package.LocalPath = string.Empty;
+                        package.FileSize = 0;
+                    }
+                }
+                else
+                {
+                    package.IsCached = false;
+                    package.LocalPath = string.Empty;
+                    package.FileSize = 0;
+                }
+            }
+
+            var cachedCount = packages.Count(p => p.IsCached);
+            _logger.LogInformation("Updated cache status: {CachedCount}/{TotalCount} packages are cached", 
+                cachedCount, packages.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update package cache status");
+        }
+    }}

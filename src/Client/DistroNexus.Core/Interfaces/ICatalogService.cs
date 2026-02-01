@@ -10,9 +10,10 @@ public interface ICatalogService
     /// <summary>
     /// Loads the distribution catalog from the configured source.
     /// </summary>
+    /// <param name="forceReload">Whether to force reload from the underlying source instead of using cache.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>A list of available distribution packages.</returns>
-    Task<List<DistroPackage>> LoadCatalogAsync(CancellationToken cancellationToken = default);
+    Task<List<DistroPackage>> LoadCatalogAsync(bool forceReload = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Refreshes the catalog from the remote source.
