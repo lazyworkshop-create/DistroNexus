@@ -35,6 +35,7 @@
         'Set-DistroNexusCredential',
         'Get-DistroNexusPackage',
         'Save-DistroNexusPackage',
+        'Remove-DistroNexusPackage',
         'Update-DistroNexusCatalog'
     )
 

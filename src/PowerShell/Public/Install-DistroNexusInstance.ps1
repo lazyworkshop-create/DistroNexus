@@ -54,7 +54,7 @@ function Install-DistroNexusInstance {
     .OUTPUTS
         Boolean indicating success or failure
     #>
-    [CmdletBinding(SupportsShouldProcess)]
+    [CmdletBinding(DefaultParameterSetName = 'Standard', SupportsShouldProcess)]
     [OutputType([bool])]
     param(
         [Parameter(Mandatory = $true, ParameterSetName = 'Standard')]
@@ -172,56 +172,76 @@ function Install-DistroNexusInstance {
                 throw "Distro catalog not found"
             }
             
-            # Find distro in catalog
+            # Find distro in catalog (flat array format only)
             $distroInfo = $null
-            $distroFamily = $null
-            foreach ($family in $config.Distros.PSObject.Properties) {
-                foreach ($version in $family.Value.Versions.PSObject.Properties) {
-                    if ($version.Value.DefaultName -eq $DistroName) {
-                        $distroInfo = $version.Value
-                        $distroFamily = $family.Name
-                        break
-                    }
-                }
-                if ($distroInfo) { break }
+            $distroList = @()
+            
+            if ($config.Distros -is [Array]) {
+                $distroList = $config.Distros
             }
+            elseif ($config.Distros) {
+                 $distroList = @($config.Distros)
+            }
+            
+            # Find by Name (exact match) or Version/DefaultName
+            $distroInfo = $distroList | Where-Object { 
+                $_.Name -eq $DistroName -or $_.Version -eq $DistroName 
+            } | Select-Object -First 1
             
             if (-not $distroInfo) {
                 throw "Distribution '$DistroName' not found in catalog"
             }
             
-            # Determine package path
+            # Get package path from distro info
             $packagePath = $distroInfo.LocalPath
+            
+            # Check if package is already cached
             if (-not $packagePath -or -not (Test-Path $packagePath)) {
-                # Try package cache
-                $cachePath = $config.Settings.PackageCachePath
-                if ($cachePath -and $distroInfo.Filename) {
-                    $packagePath = Join-Path $cachePath $distroInfo.Filename
+                # Get package info using Get-DistroNexusPackage to check cache status
+                $packageInfo = Get-DistroNexusPackage | Where-Object { 
+                    $_.Version -eq $DistroName -or $_.Name -eq $DistroName 
+                } | Select-Object -First 1
+                
+                if ($packageInfo -and $packageInfo.IsCached -and $packageInfo.LocalPath) {
+                    $packagePath = $packageInfo.LocalPath
+                    Write-DistroNexusLog "Using cached package: $packagePath"
                 }
             }
             
             # Auto-download if not found and AutoDownload is specified
-            if (-not (Test-Path $packagePath) -and $AutoDownload) {
-                Write-DistroNexusLog "Package not found, downloading..."
-                $downloadResult = Save-DistroNexusPackage -DefaultName $DistroName
+            if ((-not $packagePath -or -not (Test-Path $packagePath)) -and $AutoDownload) {
+                Write-DistroNexusLog "Package not cached, downloading using Save-DistroNexusPackage..."
                 
-                if (-not $downloadResult.Success) {
-                    throw "Failed to download package"
+                # Use Save-DistroNexusPackage for consistent download logic
+                $downloadResult = Save-DistroNexusPackage -DefaultName $DistroName -ShowSpeed $true -SkipExisting $false
+                
+                if (-not $downloadResult) {
+                    throw "Failed to download package for '$DistroName'"
                 }
                 
-                # Update package path
-                if ($cachePath -and $distroInfo.Filename) {
-                    $packagePath = Join-Path $cachePath $distroInfo.Filename
+                # Get the package path after download
+                $packageInfo = Get-DistroNexusPackage | Where-Object { 
+                    $_.Version -eq $DistroName -or $_.Name -eq $DistroName 
+                } | Select-Object -First 1
+                
+                if ($packageInfo -and $packageInfo.LocalPath) {
+                    $packagePath = $packageInfo.LocalPath
+                    Write-DistroNexusLog "Download completed: $packagePath"
+                }
+                else {
+                    throw "Package download succeeded but file not found"
                 }
             }
             
-            if (-not (Test-Path $packagePath)) {
-                throw "Package not found at: $packagePath. Use -AutoDownload or run Save-DistroNexusPackage first."
+            if (-not $packagePath -or -not (Test-Path $packagePath)) {
+                throw "Package not found. Use -AutoDownload or run Save-DistroNexusPackage -DefaultName '$DistroName' first."
             }
             
-            # Handle package format (use PackageHandler if not .tar)
+            # Handle package format
+            # .wsl, .tar, and .tar.gz files can be imported directly
+            # Other formats need to be extracted first
             $finalPackagePath = $packagePath
-            if ($packagePath -notmatch '\.tar(\.gz)?$') {
+            if ($packagePath -notmatch '\.(wsl|tar|tar\.gz)$') {
                 Write-DistroNexusLog "Converting package format..."
                 $extractedPath = Expand-DistroPackage -PackagePath $packagePath
                 if ($extractedPath) {

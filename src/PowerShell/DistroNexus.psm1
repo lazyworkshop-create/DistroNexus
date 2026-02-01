@@ -6,8 +6,17 @@ $ErrorActionPreference = 'Stop'
 # Get module root path
 $script:ModuleRoot = $PSScriptRoot
 
-# Set the project root path (two levels up from module directory)
-$script:ProjectRoot = Split-Path (Split-Path $script:ModuleRoot -Parent) -Parent
+# Set the project root path
+# In release: PowerShell module is at <root>/PowerShell, config is at <root>/config
+# In development: PowerShell module is at src/PowerShell, config is at config (two levels up)
+$parentDir = Split-Path $script:ModuleRoot -Parent
+if (Test-Path (Join-Path $parentDir "config")) {
+    # Release environment: config folder is sibling to PowerShell folder
+    $script:ProjectRoot = $parentDir
+} else {
+    # Development environment: go two levels up
+    $script:ProjectRoot = Split-Path $parentDir -Parent
+}
 
 # Import private helper functions
 $privateFunctions = @(Get-ChildItem -Path "$PSScriptRoot\Private\*.ps1" -ErrorAction SilentlyContinue)

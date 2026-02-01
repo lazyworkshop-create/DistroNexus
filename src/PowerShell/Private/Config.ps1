@@ -22,7 +22,9 @@ function Get-DistroNexusConfig {
     )
     
     if (-not $ConfigRoot) {
-        $ConfigRoot = Join-Path $script:ProjectRoot "config"
+        # Use AppData for configuration files (consistent with C# application)
+        $appDataRoot = [System.Environment]::GetFolderPath([System.Environment+SpecialFolder]::ApplicationData)
+        $ConfigRoot = Join-Path $appDataRoot "DistroNexus"
     }
     
     $result = @{
@@ -30,21 +32,26 @@ function Get-DistroNexusConfig {
         Settings = $null
     }
     
-    # Load distros.json
-    $distrosPath = Join-Path $ConfigRoot "distros.json"
-    if (Test-Path $distrosPath) {
+    # Load catalog.json (or distros.json for compatibility)
+    $catalogPath = Join-Path $ConfigRoot "catalog.json"
+    if (-not (Test-Path $catalogPath)) {
+        # Fallback to distros.json for backward compatibility
+        $catalogPath = Join-Path $ConfigRoot "distros.json"
+    }
+    
+    if (Test-Path $catalogPath) {
         try {
-            $distrosContent = Get-Content -Raw -Path $distrosPath | ConvertFrom-Json
+            $distrosContent = Get-Content -Raw -Path $catalogPath | ConvertFrom-Json
             $result.Distros = $distrosContent
-            Write-Verbose "Loaded distros catalog from $distrosPath"
+            Write-Verbose "Loaded distros catalog from $catalogPath"
         }
         catch {
-            Write-DistroNexusLog "Failed to load distros.json: $_" -Level ERROR
-            throw "Failed to parse distros.json. Please ensure it is valid JSON."
+            Write-DistroNexusLog "Failed to load catalog: $_" -Level ERROR
+            throw "Failed to parse distros catalog. Please ensure it is valid JSON."
         }
     }
     else {
-        Write-DistroNexusLog "Distros catalog not found at $distrosPath" -Level WARN
+        Write-DistroNexusLog "Distros catalog not found at $catalogPath" -Level WARN
     }
     
     # Load settings.json
@@ -78,7 +85,7 @@ function Save-DistroNexusSettings {
         Settings object to save.
 
     .PARAMETER ConfigRoot
-        Root directory for config files. If not specified, uses module root/../config
+        Root directory for config files. If not specified, uses AppData/DistroNexus
     #>
     [CmdletBinding()]
     param(
@@ -90,7 +97,14 @@ function Save-DistroNexusSettings {
     )
     
     if (-not $ConfigRoot) {
-        $ConfigRoot = Join-Path $script:ProjectRoot "config"
+        # Use AppData for configuration files (consistent with C# application)
+        $appDataRoot = [System.Environment]::GetFolderPath([System.Environment+SpecialFolder]::ApplicationData)
+        $ConfigRoot = Join-Path $appDataRoot "DistroNexus"
+    }
+    
+    # Ensure directory exists
+    if (-not (Test-Path $ConfigRoot)) {
+        New-Item -ItemType Directory -Path $ConfigRoot -Force | Out-Null
     }
     
     $settingsPath = Join-Path $ConfigRoot "settings.json"

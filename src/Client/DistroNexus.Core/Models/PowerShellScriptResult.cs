@@ -24,8 +24,9 @@ public class PowerShellScriptResult
 
     /// <summary>
     /// Gets a value indicating whether the script executed successfully.
+    /// Only checks exit code, as PowerShell Information stream can appear in stderr as CLIXML.
     /// </summary>
-    public bool Success => ExitCode == 0 && string.IsNullOrWhiteSpace(Error);
+    public bool Success => ExitCode == 0;
 
     /// <summary>
     /// Gets the parsed PowerShell objects from JSON output.
