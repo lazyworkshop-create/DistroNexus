@@ -17,6 +17,9 @@ public partial class InstallPathStep : WizardStepBase
     private readonly ISettingsService _settingsService;
     private readonly IWslManagerService _wslManager;
     private readonly ILogger _logger;
+    private CancellationTokenSource? _validationCts;
+    private System.Threading.Timer? _debounceTimer;
+    private const int DebounceDelayMs = 500;
 
     public override string StepId => "install-path";
     public override string Title => "Choose Installation Path";
@@ -36,6 +39,12 @@ public partial class InstallPathStep : WizardStepBase
 
     [ObservableProperty]
     private bool _instanceNameExists;
+
+    [ObservableProperty]
+    private string _recommendedInstanceName = string.Empty;
+
+    [ObservableProperty]
+    private bool _isValidating;
 
     public InstallPathStep(ISettingsService settingsService, IWslManagerService wslManager, ILogger logger)
     {
@@ -58,13 +67,38 @@ public partial class InstallPathStep : WizardStepBase
             Context.InstallPath = settings.DefaultInstallPath;
         }
 
+        // Generate recommended instance name from distribution name
+        if (Context?.SelectedDistribution != null)
+        {
+            var baseName = Context.SelectedDistribution.Name
+                ?.Replace(" ", "-")
+                .Replace(".", "")
+                .ToLowerInvariant() ?? "instance";
+            RecommendedInstanceName = baseName;
+            
+            // Always set as default when entering this step
+            Context.InstanceName = baseName;
+            _logger.LogInformation("Set default instance name to: {InstanceName}", baseName);
+        }
+        else
+        {
+            RecommendedInstanceName = string.Empty;
+        }
+
+        // Clear validation state
+        if (Context != null)
+        {
+            Context.PathValidationMessage = string.Empty;
+            Context.IsPathValid = false;
+        }
+        InstanceNameChecked = false;
+        InstanceNameExists = false;
+
         // Subscribe to context property changes
         if (Context != null)
         {
             Context.PropertyChanged += OnContextPropertyChanged;
         }
-
-        ValidateInstallPath();
     }
 
     public override Task OnExitAsync()
@@ -75,21 +109,35 @@ public partial class InstallPathStep : WizardStepBase
             Context.PropertyChanged -= OnContextPropertyChanged;
         }
 
+        // Clean up resources
+        _debounceTimer?.Dispose();
+        _debounceTimer = null;
+        _validationCts?.Cancel();
+        _validationCts?.Dispose();
+        _validationCts = null;
+
         return Task.CompletedTask;
     }
 
     private void OnContextPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(WizardContext.InstallPath) or nameof(WizardContext.InstanceName))
+        if (e.PropertyName == nameof(WizardContext.InstanceName))
         {
-            // Reset instance name check when instance name changes
-            if (e.PropertyName == nameof(WizardContext.InstanceName))
+            // Reset validation state when instance name changes
+            InstanceNameChecked = false;
+            InstanceNameExists = false;
+
+            // Do NOT auto-validate - only validate when user clicks Next button
+            // This prevents unnecessary API calls while typing
+        }
+        else if (e.PropertyName == nameof(WizardContext.InstallPath))
+        {
+            // Reset path validation when install path changes
+            if (Context != null)
             {
-                InstanceNameChecked = false;
-                InstanceNameExists = false;
+                Context.PathValidationMessage = string.Empty;
+                Context.IsPathValid = false;
             }
-            
-            ValidateInstallPath();
         }
     }
 
@@ -107,7 +155,6 @@ public partial class InstallPathStep : WizardStepBase
         if (dialog.ShowDialog() == true && Context != null)
         {
             Context.InstallPath = dialog.FolderName;
-            ValidateInstallPath();
         }
     }
 
@@ -185,16 +232,6 @@ public partial class InstallPathStep : WizardStepBase
                 // Don't fail validation if we can't check disk space
             }
 
-            // If instance name check is in progress, don't mark as valid yet
-            if (IsValidatingInstance)
-            {
-                Context.IsPathValid = false;
-                Context.PathValidationMessage = "Checking if instance name is available...";
-                ValidationIcon = SymbolRegular.ArrowSync24;
-                ValidationColor = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 120, 212)); // Blue
-                return;
-            }
-
             // If instance name exists, mark as invalid
             if (InstanceNameChecked && InstanceNameExists)
             {
@@ -204,22 +241,9 @@ public partial class InstallPathStep : WizardStepBase
                 return;
             }
 
-            // Check if instance name already exists in WSL (async check)
-            if (!InstanceNameChecked)
-            {
-                _ = CheckInstanceNameExistsAsync();
-                
-                // Don't mark as valid until check completes
-                Context.IsPathValid = false;
-                Context.PathValidationMessage = "Checking if instance name is available...";
-                ValidationIcon = SymbolRegular.ArrowSync24;
-                ValidationColor = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 120, 212)); // Blue
-                return;
-            }
-
-            // All checks passed
+            // Basic validation passed - full validation happens on Next button click
             Context.IsPathValid = true;
-            Context.PathValidationMessage = $"✓ Instance will be installed to: {instancePath}";
+            Context.PathValidationMessage = $"Instance will be installed to: {instancePath}";
             UpdateValidationVisuals(true);
         }
         catch (Exception ex)
@@ -231,48 +255,89 @@ public partial class InstallPathStep : WizardStepBase
     }
 
     /// <summary>
+    /// Checks if an instance with this name already exists (async).
+    /// This version runs on a background thread to avoid blocking UI.
+    /// </summary>
+    private async Task<bool> CheckInstanceNameExistsInternalAsync()
+    {
+        if (Context == null || string.IsNullOrWhiteSpace(Context.InstanceName))
+            return false;
+
+        try
+        {
+            var instances = await _wslManager.GetInstancesAsync();
+            return instances.Any(i => 
+                string.Equals(i.Name, Context.InstanceName, StringComparison.OrdinalIgnoreCase));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to check if instance name exists");
+            // Return false to allow user to proceed (will be checked again during installation)
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Checks asynchronously if an instance with this name already exists.
+    /// Uses debouncing to avoid excessive calls.
     /// </summary>
     private async Task CheckInstanceNameExistsAsync()
     {
         if (Context == null || string.IsNullOrWhiteSpace(Context.InstanceName))
             return;
 
+        // Cancel any pending validation
+        _validationCts?.Cancel();
+        _validationCts?.Dispose();
+        _validationCts = new CancellationTokenSource();
+        var token = _validationCts.Token;
+
         var currentInstanceName = Context.InstanceName;
 
         try
         {
             IsValidatingInstance = true;
-            
-            var instances = await _wslManager.GetInstancesAsync();
-            
-            // Only update if the instance name hasn't changed
-            if (Context.InstanceName == currentInstanceName)
+
+            var instanceExists = await CheckInstanceNameExistsInternalAsync();
+
+            // Only update if the instance name hasn't changed and token is not cancelled
+            if (!token.IsCancellationRequested && Context.InstanceName == currentInstanceName)
             {
-                InstanceNameExists = instances.Any(i => 
-                    string.Equals(i.Name, Context.InstanceName, StringComparison.OrdinalIgnoreCase));
+                InstanceNameExists = instanceExists;
                 InstanceNameChecked = true;
 
                 // Re-trigger validation to update UI with the result
                 ValidateInstallPath();
             }
         }
+        catch (OperationCanceledException)
+        {
+            // Validation was cancelled - this is expected
+            _logger.LogDebug("Instance name validation cancelled for: {InstanceName}", currentInstanceName);
+        }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to check if instance name exists");
-            InstanceNameChecked = false;
-            
-            // Show warning but allow user to proceed (will be checked again during installation)
-            if (Context.InstanceName == currentInstanceName)
+
+            if (!token.IsCancellationRequested)
             {
-                Context.PathValidationMessage = "Warning: Could not verify if instance name already exists. The installation will check again before proceeding.";
-                ValidationIcon = SymbolRegular.Warning24;
-                ValidationColor = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 185, 0)); // Orange
+                InstanceNameChecked = false;
+
+                // Show warning but allow user to proceed (will be checked again during installation)
+                if (Context.InstanceName == currentInstanceName)
+                {
+                    Context.PathValidationMessage = "Warning: Could not verify if instance name already exists. The installation will check again before proceeding.";
+                    ValidationIcon = SymbolRegular.Warning24;
+                    ValidationColor = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 185, 0)); // Orange
+                }
             }
         }
         finally
         {
-            IsValidatingInstance = false;
+            if (!token.IsCancellationRequested)
+            {
+                IsValidatingInstance = false;
+            }
         }
     }
 
@@ -292,107 +357,128 @@ public partial class InstallPathStep : WizardStepBase
 
     public override bool Validate()
     {
-        // First run the validation logic
-        ValidateInstallPath();
-
-        if (string.IsNullOrWhiteSpace(Context?.InstallPath))
+        try
         {
-            ErrorMessage = "Please specify an installation path.";
-            return false;
-        }
-
-        if (string.IsNullOrWhiteSpace(Context?.InstanceName))
-        {
-            ErrorMessage = "Please specify an instance name.";
-            return false;
-        }
-
-        // Validate instance name format (alphanumeric, hyphens, underscores only)
-        if (!System.Text.RegularExpressions.Regex.IsMatch(Context.InstanceName, @"^[a-zA-Z0-9_-]+$"))
-        {
-            ErrorMessage = "Instance name can only contain letters, numbers, hyphens, and underscores.";
-            return false;
-        }
-
-        // Validate instance name must start with alphanumeric
-        if (!char.IsLetterOrDigit(Context.InstanceName[0]))
-        {
-            ErrorMessage = "Instance name must start with a letter or number.";
-            return false;
-        }
-
-        // Check instance name length
-        if (Context.InstanceName.Length < 2)
-        {
-            ErrorMessage = "Instance name is too short (minimum 2 characters).";
-            return false;
-        }
-
-        if (Context.InstanceName.Length > 50)
-        {
-            ErrorMessage = "Instance name is too long (maximum 50 characters).";
-            return false;
-        }
-
-        // Check for reserved names
-        var reservedNames = new[] { "wsl", "docker", "system", "windows", "microsoft", "default", "temp", "tmp" };
-        if (reservedNames.Contains(Context.InstanceName.ToLowerInvariant()))
-        {
-            ErrorMessage = $"'{Context.InstanceName}' is a reserved name. Please choose a different name.";
-            return false;
-        }
-
-        // Check if validation is still in progress
-        if (IsValidatingInstance)
-        {
-            ErrorMessage = "Still checking if instance name is available. Please wait...";
-            return false;
-        }
-
-        // If instance name hasn't been checked yet, force a synchronous check
-        if (!InstanceNameChecked && !string.IsNullOrWhiteSpace(Context.InstanceName))
-        {
-            ErrorMessage = "Verifying instance name availability...";
-            
-            try
+            // Basic synchronous validations first
+            if (string.IsNullOrWhiteSpace(Context?.InstallPath))
             {
-                // Trigger async check and wait
-                var checkTask = CheckInstanceNameExistsAsync();
-                
-                // Wait up to 5 seconds for the check to complete
-                if (!checkTask.Wait(TimeSpan.FromSeconds(5)))
-                {
-                    ErrorMessage = "Instance name validation timed out. Please check your WSL installation and try again.";
-                    return false;
-                }
-
-                // After check completes, re-validate
-                ValidateInstallPath();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed during synchronous instance name check");
-                ErrorMessage = "Failed to verify instance name. Please try again.";
+                ErrorMessage = "Please specify an installation path.";
                 return false;
             }
-        }
 
-        // Check if instance name already exists (from completed async check)
-        if (InstanceNameChecked && InstanceNameExists)
+            if (string.IsNullOrWhiteSpace(Context?.InstanceName))
+            {
+                ErrorMessage = "Please specify an instance name.";
+                return false;
+            }
+
+            // Validate instance name format (alphanumeric, hyphens, underscores only)
+            if (!System.Text.RegularExpressions.Regex.IsMatch(Context.InstanceName, @"^[a-zA-Z0-9_-]+$"))
+            {
+                ErrorMessage = "Instance name can only contain letters, numbers, hyphens, and underscores.";
+                return false;
+            }
+
+            // Validate instance name must start with alphanumeric
+            if (!char.IsLetterOrDigit(Context.InstanceName[0]))
+            {
+                ErrorMessage = "Instance name must start with a letter or number.";
+                return false;
+            }
+
+            // Check instance name length
+            if (Context.InstanceName.Length < 2)
+            {
+                ErrorMessage = "Instance name is too short (minimum 2 characters).";
+                return false;
+            }
+
+            if (Context.InstanceName.Length > 50)
+            {
+                ErrorMessage = "Instance name is too long (maximum 50 characters).";
+                return false;
+            }
+
+            // Check for reserved names
+            var reservedNames = new[] { "wsl", "docker", "system", "windows", "microsoft", "default", "temp", "tmp" };
+            if (reservedNames.Contains(Context.InstanceName.ToLowerInvariant()))
+            {
+                ErrorMessage = $"'{Context.InstanceName}' is a reserved name. Please choose a different name.";
+                return false;
+            }
+
+            // Show loading state for async validation
+            IsValidating = true;
+            ErrorMessage = "Verifying instance name availability...";
+
+            // Force UI to update immediately
+            System.Windows.Application.Current?.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.Render);
+
+            // If instance name hasn't been checked yet, check it now in a blocking but non-UI-blocking way
+            if (!InstanceNameChecked && !string.IsNullOrWhiteSpace(Context.InstanceName))
+            {
+                try
+                {
+                    // Use Task.Run to execute async code without blocking UI thread
+                    // This runs on a thread pool thread, keeping UI responsive
+                    var task = Task.Run(async () =>
+                    {
+                        return await CheckInstanceNameExistsInternalAsync();
+                    });
+
+                    // Wait with timeout (max 10 seconds)
+                    if (task.Wait(TimeSpan.FromSeconds(10)))
+                    {
+                        InstanceNameExists = task.Result;
+                        InstanceNameChecked = true;
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Instance name check timed out");
+                        ErrorMessage = "Verification timed out. Please try again.";
+                        IsValidating = false;
+                        return false;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed during instance name check");
+                    ErrorMessage = "Failed to verify instance name. Please try again.";
+                    IsValidating = false;
+                    return false;
+                }
+            }
+
+            // Hide loading state
+            IsValidating = false;
+
+            // Check if instance name already exists (from completed check)
+            if (InstanceNameChecked && InstanceNameExists)
+            {
+                ErrorMessage = $"An instance named '{Context.InstanceName}' already exists. Please choose a different name.";
+                return false;
+            }
+
+            // Validate install path
+            ValidateInstallPath();
+
+            // Check final path validity
+            if (Context?.IsPathValid != true)
+            {
+                ErrorMessage = Context?.PathValidationMessage ?? "Invalid path or instance name.";
+                return false;
+            }
+
+            ErrorMessage = string.Empty;
+            return true;
+        }
+        catch (Exception ex)
         {
-            ErrorMessage = $"An instance named '{Context.InstanceName}' already exists. Please choose a different name.";
+            _logger.LogError(ex, "Unexpected error during validation");
+            ErrorMessage = $"Validation error: {ex.Message}";
+            IsValidating = false;
             return false;
         }
-
-        // Check final path validity
-        if (Context?.IsPathValid != true)
-        {
-            ErrorMessage = Context?.PathValidationMessage ?? "Invalid path or instance name.";
-            return false;
-        }
-
-        ErrorMessage = string.Empty;
-        return true;
     }
 
     /// <summary>

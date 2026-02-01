@@ -100,7 +100,16 @@
                           TextAlignment="Center"
                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                           TextWrapping="Wrap"
-                          Margin="0,0,0,20"/>
+                          Margin="0,0,0,10"/>
+                
+                <!-- Log Link -->
+                <TextBlock HorizontalAlignment="Center" Margin="0,0,0,20">
+                    <Hyperlink Command="{Binding OpenLogFolderCommand}"
+                              TextDecorations="None">
+                        <Run Text="📄 Open log folder for details" 
+                             Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"/>
+                    </Hyperlink>
+                </TextBlock>
                 
                 <!-- Error Details Card -->
                 <ui:Card Padding="15" Margin="0,10,0,0"

@@ -75,6 +75,9 @@ public partial class WizardContext : ObservableObject
     [ObservableProperty]
     private string _resultMessage = string.Empty;
 
+    [ObservableProperty]
+    private string _logFilePath = string.Empty;
+
     /// <summary>
     /// Creates InstallOptions from the current context.
     /// </summary>
@@ -117,5 +120,6 @@ public partial class WizardContext : ObservableObject
         InstallFailed = false;
         ErrorMessage = string.Empty;
         ResultMessage = string.Empty;
+        LogFilePath = string.Empty;
     }
 }

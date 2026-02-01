@@ -162,32 +162,44 @@
                                                           Appearance="Caution"
                                                           Margin="0,0,5,0"/>
                                                 
-                                                <!-- Install Button (for cached packages) -->
+                                                <!-- Install Button (for cached packages, not downloading) -->
                                                 <ui:Button Grid.Column="3" 
                                                           Content="Install" 
                                                           Icon="{ui:SymbolIcon Symbol=Add20}"
                                                           Command="{Binding DataContext.InstallCachedPackageCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                                           CommandParameter="{Binding}"
-                                                          Visibility="{Binding IsCached, Converter={StaticResource BoolToVisibilityConverter}}"
                                                           Appearance="Success"
-                                                          Margin="0,0,5,0"/>
+                                                          Margin="0,0,5,0">
+                                                    <ui:Button.Visibility>
+                                                        <MultiBinding Converter="{StaticResource CachedNotDownloadingVisibilityConverter}">
+                                                            <Binding Path="IsCached"/>
+                                                            <Binding Path="IsDownloading"/>
+                                                        </MultiBinding>
+                                                    </ui:Button.Visibility>
+                                                </ui:Button>
                                                 
-                                                <!-- More Actions DropDown (for cached packages) -->
+                                                <!-- More Actions DropDown (for cached packages, not downloading) -->
                                                 <ui:DropDownButton Grid.Column="4" 
                                                                    Content="Actions" 
                                                                    Icon="{ui:SymbolIcon Symbol=MoreHorizontal20}"
-                                                                   Visibility="{Binding IsCached, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                   Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Page}}">
+                                                    <ui:DropDownButton.Visibility>
+                                                        <MultiBinding Converter="{StaticResource CachedNotDownloadingVisibilityConverter}">
+                                                            <Binding Path="IsCached"/>
+                                                            <Binding Path="IsDownloading"/>
+                                                        </MultiBinding>
+                                                    </ui:DropDownButton.Visibility>
                                                     <ui:DropDownButton.Flyout>
                                                         <ContextMenu>
                                                             <ui:MenuItem Header="Redownload" 
                                                                         Icon="{ui:SymbolIcon Symbol=ArrowSync20}" 
-                                                                        Command="{Binding DataContext.RedownloadPackageCommand, RelativeSource={RelativeSource AncestorType=Page}}"
-                                                                        CommandParameter="{Binding}"/>
+                                                                        Command="{Binding PlacementTarget.Tag.RedownloadPackageCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                        CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                                             <Separator/>
                                                             <ui:MenuItem Header="Delete Cache" 
                                                                         Icon="{ui:SymbolIcon Symbol=Delete20}" 
-                                                                        Command="{Binding DataContext.DeletePackageCommand, RelativeSource={RelativeSource AncestorType=Page}}"
-                                                                        CommandParameter="{Binding}"/>
+                                                                        Command="{Binding PlacementTarget.Tag.DeletePackageCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                        CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                                         </ContextMenu>
                                                     </ui:DropDownButton.Flyout>
                                                 </ui:DropDownButton>

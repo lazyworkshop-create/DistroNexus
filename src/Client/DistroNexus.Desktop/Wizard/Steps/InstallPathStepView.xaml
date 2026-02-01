@@ -38,19 +38,17 @@
                       Command="{Binding BrowseCommand}"/>
         </Grid>
         
-        <!-- Path Validation Message -->
-        <Border Margin="0,15,0,0"
-                Padding="12"
-                CornerRadius="4"
-                Background="{DynamicResource ControlFillColorDefaultBrush}">
-            <StackPanel Orientation="Horizontal">
-                <ui:SymbolIcon Symbol="{Binding ValidationIcon}"
-                              Foreground="{Binding ValidationColor}"
-                              Margin="0,0,10,0"/>
-                <TextBlock Text="{Binding Context.PathValidationMessage}"
-                          TextWrapping="Wrap"
-                          Foreground="{Binding ValidationColor}"/>
-            </StackPanel>
-        </Border>
+        <!-- Validation Loading Indicator -->
+        <StackPanel Orientation="Horizontal" 
+                    Margin="0,15,0,0"
+                    Visibility="{Binding IsValidating, Converter={StaticResource BoolToVisibilityConverter}}">
+            <ui:ProgressRing IsIndeterminate="True" 
+                            Width="20" 
+                            Height="20"
+                            Margin="0,0,10,0"/>
+            <TextBlock Text="Validating..."
+                      VerticalAlignment="Center"
+                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+        </StackPanel>
     </StackPanel>
 </UserControl>

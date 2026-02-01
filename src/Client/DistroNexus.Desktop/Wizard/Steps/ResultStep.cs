@@ -60,6 +60,69 @@ public partial class ResultStep : WizardStepBase
     {
     }
 
+    [RelayCommand]
+    private void OpenLogFolder()
+    {
+        try
+        {
+            // Determine log folder path
+            string logFolder;
+
+            if (Context != null && !string.IsNullOrEmpty(Context.LogFilePath))
+            {
+                // Use log file path from context
+                var logDir = Path.GetDirectoryName(Context.LogFilePath);
+                if (!string.IsNullOrEmpty(logDir) && Directory.Exists(logDir))
+                {
+                    logFolder = logDir;
+                }
+                else
+                {
+                    // Fallback to default
+                    logFolder = GetDefaultLogFolder();
+                }
+            }
+            else
+            {
+                // Use default log folder
+                logFolder = GetDefaultLogFolder();
+            }
+
+            // Ensure folder exists
+            if (!Directory.Exists(logFolder))
+            {
+                Directory.CreateDirectory(logFolder);
+            }
+
+            // Open folder in Windows Explorer
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = logFolder,
+                UseShellExecute = true,
+                Verb = "open"
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show(
+                $"Failed to open log folder: {ex.Message}",
+                "Error",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Error);
+        }
+    }
+
+    /// <summary>
+    /// Gets the default log folder path (AppData\Roaming\DistroNexus\Logs).
+    /// </summary>
+    private static string GetDefaultLogFolder()
+    {
+        return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "DistroNexus",
+            "Logs");
+    }
+
     protected override UserControl CreateContent()
     {
         return new ResultStepView { DataContext = this };

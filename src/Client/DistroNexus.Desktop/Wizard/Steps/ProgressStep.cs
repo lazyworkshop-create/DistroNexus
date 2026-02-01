@@ -53,6 +53,10 @@ public partial class ProgressStep : WizardStepBase
         // Clear the step's ErrorMessage since ProgressStep displays status in its own UI
         ErrorMessage = string.Empty;
 
+        // Set log file path for error reporting
+        var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        Context.LogFilePath = Path.Combine(appDataPath, "DistroNexus", "logs", "distronexus.log");
+
         Context.IsInstalling = true;
         Context.InstallProgress = 0;
         Context.InstallStatusMessage = "Preparing installation...";
