@@ -318,36 +318,49 @@ public partial class WslManagerService : IWslManagerService
 
         try
         {
+            _logger.LogInformation("===== INSTALLATION STARTED =====");
             _logger.LogInformation("Installing WSL instance '{InstanceName}' to '{InstallPath}'", 
                 options.InstanceName, options.InstallPath);
+            _logger.LogInformation("Distribution: {DistroName}, Package URL: {Url}", 
+                options.Package?.Name ?? "Unknown", options.Package?.DownloadUrl ?? "None");
+            _logger.LogInformation("Use Local Cache: {UseCache}, Username: {Username}", 
+                options.UseLocalCache, options.Username ?? "root");
 
             progress?.Report((5, "Checking if instance already exists..."));
-            
+
             // Check for cancellation before starting
             cancellationToken.ThrowIfCancellationRequested();
 
             // Check if instance name already exists
+            _logger.LogDebug("Checking if instance '{InstanceName}' already exists...", options.InstanceName);
             var instances = await GetInstancesAsync(cancellationToken);
             if (instances.Any(i => i.Name == options.InstanceName))
             {
+                _logger.LogError("Installation failed: Instance name '{InstanceName}' already exists", options.InstanceName);
                 throw new InvalidOperationException(
                     $"An instance with the name \"{options.InstanceName}\" already exists. Please choose a different name.");
             }
+            _logger.LogDebug("Instance name '{InstanceName}' is available", options.InstanceName);
 
             progress?.Report((10, "Preparing installation..."));
             cancellationToken.ThrowIfCancellationRequested();
 
-            var escapedPath = EscapePowerShellString(options.InstallPath);
-            
+            // Create instance-specific installation path by appending instance name to base path
+            // This prevents conflicts when multiple instances are installed to the same base directory
+            var actualInstallPath = Path.Combine(options.InstallPath, options.InstanceName);
+            var escapedPath = EscapePowerShellString(actualInstallPath);
+
             progress?.Report((15, "Creating installation directory..."));
             cancellationToken.ThrowIfCancellationRequested();
 
             // Create installation directory
+            _logger.LogDebug("Creating installation directory: {Path}", actualInstallPath);
             var createDirScript = 
                 "$ProgressPreference = 'SilentlyContinue'; " +
                 $"if (-not (Test-Path {escapedPath})) {{ New-Item -ItemType Directory -Path {escapedPath} -Force | Out-Null }}; " +
                 "'success'";
             await _powerShellService.ExecuteScriptAsync(createDirScript, cancellationToken);
+            _logger.LogDebug("Installation directory created successfully");
 
             progress?.Report((20, "Preparing distribution package..."));
             cancellationToken.ThrowIfCancellationRequested();
@@ -355,11 +368,10 @@ public partial class WslManagerService : IWslManagerService
             // Prepare module call parameters
             var moduleParams = new Dictionary<string, object>
             {
-                ["Name"] = options.InstanceName,
-                ["DestinationPath"] = options.InstallPath,
                 ["DistroName"] = options.Package?.Name ?? "Ubuntu",
-                ["PackageUrl"] = options.Package?.DownloadUrl ?? "",
-                ["UseLocalCache"] = options.UseLocalCache
+                ["InstallPath"] = actualInstallPath,  // Use instance-specific path
+                ["InstanceName"] = options.InstanceName,
+                ["AutoDownload"] = true  // Enable auto-download if package not found in cache
             };
 
             // Add optional parameters
@@ -368,7 +380,7 @@ public partial class WslManagerService : IWslManagerService
                 moduleParams["Username"] = options.Username;
                 if (!string.IsNullOrWhiteSpace(options.Password))
                 {
-                    moduleParams["Password"] = options.Password;
+                    moduleParams["Password"] = "***"; // Don't log actual password
                 }
             }
 
@@ -376,6 +388,8 @@ public partial class WslManagerService : IWslManagerService
             {
                 moduleParams["InitCommands"] = options.InitCommands;
             }
+
+            _logger.LogInformation("Module parameters: {@Parameters}", moduleParams);
 
             progress?.Report((30, "Calling PowerShell module for installation..."));
             cancellationToken.ThrowIfCancellationRequested();
@@ -388,6 +402,8 @@ public partial class WslManagerService : IWslManagerService
                 progress?.Report((scaledProgress, $"Installing ({scaledProgress:F0}%)..."));
                 _logger.LogInformation("Install progress: {Percentage}%", (int)scaledProgress);
             });
+
+            _logger.LogInformation("Calling Install-DistroNexusInstance cmdlet...");
 
             // Try using PowerShell module Cmdlet first
             var moduleResult = await _powerShellService.ExecuteModuleCmdletAsync(
@@ -402,23 +418,59 @@ public partial class WslManagerService : IWslManagerService
                 },
                 cancellationToken: cancellationToken);
 
+            _logger.LogInformation("Module cmdlet execution completed. Success: {Success}, UsedModule: {UsedModule}", 
+                moduleResult.Success, moduleResult.UsedModule);
+
+            if (!string.IsNullOrWhiteSpace(moduleResult.Output))
+            {
+                _logger.LogDebug("Module output: {Output}", moduleResult.Output);
+            }
+
+            if (!string.IsNullOrWhiteSpace(moduleResult.Error))
+            {
+                _logger.LogError("Module error output: {Error}", moduleResult.Error);
+            }
+
+            if (moduleResult.Exception != null)
+            {
+                _logger.LogError(moduleResult.Exception, "Module execution exception");
+            }
+
             if (moduleResult.Success)
             {
+                _logger.LogInformation("===== INSTALLATION SUCCESSFUL =====");
                 _logger.LogInformation("WSL instance '{InstanceName}' installed successfully using module", options.InstanceName);
                 progress?.Report((100, "Installation complete"));
                 return;
             }
 
             // If module installation fails, throw error (don't fall back to inline script)
+            _logger.LogError("===== INSTALLATION FAILED =====");
             _logger.LogError("PowerShell module failed to install instance");
-            throw new InvalidOperationException(
-                $"Failed to install WSL distribution using PowerShell module. Please check the error logs and try again.",
-                moduleResult.Exception);
+            _logger.LogError("Exit Code: {ExitCode}", moduleResult.ExitCode);
+            _logger.LogError("Error Message: {Error}", moduleResult.Error ?? "<empty>");
+            _logger.LogError("Output: {Output}", moduleResult.Output ?? "<empty>");
+            _logger.LogError("Used Module: {UsedModule}", moduleResult.UsedModule);
+
+            var errorMsg = !string.IsNullOrWhiteSpace(moduleResult.Error) 
+                ? moduleResult.Error 
+                : "Failed to install WSL distribution using PowerShell module. Please check the error logs and try again.";
+
+            throw new InvalidOperationException(errorMsg, moduleResult.Exception);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to install WSL instance '{InstanceName}'", options.InstanceName);
-            
+            _logger.LogError(ex, "===== INSTALLATION EXCEPTION =====");
+            _logger.LogError(ex, "Failed to install WSL instance '{InstanceName}'. Exception Type: {ExceptionType}", 
+                options.InstanceName, ex.GetType().Name);
+            _logger.LogError("Exception Message: {Message}", ex.Message);
+            _logger.LogError("Stack Trace: {StackTrace}", ex.StackTrace);
+
+            if (ex.InnerException != null)
+            {
+                _logger.LogError(ex.InnerException, "Inner Exception: {InnerMessage}", ex.InnerException.Message);
+            }
+
             // Extract user-friendly error message
             var friendlyMessage = ExtractUserFriendlyError(ex.Message);
             throw new InvalidOperationException(friendlyMessage, ex);

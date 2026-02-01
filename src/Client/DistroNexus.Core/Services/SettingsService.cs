@@ -17,18 +17,18 @@ public class SettingsService : ISettingsService
     public SettingsService(ILogger<SettingsService> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        
-        // Standard Path Strategy: Always use AppData
+
+        // Use ApplicationData (Roaming) for settings and logs
         var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         var appFolder = Path.Combine(appDataPath, "DistroNexus");
-        
+
         if (!Directory.Exists(appFolder))
         {
             Directory.CreateDirectory(appFolder);
         }
 
         _settingsPath = Path.Combine(appFolder, "settings.json");
-        _logger.LogInformation("Using Standard configuration at: {ConfigPath}", appFolder);
+        _logger.LogInformation("Settings path: {SettingsPath}", _settingsPath);
     }
 
     /// <inheritdoc/>
