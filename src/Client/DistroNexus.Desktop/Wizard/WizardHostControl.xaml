@@ -5,6 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:local="clr-namespace:DistroNexus.Desktop.Wizard"
+             xmlns:properties="clr-namespace:DistroNexus.Desktop.Properties"
              mc:Ignorable="d" 
              d:DesignHeight="500" d:DesignWidth="650"
              d:DataContext="{d:DesignInstance Type=local:InstallWizardWorkflowViewModel}">
@@ -23,19 +24,19 @@
             <StackPanel HorizontalAlignment="Center">
                 <!-- Step Progress Text -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,15">
-                    <TextBlock Text="Step " 
+                    <TextBlock Text="{x:Static properties:Resources.StepLabel}" 
                               FontSize="14"
                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                     <TextBlock Text="{Binding Workflow.CurrentStepNumber}" 
                               FontSize="14" 
                               FontWeight="Bold"/>
-                    <TextBlock Text=" of " 
+                    <TextBlock Text="{x:Static properties:Resources.OfLabel}" 
                               FontSize="14"
                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                     <TextBlock Text="{Binding Workflow.TotalIndicatorSteps}" 
                               FontSize="14" 
                               FontWeight="Bold"/>
-                    <TextBlock Text=" - " 
+                    <TextBlock Text="{x:Static properties:Resources.StepConnector}" 
                               FontSize="14"
                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                     <TextBlock Text="{Binding Workflow.CurrentStepTitle}" 
