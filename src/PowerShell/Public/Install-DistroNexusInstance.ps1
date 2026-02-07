@@ -332,6 +332,34 @@ generateResolvConf=true
             
             Write-DistroNexusLog "Successfully installed instance: $InstanceName"
             
+            # Update configuration by seeding the cache with correct Distribution name
+            try {
+                $currentCache = Get-InstanceCache
+                if (-not $currentCache) { $currentCache = @() }
+                
+                # Check if exists (should not, but safety check)
+                $existing = $currentCache | Where-Object { $_.Name -eq $InstanceName }
+                if ($existing) {
+                    $existing.Distribution = $DistroName
+                } else {
+                    # Create temporary stub with correct Distribution name
+                    # Get-DistroNexusInstance will populate the rest (DiskSize etc)
+                    $stub = [PSCustomObject]@{
+                        Name = $InstanceName
+                        Distribution = $DistroName
+                        State = "Stopped"
+                        Version = 2
+                        BasePath = $InstallLocation
+                    }
+                    $currentCache += $stub
+                }
+                
+                Set-InstanceCache -Instances $currentCache
+            } 
+            catch {
+                 Write-Verbose "Failed to pre-seed instance configuration: $_"
+            }
+
             # Update configuration by rescanning instances
             try {
                 Get-DistroNexusInstance -ForceUpdate | Out-Null

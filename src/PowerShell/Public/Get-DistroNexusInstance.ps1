@@ -147,6 +147,7 @@ function Get-DistroNexusInstance {
                 # Get metadata from stored configuration or filesystem
                 $installTime = $null
                 $diskSize = 0
+                $sourceDistribution = $null
                 
                 # First, try to get data from stored configuration
                 if ($configMap.ContainsKey($distroName)) {
@@ -156,6 +157,9 @@ function Get-DistroNexusInstance {
                     }
                     if ($stored.DiskSize -gt 0) {
                         $diskSize = $stored.DiskSize
+                    }
+                    if ($stored.Distribution) {
+                        $sourceDistribution = $stored.Distribution
                     }
                 }
                 
@@ -207,9 +211,39 @@ function Get-DistroNexusInstance {
                     BasePath = $basePath
                     DiskSize = $diskSize
                     InstallTime = $installTime
+                    Distribution = if ($sourceDistribution) { $sourceDistribution } else { $distroName }
                     Guid = $key.PSChildName
                 }
                 
+                # Update Distribution info from /etc/os-release if instance is running
+                if ($state -eq "Running") {
+                    try {
+                        Write-Verbose "Probing running instance $distroName for distribution details..."
+                        $osRelease = wsl -d $distroName -- cat /etc/os-release 2>$null
+                        
+                        if ($LASTEXITCODE -eq 0 -and $osRelease) {
+                            $prettyName = $null
+                            
+                            # Try PRETTY_NAME="Ubuntu 22.04.3 LTS"
+                            $match = $osRelease | Select-String -Pattern '^PRETTY_NAME="([^"]+)"'
+                            if ($match) { $prettyName = $match.Matches[0].Groups[1].Value }
+                            
+                            # Fallback to NAME="Ubuntu"
+                            if (-not $prettyName) {
+                                $match = $osRelease | Select-String -Pattern '^NAME="([^"]+)"'
+                                if ($match) { $prettyName = $match.Matches[0].Groups[1].Value }
+                            }
+                            
+                            if ($prettyName) {
+                                $instance.Distribution = $prettyName
+                            }
+                        }
+                    }
+                    catch {
+                        Write-Verbose "Failed to probe os-release for $distroName : $_"
+                    }
+                }
+
                 # Add release information if requested (requires starting instance)
                 if ($IncludeRelease -and $state -eq "Stopped") {
                     Write-Verbose "Querying release info for $distroName (starting instance)..."
