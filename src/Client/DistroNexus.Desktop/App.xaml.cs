@@ -1,6 +1,8 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Threading;
+using WPFLocalizeExtension.Engine;
+using WPFLocalizeExtension.Providers;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using DistroNexus.Core.Services;
@@ -20,6 +22,21 @@ namespace DistroNexus.Desktop;
 /// </summary>
 public partial class App : System.Windows.Application
 {
+    public App()
+    {
+        try 
+        {
+            // Force culture initialization to prevent NRE in WPFLocalizeExtension
+            if (LocalizeDictionary.Instance.Culture == null)
+            {
+                LocalizeDictionary.Instance.Culture = System.Globalization.CultureInfo.GetCultureInfo("en-US");
+            }
+        }
+        catch (Exception)
+        {
+        }
+    }
+
     private IHost? _host;
     private ILogger<App>? _logger;
 
@@ -259,16 +276,20 @@ public partial class App : System.Windows.Application
                 _logger?.LogInformation("Update available: {CurrentVersion} -> {LatestVersion}", 
                     updateInfo.CurrentVersion, updateInfo.LatestVersion);
 
-                await Dispatcher.InvokeAsync(() =>
+                await Dispatcher.InvokeAsync(async () =>
                 {
-                    var result = MessageBox.Show(
-                        string.Format(DistroNexus.Desktop.Properties.Resources.UpdateAvailableMessage, 
+                    var uiMsgBox = new Wpf.Ui.Controls.MessageBox
+                    {
+                        Title = DistroNexus.Desktop.Properties.Resources.UpdateAvailableTitle,
+                        Content = string.Format(DistroNexus.Desktop.Properties.Resources.UpdateAvailableMessage, 
                             updateInfo.CurrentVersion, updateInfo.LatestVersion),
-                        DistroNexus.Desktop.Properties.Resources.UpdateAvailableTitle,
-                        MessageBoxButton.YesNo,
-                        MessageBoxImage.Information);
+                        PrimaryButtonText = "Download",
+                        CloseButtonText = "Cancel"
+                    };
 
-                    if (result == MessageBoxResult.Yes)
+                    var result = await uiMsgBox.ShowDialogAsync();
+
+                    if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
                     {
                         updateService.OpenDownloadPage(updateInfo.ReleaseUrl);
                     }
@@ -326,13 +347,11 @@ public partial class App : System.Windows.Application
                 System.Diagnostics.Debug.WriteLine($"Error reading settings for language: {ex.Message}");
             }
 
-            if (language != "en-US")
-            {
-                var culture = new System.Globalization.CultureInfo(language);
-                System.Threading.Thread.CurrentThread.CurrentUICulture = culture;
-                System.Threading.Thread.CurrentThread.CurrentCulture = culture;
-                System.Diagnostics.Debug.WriteLine($"Applied language: {language}");
-            }
+            var culture = new System.Globalization.CultureInfo(language);
+            System.Threading.Thread.CurrentThread.CurrentUICulture = culture;
+            System.Threading.Thread.CurrentThread.CurrentCulture = culture;
+            LocalizeDictionary.Instance.Culture = culture;
+            System.Diagnostics.Debug.WriteLine($"Applied language: {language}");
         }
         catch (Exception ex)
         {

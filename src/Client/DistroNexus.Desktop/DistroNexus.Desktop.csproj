@@ -17,6 +17,7 @@
     <PackageReference Include="NLog" Version="[5.*,)" />
     <PackageReference Include="NLog.Extensions.Logging" Version="[5.*,)" />
     <PackageReference Include="WPF-UI" Version="4.2.0" />
+    <PackageReference Include="WPFLocalizeExtension" Version="3.10.0" />
   </ItemGroup>
 
   <ItemGroup>
