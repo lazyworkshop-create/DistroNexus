@@ -26,7 +26,7 @@ public partial class SourceManagerViewModel : ObservableObject
     private bool _isLoading;
 
     [ObservableProperty]
-    private string _statusMessage = "Ready";
+    private string _statusMessage = Properties.Resources.StatusReady;
 
     [ObservableProperty]
     private string _newSourceName = string.Empty;
@@ -63,7 +63,7 @@ public partial class SourceManagerViewModel : ObservableObject
         try
         {
             IsLoading = true;
-            StatusMessage = "Loading sources...";
+            StatusMessage = Properties.Resources.StatusLoadingSources;
 
             _logger.LogInformation("Initializing source manager");
 
@@ -75,15 +75,15 @@ public partial class SourceManagerViewModel : ObservableObject
                 Sources.Add(source);
             }
 
-            StatusMessage = $"Loaded {Sources.Count} source(s)";
+            StatusMessage = string.Format(Properties.Resources.StatusLoadedSources, Sources.Count);
             _logger.LogInformation("Loaded {Count} sources", Sources.Count);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to initialize source manager");
-            StatusMessage = "Failed to load sources";
-            MessageBox.Show($"Failed to load sources: {ex.Message}", 
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            StatusMessage = Properties.Resources.StatusLoadSourcesFailed;
+            MessageBox.Show(string.Format(Properties.Resources.ErrorLoadSourcesEx, ex.Message), 
+                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
@@ -109,8 +109,8 @@ public partial class SourceManagerViewModel : ObservableObject
     {
         if (SelectedSource == null)
         {
-            MessageBox.Show("Please select a source to edit.", 
-                "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(Properties.Resources.InfoSelectSourceEdit, 
+                Properties.Resources.InformationTitle, MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
@@ -131,8 +131,8 @@ public partial class SourceManagerViewModel : ObservableObject
         {
             if (string.IsNullOrWhiteSpace(NewSourceName) || string.IsNullOrWhiteSpace(NewSourceUrl))
             {
-                MessageBox.Show("Name and URL are required.", 
-                    "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(Properties.Resources.ValidationNameUrlRequired, 
+                    Properties.Resources.ValidationTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -150,7 +150,7 @@ public partial class SourceManagerViewModel : ObservableObject
 
                 await _sourceManager.UpdateSourceAsync(updatedSource);
                 await RefreshSourcesAsync();
-                StatusMessage = "Source updated successfully";
+                StatusMessage = Properties.Resources.StatusSourceUpdated;
             }
             else
             {
@@ -164,7 +164,7 @@ public partial class SourceManagerViewModel : ObservableObject
 
                 await _sourceManager.AddSourceAsync(newSource);
                 await RefreshSourcesAsync();
-                StatusMessage = "Source added successfully";
+                StatusMessage = Properties.Resources.StatusSourceAdded;
             }
 
             IsNewSourceDialogOpen = false;
@@ -172,8 +172,8 @@ public partial class SourceManagerViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to save source");
-            MessageBox.Show($"Failed to save source: {ex.Message}", 
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(string.Format(Properties.Resources.ErrorSaveSourceEx, ex.Message), 
+                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -188,21 +188,21 @@ public partial class SourceManagerViewModel : ObservableObject
     {
         if (SelectedSource == null)
         {
-            MessageBox.Show("Please select a source to remove.", 
-                "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(Properties.Resources.InfoSelectSourceRemove, 
+                Properties.Resources.InformationTitle, MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
         if (SelectedSource.IsDefault)
         {
-            MessageBox.Show("Default sources cannot be removed.", 
-                "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(Properties.Resources.InfoDefaultSourceRemove, 
+                Properties.Resources.InformationTitle, MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
         var result = MessageBox.Show(
-            $"Are you sure you want to remove the source '{SelectedSource.Name}'?",
-            "Confirm Remove",
+            string.Format(Properties.Resources.ConfirmVerifyRemoveSource, SelectedSource.Name),
+            Properties.Resources.ConfirmRemoveSourceTitle,
             MessageBoxButton.YesNo,
             MessageBoxImage.Question);
 
@@ -212,13 +212,13 @@ public partial class SourceManagerViewModel : ObservableObject
             {
                 await _sourceManager.RemoveSourceAsync(SelectedSource.Id);
                 await RefreshSourcesAsync();
-                StatusMessage = "Source removed successfully";
+                StatusMessage = Properties.Resources.StatusSourceRemoved;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to remove source");
-                MessageBox.Show($"Failed to remove source: {ex.Message}", 
-                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(string.Format(Properties.Resources.ErrorRemoveSourceEx, ex.Message), 
+                    Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
     }
@@ -235,13 +235,13 @@ public partial class SourceManagerViewModel : ObservableObject
             await _sourceManager.SetSourceActiveAsync(SelectedSource.Id, newActiveState);
             
             SelectedSource.IsActive = newActiveState;
-            StatusMessage = $"Source {(newActiveState ? "enabled" : "disabled")}";
+            StatusMessage = string.Format(Properties.Resources.StatusSourceToggled, newActiveState ? Properties.Resources.StatusSourceEnabled : Properties.Resources.StatusSourceDisabled);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to toggle source active state");
-            MessageBox.Show($"Failed to toggle source: {ex.Message}", 
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(string.Format(Properties.Resources.ErrorToggleSourceEx, ex.Message), 
+                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -250,25 +250,25 @@ public partial class SourceManagerViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(NewSourceUrl))
         {
-            TestResult = "URL is required";
+            TestResult = Properties.Resources.TestResultUrlRequired;
             return;
         }
 
         try
         {
             IsTestingSource = true;
-            TestResult = "Testing...";
+            TestResult = Properties.Resources.TestResultTesting;
 
             var isAccessible = await _sourceManager.TestSourceAsync(NewSourceUrl);
             
-            TestResult = isAccessible ? "✓ Source is accessible" : "✗ Source is not accessible";
+            TestResult = isAccessible ? Properties.Resources.TestResultAccessible : Properties.Resources.TestResultNotAccessible;
             
             _logger.LogInformation("Source test result: {Url} -> {Success}", NewSourceUrl, isAccessible);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to test source");
-            TestResult = $"✗ Test failed: {ex.Message}";
+            TestResult = string.Format(Properties.Resources.TestResultFailed, ex.Message);
         }
         finally
         {
@@ -282,7 +282,7 @@ public partial class SourceManagerViewModel : ObservableObject
         try
         {
             IsLoading = true;
-            StatusMessage = "Refreshing sources...";
+            StatusMessage = Properties.Resources.StatusRefreshingSources;
 
             var sources = await _sourceManager.GetSourcesAsync();
             
@@ -292,14 +292,14 @@ public partial class SourceManagerViewModel : ObservableObject
                 Sources.Add(source);
             }
 
-            StatusMessage = $"Refreshed {Sources.Count} source(s)";
+            StatusMessage = string.Format(Properties.Resources.StatusRefreshedSources, Sources.Count);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to refresh sources");
-            StatusMessage = "Failed to refresh sources";
-            MessageBox.Show($"Failed to refresh sources: {ex.Message}", 
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            StatusMessage = Properties.Resources.StatusRefreshFailed;
+            MessageBox.Show(string.Format(Properties.Resources.ErrorRefreshSourcesEx, ex.Message), 
+                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
@@ -311,8 +311,8 @@ public partial class SourceManagerViewModel : ObservableObject
     private async Task ResetToDefaultsAsync()
     {
         var result = MessageBox.Show(
-            "Are you sure you want to reset to default sources? This will remove all custom sources.",
-            "Confirm Reset",
+            Properties.Resources.ConfirmResetSourcesMessage,
+            Properties.Resources.ConfirmResetTitle,
             MessageBoxButton.YesNo,
             MessageBoxImage.Question);
 
@@ -322,13 +322,13 @@ public partial class SourceManagerViewModel : ObservableObject
             {
                 await _sourceManager.ResetToDefaultsAsync();
                 await RefreshSourcesAsync();
-                StatusMessage = "Reset to default sources successfully";
+                StatusMessage = Properties.Resources.StatusResetSourcesSuccess;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to reset sources");
-                MessageBox.Show($"Failed to reset sources: {ex.Message}", 
-                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(string.Format(Properties.Resources.ErrorResetSourcesEx, ex.Message), 
+                    Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
     }
@@ -353,13 +353,13 @@ public partial class SourceManagerViewModel : ObservableObject
             var sourceIds = Sources.Select(s => s.Id).ToList();
             await _sourceManager.ReorderSourcesAsync(sourceIds);
 
-            StatusMessage = "Source moved up";
+            StatusMessage = Properties.Resources.StatusSourceMovedUp;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to move source up");
-            MessageBox.Show($"Failed to move source: {ex.Message}", 
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(string.Format(Properties.Resources.ErrorMoveSource, ex.Message), 
+                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -383,13 +383,13 @@ public partial class SourceManagerViewModel : ObservableObject
             var sourceIds = Sources.Select(s => s.Id).ToList();
             await _sourceManager.ReorderSourcesAsync(sourceIds);
 
-            StatusMessage = "Source moved down";
+            StatusMessage = Properties.Resources.StatusSourceMovedDown;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to move source down");
-            MessageBox.Show($"Failed to move source: {ex.Message}", 
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(string.Format(Properties.Resources.ErrorMoveSource, ex.Message), 
+                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 }

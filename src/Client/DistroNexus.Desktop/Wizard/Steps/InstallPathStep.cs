@@ -22,7 +22,7 @@ public partial class InstallPathStep : WizardStepBase
     private const int DebounceDelayMs = 500;
 
     public override string StepId => "install-path";
-    public override string Title => "Choose Installation Path";
+    public override string Title => Properties.Resources.WizardStepChooseInstallPath;
     public override string Description => "Select where to install the distribution";
 
     [ObservableProperty]
@@ -362,40 +362,40 @@ public partial class InstallPathStep : WizardStepBase
             // Basic synchronous validations first
             if (string.IsNullOrWhiteSpace(Context?.InstallPath))
             {
-                ErrorMessage = "Please specify an installation path.";
+                ErrorMessage = Properties.Resources.ErrorInstallPathRequired;
                 return false;
             }
 
             if (string.IsNullOrWhiteSpace(Context?.InstanceName))
             {
-                ErrorMessage = "Please specify an instance name.";
+                ErrorMessage = Properties.Resources.ErrorInstanceNameRequired;
                 return false;
             }
 
             // Validate instance name format (alphanumeric, hyphens, underscores only)
             if (!System.Text.RegularExpressions.Regex.IsMatch(Context.InstanceName, @"^[a-zA-Z0-9_-]+$"))
             {
-                ErrorMessage = "Instance name can only contain letters, numbers, hyphens, and underscores.";
+                ErrorMessage = Properties.Resources.ErrorInvalidInstanceName;
                 return false;
             }
 
             // Validate instance name must start with alphanumeric
             if (!char.IsLetterOrDigit(Context.InstanceName[0]))
             {
-                ErrorMessage = "Instance name must start with a letter or number.";
+                ErrorMessage = Properties.Resources.ErrorInstanceNameStartWith;
                 return false;
             }
 
             // Check instance name length
             if (Context.InstanceName.Length < 2)
             {
-                ErrorMessage = "Instance name is too short (minimum 2 characters).";
+                ErrorMessage = Properties.Resources.ErrorInstanceNameTooShort;
                 return false;
             }
 
             if (Context.InstanceName.Length > 50)
             {
-                ErrorMessage = "Instance name is too long (maximum 50 characters).";
+                ErrorMessage = Properties.Resources.ErrorInstanceNameTooLong;
                 return false;
             }
 
@@ -403,13 +403,13 @@ public partial class InstallPathStep : WizardStepBase
             var reservedNames = new[] { "wsl", "docker", "system", "windows", "microsoft", "default", "temp", "tmp" };
             if (reservedNames.Contains(Context.InstanceName.ToLowerInvariant()))
             {
-                ErrorMessage = $"'{Context.InstanceName}' is a reserved name. Please choose a different name.";
+                ErrorMessage = string.Format(Properties.Resources.ErrorInstanceNameReserved, Context.InstanceName);
                 return false;
             }
 
             // Show loading state for async validation
             IsValidating = true;
-            ErrorMessage = "Verifying instance name availability...";
+            ErrorMessage = Properties.Resources.StatusVerifyingInstanceName;
 
             // Force UI to update immediately
             System.Windows.Application.Current?.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.Render);
@@ -435,7 +435,7 @@ public partial class InstallPathStep : WizardStepBase
                     else
                     {
                         _logger.LogWarning("Instance name check timed out");
-                        ErrorMessage = "Verification timed out. Please try again.";
+                        ErrorMessage = Properties.Resources.ErrorVerificationTimeout;
                         IsValidating = false;
                         return false;
                     }
@@ -443,7 +443,7 @@ public partial class InstallPathStep : WizardStepBase
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Failed during instance name check");
-                    ErrorMessage = "Failed to verify instance name. Please try again.";
+                    ErrorMessage = Properties.Resources.ErrorVerificationFailed;
                     IsValidating = false;
                     return false;
                 }
@@ -455,7 +455,7 @@ public partial class InstallPathStep : WizardStepBase
             // Check if instance name already exists (from completed check)
             if (InstanceNameChecked && InstanceNameExists)
             {
-                ErrorMessage = $"An instance named '{Context.InstanceName}' already exists. Please choose a different name.";
+                ErrorMessage = string.Format(Properties.Resources.ErrorInstanceExistsFormat, Context.InstanceName);
                 return false;
             }
 
@@ -465,7 +465,7 @@ public partial class InstallPathStep : WizardStepBase
             // Check final path validity
             if (Context?.IsPathValid != true)
             {
-                ErrorMessage = Context?.PathValidationMessage ?? "Invalid path or instance name.";
+                ErrorMessage = Context?.PathValidationMessage ?? Properties.Resources.ErrorInvalidPathOrName;
                 return false;
             }
 
@@ -475,7 +475,7 @@ public partial class InstallPathStep : WizardStepBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error during validation");
-            ErrorMessage = $"Validation error: {ex.Message}";
+            ErrorMessage = string.Format(Properties.Resources.ErrorValidationFormat, ex.Message);
             IsValidating = false;
             return false;
         }

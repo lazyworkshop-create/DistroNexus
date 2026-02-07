@@ -158,7 +158,7 @@ public partial class InstallWizardViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to initialize install wizard");
-            ErrorMessage = $"Failed to load distributions: {ex.Message}";
+            ErrorMessage = string.Format(Properties.Resources.LoadDistributionsError, ex.Message);
         }
     }
 
@@ -207,7 +207,7 @@ public partial class InstallWizardViewModel : ObservableObject
         {
             IsInstalling = true;
             InstallProgress = 0;
-            InstallStatusMessage = "Preparing installation...";
+            InstallStatusMessage = Properties.Resources.StatusPreparingInstall;
             _installCts = new CancellationTokenSource();
 
             _logger.LogInformation("Starting installation of {DistroName} to {Path}", 
@@ -229,7 +229,7 @@ public partial class InstallWizardViewModel : ObservableObject
 
             // Clear previous logs
             InstallLogs.Clear();
-            AddInstallLog("Starting installation...");
+            AddInstallLog(Properties.Resources.LogStartingInstall);
 
             // Progress callback
             var progress = new Progress<(double percentage, string message)>(p =>
@@ -242,7 +242,7 @@ public partial class InstallWizardViewModel : ObservableObject
             await _wslManager.InstallInstanceAsync(options, progress, _installCts.Token);
 
             InstallProgress = 100;
-            InstallStatusMessage = "Installation completed successfully!";
+            InstallStatusMessage = Properties.Resources.InstallSuccessLabel;
             InstallCompleted = true;
             
                 _logger.LogInformation("Installation completed successfully");
@@ -250,16 +250,16 @@ public partial class InstallWizardViewModel : ObservableObject
         catch (OperationCanceledException)
         {
             _logger.LogWarning("Installation cancelled by user");
-            InstallStatusMessage = "Installation cancelled.";
+            InstallStatusMessage = Properties.Resources.StatusInstallCancelled;
             InstallFailed = true;
-            ErrorMessage = "Installation was cancelled.";
+            ErrorMessage = Properties.Resources.ErrorInstallCancelled;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Installation failed");
             InstallFailed = true;
-            ErrorMessage = $"Installation failed: {ex.Message}";
-            InstallStatusMessage = "Installation failed.";
+            ErrorMessage = string.Format(Properties.Resources.ErrorInstallFailed, ex.Message);
+            InstallStatusMessage = Properties.Resources.StatusInstallFailed;
         }
         finally
         {
@@ -295,7 +295,7 @@ public partial class InstallWizardViewModel : ObservableObject
         // Use folder browser dialog
         var dialog = new Microsoft.Win32.OpenFolderDialog
         {
-            Title = "Select Installation Directory",
+            Title = Properties.Resources.SelectInstallDirTitle,
             InitialDirectory = string.IsNullOrEmpty(InstallPath) 
                 ? Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles) 
                 : InstallPath
@@ -320,17 +320,17 @@ public partial class InstallWizardViewModel : ObservableObject
         {
             true => CurrentStep switch
             {
-                1 => "Select Distribution",
-                2 => "Quick Installation",
-                _ => "Installation"
+                1 => Properties.Resources.StepTitleSelectDistro,
+                2 => Properties.Resources.StepTitleQuickInstall,
+                _ => Properties.Resources.StepTitleInstallation
             },
             false => CurrentStep switch
             {
-                1 => "Select Distribution",
-                2 => "Choose Installation Path",
-                3 => "Configure User Account",
-                4 => "Review and Install",
-                _ => "Installation"
+                1 => Properties.Resources.StepTitleSelectDistro,
+                2 => Properties.Resources.StepTitleChoosePath,
+                3 => Properties.Resources.StepTitleConfigUser,
+                4 => Properties.Resources.StepTitleReview,
+                _ => Properties.Resources.StepTitleInstallation
             }
         };
 
@@ -363,7 +363,7 @@ public partial class InstallWizardViewModel : ObservableObject
             case 1:
                 if (SelectedDistribution == null)
                 {
-                    ErrorMessage = "Please select a distribution to install.";
+                    ErrorMessage = Properties.Resources.ValMsgSelectDistro;
                     return false;
                 }
                 break;
@@ -373,12 +373,12 @@ public partial class InstallWizardViewModel : ObservableObject
                 // In normal mode, this is just the path validation
                 if (string.IsNullOrWhiteSpace(InstallPath))
                 {
-                    ErrorMessage = "Please specify an installation path.";
+                    ErrorMessage = Properties.Resources.ValMsgSpecifyPath;
                     return false;
                 }
                 if (string.IsNullOrWhiteSpace(InstanceName))
                 {
-                    ErrorMessage = "Please specify an instance name.";
+                    ErrorMessage = Properties.Resources.ValMsgSpecifyName;
                     return false;
                 }
                 if (!IsPathValid)
@@ -392,17 +392,17 @@ public partial class InstallWizardViewModel : ObservableObject
                 {
                     if (string.IsNullOrWhiteSpace(Username))
                     {
-                        ErrorMessage = "Please enter a username.";
+                        ErrorMessage = Properties.Resources.ValMsgEnterUsername;
                         return false;
                     }
                     if (string.IsNullOrWhiteSpace(Password))
                     {
-                        ErrorMessage = "Please enter a password.";
+                        ErrorMessage = Properties.Resources.ValMsgEnterPassword;
                         return false;
                     }
                     if (Password != ConfirmPassword)
                     {
-                        ErrorMessage = "Passwords do not match.";
+                        ErrorMessage = Properties.Resources.ValMsgPasswordsNoMatch;
                         return false;
                     }
                 }
@@ -414,12 +414,12 @@ public partial class InstallWizardViewModel : ObservableObject
                 {
                     if (string.IsNullOrWhiteSpace(Username))
                     {
-                        ErrorMessage = "Please enter a username.";
+                        ErrorMessage = Properties.Resources.ValMsgEnterUsername;
                         return false;
                     }
                     if (Password != ConfirmPassword)
                     {
-                        ErrorMessage = "Passwords do not match.";
+                        ErrorMessage = Properties.Resources.ValMsgPasswordsNoMatch;
                         return false;
                     }
                 }
@@ -509,7 +509,7 @@ public partial class InstallWizardViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(InstallPath))
         {
             IsPathValid = false;
-            PathValidationMessage = "Installation path is required.";
+            PathValidationMessage = Properties.Resources.ValMsgPathRequired;
             return;
         }
 
@@ -521,7 +521,7 @@ public partial class InstallWizardViewModel : ObservableObject
             if (Directory.Exists(instancePath))
             {
                 IsPathValid = false;
-                PathValidationMessage = "A directory already exists at this location.";
+                PathValidationMessage = Properties.Resources.ValMsgDirExists;
                 return;
             }
 
@@ -539,18 +539,18 @@ public partial class InstallWizardViewModel : ObservableObject
                 catch
                 {
                     IsPathValid = false;
-                    PathValidationMessage = "Cannot create directory at this location.";
+                    PathValidationMessage = Properties.Resources.ValMsgCannotCreateDir;
                     return;
                 }
             }
 
             IsPathValid = true;
-            PathValidationMessage = $"Instance will be installed to: {instancePath}";
+            PathValidationMessage = string.Format(Properties.Resources.ValMsgInstallTarget, instancePath);
         }
         catch (Exception ex)
         {
             IsPathValid = false;
-            PathValidationMessage = $"Invalid path: {ex.Message}";
+            PathValidationMessage = string.Format(Properties.Resources.ValMsgInvalidPath, ex.Message);
         }
     }
 

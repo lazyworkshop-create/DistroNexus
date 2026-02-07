@@ -40,7 +40,7 @@ public partial class PackageManagerViewModel : ObservableObject
     private bool _isLoading;
 
     [ObservableProperty]
-    private string _statusMessage = "Ready";
+    private string _statusMessage = Properties.Resources.StatusReady;
 
     [ObservableProperty]
     private bool _isOfflineMode;
@@ -63,7 +63,7 @@ public partial class PackageManagerViewModel : ObservableObject
         try
         {
             IsLoading = true;
-            StatusMessage = "Loading distribution catalog...";
+            StatusMessage = Properties.Resources.StatusLoadingCatalog;
 
             _logger.LogInformation("Loading distribution catalog");
 
@@ -80,15 +80,15 @@ public partial class PackageManagerViewModel : ObservableObject
 
             UpdateGroupedPackages();
 
-            StatusMessage = $"Loaded {Packages.Count} distribution(s)";
+            StatusMessage = string.Format(Properties.Resources.StatusLoadedDistros, Packages.Count);
             _logger.LogInformation("Loaded {Count} distributions", Packages.Count);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to load catalog");
-            StatusMessage = $"Error loading catalog: {ex.Message}";
-            MessageBox.Show($"Failed to load catalog: {ex.Message}", 
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            StatusMessage = string.Format(Properties.Resources.ErrorLoadingCatalogShort, ex.Message);
+            MessageBox.Show(string.Format(Properties.Resources.LoadCatalogError, ex.Message), 
+                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
@@ -103,41 +103,41 @@ public partial class PackageManagerViewModel : ObservableObject
         {
             IsLoading = true;
             IsOfflineMode = false;
-            StatusMessage = "Refreshing catalog from remote source...";
+            StatusMessage = Properties.Resources.StatusRefreshingCatalog;
 
             _logger.LogInformation("Refreshing catalog");
 
             await _catalogService.RefreshCatalogAsync();
             await LoadCatalogAsync();
 
-            StatusMessage = "Catalog refreshed successfully";
-            MessageBox.Show("Catalog refreshed successfully", 
-                "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            StatusMessage = Properties.Resources.StatusCatalogRefreshed;
+            MessageBox.Show(Properties.Resources.StatusCatalogRefreshed, 
+                Properties.Resources.Success, MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (HttpRequestException ex)
         {
             // Network error - switch to offline mode
             _logger.LogWarning(ex, "Network error - switching to offline mode");
             IsOfflineMode = true;
-            StatusMessage = "Offline Mode - Using cached catalog";
+            StatusMessage = Properties.Resources.StatusOfflineCached;
             
             // Try to load from cache
             await LoadCatalogAsync();
             
-            MessageBox.Show("Unable to connect to remote catalog. Using cached data.\n\nWorking in Offline Mode.", 
-                "Offline Mode", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(Properties.Resources.ErrorOfflineModeMessage, 
+                Properties.Resources.OfflineModeTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to refresh catalog");
             IsOfflineMode = true;
-            StatusMessage = "Offline Mode - " + ex.Message;
+            StatusMessage = string.Format(Properties.Resources.StatusOfflineError, ex.Message);
             
             // Try to load from cache anyway
             await LoadCatalogAsync();
             
-            MessageBox.Show($"Failed to refresh catalog: {ex.Message}\n\nUsing cached data.", 
-                "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(string.Format(Properties.Resources.ErrorRefreshCatalogFailed, ex.Message), 
+                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         finally
         {
@@ -162,13 +162,13 @@ public partial class PackageManagerViewModel : ObservableObject
 
             UpdateGroupedPackages();
 
-            StatusMessage = $"Found {FilteredPackages.Count} matching distribution(s)";
+            StatusMessage = string.Format(Properties.Resources.StatusFoundDistros, FilteredPackages.Count);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Search failed");
-            MessageBox.Show($"Search failed: {ex.Message}", 
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(string.Format(Properties.Resources.ErrorSearchFailed, ex.Message), 
+                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -206,16 +206,16 @@ public partial class PackageManagerViewModel : ObservableObject
             // Subscribe to status changes to update UI
             _ = MonitorDownloadTaskAsync(downloadTask, package);
 
-            StatusMessage = $"Download queued: {package.Name}";
+            StatusMessage = string.Format(Properties.Resources.StatusDownloadQueued, package.Name);
             _logger.LogInformation("Download queued successfully for {PackageName}", package.Name);
         }
         catch (Exception ex)
         {
             package.IsDownloading = false;
             _logger.LogError(ex, "Failed to queue download");
-            StatusMessage = "Failed to queue download";
-            MessageBox.Show($"Failed to queue download: {ex.Message}", 
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            StatusMessage = Properties.Resources.StatusQueueFailed;
+            MessageBox.Show(string.Format(Properties.Resources.ErrorQueueDownload, ex.Message), 
+                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -238,15 +238,15 @@ public partial class PackageManagerViewModel : ObservableObject
                     downloadTask.CancellationTokenSource?.Cancel();
                     _activeDownloads.Remove(package.Id);
                     package.IsDownloading = false;
-                    StatusMessage = $"Download cancelled: {package.Name}";
+                    StatusMessage = string.Format(Properties.Resources.StatusDownloadCancelled, package.Name);
                 }
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to cancel download for {PackageName}", package.Name);
-            MessageBox.Show($"Failed to cancel download: {ex.Message}", 
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(string.Format(Properties.Resources.ErrorCancelDownload, ex.Message), 
+                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -429,8 +429,8 @@ public partial class PackageManagerViewModel : ObservableObject
             // Extract user-friendly error message
             var errorMessage = ExtractUserFriendlyError(ex.Message);
             
-            MessageBox.Show($"Failed to delete package: {errorMessage}", 
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(string.Format(Properties.Resources.ErrorDeletePackage, errorMessage), 
+                Properties.Resources.ErrorApplicationTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -507,8 +507,8 @@ public partial class PackageManagerViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to redownload package");
-            MessageBox.Show($"Failed to redownload package: {ex.Message}", 
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(string.Format(Properties.Resources.ErrorRedownloadPackage, ex.Message), 
+                Properties.Resources.ErrorApplicationTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -517,7 +517,7 @@ public partial class PackageManagerViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(CustomSourceUrl))
         {
-            MessageBox.Show("Please enter a valid URL", "Invalid URL", 
+            MessageBox.Show(Properties.Resources.ErrorInvalidUrl, Properties.Resources.TitleInvalidUrl, 
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -529,7 +529,7 @@ public partial class PackageManagerViewModel : ObservableObject
             // Validate URL format
             if (!Uri.TryCreate(CustomSourceUrl, UriKind.Absolute, out var uri))
             {
-                MessageBox.Show("Invalid URL format", "Error", 
+                MessageBox.Show(Properties.Resources.ErrorCustomUrlInvalidFormat, Properties.Resources.ErrorApplicationTitle, 
                     MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
@@ -540,14 +540,14 @@ public partial class PackageManagerViewModel : ObservableObject
             IsAddSourcePanelVisible = false;
             await LoadCatalogAsync();
             
-            MessageBox.Show("Custom source added successfully", "Success", 
+            MessageBox.Show(Properties.Resources.SuccessCustomSourceAdded, Properties.Resources.TitleSuccess, 
                 MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to add custom source");
-            MessageBox.Show($"Failed to add custom source: {ex.Message}", 
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(string.Format(Properties.Resources.ErrorAddCustomSource, ex.Message), 
+                Properties.Resources.ErrorApplicationTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -586,8 +586,8 @@ public partial class PackageManagerViewModel : ObservableObject
         {
             _logger.LogError(ex, "Failed to update sources");
             StatusMessage = "Failed to update sources";
-            MessageBox.Show($"Failed to update sources: {ex.Message}", 
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(string.Format(Properties.Resources.ErrorUpdateSources, ex.Message), 
+                Properties.Resources.ErrorApplicationTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -617,8 +617,8 @@ public partial class PackageManagerViewModel : ObservableObject
             
             if (packagesToDownload.Count == 0)
             {
-                MessageBox.Show("All packages are already cached or currently downloading.", 
-                    "Download All", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show(Properties.Resources.InfoAllPackagesCached, 
+                    Properties.Resources.TitleDownloadAll, MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -688,8 +688,8 @@ public partial class PackageManagerViewModel : ObservableObject
         {
             _logger.LogError(ex, "Failed to download all packages");
             StatusMessage = "Failed to queue downloads";
-            MessageBox.Show($"Failed to start download all: {ex.Message}", 
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(string.Format(Properties.Resources.ErrorStartDownloadAll, ex.Message), 
+                Properties.Resources.ErrorApplicationTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -709,8 +709,8 @@ public partial class PackageManagerViewModel : ObservableObject
             
             // For now, just show a confirmation message as the wizard needs more implementation
             var result = MessageBox.Show(
-                $"Install {package.Name} ({package.Id})?\n\nThis will start the installation process.", 
-                "Install Package", 
+                string.Format(Properties.Resources.ConfirmInstallPackage, package.Name, package.Id), 
+                Properties.Resources.TitleInstallPackage, 
                 MessageBoxButton.YesNoCancel, 
                 MessageBoxImage.Question);
                 
@@ -729,8 +729,8 @@ public partial class PackageManagerViewModel : ObservableObject
         {
             _logger.LogError(ex, "Failed to install cached package: {PackageId}", package.Id);
             StatusMessage = $"Failed to install {package.Name}";
-            MessageBox.Show($"Failed to install {package.Name}: {ex.Message}", 
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(string.Format(Properties.Resources.ErrorInstallPackage, package.Name, ex.Message), 
+                Properties.Resources.ErrorApplicationTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 }

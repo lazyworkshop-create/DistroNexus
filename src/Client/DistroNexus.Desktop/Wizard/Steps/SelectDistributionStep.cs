@@ -16,7 +16,7 @@ public partial class SelectDistributionStep : WizardStepBase
     private readonly ILogger _logger;
 
     public override string StepId => "select-distribution";
-    public override string Title => "Select Distribution";
+    public override string Title => Properties.Resources.WizardStepSelectDistribution;
     public override string Description => "Choose a Linux distribution to install";
 
     [ObservableProperty]
@@ -76,14 +76,14 @@ public partial class SelectDistributionStep : WizardStepBase
     {
         if (Context?.SelectedDistribution == null)
         {
-            ErrorMessage = "Please select a distribution to install.";
+            ErrorMessage = Properties.Resources.ErrorSelectDistribution;
             return false;
         }
 
         // Validate that the distribution has a download URL
         if (string.IsNullOrWhiteSpace(Context.SelectedDistribution.DownloadUrl))
         {
-            ErrorMessage = "The selected distribution does not have a valid download URL.";
+            ErrorMessage = Properties.Resources.ErrorInvalidDownloadUrl;
             return false;
         }
 
@@ -91,7 +91,7 @@ public partial class SelectDistributionStep : WizardStepBase
         if (!Uri.TryCreate(Context.SelectedDistribution.DownloadUrl, UriKind.Absolute, out var uri) ||
             (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
         {
-            ErrorMessage = "The distribution download URL is not valid.";
+            ErrorMessage = Properties.Resources.ErrorInvalidUrlFormat;
             return false;
         }
 

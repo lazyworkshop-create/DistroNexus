@@ -11,8 +11,8 @@ namespace DistroNexus.Desktop.Wizard.Steps;
 public partial class ResultStep : WizardStepBase
 {
     public override string StepId => "result";
-    public override string Title => "Complete";
-    public override string Description => "Installation result";
+    public override string Title => Properties.Resources.ResultCompleteTitle;
+    public override string Description => Properties.Resources.ResultCompleteDescription;
 
     /// <summary>
     /// This step is not shown in the step indicator.
@@ -30,8 +30,8 @@ public partial class ResultStep : WizardStepBase
     /// Gets the success message.
     /// </summary>
     public string SuccessMessage => Context != null
-        ? $"{Context.SelectedDistribution?.Name} has been installed successfully and is ready to use."
-        : "Installation completed successfully.";
+        ? string.Format(Properties.Resources.ResultSuccess, Context.SelectedDistribution?.Name)
+        : Properties.Resources.ResultSuccessSimple;
 
     /// <summary>
     /// Gets whether there are error details to show.
@@ -105,8 +105,8 @@ public partial class ResultStep : WizardStepBase
         catch (Exception ex)
         {
             System.Windows.MessageBox.Show(
-                $"Failed to open log folder: {ex.Message}",
-                "Error",
+                string.Format(Properties.Resources.ErrorOpenLogFolder, ex.Message),
+                Properties.Resources.ErrorApplicationTitle,
                 System.Windows.MessageBoxButton.OK,
                 System.Windows.MessageBoxImage.Error);
         }
@@ -137,7 +137,7 @@ public partial class ResultStep : WizardStepBase
         {
             buttons.Add(new WizardButtonAction
             {
-                Content = "Try Again",
+                Content = Properties.Resources.ButtonTryAgain,
                 Command = new RelayCommand(TryAgain),
                 IsVisible = true,
                 IsPrimary = false
@@ -147,7 +147,7 @@ public partial class ResultStep : WizardStepBase
         // Always show Finish/Close button
         buttons.Add(new WizardButtonAction
         {
-            Content = Context?.InstallCompleted == true ? "Finish" : "Close",
+            Content = Context?.InstallCompleted == true ? Properties.Resources.ButtonFinish : Properties.Resources.ButtonClose,
             Command = new RelayCommand(Finish),
             IsVisible = true,
             IsPrimary = true

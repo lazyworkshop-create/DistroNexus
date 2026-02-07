@@ -64,7 +64,7 @@ public abstract partial class WizardStepBase : ObservableObject, IWizardStep
         {
             buttons.Add(new WizardButtonAction
             {
-                Content = "Back",
+                Content = Properties.Resources.ButtonBack,
                 Command = new RelayCommand(() => Workflow?.GoBack()),
                 IsVisible = true,
                 IsPrimary = false
@@ -74,7 +74,7 @@ public abstract partial class WizardStepBase : ObservableObject, IWizardStep
         // Default Next button
         buttons.Add(new WizardButtonAction
         {
-            Content = "Next",
+            Content = Properties.Resources.ButtonNext,
             Command = new RelayCommand(() => Workflow?.GoNext()),
             IsVisible = true,
             IsPrimary = true

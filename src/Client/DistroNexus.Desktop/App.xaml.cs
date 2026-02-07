@@ -33,6 +33,9 @@ public partial class App : System.Windows.Application
             ConfigureNLog();
             System.Diagnostics.Debug.WriteLine("NLog configured successfully");
 
+            // Apply language settings early
+            ApplyLanguageFromSettings();
+
             // Set up global exception handlers after NLog
             SetupExceptionHandling();
             System.Diagnostics.Debug.WriteLine("Exception handling setup complete");
@@ -136,8 +139,8 @@ public partial class App : System.Windows.Application
             System.Diagnostics.Debug.WriteLine($"Exception: {ex}");
 
             // Critical startup error - show to user
-            var errorMessage = $"Failed to start DistroNexus:\n\n{ex.Message}\n\nStack Trace:\n{ex.StackTrace}";
-            MessageBox.Show(errorMessage, "Startup Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            var errorMessage = string.Format(DistroNexus.Desktop.Properties.Resources.ErrorStartupMessage, ex.Message, ex.StackTrace);
+            MessageBox.Show(errorMessage, DistroNexus.Desktop.Properties.Resources.ErrorStartupTitle, MessageBoxButton.OK, MessageBoxImage.Error);
 
             // Log the error if logger is available
             _logger?.LogCritical(ex, "Critical error during application startup");
@@ -259,11 +262,9 @@ public partial class App : System.Windows.Application
                 await Dispatcher.InvokeAsync(() =>
                 {
                     var result = MessageBox.Show(
-                        $"A new version of DistroNexus is available!\n\n" +
-                        $"Current version: {updateInfo.CurrentVersion}\n" +
-                        $"Latest version: {updateInfo.LatestVersion}\n\n" +
-                        $"Would you like to open the download page?",
-                        "Update Available",
+                        string.Format(DistroNexus.Desktop.Properties.Resources.UpdateAvailableMessage, 
+                            updateInfo.CurrentVersion, updateInfo.LatestVersion),
+                        DistroNexus.Desktop.Properties.Resources.UpdateAvailableTitle,
                         MessageBoxButton.YesNo,
                         MessageBoxImage.Information);
 
@@ -296,6 +297,50 @@ public partial class App : System.Windows.Application
     }
 
     /// <summary>
+    /// Applies language from settings.
+    /// </summary>
+    private void ApplyLanguageFromSettings()
+    {
+        try
+        {
+            string language = "en-US";
+            try
+            {
+                var settingsPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "DistroNexus",
+                    "settings.json");
+                
+                if (File.Exists(settingsPath))
+                {
+                    var settingsJson = File.ReadAllText(settingsPath);
+                    var settings = System.Text.Json.JsonSerializer.Deserialize<GlobalSettings>(settingsJson);
+                    if (!string.IsNullOrEmpty(settings?.Language))
+                    {
+                        language = settings.Language;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error reading settings for language: {ex.Message}");
+            }
+
+            if (language != "en-US")
+            {
+                var culture = new System.Globalization.CultureInfo(language);
+                System.Threading.Thread.CurrentThread.CurrentUICulture = culture;
+                System.Threading.Thread.CurrentThread.CurrentCulture = culture;
+                System.Diagnostics.Debug.WriteLine($"Applied language: {language}");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to apply language: {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// Configures NLog with dynamic log path based on settings.
     /// </summary>
     private void ConfigureNLog()
@@ -304,8 +349,8 @@ public partial class App : System.Windows.Application
         {
             System.Diagnostics.Debug.WriteLine("=== ConfigureNLog Start ===");
 
-            // Determine log directory from settings or use default ApplicationData (Roaming) location
             string logDirectory;
+            bool enableLogging = true;
 
             try
             {
@@ -325,19 +370,29 @@ public partial class App : System.Windows.Application
 
                     var settings = System.Text.Json.JsonSerializer.Deserialize<GlobalSettings>(settingsJson);
 
-                    if (!string.IsNullOrWhiteSpace(settings?.LogPath))
+                    if (settings != null)
                     {
-                        logDirectory = settings.LogPath;
-                        System.Diagnostics.Debug.WriteLine($"Using log path from settings: {logDirectory}");
+                        enableLogging = settings.EnableLogging;
+                        
+                        if (!string.IsNullOrWhiteSpace(settings.LogPath))
+                        {
+                            logDirectory = settings.LogPath;
+                            System.Diagnostics.Debug.WriteLine($"Using log path from settings: {logDirectory}");
+                        }
+                        else
+                        {
+                            logDirectory = Path.Combine(
+                                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                                "DistroNexus",
+                                "Logs");
+                        }
                     }
                     else
                     {
-                        // Use default ApplicationData (Roaming) location
                         logDirectory = Path.Combine(
                             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                             "DistroNexus",
                             "Logs");
-                        System.Diagnostics.Debug.WriteLine($"Settings.LogPath is empty, using default: {logDirectory}");
                     }
                 }
                 else
@@ -347,18 +402,24 @@ public partial class App : System.Windows.Application
                         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                         "DistroNexus",
                         "Logs");
-                    System.Diagnostics.Debug.WriteLine($"Settings file not found, using default: {logDirectory}");
                 }
             }
             catch (Exception ex)
             {
-                // If anything fails, use default ApplicationData (Roaming) location
+                // If anything fails, use default
                 logDirectory = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                     "DistroNexus",
                     "Logs");
                 System.Diagnostics.Debug.WriteLine($"Error loading settings: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"Using default log path: {logDirectory}");
+            }
+
+            if (!enableLogging)
+            {
+                System.Diagnostics.Debug.WriteLine("Logging is disabled in settings");
+                // Ensure no logging configuration is active
+                LogManager.Configuration = null;
+                return;
             }
 
             // Ensure log directory exists
@@ -369,12 +430,8 @@ public partial class App : System.Windows.Application
             // Configure NLog with dynamic log directory
             var config = LogManager.Configuration ?? new NLog.Config.LoggingConfiguration();
 
-            System.Diagnostics.Debug.WriteLine($"NLog Configuration loaded: {config != null}");
-
             // Update log directory variable
             config.Variables["logDirectory"] = logDirectory;
-
-            System.Diagnostics.Debug.WriteLine($"Updated NLog variable 'logDirectory' to: {logDirectory}");
 
             // Apply configuration
             LogManager.Configuration = config;
@@ -399,8 +456,6 @@ public partial class App : System.Windows.Application
             System.Diagnostics.Debug.WriteLine($"Exception Type: {ex.GetType().Name}");
             System.Diagnostics.Debug.WriteLine($"Exception Message: {ex.Message}");
             System.Diagnostics.Debug.WriteLine($"Stack Trace: {ex.StackTrace}");
-
-            // Don't throw - allow app to continue even if logging fails
         }
     }
 
@@ -420,9 +475,9 @@ public partial class App : System.Windows.Application
     {
         _logger?.LogError(e.Exception, "Unhandled UI thread exception");
 
-        var message = $"An unexpected error occurred:\n\n{e.Exception.Message}\n\nThe application will attempt to continue.";
+        var message = string.Format(DistroNexus.Desktop.Properties.Resources.ErrorUnexpectedException, e.Exception.Message);
         
-        MessageBox.Show(message, "Application Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        MessageBox.Show(message, DistroNexus.Desktop.Properties.Resources.ErrorApplicationTitle, MessageBoxButton.OK, MessageBoxImage.Error);
 
         // Mark as handled to prevent application crash
         e.Handled = true;
@@ -435,8 +490,8 @@ public partial class App : System.Windows.Application
 
         if (e.IsTerminating)
         {
-            var message = $"A fatal error occurred:\n\n{exception?.Message ?? "Unknown error"}\n\nThe application will now close.";
-            MessageBox.Show(message, "Fatal Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            var message = string.Format(DistroNexus.Desktop.Properties.Resources.ErrorFatalException, exception?.Message ?? "Unknown error");
+            MessageBox.Show(message, DistroNexus.Desktop.Properties.Resources.ErrorFatalTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

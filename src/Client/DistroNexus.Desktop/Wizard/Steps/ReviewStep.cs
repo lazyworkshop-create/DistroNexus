@@ -11,8 +11,8 @@ namespace DistroNexus.Desktop.Wizard.Steps;
 public partial class ReviewStep : WizardStepBase
 {
     public override string StepId => "review";
-    public override string Title => "Review and Install";
-    public override string Description => "Review your settings before installation";
+    public override string Title => Properties.Resources.ReviewInstallTitle;
+    public override string Description => Properties.Resources.ReviewInstallDescription;
 
     /// <summary>
     /// Gets the full installation path including instance name.
@@ -26,7 +26,7 @@ public partial class ReviewStep : WizardStepBase
     /// </summary>
     public string DisplayUsername => Context?.CreateUser == true 
         ? Context.Username 
-        : "root (default)";
+        : Properties.Resources.DefaultUserRoot;
 
     public ReviewStep()
     {
@@ -43,14 +43,14 @@ public partial class ReviewStep : WizardStepBase
         [
             new WizardButtonAction
             {
-                Content = "Back",
+                Content = Properties.Resources.ButtonBack,
                 Command = new RelayCommand(() => Workflow?.GoBack()),
                 IsVisible = true,
                 IsPrimary = false
             },
             new WizardButtonAction
             {
-                Content = "Install",
+                Content = Properties.Resources.ActionInstall,
                 Command = new RelayCommand(() => Workflow?.GoNext()),
                 IsVisible = true,
                 IsPrimary = true,

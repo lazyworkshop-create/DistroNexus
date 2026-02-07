@@ -31,7 +31,8 @@ public partial class MainWindow : FluentWindow
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"MainWindow constructor error: {ex}");
-            MessageBox.Show($"Failed to initialize MainWindow:\n\n{ex.Message}", "Initialization Error", 
+            MessageBox.Show(string.Format(Properties.Resources.ErrorInitializeMainWindow, ex.Message), 
+                Properties.Resources.TitleInitializationError, 
                 MessageBoxButton.OK, MessageBoxImage.Error);
             throw;
         }
@@ -68,7 +69,8 @@ public partial class MainWindow : FluentWindow
             System.Diagnostics.Debug.WriteLine($"MainWindow OnLoaded error: {ex}");
             _viewModel.IsLoading = false;
             _viewModel.StatusMessage = "Initialization failed";
-            MessageBox.Show($"Failed to initialize application:\n\n{ex.Message}", "Initialization Error", 
+            MessageBox.Show(string.Format(Properties.Resources.ErrorInitializeApplication, ex.Message), 
+                Properties.Resources.TitleInitializationError, 
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -142,7 +144,8 @@ public partial class MainWindow : FluentWindow
                 _viewModel.StatusMessage = "Error loading data";
 
                 // Show error to user (non-blocking)
-                MessageBox.Show($"Failed to load WSL instances:\n\n{ex.Message}", "Load Error", 
+                MessageBox.Show(string.Format(Properties.Resources.ErrorLoadWslInstances, ex.Message), 
+                    Properties.Resources.TitleLoadError, 
                     MessageBoxButton.OK, MessageBoxImage.Warning);
             });
         }

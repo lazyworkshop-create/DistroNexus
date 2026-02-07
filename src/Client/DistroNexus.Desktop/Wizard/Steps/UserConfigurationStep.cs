@@ -14,7 +14,7 @@ public partial class UserConfigurationStep : WizardStepBase
     private readonly ILogger _logger;
 
     public override string StepId => "user-configuration";
-    public override string Title => "Configure User Account";
+    public override string Title => Properties.Resources.WizardStepConfigureUser;
     public override string Description => "Set up the default user for this instance";
 
     /// <summary>
@@ -61,14 +61,14 @@ public partial class UserConfigurationStep : WizardStepBase
         {
             if (string.IsNullOrWhiteSpace(Context.Username))
             {
-                ErrorMessage = "Please enter a username.";
+                ErrorMessage = Properties.Resources.ErrorUsernameRequired;
                 return false;
             }
 
             // Validate username format (Linux username rules)
             if (!IsValidLinuxUsername(Context.Username))
             {
-                ErrorMessage = "Username must start with a letter and contain only lowercase letters, numbers, hyphens, or underscores.";
+                ErrorMessage = Properties.Resources.ErrorUsernameFormat;
                 return false;
             }
 
@@ -77,19 +77,19 @@ public partial class UserConfigurationStep : WizardStepBase
             {
                 if (Context.Password.Length < 4)
                 {
-                    ErrorMessage = "Password must be at least 4 characters long.";
+                    ErrorMessage = Properties.Resources.ErrorPasswordMinLength;
                     return false;
                 }
 
                 if (Context.Password != Context.ConfirmPassword)
                 {
-                    ErrorMessage = "Passwords do not match.";
+                    ErrorMessage = Properties.Resources.ErrorPasswordMismatch;
                     return false;
                 }
             }
             else if (!string.IsNullOrWhiteSpace(Context.ConfirmPassword))
             {
-                ErrorMessage = "Passwords do not match.";
+                ErrorMessage = Properties.Resources.ErrorPasswordMismatch;
                 return false;
             }
         }
@@ -97,7 +97,7 @@ public partial class UserConfigurationStep : WizardStepBase
         // Validate WSL version
         if (Context?.WslVersion != 1 && Context?.WslVersion != 2)
         {
-            ErrorMessage = "Please select a valid WSL version (1 or 2).";
+            ErrorMessage = Properties.Resources.ErrorInvalidWslVersion;
             return false;
         }
 

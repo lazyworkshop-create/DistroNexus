@@ -166,8 +166,8 @@ public partial class SettingsViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to load settings");
-            MessageBox.Show($"Failed to load settings: {ex.Message}", 
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(string.Format(Properties.Resources.ErrorLoadSettings, ex.Message), 
+                Properties.Resources.ErrorApplicationTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -224,16 +224,27 @@ public partial class SettingsViewModel : ObservableObject
             ApplyTheme(Theme);
 
             IsDirty = false;
-            MessageBox.Show("Settings saved successfully", 
-                "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+
+            // Check if language changed
+            var currentCulture = System.Threading.Thread.CurrentThread.CurrentUICulture.Name;
+            if (!string.Equals(currentCulture, Language, StringComparison.OrdinalIgnoreCase))
+            {
+                MessageBox.Show(Properties.Resources.SettingsSavedRestart, 
+                    Properties.Resources.Success, MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                MessageBox.Show(Properties.Resources.SettingsSaved, 
+                    Properties.Resources.Success, MessageBoxButton.OK, MessageBoxImage.Information);
+            }
 
             _logger.LogInformation("Settings saved successfully");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to save settings");
-            MessageBox.Show($"Failed to save settings: {ex.Message}", 
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(string.Format(Properties.Resources.SaveSettingsError, ex.Message), 
+                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -256,14 +267,14 @@ public partial class SettingsViewModel : ObservableObject
             _settingsService.ResetSettings();
             await LoadSettingsAsync();
 
-            MessageBox.Show("Settings reset to defaults", 
-                "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(Properties.Resources.StatusSettingsReset, 
+                Properties.Resources.Success, MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to reset settings");
-            MessageBox.Show($"Failed to reset settings: {ex.Message}", 
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(string.Format(Properties.Resources.ErrorResetSettings, ex.Message), 
+                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -317,8 +328,8 @@ public partial class SettingsViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to apply theme");
-            MessageBox.Show($"Failed to apply theme: {ex.Message}",
-                "Theme Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(string.Format(Properties.Resources.ErrorApplyTheme, ex.Message),
+                Properties.Resources.TitleThemeError, MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
@@ -455,8 +466,8 @@ public partial class SettingsViewModel : ObservableObject
     private async Task ClearCacheAsync()
     {
         var result = MessageBox.Show(
-            "Are you sure you want to clear all cached packages? This will free up disk space but downloaded packages will need to be re-downloaded.",
-            "Confirm Clear Cache",
+            string.Format(Properties.Resources.ConfirmClearCache, CachedPackageCount),
+            Properties.Resources.ConfirmTitle,
             MessageBoxButton.YesNo,
             MessageBoxImage.Warning);
 
@@ -471,16 +482,16 @@ public partial class SettingsViewModel : ObservableObject
 
             await RefreshCacheInfoAsync();
 
-            MessageBox.Show($"Successfully cleared {deletedCount} cached files.", 
-                "Cache Cleared", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(string.Format(Properties.Resources.StatusCacheCleared, deletedCount), 
+                Properties.Resources.Success, MessageBoxButton.OK, MessageBoxImage.Information);
 
             _logger.LogInformation("Cache cleared: {Count} files deleted", deletedCount);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to clear cache");
-            MessageBox.Show($"Failed to clear cache: {ex.Message}", 
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(string.Format(Properties.Resources.ErrorClearCache, ex.Message), 
+                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -516,8 +527,8 @@ public partial class SettingsViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to delete cached file");
-            MessageBox.Show($"Failed to delete file: {ex.Message}", 
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(string.Format(Properties.Resources.DeleteFileError, ex.Message), 
+                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -537,21 +548,21 @@ public partial class SettingsViewModel : ObservableObject
                 
                 if (!success)
                 {
-                    MessageBox.Show("Failed to open cache folder.", 
-                        "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show(Properties.Resources.OpenCacheFolderError, 
+                        Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
             else
             {
-                MessageBox.Show("Cache folder path is not configured.", 
-                    "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show(Properties.Resources.CachePathNotConfigured, 
+                    Properties.Resources.InformationTitle, MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to open cache folder");
-            MessageBox.Show($"Failed to open cache folder: {ex.Message}", 
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(string.Format(Properties.Resources.ErrorOpenCacheFolder, ex.Message), 
+                Properties.Resources.ErrorApplicationTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

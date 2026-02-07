@@ -17,7 +17,7 @@ public partial class ProgressStep : WizardStepBase
     private CancellationTokenSource? _installCts;
 
     public override string StepId => "progress";
-    public override string Title => "Installing...";
+    public override string Title => Properties.Resources.WizardStepInstalling;
     public override string Description => "Installation in progress";
 
     /// <summary>
@@ -242,8 +242,8 @@ public partial class ProgressStep : WizardStepBase
     {
         // Show confirmation dialog
         var result = System.Windows.MessageBox.Show(
-            "Are you sure you want to cancel the installation?\n\nThe installation process will be stopped and any partially downloaded files will be removed.",
-            "Cancel Installation",
+            Properties.Resources.ConfirmCancelInstallation,
+            Properties.Resources.TitleCancelInstallation,
             System.Windows.MessageBoxButton.YesNo,
             System.Windows.MessageBoxImage.Warning,
             System.Windows.MessageBoxResult.No);
