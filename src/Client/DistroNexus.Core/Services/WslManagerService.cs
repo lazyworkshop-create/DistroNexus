@@ -172,7 +172,7 @@ public partial class WslManagerService : IWslManagerService
                         int.Parse(ver.GetString() ?? "2") : 2,
                     InstallPath = element.GetProperty("BasePath").GetString() ?? "",
                     Size = diskSize,
-                    Distribution = instanceName,
+                    Distribution = element.TryGetProperty("Distribution", out var dist) ? dist.GetString() ?? instanceName : instanceName,
                     IsDefault = false, // Will be determined from wsl --list
                     LastAccessed = element.TryGetProperty("InstallTime", out var time) && 
                         DateTime.TryParse(time.GetString(), out var dt) ? dt : (DateTime?)null
@@ -208,6 +208,20 @@ public partial class WslManagerService : IWslManagerService
                 # Get state from wsl --list --verbose (includes Running/Stopped state)
                 $wslOutput = wsl --list --verbose 2>&1
                 $wslStatus = @{}
+
+                # Load cached metadata (Distribution names)
+                $cacheMap = @{}
+                try {
+                    $jsonPath = Join-Path $env:APPDATA "DistroNexus\instances.json"
+                    if (Test-Path $jsonPath) {
+                        $cacheData = Get-Content $jsonPath -Raw | ConvertFrom-Json
+                        foreach ($c in $cacheData) { 
+                            if ($c.PSObject.Properties.Match('Distribution')) {
+                                $cacheMap[$c.Name] = $c.Distribution 
+                            }
+                        }
+                    }
+                } catch { }
                 
                 if ($wslOutput -and $LASTEXITCODE -eq 0) {
                     foreach ($line in $wslOutput) {
@@ -257,6 +271,17 @@ public partial class WslManagerService : IWslManagerService
                                 $isDefault = $wslStatus[$name].IsDefault
                             }
                             
+                            $distName = if ($cacheMap.ContainsKey($name)) { $cacheMap[$name] } else { $name }
+                            
+                            # Probe running instance for better name
+                            if ($state -eq "Running") {
+                                $osRel = wsl -d $name -- cat /etc/os-release 2>$null
+                                if ($LASTEXITCODE -eq 0 -and $osRel) {
+                                  if ($osRel -match 'PRETTY_NAME="([^"]+)"') { $distName = $matches[1] }
+                                  elseif ($osRel -match 'NAME="([^"]+)"') { $distName = $matches[1] }
+                                }
+                            }
+
                             $instances += [PSCustomObject]@{
                                 Name = $name
                                 State = $state
@@ -264,7 +289,7 @@ public partial class WslManagerService : IWslManagerService
                                 InstallPath = $basePath
                                 IsDefault = $isDefault
                                 Size = $size
-                                Distribution = $name
+                                Distribution = $distName
                                 LastAccessed = $lastAccessed
                             }
                         } catch {
