@@ -5,6 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:local="clr-namespace:DistroNexus.Desktop.Wizard.Steps"
+             xmlns:properties="clr-namespace:DistroNexus.Desktop.Properties"
              mc:Ignorable="d" 
              d:DesignHeight="400" d:DesignWidth="600"
              d:DataContext="{d:DesignInstance Type=local:ReviewStep}">
@@ -13,7 +14,7 @@
         <!-- Installation Summary Card -->
         <ui:Card Padding="20" Margin="0,0,0,20">
             <StackPanel>
-                <TextBlock Text="Installation Summary"
+                <TextBlock Text="{x:Static properties:Resources.InstallationSummaryTitle}"
                           FontSize="16"
                           FontWeight="SemiBold"
                           Margin="0,0,0,15"/>
@@ -33,7 +34,7 @@
                     
                     <!-- Distribution -->
                     <TextBlock Grid.Row="0" Grid.Column="0" 
-                              Text="Distribution:"
+                              Text="{x:Static properties:Resources.LabelDistribution}"
                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                               Margin="0,0,0,8"/>
                     <TextBlock Grid.Row="0" Grid.Column="1" 
@@ -43,7 +44,7 @@
                     
                     <!-- Instance Name -->
                     <TextBlock Grid.Row="1" Grid.Column="0" 
-                              Text="Instance Name:"
+                              Text="{x:Static properties:Resources.LabelInstanceName}"
                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                               Margin="0,0,0,8"/>
                     <TextBlock Grid.Row="1" Grid.Column="1" 
@@ -53,7 +54,7 @@
                     
                     <!-- Install Path -->
                     <TextBlock Grid.Row="2" Grid.Column="0" 
-                              Text="Install Path:"
+                              Text="{x:Static properties:Resources.LabelInstallPath}"
                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                               Margin="0,0,0,8"/>
                     <TextBlock Grid.Row="2" Grid.Column="1" 
@@ -64,7 +65,7 @@
                     
                     <!-- Username -->
                     <TextBlock Grid.Row="3" Grid.Column="0" 
-                              Text="Username:"
+                              Text="{x:Static properties:Resources.LabelUsername}"
                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                               Margin="0,0,0,8"/>
                     <TextBlock Grid.Row="3" Grid.Column="1" 
@@ -74,21 +75,21 @@
                     
                     <!-- WSL Version -->
                     <TextBlock Grid.Row="4" Grid.Column="0" 
-                              Text="WSL Version:"
+                              Text="{x:Static properties:Resources.LabelWslVersion}"
                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                     <TextBlock Grid.Row="4" Grid.Column="1" 
-                              Text="{Binding Context.WslVersion, StringFormat=WSL {0}}"
+                              Text="{Binding Context.WslVersion, StringFormat={x:Static properties:Resources.WslVersionFormat}}"
                               FontWeight="SemiBold"/>
                 </Grid>
             </StackPanel>
         </ui:Card>
         
         <!-- Options -->
-        <ui:ToggleSwitch Content="Set as default WSL distribution"
+        <ui:ToggleSwitch Content="{x:Static properties:Resources.OptionSetDefault}"
                         IsChecked="{Binding Context.SetAsDefault, Mode=TwoWay}"
                         Margin="0,0,0,10"/>
         
-        <ui:ToggleSwitch Content="Launch after installation"
+        <ui:ToggleSwitch Content="{x:Static properties:Resources.OptionLaunchAfter}"
                         IsChecked="{Binding Context.LaunchAfterInstall, Mode=TwoWay}"/>
     </StackPanel>
 </UserControl>

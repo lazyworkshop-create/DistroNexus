@@ -6,6 +6,7 @@ xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
 xmlns:vm="clr-namespace:DistroNexus.Desktop.ViewModels"
 xmlns:download="clr-namespace:DistroNexus.Core.Models;assembly=DistroNexus.Core"
+xmlns:properties="clr-namespace:DistroNexus.Desktop.Properties"
 mc:Ignorable="d"
 Title="DistroNexus 2.0" 
 Height="600" 
@@ -49,20 +50,20 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                 <!-- Left Side: Main Actions (only visible on dashboard) -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" 
                            Visibility="{Binding IsOnDashboard, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <ui:Button Content="Refresh" 
+                    <ui:Button Content="{x:Static properties:Resources.Refresh}" 
                               Icon="{ui:SymbolIcon Symbol=ArrowSync20}"
                               Command="{Binding RefreshCommand}"
                               Margin="0,0,10,0"/>
-                    <ui:Button Content="Install New" 
+                    <ui:Button Content="{x:Static properties:Resources.InstallNew}" 
                               Icon="{ui:SymbolIcon Symbol=Add20}"
                               Command="{Binding ShowInstallWizardCommand}"
                               Margin="0,0,10,0"
                               Appearance="Primary"/>
-                    <ui:Button Content="Package Manager" 
+                    <ui:Button Content="{x:Static properties:Resources.PackageManagerTitle}" 
                               Icon="{ui:SymbolIcon Symbol=Apps20}"
                               Command="{Binding ShowPackageManagerCommand}"
                               Margin="0,0,10,0"/>
-                    <ui:Button Content="Settings" 
+                    <ui:Button Content="{x:Static properties:Resources.SettingsTitle}" 
                               Icon="{ui:SymbolIcon Symbol=Settings20}"
                               Command="{Binding ShowSettingsCommand}"/>
                 </StackPanel>
@@ -72,15 +73,15 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                     <!-- Download Tasks Button -->
                     <ui:Button Icon="{ui:SymbolIcon Symbol=ArrowDownload24}"
                               Command="{Binding ToggleDownloadPanelCommand}"
-                              ToolTip="Download Tasks"
+                              ToolTip="{x:Static properties:Resources.DownloadTasksTooltip}"
                               Margin="0,0,10,0"/>
                     
-                    <ui:Button ToolTip="Toggle Theme (Dark/Light)"
+                    <ui:Button ToolTip="{x:Static properties:Resources.ToggleThemeTooltip}"
                               Icon="{ui:SymbolIcon Symbol=WeatherMoon20}"
                               Command="{Binding ToggleThemeCommand}"
                               Margin="0,0,5,0"/>
                     
-                    <ui:Button ToolTip="Switch Language (EN/CN)"
+                    <ui:Button ToolTip="{x:Static properties:Resources.SwitchLanguageTooltip}"
                               Icon="{ui:SymbolIcon Symbol=LocalLanguage20}"
                               Command="{Binding ToggleLanguageCommand}"/>
                 </StackPanel>
@@ -108,12 +109,12 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                       Margin="0,2,0,0"/>
                                             <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
-                                                <TextBlock Text="State: " 
+                                                <TextBlock Text="{x:Static properties:Resources.InstanceStateLabel}" 
                                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
                                                 <TextBlock Text="{Binding State}" 
                                                           FontWeight="SemiBold"
                                                           Foreground="{Binding State, Converter={StaticResource InstanceStateToColorConverter}}"/>
-                                                <TextBlock Text=" | Disk: " 
+                                                <TextBlock Text="{x:Static properties:Resources.InstanceDiskLabel}" 
                                                           Margin="10,0,0,0"
                                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
                                                 <TextBlock Text="{Binding DiskSizeDisplay}" 
@@ -130,29 +131,29 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                                         <StackPanel Grid.Column="1" 
                                                    Orientation="Horizontal" 
                                                    VerticalAlignment="Center">
-                                            <ui:Button Content="Start" 
+                                            <ui:Button Content="{x:Static properties:Resources.InstanceStart}" 
                                                       Icon="{ui:SymbolIcon Symbol=Play20}"
                                                       Command="{Binding StartCommand}"
                                                       Margin="0,0,5,0"
                                                       Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}"/>
-                                            <ui:Button Content="Stop" 
+                                            <ui:Button Content="{x:Static properties:Resources.InstanceStop}" 
                                                       Icon="{ui:SymbolIcon Symbol=Stop20}"
                                                       Command="{Binding StopCommand}"
                                                       Margin="0,0,5,0"
                                                       Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                            <ui:Button Content="Terminal" 
+                                            <ui:Button Content="{x:Static properties:Resources.InstanceTerminal}" 
                                                       Icon="{ui:SymbolIcon Symbol=WindowConsole20}"
                                                       Command="{Binding OpenTerminalCommand}"
                                                       Margin="0,0,5,0"/>
-                                            <ui:DropDownButton Content="More" Icon="{ui:SymbolIcon Symbol=MoreHorizontal20}">
+                                            <ui:DropDownButton Content="{x:Static properties:Resources.InstanceMore}" Icon="{ui:SymbolIcon Symbol=MoreHorizontal20}">
                                                 <ui:DropDownButton.Flyout>
                                                     <ContextMenu>
-                                                        <ui:MenuItem Header="Move..." Icon="{ui:SymbolIcon Symbol=ArrowMove20}" Command="{Binding MoveCommand}"/>
-                                                        <ui:MenuItem Header="Rename..." Icon="{ui:SymbolIcon Symbol=Rename20}" Command="{Binding RenameCommand}"/>
-                                                        <ui:MenuItem Header="Set Credentials..." Icon="{ui:SymbolIcon Symbol=Key20}" Command="{Binding SetCredentialsCommand}"/>
-                                                        <ui:MenuItem Header="Force Refresh" Icon="{ui:SymbolIcon Symbol=ArrowSync20}" Command="{Binding ForceRefreshCommand}"/>
+                                                        <ui:MenuItem Header="{x:Static properties:Resources.ActionMove}" Icon="{ui:SymbolIcon Symbol=ArrowMove20}" Command="{Binding MoveCommand}"/>
+                                                        <ui:MenuItem Header="{x:Static properties:Resources.ActionRename}" Icon="{ui:SymbolIcon Symbol=Rename20}" Command="{Binding RenameCommand}"/>
+                                                        <ui:MenuItem Header="{x:Static properties:Resources.ActionSetCredentials}" Icon="{ui:SymbolIcon Symbol=Key20}" Command="{Binding SetCredentialsCommand}"/>
+                                                        <ui:MenuItem Header="{x:Static properties:Resources.ActionForceRefresh}" Icon="{ui:SymbolIcon Symbol=ArrowSync20}" Command="{Binding ForceRefreshCommand}"/>
                                                         <Separator/>
-                                                        <ui:MenuItem Header="Remove" Icon="{ui:SymbolIcon Symbol=Delete20}" Command="{Binding RemoveCommand}"/>
+                                                        <ui:MenuItem Header="{x:Static properties:Resources.ActionRemove}" Icon="{ui:SymbolIcon Symbol=Delete20}" Command="{Binding RemoveCommand}"/>
                                                     </ContextMenu>
                                                 </ui:DropDownButton.Flyout>
                                             </ui:DropDownButton>
@@ -169,11 +170,11 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                             HorizontalAlignment="Center"
                             Visibility="{Binding Instances.Count, Converter={StaticResource IntToVisibilityConverter}}">
                     <ui:SymbolIcon Symbol="Apps48" FontSize="64" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                    <TextBlock Text="No WSL instances found" 
+                    <TextBlock Text="{x:Static properties:Resources.NoInstancesTitle}" 
                                FontSize="18" 
                                HorizontalAlignment="Center"
                                Margin="0,15,0,5"/>
-                    <TextBlock Text="Click 'Install New' to get started" 
+                    <TextBlock Text="{x:Static properties:Resources.NoInstancesSubtitle}" 
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                HorizontalAlignment="Center"/>
                 </StackPanel>
@@ -191,7 +192,7 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                   Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                     <ui:ProgressRing IsIndeterminate="True" Width="50" Height="50"/>
-                    <TextBlock Text="Loading..." 
+                    <TextBlock Text="{x:Static properties:Resources.LoadingText}" 
                               Foreground="White" 
                               FontSize="16" 
                               Margin="0,10,0,0"
@@ -232,11 +233,11 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                             </Grid.ColumnDefinitions>
                             
                             <StackPanel Grid.Column="0">
-                                <TextBlock Text="Download Tasks" 
+                                <TextBlock Text="{x:Static properties:Resources.DownloadPanelTitle}" 
                                            FontSize="18" 
                                            FontWeight="SemiBold"
                                            Margin="0,0,0,5"/>
-                                <TextBlock Text="{Binding ActiveDownloadsCount, StringFormat='{}{0} active downloads'}" 
+                                <TextBlock Text="{Binding ActiveDownloadsCount, StringFormat={x:Static properties:Resources.ActiveDownloadsFormat}}" 
                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                            FontSize="14"/>
                             </StackPanel>
@@ -244,7 +245,7 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                             <ui:Button Grid.Column="1" 
                                       Icon="{ui:SymbolIcon Symbol=Dismiss20}"
                                       Command="{Binding ToggleDownloadPanelCommand}"
-                                      ToolTip="Close"/>
+                                      ToolTip="{x:Static properties:Resources.CloseTooltip}"/>
                         </Grid>
                     </Border>
                     
@@ -296,7 +297,7 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                                                 <ui:Button Icon="{ui:SymbolIcon Symbol=Dismiss20}"
                                                           Command="{Binding DataContext.CancelDownloadCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                           CommandParameter="{Binding Id}"
-                                                          ToolTip="Cancel"
+                                                          ToolTip="{x:Static properties:Resources.CancelTooltip}"
                                                           Margin="0,0,5,0"
                                                           Visibility="{Binding Status, Converter={StaticResource DownloadStatusToActionVisibilityConverter}}"/>
                                                 
@@ -349,7 +350,7 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                            Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                            BorderThickness="0,1,0,0">
-                        <ui:Button Content="Clear Completed"
+                        <ui:Button Content="{x:Static properties:Resources.ButtonClearCompleted}"
                                   Command="{Binding ClearCompletedDownloadsCommand}"
                                   HorizontalAlignment="Stretch"
                                   Appearance="Secondary"/>

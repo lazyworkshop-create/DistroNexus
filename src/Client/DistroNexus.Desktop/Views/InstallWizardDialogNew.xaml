@@ -5,8 +5,9 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:wizard="clr-namespace:DistroNexus.Desktop.Wizard"
+        xmlns:properties="clr-namespace:DistroNexus.Desktop.Properties"
         mc:Ignorable="d"
-        Title="Install WSL Distribution" 
+        Title="{x:Static properties:Resources.InstallWizardTitle}" 
         Height="550" 
         Width="700"
         WindowStartupLocation="CenterOwner"
@@ -23,7 +24,7 @@
 
         <!-- Title Bar -->
         <ui:TitleBar Grid.Row="0" 
-                     Title="Install WSL Distribution"
+                     Title="{x:Static properties:Resources.InstallWizardTitle}"
                      ShowMaximize="False"
                      ShowMinimize="False"/>
 

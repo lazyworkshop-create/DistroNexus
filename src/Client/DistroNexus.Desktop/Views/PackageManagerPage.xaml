@@ -5,8 +5,9 @@
   xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
   xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
   xmlns:vm="clr-namespace:DistroNexus.Desktop.ViewModels"
+  xmlns:properties="clr-namespace:DistroNexus.Desktop.Properties"
   mc:Ignorable="d"
-  Title="Package Manager"
+  Title="{x:Static properties:Resources.PackageManagerTitle}"
   Loaded="Page_Loaded"
   d:DataContext="{d:DesignInstance Type=vm:PackageManagerViewModel}">
     
@@ -25,26 +26,26 @@
         </Grid.ColumnDefinitions>
 
         <StackPanel Orientation="Horizontal">
-            <ui:Button Content="Refresh" 
+            <ui:Button Content="{x:Static properties:Resources.Refresh}" 
                       Icon="{ui:SymbolIcon Symbol=ArrowSync20}"
                       Command="{Binding RefreshCatalogCommand}"
                       Margin="0,0,10,0"/>
-            <ui:Button Content="Update" 
+            <ui:Button Content="{x:Static properties:Resources.Update}" 
                       Icon="{ui:SymbolIcon Symbol=CloudSync20}"
                       Command="{Binding UpdateSourcesCommand}"
-                      ToolTip="Update distribution catalog from remote source"
+                      ToolTip="{x:Static properties:Resources.UpdateCatalogTooltip}"
                       Margin="0,0,10,0"/>
-            <ui:Button Content="Download" 
+            <ui:Button Content="{x:Static properties:Resources.Download}" 
                       Icon="{ui:SymbolIcon Symbol=ArrowDownload20}"
                       Command="{Binding DownloadAllCommand}"
-                      ToolTip="Download all uncached packages"
+                      ToolTip="{x:Static properties:Resources.DownloadAllTooltip}"
                       Margin="0,0,10,0"/>
-            <ui:TextBox PlaceholderText="Search distributions..." 
+            <ui:TextBox PlaceholderText="{x:Static properties:Resources.SearchPlaceholder}" 
                        Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
                        Height="36"
                        MinWidth="250"
                        Margin="0,0,10,0"/>
-            <ui:Button Content="Add" 
+            <ui:Button Content="{x:Static properties:Resources.AddSource}" 
                       Icon="{ui:SymbolIcon Symbol=Add20}"
                       Command="{Binding ToggleAddSourcePanelCommand}"
                       Margin="0,0,10,0"/>
@@ -54,7 +55,7 @@
                          Visibility="{Binding IsOfflineMode, Converter={StaticResource BoolToVisibilityConverter}}"
                          VerticalAlignment="Center"
                          Margin="0,0,5,0"/>
-            <TextBlock Text="Offline Mode" 
+            <TextBlock Text="{x:Static properties:Resources.OfflineMode}" 
                       Foreground="Orange"
                       FontWeight="SemiBold"
                       VerticalAlignment="Center"
@@ -62,7 +63,7 @@
         </StackPanel>
 
         <ui:Button Grid.Column="1" 
-                  Content="Back" 
+                  Content="{x:Static properties:Resources.Back}" 
                   Icon="{ui:SymbolIcon Symbol=ArrowLeft20}"
                   Command="{Binding GoBackCommand}"/>
     </Grid>
@@ -106,15 +107,15 @@
                                                         <TextBlock Text="{Binding Name}" 
                                                                   FontSize="15" 
                                                                   FontWeight="SemiBold"/>
-                                                        <ui:Badge Content="Cached" 
+                                                        <ui:Badge Content="{x:Static properties:Resources.BadgeCached}" 
                                                                  Appearance="Success" 
                                                                  Margin="8,0,0,0"
                                                                  Visibility="{Binding IsCached, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                                        <ui:Badge Content="Online" 
+                                                        <ui:Badge Content="{x:Static properties:Resources.BadgeOnline}" 
                                                                  Appearance="Info" 
                                                                  Margin="8,0,0,0"
                                                                  Visibility="{Binding IsCached, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}"/>
-                                                        <ui:Badge Content="Custom" 
+                                                        <ui:Badge Content="{x:Static properties:Resources.BadgeCustom}" 
                                                                  Appearance="Caution" 
                                                                  Margin="8,0,0,0"
                                                                  Visibility="{Binding IsCustomSource, Converter={StaticResource BoolToVisibilityConverter}}"/>
@@ -122,23 +123,26 @@
                                                     <TextBlock Text="{Binding Description}" 
                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                               TextTrimming="CharacterEllipsis"
-                                                              MaxWidth="400"
+                                                              TextWrapping="NoWrap"
+                                                              HorizontalAlignment="Left"
                                                               Margin="0,2,0,0"/>
-                                                    <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                                                         <TextBlock Text="{Binding Version}" 
-                                                                  Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                                  FontSize="11"/>
-                                                        <TextBlock Text=" | " Foreground="{DynamicResource TextFillColorTertiaryBrush}" FontSize="11"/>
+                                                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                                  FontSize="12"/>
+                                                        <TextBlock Text=" | " 
+                                                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}" 
+                                                                  FontSize="12"/>
                                                         <TextBlock Text="{Binding FileSize, Converter={StaticResource FileSizeFormatter}}" 
-                                                                  Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                                  FontSize="11"/>
+                                                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                                  FontSize="12"/>
                                                     </StackPanel>
                                                 </StackPanel>
 
                                                 <!-- Download/Cancel/Install Actions -->
                                                 <!-- Download Button (visible when not cached and not downloading) -->
                                                 <ui:Button Grid.Column="2" 
-                                                          Content="Download" 
+                                                          Content="{x:Static properties:Resources.ActionDownload}" 
                                                           Icon="{ui:SymbolIcon Symbol=ArrowDownload20}"
                                                           Command="{Binding DataContext.DownloadPackageCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                                           CommandParameter="{Binding}"
@@ -154,7 +158,7 @@
                                                 
                                                 <!-- Cancel Button (visible when downloading) -->
                                                 <ui:Button Grid.Column="2" 
-                                                          Content="Cancel" 
+                                                          Content="{x:Static properties:Resources.ButtonCancel}" 
                                                           Icon="{ui:SymbolIcon Symbol=Dismiss20}"
                                                           Command="{Binding DataContext.CancelDownloadCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                                           CommandParameter="{Binding}"
@@ -164,7 +168,7 @@
                                                 
                                                 <!-- Install Button (for cached packages, not downloading) -->
                                                 <ui:Button Grid.Column="3" 
-                                                          Content="Install" 
+                                                          Content="{x:Static properties:Resources.ActionInstall}" 
                                                           Icon="{ui:SymbolIcon Symbol=Add20}"
                                                           Command="{Binding DataContext.InstallCachedPackageCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                                           CommandParameter="{Binding}"
@@ -180,7 +184,7 @@
                                                 
                                                 <!-- More Actions DropDown (for cached packages, not downloading) -->
                                                 <ui:DropDownButton Grid.Column="4" 
-                                                                   Content="Actions" 
+                                                                   Content="{x:Static properties:Resources.ActionActions}" 
                                                                    Icon="{ui:SymbolIcon Symbol=MoreHorizontal20}"
                                                                    Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Page}}">
                                                     <ui:DropDownButton.Visibility>
@@ -191,12 +195,12 @@
                                                     </ui:DropDownButton.Visibility>
                                                     <ui:DropDownButton.Flyout>
                                                         <ContextMenu>
-                                                            <ui:MenuItem Header="Redownload" 
+                                                            <ui:MenuItem Header="{x:Static properties:Resources.ActionRedownload}" 
                                                                         Icon="{ui:SymbolIcon Symbol=ArrowSync20}" 
                                                                         Command="{Binding PlacementTarget.Tag.RedownloadPackageCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                                         CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                                             <Separator/>
-                                                            <ui:MenuItem Header="Delete Cache" 
+                                                            <ui:MenuItem Header="{x:Static properties:Resources.ActionDeleteCache}" 
                                                                         Icon="{ui:SymbolIcon Symbol=Delete20}" 
                                                                         Command="{Binding PlacementTarget.Tag.DeletePackageCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                                         CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
@@ -232,20 +236,20 @@
                 </Grid.ColumnDefinitions>
                 
                 <TextBlock Grid.Column="0" 
-                           Text="Custom Source URL:" 
+                           Text="{x:Static properties:Resources.CustomSourceUrlLabel}" 
                            VerticalAlignment="Center"
                            Margin="0,0,10,0"/>
                 <ui:TextBox Grid.Column="1" 
                            Text="{Binding CustomSourceUrl, UpdateSourceTrigger=PropertyChanged}"
                            PlaceholderText="https://example.com/distros.json"/>
                 <ui:Button Grid.Column="2" 
-                          Content="Add" 
+                          Content="{x:Static properties:Resources.ActionAdd}" 
                           Icon="{ui:SymbolIcon Symbol=Add20}"
                           Command="{Binding AddCustomSourceCommand}"
                           Appearance="Primary"
                           Margin="10,0,0,0"/>
                 <ui:Button Grid.Column="3" 
-                          Content="Cancel" 
+                          Content="{x:Static properties:Resources.ButtonCancel}" 
                           Icon="{ui:SymbolIcon Symbol=Dismiss20}"
                           Command="{Binding ToggleAddSourcePanelCommand}"
                           Margin="5,0,0,0"/>
@@ -258,7 +262,7 @@
               Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                 <ui:ProgressRing IsIndeterminate="True" Width="50" Height="50"/>
-                <TextBlock Text="Loading catalog..." 
+                <TextBlock Text="{x:Static properties:Resources.LoadingCatalog}" 
                           Foreground="White" 
                           FontSize="16" 
                           Margin="0,10,0,0"

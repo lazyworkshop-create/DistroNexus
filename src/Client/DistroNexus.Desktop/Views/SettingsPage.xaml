@@ -5,8 +5,9 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       xmlns:vm="clr-namespace:DistroNexus.Desktop.ViewModels"
+      xmlns:properties="clr-namespace:DistroNexus.Desktop.Properties"
       mc:Ignorable="d"
-      Title="Settings"
+      Title="{x:Static properties:Resources.SettingsTitle}"
       d:DataContext="{d:DesignInstance Type=vm:SettingsViewModel}">
     
     <Grid Margin="0">
@@ -30,19 +31,19 @@
                            Margin="0,0,15,0"
                            Visibility="{Binding IsDirty, Converter={StaticResource BoolToVisibilityConverter}}"/>
                 
-                <ui:Button Content="Reset to Defaults" 
+                <ui:Button Content="{x:Static properties:Resources.ResetToDefaults}" 
                            Icon="{ui:SymbolIcon Symbol=ArrowReset20}"
                            Command="{Binding ResetSettingsCommand}"
                            Margin="0,0,10,0"/>
                 
-                <ui:Button Content="Save Settings" 
+                <ui:Button Content="{x:Static properties:Resources.SaveSettings}" 
                            Icon="{ui:SymbolIcon Symbol=Save20}"
                            Command="{Binding SaveSettingsCommand}"
                            Appearance="Primary"/>
             </StackPanel>
             
             <ui:Button Grid.Column="1" 
-                      Content="Back" 
+                      Content="{x:Static properties:Resources.Back}" 
                       Icon="{ui:SymbolIcon Symbol=ArrowLeft20}"
                       Command="{Binding GoBackCommand}"/>
         </Grid>
@@ -53,9 +54,9 @@
                 <!-- General Settings -->
                 <ui:Card Margin="0,0,0,15">
                     <StackPanel>
-                        <TextBlock Text="General Settings" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
+                        <TextBlock Text="{x:Static properties:Resources.GeneralSettings}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
                         
-                        <TextBlock Text="Default Installation Path" Margin="0,0,0,5"/>
+                        <TextBlock Text="{x:Static properties:Resources.DefaultInstallPath}" Margin="0,0,0,5"/>
                         <Grid Margin="0,0,0,15">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -65,12 +66,12 @@
                                        Text="{Binding DefaultInstallPath, UpdateSourceTrigger=PropertyChanged}"
                                        Margin="0,0,10,0"/>
                             <ui:Button Grid.Column="1" 
-                                      Content="Browse..."
+                                      Content="{x:Static properties:Resources.Browse}"
                                       Icon="{ui:SymbolIcon Symbol=Folder20}"
                                       Command="{Binding BrowseInstallPathCommand}"/>
                         </Grid>
 
-                        <TextBlock Text="Package Cache Path" Margin="0,0,0,5"/>
+                        <TextBlock Text="{x:Static properties:Resources.PackageCachePath}" Margin="0,0,0,5"/>
                         <Grid Margin="0,0,0,15">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -80,7 +81,7 @@
                                        Text="{Binding PackageCachePath, UpdateSourceTrigger=PropertyChanged}"
                                        Margin="0,0,10,0"/>
                             <ui:Button Grid.Column="1" 
-                                      Content="Browse..."
+                                      Content="{x:Static properties:Resources.Browse}"
                                       Icon="{ui:SymbolIcon Symbol=Folder20}"
                                       Command="{Binding BrowseCachePathCommand}"/>
                         </Grid>
@@ -92,20 +93,20 @@
                             </Grid.ColumnDefinitions>
                             
                             <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                                <TextBlock Text="Default WSL Version" Margin="0,0,0,5"/>
+                                <TextBlock Text="{x:Static properties:Resources.DefaultWslVersion}" Margin="0,0,0,5"/>
                                 <ComboBox SelectedIndex="{Binding WslVersionIndex}">
-                                    <ComboBoxItem Content="WSL 1"/>
-                                    <ComboBoxItem Content="WSL 2 (Recommended)"/>
+                                    <ComboBoxItem Content="{x:Static properties:Resources.WslVersion1}"/>
+                                    <ComboBoxItem Content="{x:Static properties:Resources.WslVersion2Recommended}"/>
                                 </ComboBox>
                             </StackPanel>
                             
                             <StackPanel Grid.Column="1">
-                                <TextBlock Text="Default Username" Margin="0,0,0,5"/>
+                                <TextBlock Text="{x:Static properties:Resources.DefaultUsername}" Margin="0,0,0,5"/>
                                 <ui:TextBox Text="{Binding DefaultUsername, UpdateSourceTrigger=PropertyChanged}"/>
                             </StackPanel>
                         </Grid>
 
-                        <TextBlock Text="Default Terminal Start Path" Margin="0,0,0,5"/>
+                        <TextBlock Text="{x:Static properties:Resources.DefaultTerminalStartPath}" Margin="0,0,0,5"/>
                         <Grid Margin="0,0,0,15">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -113,15 +114,15 @@
                             </Grid.ColumnDefinitions>
                             <ui:TextBox Grid.Column="0" 
                                        Text="{Binding TerminalStartPath, UpdateSourceTrigger=PropertyChanged}"
-                                       PlaceholderText="~ (home directory)"
+                                       PlaceholderText="{x:Static properties:Resources.TerminalPathPlaceholder}"
                                        Margin="0,0,10,0"/>
                             <ui:Button Grid.Column="1" 
-                                      Content="Browse..."
+                                      Content="{x:Static properties:Resources.Browse}"
                                       Icon="{ui:SymbolIcon Symbol=Folder20}"
                                       Command="{Binding BrowseTerminalPathCommand}"/>
                         </Grid>
 
-                        <TextBlock Text="Default Distribution" Margin="0,0,0,5"/>
+                        <TextBlock Text="{x:Static properties:Resources.DefaultDistro}" Margin="0,0,0,5"/>
                         <ComboBox ItemsSource="{Binding AvailableDistributions}" 
                                   SelectedItem="{Binding DefaultDistribution}"
                                   DisplayMemberPath="Name"
@@ -132,19 +133,19 @@
                 <!-- Appearance Settings -->
                 <ui:Card Margin="0,0,0,15">
                     <StackPanel>
-                        <TextBlock Text="Appearance" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
+                        <TextBlock Text="{x:Static properties:Resources.Appearance}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
                         
-                        <TextBlock Text="Theme" Margin="0,0,0,5"/>
-                        <ComboBox SelectedItem="{Binding Theme}" Margin="0,0,0,15">
-                            <ComboBoxItem Content="Light"/>
-                            <ComboBoxItem Content="Dark"/>
-                            <ComboBoxItem Content="Auto"/>
+                        <TextBlock Text="{x:Static properties:Resources.Theme}" Margin="0,0,0,5"/>
+                        <ComboBox SelectedValue="{Binding Theme}" SelectedValuePath="Tag" Margin="0,0,0,15">
+                            <ComboBoxItem Tag="Light" Content="{x:Static properties:Resources.ThemeLight}"/>
+                            <ComboBoxItem Tag="Dark" Content="{x:Static properties:Resources.ThemeDark}"/>
+                            <ComboBoxItem Tag="Auto" Content="{x:Static properties:Resources.ThemeAuto}"/>
                         </ComboBox>
 
-                        <TextBlock Text="Language" Margin="0,0,0,5"/>
-                        <ComboBox SelectedItem="{Binding Language}">
-                            <ComboBoxItem Content="en-US"/>
-                            <ComboBoxItem Content="zh-CN"/>
+                        <TextBlock Text="{x:Static properties:Resources.Language}" Margin="0,0,0,5"/>
+                        <ComboBox SelectedValue="{Binding Language}" SelectedValuePath="Tag">
+                            <ComboBoxItem Tag="en-US" Content="{x:Static properties:Resources.LangEnglish}"/>
+                            <ComboBoxItem Tag="zh-CN" Content="{x:Static properties:Resources.LangChinese}"/>
                         </ComboBox>
                     </StackPanel>
                 </ui:Card>
@@ -152,9 +153,9 @@
                 <!-- Download Settings -->
                 <ui:Card Margin="0,0,0,15">
                     <StackPanel>
-                        <TextBlock Text="Download Settings" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
+                        <TextBlock Text="{x:Static properties:Resources.DownloadSettings}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
                         
-                        <TextBlock Text="Online Catalog Source URL" Margin="0,0,0,5"/>
+                        <TextBlock Text="{x:Static properties:Resources.OnlineCatalogUrl}" Margin="0,0,0,5"/>
                         <ui:TextBox Text="{Binding CatalogUrl, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,15"/>
 
                         <Grid Margin="0,0,0,15">
@@ -164,21 +165,21 @@
                             </Grid.ColumnDefinitions>
                             
                             <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                                <TextBlock Text="Max Concurrent Downloads" Margin="0,0,0,5"/>
+                                <TextBlock Text="{x:Static properties:Resources.MaxConcurrentDownloads}" Margin="0,0,0,5"/>
                                 <ui:NumberBox Value="{Binding MaxConcurrentDownloads}" 
                                               Minimum="1" 
                                               Maximum="10"/>
                             </StackPanel>
                             
                             <StackPanel Grid.Column="1">
-                                <TextBlock Text="Max Retry Attempts" Margin="0,0,0,5"/>
+                                <TextBlock Text="{x:Static properties:Resources.MaxRetryAttempts}" Margin="0,0,0,5"/>
                                 <ui:NumberBox Value="{Binding MaxRetryAttempts}" 
                                               Minimum="0" 
                                               Maximum="10"/>
                             </StackPanel>
                         </Grid>
 
-                        <ui:ToggleSwitch Content="Auto Retry Failed Downloads" 
+                        <ui:ToggleSwitch Content="{x:Static properties:Resources.AutoRetryFailedDownloads}" 
                                          IsChecked="{Binding AutoRetryDownloads}"/>
                     </StackPanel>
                 </ui:Card>
@@ -186,7 +187,7 @@
                 <!-- Cache Management -->
                 <ui:Card Margin="0,0,0,15">
                     <StackPanel>
-                        <TextBlock Text="Cache Management" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
+                        <TextBlock Text="{x:Static properties:Resources.CacheManagement}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
                         
                         <Grid Margin="0,0,0,15">
                             <Grid.ColumnDefinitions>
@@ -195,14 +196,14 @@
                             </Grid.ColumnDefinitions>
                             
                             <StackPanel Grid.Column="0">
-                                <TextBlock Text="Package Cache Location" Margin="0,0,0,5"/>
+                                <TextBlock Text="{x:Static properties:Resources.PackageCacheLocation}" Margin="0,0,0,5"/>
                                 <TextBlock Text="{Binding CachePath}" 
                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                            TextWrapping="Wrap"/>
                             </StackPanel>
                             
                             <ui:Button Grid.Column="1" 
-                                      Content="Open Folder"
+                                      Content="{x:Static properties:Resources.OpenFolder}"
                                       Icon="{ui:SymbolIcon Symbol=FolderOpen20}"
                                       Command="{Binding OpenCacheFolderCommand}"
                                       VerticalAlignment="Center"/>
@@ -215,14 +216,14 @@
                             </Grid.ColumnDefinitions>
                             
                             <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                                <TextBlock Text="Cached Packages" Margin="0,0,0,5"/>
+                                <TextBlock Text="{x:Static properties:Resources.CachedPackages}" Margin="0,0,0,5"/>
                                 <TextBlock Text="{Binding CachedPackageCount}" 
                                            FontSize="24" 
                                            FontWeight="SemiBold"/>
                             </StackPanel>
                             
                             <StackPanel Grid.Column="1">
-                                <TextBlock Text="Total Size" Margin="0,0,0,5"/>
+                                <TextBlock Text="{x:Static properties:Resources.TotalSize}" Margin="0,0,0,5"/>
                                 <TextBlock Text="{Binding CacheTotalSize}" 
                                            FontSize="24" 
                                            FontWeight="SemiBold"/>
@@ -230,18 +231,18 @@
                         </Grid>
 
                         <StackPanel Orientation="Horizontal">
-                            <ui:Button Content="Refresh" 
+                            <ui:Button Content="{x:Static properties:Resources.Refresh}" 
                                       Icon="{ui:SymbolIcon Symbol=ArrowSync20}"
                                       Command="{Binding RefreshCacheInfoCommand}"
                                       Margin="0,0,10,0"/>
-                            <ui:Button Content="Clear All Cache" 
+                            <ui:Button Content="{x:Static properties:Resources.ClearAllCache}" 
                                       Icon="{ui:SymbolIcon Symbol=Delete20}"
                                       Command="{Binding ClearCacheCommand}"
                                       Appearance="Danger"/>
                         </StackPanel>
 
                         <!-- Cached Packages List -->
-                        <TextBlock Text="Cached Files" 
+                        <TextBlock Text="{x:Static properties:Resources.CachedFiles}" 
                                    Margin="0,20,0,10"
                                    FontWeight="SemiBold"
                                    Visibility="{Binding CachedPackageCount, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=Inverse}"/>
@@ -267,7 +268,7 @@
                                                 <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" 
                                                           FontSize="11">
                                                     <Run Text="{Binding SizeDisplay, Mode=OneWay}"/>
-                                                    <Run Text=" | Cached: "/>
+                                                    <Run Text="{x:Static properties:Resources.CachedDateLabel}"/>
                                                     <Run Text="{Binding CachedDate, StringFormat='{}{0:yyyy-MM-dd}', Mode=OneWay}"/>
                                                 </TextBlock>
                                             </StackPanel>
@@ -279,7 +280,7 @@
                                                       Margin="0,0,15,0"/>
                                             
                                             <ui:Button Grid.Column="2" 
-                                                      ToolTip="Delete this cached file"
+                                                      ToolTip="{x:Static properties:Resources.DeleteCachedFileTooltip}"
                                                       Icon="{ui:SymbolIcon Symbol=Delete16}"
                                                       Command="{Binding DataContext.DeleteCachedPackageCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                                       CommandParameter="{Binding}"
@@ -295,10 +296,10 @@
                 <!-- Advanced Settings -->
                 <ui:Card Margin="0,0,0,15">
                     <StackPanel>
-                        <TextBlock Text="Advanced Settings" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
+                        <TextBlock Text="{x:Static properties:Resources.AdvancedSettings}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
 
-                        <TextBlock Text="PowerShell Module Path (Optional)" Margin="0,0,0,5"/>
-                        <TextBlock Text="Leave empty to use automatic detection. Set this if the module is in a custom location." 
+                        <TextBlock Text="{x:Static properties:Resources.PowerShellModulePathHeader}" Margin="0,0,0,5"/>
+                        <TextBlock Text="{x:Static properties:Resources.PowerShellModulePathDescription}" 
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    FontSize="11"
                                    TextWrapping="Wrap"
@@ -311,37 +312,37 @@
                             </Grid.ColumnDefinitions>
                             <ui:TextBox Grid.Column="0" 
                                        Text="{Binding PowerShellModulePath, UpdateSourceTrigger=PropertyChanged}"
-                                       PlaceholderText="Auto-detect module path"
+                                       PlaceholderText="{x:Static properties:Resources.PowerShellModulePathPlaceholder}"
                                        Margin="0,0,10,0"/>
                             <ui:Button Grid.Column="1" 
-                                      Content="Browse..."
+                                      Content="{x:Static properties:Resources.Browse}"
                                       Icon="{ui:SymbolIcon Symbol=Folder20}"
                                       Command="{Binding BrowsePowerShellModulePathCommand}"
                                       Margin="0,0,10,0"/>
                             <ui:Button Grid.Column="2" 
-                                      Content="Clear"
+                                      Content="{x:Static properties:Resources.Clear}"
                                       Icon="{ui:SymbolIcon Symbol=Delete20}"
                                       Command="{Binding ClearPowerShellModulePathCommand}"
                                       Appearance="Secondary"/>
                         </Grid>
 
-                        <ui:InfoBar Title="Module Path Configuration" 
+                        <ui:InfoBar Title="{x:Static properties:Resources.ModulePathConfigTitle}" 
                                     Severity="Informational"
                                     IsOpen="True"
                                     IsClosable="False">
                             <ui:InfoBar.Content>
                                 <TextBlock TextWrapping="Wrap">
-                                    <Run Text="The PowerShell module is required for DistroNexus to manage WSL instances."/>
+                                    <Run Text="{x:Static properties:Resources.ModulePathInfo1}"/>
                                     <LineBreak/>
-                                    <Run Text="If not specified, the application will search in these locations:"/>
+                                    <Run Text="{x:Static properties:Resources.ModulePathInfo2}"/>
                                     <LineBreak/>
-                                    <Run Text="• Environment variable: DISTRONEXUS_MODULE_PATH"/>
+                                    <Run Text="{x:Static properties:Resources.ModulePathSearchLoc1}"/>
                                     <LineBreak/>
-                                    <Run Text="• Development: src/PowerShell (relative to application)"/>
+                                    <Run Text="{x:Static properties:Resources.ModulePathSearchLoc2}"/>
                                     <LineBreak/>
-                                    <Run Text="• Installed: %ProgramFiles%\DistroNexus\PowerShell"/>
+                                    <Run Text="{x:Static properties:Resources.ModulePathSearchLoc3}"/>
                                     <LineBreak/>
-                                    <Run Text="• User modules: %USERPROFILE%\Documents\PowerShell\Modules\DistroNexus"/>
+                                    <Run Text="{x:Static properties:Resources.ModulePathSearchLoc4}"/>
                                 </TextBlock>
                             </ui:InfoBar.Content>
                         </ui:InfoBar>
@@ -351,21 +352,21 @@
                 <!-- Behavior Settings -->
                 <ui:Card Margin="0,0,0,15">
                     <StackPanel>
-                        <TextBlock Text="Behavior" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
+                        <TextBlock Text="{x:Static properties:Resources.Behavior}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
                         
-                        <ui:ToggleSwitch Content="Enable Logging" 
+                        <ui:ToggleSwitch Content="{x:Static properties:Resources.EnableLogging}" 
                                          IsChecked="{Binding EnableLogging}"
                                          Margin="0,0,0,10"/>
                         
-                        <ui:ToggleSwitch Content="Check for Updates on Startup" 
+                        <ui:ToggleSwitch Content="{x:Static properties:Resources.CheckUpdatesOnStartup}" 
                                          IsChecked="{Binding CheckUpdatesOnStartup}"
                                          Margin="0,0,0,10"/>
                         
-                        <ui:ToggleSwitch Content="Show Confirmation Dialogs" 
+                        <ui:ToggleSwitch Content="{x:Static properties:Resources.ShowConfirmationDialogs}" 
                                          IsChecked="{Binding ShowConfirmationDialogs}"
                                          Margin="0,0,0,10"/>
                         
-                        <ui:ToggleSwitch Content="Enable Auto Save" 
+                        <ui:ToggleSwitch Content="{x:Static properties:Resources.EnableAutoSave}" 
                                          IsChecked="{Binding AutoSaveEnabled}"
                                          Margin="0,0,0,10"/>
                         
@@ -375,14 +376,14 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             
-                            <TextBlock Grid.Row="0" Text="Auto Save Interval (seconds)" Margin="0,0,0,5"/>
+                            <TextBlock Grid.Row="0" Text="{x:Static properties:Resources.AutoSaveInterval}" Margin="0,0,0,5"/>
                             <ui:NumberBox Grid.Row="1" Value="{Binding AutoSaveInterval}" 
                                           Minimum="30" 
                                           Maximum="300"
                                           Margin="0,0,0,15"/>
                         </Grid>
                         
-                        <TextBlock Text="Log File Path" Margin="0,15,0,5" 
+                        <TextBlock Text="{x:Static properties:Resources.LogFilePath}" Margin="0,15,0,5" 
                                    Visibility="{Binding EnableLogging, Converter={StaticResource BoolToVisibilityConverter}}"/>
                         <ui:TextBox Text="{Binding LogPath}" 
                                    IsReadOnly="True"

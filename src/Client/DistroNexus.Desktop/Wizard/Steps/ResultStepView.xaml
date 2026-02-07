@@ -5,6 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:local="clr-namespace:DistroNexus.Desktop.Wizard.Steps"
+             xmlns:properties="clr-namespace:DistroNexus.Desktop.Properties"
              mc:Ignorable="d" 
              d:DesignHeight="400" d:DesignWidth="600"
              d:DataContext="{d:DesignInstance Type=local:ResultStep}">
@@ -25,7 +26,7 @@
                 </Border>
                 
                 <!-- Success Title -->
-                <TextBlock Text="Installation Successful!"
+                <TextBlock Text="{x:Static properties:Resources.InstallSuccessLabel}"
                           FontSize="24"
                           FontWeight="SemiBold"
                           HorizontalAlignment="Center"
@@ -54,17 +55,17 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Distribution:"
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static properties:Resources.LabelDistribution}"
                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                         <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Context.SelectedDistribution.Name}"
                                   FontWeight="SemiBold"/>
                         
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Instance:" Margin="0,5,0,0"
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{x:Static properties:Resources.LabelInstance}" Margin="0,5,0,0"
                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                         <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Context.InstanceName}" Margin="0,5,0,0"
                                   FontWeight="SemiBold"/>
                         
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Location:" Margin="0,5,0,0"
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="{x:Static properties:Resources.LabelLocation}" Margin="0,5,0,0"
                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                         <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding FullInstallPath}" Margin="0,5,0,0"
                                   FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
@@ -86,7 +87,7 @@
                 </Border>
                 
                 <!-- Failure Title -->
-                <TextBlock Text="Installation Failed"
+                <TextBlock Text="{x:Static properties:Resources.InstallFailedLabel}"
                           FontSize="24"
                           FontWeight="SemiBold"
                           HorizontalAlignment="Center"

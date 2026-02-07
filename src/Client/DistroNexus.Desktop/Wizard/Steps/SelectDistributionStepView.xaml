@@ -5,6 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:local="clr-namespace:DistroNexus.Desktop.Wizard.Steps"
+             xmlns:properties="clr-namespace:DistroNexus.Desktop.Properties"
              mc:Ignorable="d" 
              d:DesignHeight="400" d:DesignWidth="600"
              d:DataContext="{d:DesignInstance Type=local:SelectDistributionStep}">
@@ -17,7 +18,7 @@
         
         <!-- Header -->
         <TextBlock Grid.Row="0" 
-                   Text="Select a Linux distribution to install:"
+                   Text="{x:Static properties:Resources.SelectDistroHeader}"
                    FontSize="14"
                    Margin="0,0,0,15"/>
         
