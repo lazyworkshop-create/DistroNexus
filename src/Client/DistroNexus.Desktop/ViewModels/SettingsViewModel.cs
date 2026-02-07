@@ -9,6 +9,8 @@ using System.IO;
 using System.Threading;
 using System.Timers;
 using System.Windows;
+using WPFLocalizeExtension.Engine;
+using System.Globalization;
 
 namespace DistroNexus.Desktop.ViewModels;
 
@@ -126,6 +128,19 @@ public partial class SettingsViewModel : ObservableObject
         SetupAutoSaveTimer();
     }
 
+    private async Task ShowAlert(string title, string message)
+    {
+        var uiMessageBox = new Wpf.Ui.Controls.MessageBox
+        {
+            Title = title,
+            Content = message,
+            CloseButtonText = "OK",
+            MaxWidth = 400
+        };
+
+        await uiMessageBox.ShowDialogAsync();
+    }
+
     [RelayCommand]
     private async Task LoadSettingsAsync()
     {
@@ -166,8 +181,7 @@ public partial class SettingsViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to load settings");
-            MessageBox.Show(string.Format(Properties.Resources.ErrorLoadSettings, ex.Message), 
-                Properties.Resources.ErrorApplicationTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorApplicationTitle, string.Format(Properties.Resources.ErrorLoadSettings, ex.Message));
         }
     }
 
@@ -221,43 +235,47 @@ public partial class SettingsViewModel : ObservableObject
             _settingsService.SaveSettings(settings);
 
             // Apply theme immediately
-            ApplyTheme(Theme);
+            await ApplyThemeAsync(Theme);
 
             IsDirty = false;
 
-            // Check if language changed
-            var currentCulture = System.Threading.Thread.CurrentThread.CurrentUICulture.Name;
-            if (!string.Equals(currentCulture, Language, StringComparison.OrdinalIgnoreCase))
+            // Apply language immediately
+            if (!string.IsNullOrEmpty(Language))
             {
-                MessageBox.Show(Properties.Resources.SettingsSavedRestart, 
-                    Properties.Resources.Success, MessageBoxButton.OK, MessageBoxImage.Information);
+                try 
+                {
+                    System.Diagnostics.Debug.WriteLine($"Changing language to: {Language}");
+                    var culture = new CultureInfo(Language);
+                    LocalizeDictionary.Instance.Culture = culture;
+                    Thread.CurrentThread.CurrentCulture = culture;
+                    Thread.CurrentThread.CurrentUICulture = culture;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to switch language to {Language}", Language);
+                }
             }
-            else
-            {
-                MessageBox.Show(Properties.Resources.SettingsSaved, 
-                    Properties.Resources.Success, MessageBoxButton.OK, MessageBoxImage.Information);
-            }
+
+            await ShowAlert(Properties.Resources.Success, Properties.Resources.SettingsSaved);
 
             _logger.LogInformation("Settings saved successfully");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to save settings");
-            MessageBox.Show(string.Format(Properties.Resources.SaveSettingsError, ex.Message), 
-                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.SaveSettingsError, ex.Message));
         }
     }
 
     [RelayCommand]
     private async Task ResetSettingsAsync()
     {
-        var result = MessageBox.Show(
-            "Are you sure you want to reset all settings to defaults?",
+        var confirmed = DistroNexus.Desktop.Views.ConfirmDialog.Show(
             "Confirm Reset",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
+            "Are you sure you want to reset all settings to defaults?",
+            "Reset");
 
-        if (result != MessageBoxResult.Yes)
+        if (!confirmed)
             return;
 
         try
@@ -267,14 +285,12 @@ public partial class SettingsViewModel : ObservableObject
             _settingsService.ResetSettings();
             await LoadSettingsAsync();
 
-            MessageBox.Show(Properties.Resources.StatusSettingsReset, 
-                Properties.Resources.Success, MessageBoxButton.OK, MessageBoxImage.Information);
+            await ShowAlert(Properties.Resources.Success, Properties.Resources.StatusSettingsReset);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to reset settings");
-            MessageBox.Show(string.Format(Properties.Resources.ErrorResetSettings, ex.Message), 
-                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorResetSettings, ex.Message));
         }
     }
 
@@ -314,7 +330,7 @@ public partial class SettingsViewModel : ObservableObject
     /// Applies the selected theme to the application.
     /// </summary>
     /// <param name="themeName">The name of the theme to apply ("Light", "Dark", or "Auto").</param>
-    private void ApplyTheme(string themeName)
+    private async Task ApplyThemeAsync(string themeName)
     {
         try
         {
@@ -328,8 +344,7 @@ public partial class SettingsViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to apply theme");
-            MessageBox.Show(string.Format(Properties.Resources.ErrorApplyTheme, ex.Message),
-                Properties.Resources.TitleThemeError, MessageBoxButton.OK, MessageBoxImage.Warning);
+            await ShowAlert(Properties.Resources.TitleThemeError, string.Format(Properties.Resources.ErrorApplyTheme, ex.Message));
         }
     }
 
@@ -368,7 +383,7 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void BrowsePowerShellModulePath()
+    private async Task BrowsePowerShellModulePath()
     {
         var dialog = new Microsoft.Win32.OpenFolderDialog
         {
@@ -392,11 +407,7 @@ public partial class SettingsViewModel : ObservableObject
             }
             else
             {
-                MessageBox.Show(
-                    $"The selected directory does not contain 'DistroNexus.psd1'.\n\nPlease select the directory that contains the PowerShell module manifest file.",
-                    "Invalid Module Path",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                await ShowAlert("Invalid Module Path", $"The selected directory does not contain 'DistroNexus.psd1'.\n\nPlease select the directory that contains the PowerShell module manifest file.");
                 _logger.LogWarning("Invalid PowerShell module path selected: {Path}", selectedPath);
             }
         }
@@ -465,13 +476,12 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private async Task ClearCacheAsync()
     {
-        var result = MessageBox.Show(
-            string.Format(Properties.Resources.ConfirmClearCache, CachedPackageCount),
+        var confirmed = DistroNexus.Desktop.Views.ConfirmDialog.Show(
             Properties.Resources.ConfirmTitle,
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
+            string.Format(Properties.Resources.ConfirmClearCache, CachedPackageCount),
+            "Clear Cache");
 
-        if (result != MessageBoxResult.Yes)
+        if (!confirmed)
             return;
 
         try
@@ -482,16 +492,14 @@ public partial class SettingsViewModel : ObservableObject
 
             await RefreshCacheInfoAsync();
 
-            MessageBox.Show(string.Format(Properties.Resources.StatusCacheCleared, deletedCount), 
-                Properties.Resources.Success, MessageBoxButton.OK, MessageBoxImage.Information);
+            await ShowAlert(Properties.Resources.Success, string.Format(Properties.Resources.StatusCacheCleared, deletedCount));
 
             _logger.LogInformation("Cache cleared: {Count} files deleted", deletedCount);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to clear cache");
-            MessageBox.Show(string.Format(Properties.Resources.ErrorClearCache, ex.Message), 
-                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorClearCache, ex.Message));
         }
     }
 
@@ -504,13 +512,12 @@ public partial class SettingsViewModel : ObservableObject
         if (package == null)
             return;
 
-        var result = MessageBox.Show(
-            $"Are you sure you want to delete the cached file '{package.FileName}'?",
+        var confirmed = DistroNexus.Desktop.Views.ConfirmDialog.Show(
             "Confirm Delete",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
+            $"Are you sure you want to delete the cached file '{package.FileName}'?",
+            "Delete");
 
-        if (result != MessageBoxResult.Yes)
+        if (!confirmed)
             return;
 
         try
@@ -527,8 +534,7 @@ public partial class SettingsViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to delete cached file");
-            MessageBox.Show(string.Format(Properties.Resources.DeleteFileError, ex.Message), 
-                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.DeleteFileError, ex.Message));
         }
     }
 
@@ -548,21 +554,18 @@ public partial class SettingsViewModel : ObservableObject
                 
                 if (!success)
                 {
-                    MessageBox.Show(Properties.Resources.OpenCacheFolderError, 
-                        Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+                    await ShowAlert(Properties.Resources.ErrorTitle, Properties.Resources.OpenCacheFolderError);
                 }
             }
             else
             {
-                MessageBox.Show(Properties.Resources.CachePathNotConfigured, 
-                    Properties.Resources.InformationTitle, MessageBoxButton.OK, MessageBoxImage.Information);
+                await ShowAlert(Properties.Resources.InformationTitle, Properties.Resources.CachePathNotConfigured);
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to open cache folder");
-            MessageBox.Show(string.Format(Properties.Resources.ErrorOpenCacheFolder, ex.Message), 
-                Properties.Resources.ErrorApplicationTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorApplicationTitle, string.Format(Properties.Resources.ErrorOpenCacheFolder, ex.Message));
         }
     }
 

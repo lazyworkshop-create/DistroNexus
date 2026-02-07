@@ -8,6 +8,9 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Windows;
+using DistroNexus.Desktop.Views;
+using DistroNexus.Desktop.Wizard;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DistroNexus.Desktop.ViewModels;
 
@@ -20,6 +23,7 @@ public partial class PackageManagerViewModel : ObservableObject
     private readonly IDownloadService _downloadService;
     private readonly IDownloadTaskManager _downloadTaskManager;
     private readonly ILogger<PackageManagerViewModel> _logger;
+    private readonly IServiceProvider _serviceProvider;
     
     // Track active downloads: PackageId -> DownloadTask
     private readonly Dictionary<string, DownloadTask> _activeDownloads = new();
@@ -49,12 +53,27 @@ public partial class PackageManagerViewModel : ObservableObject
         ICatalogService catalogService,
         IDownloadService downloadService,
         IDownloadTaskManager downloadTaskManager,
-        ILogger<PackageManagerViewModel> logger)
+        ILogger<PackageManagerViewModel> logger,
+        IServiceProvider serviceProvider)
     {
         _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
         _downloadService = downloadService ?? throw new ArgumentNullException(nameof(downloadService));
         _downloadTaskManager = downloadTaskManager ?? throw new ArgumentNullException(nameof(downloadTaskManager));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+    }
+
+    private async Task ShowAlert(string title, string message)
+    {
+        var uiMessageBox = new Wpf.Ui.Controls.MessageBox
+        {
+            Title = title,
+            Content = message,
+            CloseButtonText = "OK",
+            MaxWidth = 400
+        };
+
+        await uiMessageBox.ShowDialogAsync();
     }
 
     [RelayCommand]
@@ -87,8 +106,7 @@ public partial class PackageManagerViewModel : ObservableObject
         {
             _logger.LogError(ex, "Failed to load catalog");
             StatusMessage = string.Format(Properties.Resources.ErrorLoadingCatalogShort, ex.Message);
-            MessageBox.Show(string.Format(Properties.Resources.LoadCatalogError, ex.Message), 
-                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.LoadCatalogError, ex.Message));
         }
         finally
         {
@@ -111,8 +129,7 @@ public partial class PackageManagerViewModel : ObservableObject
             await LoadCatalogAsync();
 
             StatusMessage = Properties.Resources.StatusCatalogRefreshed;
-            MessageBox.Show(Properties.Resources.StatusCatalogRefreshed, 
-                Properties.Resources.Success, MessageBoxButton.OK, MessageBoxImage.Information);
+            await ShowAlert(Properties.Resources.Success, Properties.Resources.StatusCatalogRefreshed);
         }
         catch (HttpRequestException ex)
         {
@@ -124,8 +141,7 @@ public partial class PackageManagerViewModel : ObservableObject
             // Try to load from cache
             await LoadCatalogAsync();
             
-            MessageBox.Show(Properties.Resources.ErrorOfflineModeMessage, 
-                Properties.Resources.OfflineModeTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
+            await ShowAlert(Properties.Resources.OfflineModeTitle, Properties.Resources.ErrorOfflineModeMessage);
         }
         catch (Exception ex)
         {
@@ -136,8 +152,7 @@ public partial class PackageManagerViewModel : ObservableObject
             // Try to load from cache anyway
             await LoadCatalogAsync();
             
-            MessageBox.Show(string.Format(Properties.Resources.ErrorRefreshCatalogFailed, ex.Message), 
-                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorRefreshCatalogFailed, ex.Message));
         }
         finally
         {
@@ -167,8 +182,7 @@ public partial class PackageManagerViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Search failed");
-            MessageBox.Show(string.Format(Properties.Resources.ErrorSearchFailed, ex.Message), 
-                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorSearchFailed, ex.Message));
         }
     }
 
@@ -214,8 +228,7 @@ public partial class PackageManagerViewModel : ObservableObject
             package.IsDownloading = false;
             _logger.LogError(ex, "Failed to queue download");
             StatusMessage = Properties.Resources.StatusQueueFailed;
-            MessageBox.Show(string.Format(Properties.Resources.ErrorQueueDownload, ex.Message), 
-                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorQueueDownload, ex.Message));
         }
     }
 
@@ -223,7 +236,7 @@ public partial class PackageManagerViewModel : ObservableObject
     /// Cancels an active download for a package.
     /// </summary>
     [RelayCommand]
-    private void CancelDownload(DistroPackage package)
+    private async Task CancelDownload(DistroPackage package)
     {
         if (package == null)
             return;
@@ -245,8 +258,7 @@ public partial class PackageManagerViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to cancel download for {PackageName}", package.Name);
-            MessageBox.Show(string.Format(Properties.Resources.ErrorCancelDownload, ex.Message), 
-                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorCancelDownload, ex.Message));
         }
     }
 
@@ -401,13 +413,12 @@ public partial class PackageManagerViewModel : ObservableObject
         if (package == null)
             return;
 
-        var result = MessageBox.Show(
-            $"Are you sure you want to delete the cached package '{package.Name}'?",
+        var confirmed = DistroNexus.Desktop.Views.ConfirmDialog.Show(
             "Confirm Delete",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
+            $"Are you sure you want to delete the cached package '{package.Name}'?",
+            "Delete");
 
-        if (result != MessageBoxResult.Yes)
+        if (!confirmed)
             return;
 
         try
@@ -429,8 +440,7 @@ public partial class PackageManagerViewModel : ObservableObject
             // Extract user-friendly error message
             var errorMessage = ExtractUserFriendlyError(ex.Message);
             
-            MessageBox.Show(string.Format(Properties.Resources.ErrorDeletePackage, errorMessage), 
-                Properties.Resources.ErrorApplicationTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorApplicationTitle, string.Format(Properties.Resources.ErrorDeletePackage, errorMessage));
         }
     }
 
@@ -507,8 +517,7 @@ public partial class PackageManagerViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to redownload package");
-            MessageBox.Show(string.Format(Properties.Resources.ErrorRedownloadPackage, ex.Message), 
-                Properties.Resources.ErrorApplicationTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorApplicationTitle, string.Format(Properties.Resources.ErrorRedownloadPackage, ex.Message));
         }
     }
 
@@ -517,8 +526,7 @@ public partial class PackageManagerViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(CustomSourceUrl))
         {
-            MessageBox.Show(Properties.Resources.ErrorInvalidUrl, Properties.Resources.TitleInvalidUrl, 
-                MessageBoxButton.OK, MessageBoxImage.Warning);
+            await ShowAlert(Properties.Resources.TitleInvalidUrl, Properties.Resources.ErrorInvalidUrl);
             return;
         }
 
@@ -529,8 +537,7 @@ public partial class PackageManagerViewModel : ObservableObject
             // Validate URL format
             if (!Uri.TryCreate(CustomSourceUrl, UriKind.Absolute, out var uri))
             {
-                MessageBox.Show(Properties.Resources.ErrorCustomUrlInvalidFormat, Properties.Resources.ErrorApplicationTitle, 
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                await ShowAlert(Properties.Resources.ErrorApplicationTitle, Properties.Resources.ErrorCustomUrlInvalidFormat);
                 return;
             }
 
@@ -540,14 +547,12 @@ public partial class PackageManagerViewModel : ObservableObject
             IsAddSourcePanelVisible = false;
             await LoadCatalogAsync();
             
-            MessageBox.Show(Properties.Resources.SuccessCustomSourceAdded, Properties.Resources.TitleSuccess, 
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            await ShowAlert(Properties.Resources.TitleSuccess, Properties.Resources.SuccessCustomSourceAdded);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to add custom source");
-            MessageBox.Show(string.Format(Properties.Resources.ErrorAddCustomSource, ex.Message), 
-                Properties.Resources.ErrorApplicationTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorApplicationTitle, string.Format(Properties.Resources.ErrorAddCustomSource, ex.Message));
         }
     }
 
@@ -586,8 +591,7 @@ public partial class PackageManagerViewModel : ObservableObject
         {
             _logger.LogError(ex, "Failed to update sources");
             StatusMessage = "Failed to update sources";
-            MessageBox.Show(string.Format(Properties.Resources.ErrorUpdateSources, ex.Message), 
-                Properties.Resources.ErrorApplicationTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorApplicationTitle, string.Format(Properties.Resources.ErrorUpdateSources, ex.Message));
         }
     }
 
@@ -617,8 +621,7 @@ public partial class PackageManagerViewModel : ObservableObject
             
             if (packagesToDownload.Count == 0)
             {
-                MessageBox.Show(Properties.Resources.InfoAllPackagesCached, 
-                    Properties.Resources.TitleDownloadAll, MessageBoxButton.OK, MessageBoxImage.Information);
+                await ShowAlert(Properties.Resources.TitleDownloadAll, Properties.Resources.InfoAllPackagesCached);
                 return;
             }
 
@@ -626,12 +629,12 @@ public partial class PackageManagerViewModel : ObservableObject
             var packageList = string.Join("\n", packagesToDownload.Select((p, i) => $"{i + 1}. {p.Name} ({p.Version})"));
             var message = $"The following {packagesToDownload.Count} package(s) will be downloaded:\n\n{packageList}\n\nDo you want to continue?";
             
-            var result = MessageBox.Show(message, 
-                "Confirm Download All", 
-                MessageBoxButton.YesNo, 
-                MessageBoxImage.Question);
+            var confirmed = DistroNexus.Desktop.Views.ConfirmDialog.Show(
+                "Confirm Download All",
+                message,
+                "Download");
 
-            if (result != MessageBoxResult.Yes)
+            if (!confirmed)
             {
                 _logger.LogInformation("Download all cancelled by user");
                 StatusMessage = "Download cancelled by user";
@@ -688,8 +691,7 @@ public partial class PackageManagerViewModel : ObservableObject
         {
             _logger.LogError(ex, "Failed to download all packages");
             StatusMessage = "Failed to queue downloads";
-            MessageBox.Show(string.Format(Properties.Resources.ErrorStartDownloadAll, ex.Message), 
-                Properties.Resources.ErrorApplicationTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorApplicationTitle, string.Format(Properties.Resources.ErrorStartDownloadAll, ex.Message));
         }
     }
 
@@ -697,7 +699,7 @@ public partial class PackageManagerViewModel : ObservableObject
     /// Installs a cached package.
     /// </summary>
     [RelayCommand]
-    private async Task InstallCachedPackageAsync(DistroPackage package)
+    private async Task InstallCachedPackage(DistroPackage package)
     {
         if (package == null) return;
         
@@ -707,17 +709,25 @@ public partial class PackageManagerViewModel : ObservableObject
         {
             StatusMessage = $"Starting installation of {package.Name}...";
             
-            // For now, just show a confirmation message as the wizard needs more implementation
-            var result = MessageBox.Show(
-                string.Format(Properties.Resources.ConfirmInstallPackage, package.Name, package.Id), 
-                Properties.Resources.TitleInstallPackage, 
-                MessageBoxButton.YesNoCancel, 
-                MessageBoxImage.Question);
-                
-            if (result == MessageBoxResult.Yes)
+            // Create the wizard window via DI
+            var wizardWindow = _serviceProvider.GetRequiredService<InstallWizardDialogNew>();
+            wizardWindow.Owner = Application.Current.MainWindow;
+            
+            // Pre-select the distribution in the workflow context
+            if (wizardWindow.DataContext is InstallWizardWorkflowViewModel wizardVm)
             {
-                StatusMessage = $"Installation of {package.Name} started";
-                _logger.LogInformation("Installation started for package: {PackageId}", package.Id);
+                wizardVm.Workflow.Context.SelectedDistribution = package;
+            }
+            
+            _logger.LogInformation("Opening install wizard for package: {PackageId}", package.Id);
+            
+            // Show the wizard as a modal dialog
+            var result = wizardWindow.ShowDialog();
+            
+            if (result == true)
+            {
+                StatusMessage = $"Installation completed for {package.Name}";
+                _logger.LogInformation("Installation completed for package: {PackageId}", package.Id);
             }
             else
             {
@@ -729,8 +739,7 @@ public partial class PackageManagerViewModel : ObservableObject
         {
             _logger.LogError(ex, "Failed to install cached package: {PackageId}", package.Id);
             StatusMessage = $"Failed to install {package.Name}";
-            MessageBox.Show(string.Format(Properties.Resources.ErrorInstallPackage, package.Name, ex.Message), 
-                Properties.Resources.ErrorApplicationTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorApplicationTitle, string.Format(Properties.Resources.ErrorInstallPackage, package.Name, ex.Message));
         }
     }
 }

@@ -69,9 +69,15 @@ public partial class MainWindow : FluentWindow
             System.Diagnostics.Debug.WriteLine($"MainWindow OnLoaded error: {ex}");
             _viewModel.IsLoading = false;
             _viewModel.StatusMessage = "Initialization failed";
-            MessageBox.Show(string.Format(Properties.Resources.ErrorInitializeApplication, ex.Message), 
-                Properties.Resources.TitleInitializationError, 
-                MessageBoxButton.OK, MessageBoxImage.Error);
+            
+            var uiMsgBox = new Wpf.Ui.Controls.MessageBox
+            {
+                Title = Properties.Resources.TitleInitializationError,
+                Content = string.Format(Properties.Resources.ErrorInitializeApplication, ex.Message),
+                CloseButtonText = "OK",
+                MaxWidth = 400
+            };
+            await uiMsgBox.ShowDialogAsync();
         }
     }
 
@@ -138,15 +144,20 @@ public partial class MainWindow : FluentWindow
             System.Diagnostics.Debug.WriteLine($"Background loading error: {ex}");
 
             // Always clear loading state on error
-            await Dispatcher.InvokeAsync(() =>
+            await Dispatcher.InvokeAsync(async () =>
             {
                 _viewModel.IsLoading = false;
                 _viewModel.StatusMessage = "Error loading data";
 
                 // Show error to user (non-blocking)
-                MessageBox.Show(string.Format(Properties.Resources.ErrorLoadWslInstances, ex.Message), 
-                    Properties.Resources.TitleLoadError, 
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                var uiMsgBox = new Wpf.Ui.Controls.MessageBox
+                {
+                    Title = Properties.Resources.TitleLoadError,
+                    Content = string.Format(Properties.Resources.ErrorLoadWslInstances, ex.Message),
+                    CloseButtonText = "OK",
+                    MaxWidth = 400
+                };
+                await uiMsgBox.ShowDialogAsync();
             });
         }
     }

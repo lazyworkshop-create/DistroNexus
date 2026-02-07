@@ -1,13 +1,15 @@
 <Page x:Class="DistroNexus.Desktop.Views.PackageManagerPage"
   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:lex="http://wpflocalizeextension.codeplex.com"
+             lex:ResxLocalizationProvider.DefaultAssembly="DistroNexus.Desktop"
+             lex:ResxLocalizationProvider.DefaultDictionary="Properties.Resources"
+xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
   xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
   xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
   xmlns:vm="clr-namespace:DistroNexus.Desktop.ViewModels"
-  xmlns:properties="clr-namespace:DistroNexus.Desktop.Properties"
   mc:Ignorable="d"
-  Title="{x:Static properties:Resources.PackageManagerTitle}"
+  Title="{lex:Loc PackageManagerTitle}"
   Loaded="Page_Loaded"
   d:DataContext="{d:DesignInstance Type=vm:PackageManagerViewModel}">
     
@@ -26,26 +28,26 @@
         </Grid.ColumnDefinitions>
 
         <StackPanel Orientation="Horizontal">
-            <ui:Button Content="{x:Static properties:Resources.Refresh}" 
+            <ui:Button Content="{lex:Loc Refresh}" 
                       Icon="{ui:SymbolIcon Symbol=ArrowSync20}"
                       Command="{Binding RefreshCatalogCommand}"
                       Margin="0,0,10,0"/>
-            <ui:Button Content="{x:Static properties:Resources.Update}" 
+            <ui:Button Content="{lex:Loc Update}" 
                       Icon="{ui:SymbolIcon Symbol=CloudSync20}"
                       Command="{Binding UpdateSourcesCommand}"
-                      ToolTip="{x:Static properties:Resources.UpdateCatalogTooltip}"
+                      ToolTip="{lex:Loc UpdateCatalogTooltip}"
                       Margin="0,0,10,0"/>
-            <ui:Button Content="{x:Static properties:Resources.Download}" 
+            <ui:Button Content="{lex:Loc Download}" 
                       Icon="{ui:SymbolIcon Symbol=ArrowDownload20}"
                       Command="{Binding DownloadAllCommand}"
-                      ToolTip="{x:Static properties:Resources.DownloadAllTooltip}"
+                      ToolTip="{lex:Loc DownloadAllTooltip}"
                       Margin="0,0,10,0"/>
-            <ui:TextBox PlaceholderText="{x:Static properties:Resources.SearchPlaceholder}" 
+            <ui:TextBox PlaceholderText="{lex:Loc SearchPlaceholder}" 
                        Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
                        Height="36"
                        MinWidth="250"
                        Margin="0,0,10,0"/>
-            <ui:Button Content="{x:Static properties:Resources.AddSource}" 
+            <ui:Button Content="{lex:Loc AddSource}" 
                       Icon="{ui:SymbolIcon Symbol=Add20}"
                       Command="{Binding ToggleAddSourcePanelCommand}"
                       Margin="0,0,10,0"/>
@@ -55,7 +57,7 @@
                          Visibility="{Binding IsOfflineMode, Converter={StaticResource BoolToVisibilityConverter}}"
                          VerticalAlignment="Center"
                          Margin="0,0,5,0"/>
-            <TextBlock Text="{x:Static properties:Resources.OfflineMode}" 
+            <TextBlock Text="{lex:Loc OfflineMode}" 
                       Foreground="Orange"
                       FontWeight="SemiBold"
                       VerticalAlignment="Center"
@@ -63,7 +65,7 @@
         </StackPanel>
 
         <ui:Button Grid.Column="1" 
-                  Content="{x:Static properties:Resources.Back}" 
+                  Content="{lex:Loc Back}" 
                   Icon="{ui:SymbolIcon Symbol=ArrowLeft20}"
                   Command="{Binding GoBackCommand}"/>
     </Grid>
@@ -107,15 +109,15 @@
                                                         <TextBlock Text="{Binding Name}" 
                                                                   FontSize="15" 
                                                                   FontWeight="SemiBold"/>
-                                                        <ui:Badge Content="{x:Static properties:Resources.BadgeCached}" 
+                                                        <ui:Badge Content="{lex:Loc BadgeCached}" 
                                                                  Appearance="Success" 
                                                                  Margin="8,0,0,0"
                                                                  Visibility="{Binding IsCached, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                                        <ui:Badge Content="{x:Static properties:Resources.BadgeOnline}" 
+                                                        <ui:Badge Content="{lex:Loc BadgeOnline}" 
                                                                  Appearance="Info" 
                                                                  Margin="8,0,0,0"
                                                                  Visibility="{Binding IsCached, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}"/>
-                                                        <ui:Badge Content="{x:Static properties:Resources.BadgeCustom}" 
+                                                        <ui:Badge Content="{lex:Loc BadgeCustom}" 
                                                                  Appearance="Caution" 
                                                                  Margin="8,0,0,0"
                                                                  Visibility="{Binding IsCustomSource, Converter={StaticResource BoolToVisibilityConverter}}"/>
@@ -142,7 +144,7 @@
                                                 <!-- Download/Cancel/Install Actions -->
                                                 <!-- Download Button (visible when not cached and not downloading) -->
                                                 <ui:Button Grid.Column="2" 
-                                                          Content="{x:Static properties:Resources.ActionDownload}" 
+                                                          Content="{lex:Loc ActionDownload}" 
                                                           Icon="{ui:SymbolIcon Symbol=ArrowDownload20}"
                                                           Command="{Binding DataContext.DownloadPackageCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                                           CommandParameter="{Binding}"
@@ -158,7 +160,7 @@
                                                 
                                                 <!-- Cancel Button (visible when downloading) -->
                                                 <ui:Button Grid.Column="2" 
-                                                          Content="{x:Static properties:Resources.ButtonCancel}" 
+                                                          Content="{lex:Loc ButtonCancel}" 
                                                           Icon="{ui:SymbolIcon Symbol=Dismiss20}"
                                                           Command="{Binding DataContext.CancelDownloadCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                                           CommandParameter="{Binding}"
@@ -168,7 +170,7 @@
                                                 
                                                 <!-- Install Button (for cached packages, not downloading) -->
                                                 <ui:Button Grid.Column="3" 
-                                                          Content="{x:Static properties:Resources.ActionInstall}" 
+                                                          Content="{lex:Loc ActionInstall}" 
                                                           Icon="{ui:SymbolIcon Symbol=Add20}"
                                                           Command="{Binding DataContext.InstallCachedPackageCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                                           CommandParameter="{Binding}"
@@ -184,7 +186,7 @@
                                                 
                                                 <!-- More Actions DropDown (for cached packages, not downloading) -->
                                                 <ui:DropDownButton Grid.Column="4" 
-                                                                   Content="{x:Static properties:Resources.ActionActions}" 
+                                                                   Content="{lex:Loc InstanceMore}" 
                                                                    Icon="{ui:SymbolIcon Symbol=MoreHorizontal20}"
                                                                    Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Page}}">
                                                     <ui:DropDownButton.Visibility>
@@ -195,12 +197,12 @@
                                                     </ui:DropDownButton.Visibility>
                                                     <ui:DropDownButton.Flyout>
                                                         <ContextMenu>
-                                                            <ui:MenuItem Header="{x:Static properties:Resources.ActionRedownload}" 
+                                                            <ui:MenuItem Header="{lex:Loc ActionRedownload}" 
                                                                         Icon="{ui:SymbolIcon Symbol=ArrowSync20}" 
                                                                         Command="{Binding PlacementTarget.Tag.RedownloadPackageCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                                         CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                                             <Separator/>
-                                                            <ui:MenuItem Header="{x:Static properties:Resources.ActionDeleteCache}" 
+                                                            <ui:MenuItem Header="{lex:Loc ActionDeleteCache}" 
                                                                         Icon="{ui:SymbolIcon Symbol=Delete20}" 
                                                                         Command="{Binding PlacementTarget.Tag.DeletePackageCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                                         CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
@@ -236,20 +238,20 @@
                 </Grid.ColumnDefinitions>
                 
                 <TextBlock Grid.Column="0" 
-                           Text="{x:Static properties:Resources.CustomSourceUrlLabel}" 
+                           Text="{lex:Loc CustomSourceUrlLabel}" 
                            VerticalAlignment="Center"
                            Margin="0,0,10,0"/>
                 <ui:TextBox Grid.Column="1" 
                            Text="{Binding CustomSourceUrl, UpdateSourceTrigger=PropertyChanged}"
                            PlaceholderText="https://example.com/distros.json"/>
                 <ui:Button Grid.Column="2" 
-                          Content="{x:Static properties:Resources.ActionAdd}" 
+                          Content="{lex:Loc ActionAdd}" 
                           Icon="{ui:SymbolIcon Symbol=Add20}"
                           Command="{Binding AddCustomSourceCommand}"
                           Appearance="Primary"
                           Margin="10,0,0,0"/>
                 <ui:Button Grid.Column="3" 
-                          Content="{x:Static properties:Resources.ButtonCancel}" 
+                          Content="{lex:Loc ButtonCancel}" 
                           Icon="{ui:SymbolIcon Symbol=Dismiss20}"
                           Command="{Binding ToggleAddSourcePanelCommand}"
                           Margin="5,0,0,0"/>
@@ -262,7 +264,7 @@
               Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                 <ui:ProgressRing IsIndeterminate="True" Width="50" Height="50"/>
-                <TextBlock Text="{x:Static properties:Resources.LoadingCatalog}" 
+                <TextBlock Text="{lex:Loc LoadingCatalog}" 
                           Foreground="White" 
                           FontSize="16" 
                           Margin="0,10,0,0"

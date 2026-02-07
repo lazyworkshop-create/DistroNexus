@@ -57,6 +57,19 @@ public partial class SourceManagerViewModel : ObservableObject
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
+    private async Task ShowAlert(string title, string message)
+    {
+        var uiMessageBox = new Wpf.Ui.Controls.MessageBox
+        {
+            Title = title,
+            Content = message,
+            CloseButtonText = "OK",
+            MaxWidth = 400
+        };
+
+        await uiMessageBox.ShowDialogAsync();
+    }
+
     [RelayCommand]
     private async Task InitializeAsync()
     {
@@ -82,8 +95,7 @@ public partial class SourceManagerViewModel : ObservableObject
         {
             _logger.LogError(ex, "Failed to initialize source manager");
             StatusMessage = Properties.Resources.StatusLoadSourcesFailed;
-            MessageBox.Show(string.Format(Properties.Resources.ErrorLoadSourcesEx, ex.Message), 
-                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorLoadSourcesEx, ex.Message));
         }
         finally
         {
@@ -105,12 +117,11 @@ public partial class SourceManagerViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ShowEditSourceDialog()
+    private async Task ShowEditSourceDialog()
     {
         if (SelectedSource == null)
         {
-            MessageBox.Show(Properties.Resources.InfoSelectSourceEdit, 
-                Properties.Resources.InformationTitle, MessageBoxButton.OK, MessageBoxImage.Information);
+            await ShowAlert(Properties.Resources.InformationTitle, Properties.Resources.InfoSelectSourceEdit);
             return;
         }
 
@@ -131,8 +142,7 @@ public partial class SourceManagerViewModel : ObservableObject
         {
             if (string.IsNullOrWhiteSpace(NewSourceName) || string.IsNullOrWhiteSpace(NewSourceUrl))
             {
-                MessageBox.Show(Properties.Resources.ValidationNameUrlRequired, 
-                    Properties.Resources.ValidationTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
+                await ShowAlert(Properties.Resources.ValidationTitle, Properties.Resources.ValidationNameUrlRequired);
                 return;
             }
 
@@ -172,8 +182,7 @@ public partial class SourceManagerViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to save source");
-            MessageBox.Show(string.Format(Properties.Resources.ErrorSaveSourceEx, ex.Message), 
-                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorSaveSourceEx, ex.Message));
         }
     }
 
@@ -188,25 +197,22 @@ public partial class SourceManagerViewModel : ObservableObject
     {
         if (SelectedSource == null)
         {
-            MessageBox.Show(Properties.Resources.InfoSelectSourceRemove, 
-                Properties.Resources.InformationTitle, MessageBoxButton.OK, MessageBoxImage.Information);
+            await ShowAlert(Properties.Resources.InformationTitle, Properties.Resources.InfoSelectSourceRemove);
             return;
         }
 
         if (SelectedSource.IsDefault)
         {
-            MessageBox.Show(Properties.Resources.InfoDefaultSourceRemove, 
-                Properties.Resources.InformationTitle, MessageBoxButton.OK, MessageBoxImage.Information);
+            await ShowAlert(Properties.Resources.InformationTitle, Properties.Resources.InfoDefaultSourceRemove);
             return;
         }
 
-        var result = MessageBox.Show(
-            string.Format(Properties.Resources.ConfirmVerifyRemoveSource, SelectedSource.Name),
+        var confirmed = DistroNexus.Desktop.Views.ConfirmDialog.Show(
             Properties.Resources.ConfirmRemoveSourceTitle,
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
+            string.Format(Properties.Resources.ConfirmVerifyRemoveSource, SelectedSource.Name),
+            "Remove"); // Should ideally be a resource like ButtonRemove
 
-        if (result == MessageBoxResult.Yes)
+        if (confirmed)
         {
             try
             {
@@ -217,8 +223,7 @@ public partial class SourceManagerViewModel : ObservableObject
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to remove source");
-                MessageBox.Show(string.Format(Properties.Resources.ErrorRemoveSourceEx, ex.Message), 
-                    Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+                await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorRemoveSourceEx, ex.Message));
             }
         }
     }
@@ -240,8 +245,7 @@ public partial class SourceManagerViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to toggle source active state");
-            MessageBox.Show(string.Format(Properties.Resources.ErrorToggleSourceEx, ex.Message), 
-                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorToggleSourceEx, ex.Message));
         }
     }
 
@@ -298,8 +302,7 @@ public partial class SourceManagerViewModel : ObservableObject
         {
             _logger.LogError(ex, "Failed to refresh sources");
             StatusMessage = Properties.Resources.StatusRefreshFailed;
-            MessageBox.Show(string.Format(Properties.Resources.ErrorRefreshSourcesEx, ex.Message), 
-                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorRefreshSourcesEx, ex.Message));
         }
         finally
         {
@@ -310,13 +313,12 @@ public partial class SourceManagerViewModel : ObservableObject
     [RelayCommand]
     private async Task ResetToDefaultsAsync()
     {
-        var result = MessageBox.Show(
-            Properties.Resources.ConfirmResetSourcesMessage,
+        var confirmed = DistroNexus.Desktop.Views.ConfirmDialog.Show(
             Properties.Resources.ConfirmResetTitle,
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
+            Properties.Resources.ConfirmResetSourcesMessage,
+            "Reset");
 
-        if (result == MessageBoxResult.Yes)
+        if (confirmed)
         {
             try
             {
@@ -327,8 +329,7 @@ public partial class SourceManagerViewModel : ObservableObject
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to reset sources");
-                MessageBox.Show(string.Format(Properties.Resources.ErrorResetSourcesEx, ex.Message), 
-                    Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+                await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorResetSourcesEx, ex.Message));
             }
         }
     }
@@ -358,8 +359,7 @@ public partial class SourceManagerViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to move source up");
-            MessageBox.Show(string.Format(Properties.Resources.ErrorMoveSource, ex.Message), 
-                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorMoveSource, ex.Message));
         }
     }
 
@@ -388,8 +388,7 @@ public partial class SourceManagerViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to move source down");
-            MessageBox.Show(string.Format(Properties.Resources.ErrorMoveSource, ex.Message), 
-                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorMoveSource, ex.Message));
         }
     }
 }
