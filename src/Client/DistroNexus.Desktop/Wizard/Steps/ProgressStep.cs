@@ -241,14 +241,12 @@ public partial class ProgressStep : WizardStepBase
     private void Cancel()
     {
         // Show confirmation dialog
-        var result = System.Windows.MessageBox.Show(
-            Properties.Resources.ConfirmCancelInstallation,
+        var confirmed = DistroNexus.Desktop.Views.ConfirmDialog.Show(
             Properties.Resources.TitleCancelInstallation,
-            System.Windows.MessageBoxButton.YesNo,
-            System.Windows.MessageBoxImage.Warning,
-            System.Windows.MessageBoxResult.No);
+            Properties.Resources.ConfirmCancelInstallation,
+            "Yes"); // Assuming "Yes" or equivalent resource exists, otherwise literal
 
-        if (result == System.Windows.MessageBoxResult.Yes)
+        if (confirmed)
         {
             _logger.LogInformation("User confirmed cancellation of installation");
             _installCts?.Cancel();

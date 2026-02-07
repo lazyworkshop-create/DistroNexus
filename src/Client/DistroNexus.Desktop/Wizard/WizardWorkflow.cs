@@ -78,14 +78,17 @@ public partial class WizardWorkflow : ObservableObject
     }
 
     /// <summary>
-    /// Starts the workflow at the first step.
+    /// Starts the workflow at the specified step index.
     /// </summary>
-    public async Task StartAsync()
+    public async Task StartAsync(int startIndex = 0)
     {
         if (_steps.Count == 0)
             return;
 
-        _currentIndex = 0;
+        if (startIndex < 0 || startIndex >= _steps.Count)
+            startIndex = 0;
+
+        _currentIndex = startIndex;
         await NavigateToCurrentStepAsync();
     }
 

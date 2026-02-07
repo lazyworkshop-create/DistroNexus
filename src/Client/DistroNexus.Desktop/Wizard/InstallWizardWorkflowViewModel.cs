@@ -60,7 +60,18 @@ public partial class InstallWizardWorkflowViewModel : ObservableObject
     private async Task InitializeAsync()
     {
         _logger.LogInformation("Initializing install wizard workflow");
-        await Workflow.StartAsync();
+        
+        // If a distribution is already pre-selected (e.g. from Package Manager),
+        // skip the selection step (Step 0) and start at the path step (Step 1).
+        int startStep = Workflow.Context.SelectedDistribution != null ? 1 : 0;
+        
+        if (startStep > 0)
+        {
+            _logger.LogInformation("Distribution {Distro} pre-selected, skipping to step {Step}", 
+                Workflow.Context.SelectedDistribution?.Name, startStep);
+        }
+
+        await Workflow.StartAsync(startStep);
     }
 
     [RelayCommand]

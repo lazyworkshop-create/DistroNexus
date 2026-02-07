@@ -61,7 +61,7 @@ public partial class ResultStep : WizardStepBase
     }
 
     [RelayCommand]
-    private void OpenLogFolder()
+    private async Task OpenLogFolder()
     {
         try
         {
@@ -104,11 +104,15 @@ public partial class ResultStep : WizardStepBase
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show(
-                string.Format(Properties.Resources.ErrorOpenLogFolder, ex.Message),
-                Properties.Resources.ErrorApplicationTitle,
-                System.Windows.MessageBoxButton.OK,
-                System.Windows.MessageBoxImage.Error);
+            var uiMessageBox = new Wpf.Ui.Controls.MessageBox
+            {
+                Title = Properties.Resources.ErrorApplicationTitle,
+                Content = string.Format(Properties.Resources.ErrorOpenLogFolder, ex.Message),
+                CloseButtonText = "OK",
+                MaxWidth = 400
+            };
+
+            await uiMessageBox.ShowDialogAsync();
         }
     }
 

@@ -28,6 +28,10 @@ public partial class ReviewStep : WizardStepBase
         ? Context.Username 
         : Properties.Resources.DefaultUserRoot;
 
+    public string WslVersionDisplayText => Context != null
+        ? string.Format(Properties.Resources.WslVersionFormat, Context.WslVersion)
+        : string.Empty;
+
     public ReviewStep()
     {
     }
