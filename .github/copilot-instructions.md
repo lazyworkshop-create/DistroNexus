@@ -28,6 +28,14 @@ DistroNexus is a Windows Subsystem for Linux (WSL) manager (v2.0).
 - After completing each phase, immediately update the status in `task_plan.md`
 - Write research conclusions to `findings.md`, not just in the conversation
 
+## Documentation Management
+- **Location**: All development docs go into `docs/`. User docs go into `website/`.
+- **Naming**: English filenames, `kebab-case` preferred.
+- **Archiving**: 
+  - Move completed plans, scratchpads, and status reports to `docs/archive/` immediately after the milestone is reached.
+  - Prefix archived files with date `YYYYMMDD_` if order matters.
+- **Living Docs**: Update `docs/architecture/` and `docs/development/` when code changes. do NOT create new "Update Report" files; update the original doc instead.
+
 ## Project Structure
 - `src/Client`:
     - `DistroNexus.Desktop`: WPF App (Views, ViewModels).
