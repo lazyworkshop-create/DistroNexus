@@ -7,6 +7,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
 using System.Windows;
+using WPFLocalizeExtension.Engine;
+using System.Globalization;
+using System.Threading;
 
 namespace DistroNexus.Desktop.ViewModels;
 
@@ -51,7 +54,11 @@ public partial class MainViewModel : ObservableObject
     private bool _isDownloadPanelVisible;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ActiveDownloadsDisplayText))]
     private int _activeDownloadsCount;
+
+    public string ActiveDownloadsDisplayText => 
+        string.Format(Properties.Resources.ActiveDownloadsFormat, ActiveDownloadsCount);
 
     /// <summary>
     /// Gets the collection of download tasks for data binding.
@@ -115,6 +122,17 @@ public partial class MainViewModel : ObservableObject
         return Task.CompletedTask;
     }
 
+    private async Task ShowAlert(string title, string message)
+    {
+        var uiMessageBox = new Wpf.Ui.Controls.MessageBox
+        {
+            Title = title,
+            Content = message,
+            CloseButtonText = Properties.Resources.ButtonClose ?? "Close"
+        };
+        await uiMessageBox.ShowDialogAsync();
+    }
+
     [RelayCommand]
     private async Task LoadInstancesAsync(CancellationToken cancellationToken = default)
     {
@@ -133,7 +151,9 @@ public partial class MainViewModel : ObservableObject
                 Instances.Clear();
                 foreach (var instance in instances)
                 {
-                    Instances.Add(new WslInstanceViewModel(instance, _wslManager, _terminalService, _settingsService, _logger));
+                    var vm = new WslInstanceViewModel(instance, _wslManager, _terminalService, _settingsService, _logger);
+                    vm.RefreshRequested += (s, e) => _ = RefreshAsync();
+                    Instances.Add(vm);
                 }
 
                 // Check for default distro setting and select it if no selection exists
@@ -161,8 +181,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to load WSL instances");
-            MessageBox.Show(string.Format(Properties.Resources.LoadInstancesError, ex.Message), 
-                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.LoadInstancesError, ex.Message));
         }
         // Note: Don't set IsLoading = false here as it's controlled by MainWindow
     }
@@ -380,6 +399,12 @@ public partial class MainViewModel : ObservableObject
             // Toggle between en-US and zh-CN
             CurrentLanguage = CurrentLanguage == "en-US" ? "zh-CN" : "en-US";
 
+            // Apply immediately
+            var culture = new CultureInfo(CurrentLanguage);
+            LocalizeDictionary.Instance.Culture = culture;
+            Thread.CurrentThread.CurrentCulture = culture;
+            Thread.CurrentThread.CurrentUICulture = culture;
+
             // Save language preference
             var settings = _settingsService.LoadSettings();
             settings.Language = CurrentLanguage;
@@ -388,12 +413,6 @@ public partial class MainViewModel : ObservableObject
             StatusMessage = Properties.Resources.LanguageChangedTitle;
 
             _logger.LogInformation("Language changed to {Language}", CurrentLanguage);
-
-            MessageBox.Show(
-                Properties.Resources.LanguageChangedMessage,
-                Properties.Resources.LanguageChangedTitle,
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
@@ -416,8 +435,7 @@ public partial class MainViewModel : ObservableObject
             var powerShellService = _serviceProvider.GetService(typeof(IPowerShellService)) as IPowerShellService;
             if (powerShellService == null)
             {
-                MessageBox.Show(Properties.Resources.DiagnosticsServiceUnavailable,
-                    Properties.Resources.DiagnosticsErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+                await ShowAlert(Properties.Resources.DiagnosticsErrorTitle, Properties.Resources.DiagnosticsServiceUnavailable);
                 return;
             }
 
@@ -454,8 +472,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to generate diagnostics");
-            MessageBox.Show(string.Format(Properties.Resources.ErrorGenerateDiagnostics, ex.Message),
-                Properties.Resources.ErrorApplicationTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorApplicationTitle, string.Format(Properties.Resources.ErrorGenerateDiagnostics, ex.Message));
             StatusMessage = "Failed to generate diagnostics";
         }
     }
@@ -471,6 +488,11 @@ public partial class WslInstanceViewModel : ObservableObject
     private readonly ISettingsService _settingsService;
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Event raised when the instance requests a refresh of the main list (e.g. after deletion).
+    /// </summary>
+    public event EventHandler? RefreshRequested;
+
     [ObservableProperty]
     private WslInstance _instance;
 
@@ -480,9 +502,13 @@ public partial class WslInstanceViewModel : ObservableObject
     [ObservableProperty]
     private bool _isForceRefreshing;
 
+    [ObservableProperty]
+    private bool _isBusy;
+
     public string Name => Instance.Name;
     public string State => Instance.State == "Running" ? Properties.Resources.StateRunning : 
                           (Instance.State == "Stopped" ? Properties.Resources.StateStopped : Instance.State);
+    public string RawState => Instance.State;
     public bool IsRunning => Instance.IsRunning;
     public string InstallPath => WslInstance.NormalizeWindowsPath(Instance.InstallPath);
     public string Distribution => Instance.Distribution;
@@ -540,6 +566,19 @@ public partial class WslInstanceViewModel : ObservableObject
         return $"{size:0.##} {sizes[order]}";
     }
 
+    private async Task ShowAlert(string title, string message)
+    {
+        var uiMessageBox = new Wpf.Ui.Controls.MessageBox
+        {
+            Title = title,
+            Content = message,
+            CloseButtonText = "OK",
+            MaxWidth = 400
+        };
+
+        await uiMessageBox.ShowDialogAsync();
+    }
+
     /// <summary>
     /// Forces a complete refresh of this instance, starting it and loading full information.
     /// Shows a confirmation dialog before proceeding.
@@ -553,13 +592,12 @@ public partial class WslInstanceViewModel : ObservableObject
         try
         {
             // Show confirmation dialog
-            var result = MessageBox.Show(
-                Properties.Resources.ConfirmForceRefreshMessage,
+            var confirmed = DistroNexus.Desktop.Views.ConfirmDialog.Show(
                 Properties.Resources.ConfirmForceRefreshTitle,
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
+                Properties.Resources.ConfirmForceRefreshMessage,
+                "Force Refresh");
 
-            if (result != MessageBoxResult.Yes)
+            if (!confirmed)
                 return;
 
             IsForceRefreshing = true;
@@ -574,6 +612,7 @@ public partial class WslInstanceViewModel : ObservableObject
             {
                 Instance = refreshedInstance;
                 OnPropertyChanged(nameof(State));
+                OnPropertyChanged(nameof(RawState));
                 OnPropertyChanged(nameof(IsRunning));
 
                 // Auto-load disk size
@@ -583,16 +622,14 @@ public partial class WslInstanceViewModel : ObservableObject
             }
             else
             {
-                MessageBox.Show(Properties.Resources.ErrorForceRefreshNull,
-                    Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+                await ShowAlert(Properties.Resources.ErrorTitle, Properties.Resources.ErrorForceRefreshNull);
                 _logger.LogError("Force refresh returned null for instance {Name}", Name);
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Force refresh failed for instance {Name}", Name);
-            MessageBox.Show(string.Format(Properties.Resources.ErrorForceRefreshEx, ex.Message),
-                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorForceRefreshEx, ex.Message));
         }
         finally
         {
@@ -645,6 +682,7 @@ public partial class WslInstanceViewModel : ObservableObject
     {
         Instance.State = newState;
         OnPropertyChanged(nameof(State));
+        OnPropertyChanged(nameof(RawState));
         OnPropertyChanged(nameof(IsRunning));
         OnPropertyChanged(nameof(DiskSizeDisplay));
     }
@@ -675,20 +713,19 @@ public partial class WslInstanceViewModel : ObservableObject
             {
                 Instance.State = "Running";
                 OnPropertyChanged(nameof(State));
+                OnPropertyChanged(nameof(RawState));
                 OnPropertyChanged(nameof(IsRunning));
                 _logger.LogInformation("Instance {Name} started with keep-alive task", Name);
             }
             else
             {
-                MessageBox.Show(string.Format(Properties.Resources.ErrorStartInstanceFailed, Name), 
-                    Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+                await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorStartInstanceFailed, Name));
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to start instance {Name}", Name);
-            MessageBox.Show(string.Format(Properties.Resources.ErrorStartInstanceEx, ex.Message), 
-                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorStartInstanceEx, ex.Message));
         }
     }
 
@@ -722,25 +759,26 @@ public partial class WslInstanceViewModel : ObservableObject
             {
                 Instance.State = "Stopped";
                 OnPropertyChanged(nameof(State));
+                OnPropertyChanged(nameof(RawState));
                 OnPropertyChanged(nameof(IsRunning));
             }
             else
             {
-                MessageBox.Show(string.Format(Properties.Resources.ErrorStopInstanceFailed, Name), 
-                    Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+                await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorStopInstanceFailed, Name));
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to stop instance {Name}", Name);
-            MessageBox.Show(string.Format(Properties.Resources.ErrorStopInstanceEx, ex.Message), 
-                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorStopInstanceEx, ex.Message));
         }
     }
 
     [RelayCommand]
     private async Task RemoveAsync()
     {
+        if (IsBusy) return;
+
         var settings = _settingsService.LoadSettings();
 
         if (settings.ShowConfirmationDialogs)
@@ -757,18 +795,23 @@ public partial class WslInstanceViewModel : ObservableObject
 
         try
         {
+            IsBusy = true;
             _logger.LogInformation("Removing instance {Name}", Name);
             
             await _wslManager.RemoveInstanceAsync(Name);
             
-            MessageBox.Show(string.Format(Properties.Resources.SuccessInstanceRemoved, Name), 
-                Properties.Resources.SuccessTitle, MessageBoxButton.OK, MessageBoxImage.Information);
+            await ShowAlert(Properties.Resources.SuccessTitle, string.Format(Properties.Resources.SuccessInstanceRemoved, Name));
+
+            RefreshRequested?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to remove instance {Name}", Name);
-            MessageBox.Show(string.Format(Properties.Resources.ErrorRemoveInstanceEx, ex.Message), 
-                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorRemoveInstanceEx, ex.Message));
+        }
+        finally
+        {
+            IsBusy = false;
         }
     }
 
@@ -794,21 +837,21 @@ public partial class WslInstanceViewModel : ObservableObject
             }
             else
             {
-                MessageBox.Show(string.Format(Properties.Resources.ErrorOpenTerminalFailed, Name), 
-                    Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+                await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorOpenTerminalFailed, Name));
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to open terminal for instance {Name}", Name);
-            MessageBox.Show(string.Format(Properties.Resources.ErrorOpenTerminalEx, ex.Message), 
-                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorOpenTerminalEx, ex.Message));
         }
     }
 
     [RelayCommand]
     private async Task MoveAsync()
     {
+        if (IsBusy) return;
+
         var dialog = new Microsoft.Win32.OpenFolderDialog
         {
             Title = string.Format(Properties.Resources.SelectMoveLocationTitle, Name)
@@ -819,17 +862,17 @@ public partial class WslInstanceViewModel : ObservableObject
 
         var newPath = dialog.FolderName;
 
-        var confirm = MessageBox.Show(
-            string.Format(Properties.Resources.ConfirmMoveMessage, Name, newPath),
+        var confirmed = DistroNexus.Desktop.Views.ConfirmDialog.Show(
             Properties.Resources.ConfirmMoveTitle,
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
+            string.Format(Properties.Resources.ConfirmMoveMessage, Name, newPath),
+            "Move");
 
-        if (confirm != MessageBoxResult.Yes)
+        if (!confirmed)
             return;
 
         try
         {
+            IsBusy = true;
             _logger.LogInformation("Moving instance {Name} to {NewPath}", Name, newPath);
             
             await _wslManager.MoveInstanceAsync(Name, newPath);
@@ -837,20 +880,26 @@ public partial class WslInstanceViewModel : ObservableObject
             Instance.InstallPath = newPath;
             OnPropertyChanged(nameof(InstallPath));
             
-            MessageBox.Show(string.Format(Properties.Resources.SuccessInstanceMoved, Name), 
-                Properties.Resources.SuccessTitle, MessageBoxButton.OK, MessageBoxImage.Information);
+            await ShowAlert(Properties.Resources.SuccessTitle, string.Format(Properties.Resources.SuccessInstanceMoved, Name));
+
+            RefreshRequested?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to move instance {Name}", Name);
-            MessageBox.Show(string.Format(Properties.Resources.ErrorMoveInstanceEx, ex.Message), 
-                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorMoveInstanceEx, ex.Message));
+        }
+        finally
+        {
+            IsBusy = false;
         }
     }
 
     [RelayCommand]
     private async Task RenameAsync()
     {
+        if (IsBusy) return;
+
         var inputDialog = new Wpf.Ui.Controls.MessageBox
         {
             Title = Properties.Resources.RenameTitle,
@@ -876,6 +925,7 @@ public partial class WslInstanceViewModel : ObservableObject
 
         try
         {
+            IsBusy = true;
             _logger.LogInformation("Renaming instance {OldName} to {NewName}", Name, newName);
             
             await _wslManager.RenameInstanceAsync(Name, newName);
@@ -883,48 +933,94 @@ public partial class WslInstanceViewModel : ObservableObject
             Instance.Name = newName;
             OnPropertyChanged(nameof(Name));
             
-            MessageBox.Show(string.Format(Properties.Resources.SuccessInstanceRenamed, newName), 
-                Properties.Resources.SuccessTitle, MessageBoxButton.OK, MessageBoxImage.Information);
+            await ShowAlert(Properties.Resources.SuccessTitle, string.Format(Properties.Resources.SuccessInstanceRenamed, newName));
+
+            RefreshRequested?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to rename instance {Name}", Name);
-            MessageBox.Show(string.Format(Properties.Resources.ErrorRenameInstanceEx, ex.Message), 
-                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorRenameInstanceEx, ex.Message));
+        }
+        finally
+        {
+            IsBusy = false;
         }
     }
 
     [RelayCommand]
     private async Task SetCredentialsAsync()
     {
-        // For now, show a simple dialog - in a full implementation, use a proper dialog
-        var username = Microsoft.VisualBasic.Interaction.InputBox(
-            Properties.Resources.PromptEnterUsername,
-            Properties.Resources.SetCredentialsTitle,
-            "root");
+        if (IsBusy) return;
 
-        if (string.IsNullOrEmpty(username))
-            return;
+        // Username Dialog
+        var userTextBox = new System.Windows.Controls.TextBox 
+        { 
+            Text = "root",
+            MinWidth = 200 
+        };
+        
+        var userDialog = new Wpf.Ui.Controls.MessageBox
+        {
+            Title = Properties.Resources.SetCredentialsTitle,
+            Content = new System.Windows.Controls.StackPanel
+            {
+                Children = 
+                {
+                    new System.Windows.Controls.TextBlock { Text = Properties.Resources.PromptEnterUsername, Margin = new Thickness(0,0,0,10) },
+                    userTextBox
+                }
+            },
+            PrimaryButtonText = "Next",
+            CloseButtonText = Properties.Resources.ButtonCancel
+        };
 
-        var password = Microsoft.VisualBasic.Interaction.InputBox(
-            Properties.Resources.PromptEnterPassword,
-            Properties.Resources.SetCredentialsTitle,
-            "");
+        var userResult = await userDialog.ShowDialogAsync();
+        if (userResult != Wpf.Ui.Controls.MessageBoxResult.Primary) return;
+        
+        var username = userTextBox.Text;
+        if (string.IsNullOrEmpty(username)) return;
+
+        // Password Dialog
+        var passwordBox = new System.Windows.Controls.PasswordBox { MinWidth = 200 };
+        
+        var passDialog = new Wpf.Ui.Controls.MessageBox
+        {
+            Title = Properties.Resources.SetCredentialsTitle,
+            Content = new System.Windows.Controls.StackPanel
+            {
+                Children = 
+                {
+                    new System.Windows.Controls.TextBlock { Text = Properties.Resources.PromptEnterPassword, Margin = new Thickness(0,0,0,10) },
+                    passwordBox
+                }
+            },
+            PrimaryButtonText = "OK",
+            CloseButtonText = Properties.Resources.ButtonCancel
+        };
+
+        var passResult = await passDialog.ShowDialogAsync();
+        if (passResult != Wpf.Ui.Controls.MessageBoxResult.Primary) return;
+        
+        var password = passwordBox.Password;
 
         try
         {
+            IsBusy = true;
             _logger.LogInformation("Setting credentials for instance {Name}", Name);
             
             await _wslManager.SetCredentialsAsync(Name, username, password);
             
-            MessageBox.Show(string.Format(Properties.Resources.SuccessCredentialsSet, Name), 
-                Properties.Resources.SuccessTitle, MessageBoxButton.OK, MessageBoxImage.Information);
+            await ShowAlert(Properties.Resources.SuccessTitle, string.Format(Properties.Resources.SuccessCredentialsSet, Name));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to set credentials for instance {Name}", Name);
-            MessageBox.Show(string.Format(Properties.Resources.ErrorSetCredentialsEx, ex.Message), 
-                Properties.Resources.ErrorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorSetCredentialsEx, ex.Message));
+        }
+        finally
+        {
+            IsBusy = false;
         }
     }
 }
