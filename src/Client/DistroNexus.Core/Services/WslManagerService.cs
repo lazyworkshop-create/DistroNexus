@@ -841,7 +841,7 @@ public partial class WslManagerService : IWslManagerService
 
             if (moduleResult.Success)
             {
-                _logger.LogInformation("WSL instance renamed successfully using module", oldName);
+                _logger.LogInformation("WSL instance {OldName} renamed successfully using module", oldName);
                 return;
             }
 

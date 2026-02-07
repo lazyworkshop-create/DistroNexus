@@ -85,6 +85,32 @@ public class CatalogService : ICatalogService
 
         try
         {
+            // 1. Try loading from custom URL first if configured
+            var settings = _settingsService.LoadSettings();
+            if (!string.IsNullOrWhiteSpace(settings.CatalogUrl))
+            {
+                try 
+                {
+                    _logger.LogInformation("Attempting to load catalog from custom URL: {Url}", settings.CatalogUrl);
+                    var json = await _httpClient.GetStringAsync(settings.CatalogUrl, cancellationToken);
+                    var customPackages = ParseCatalogJson(json);
+                    
+                    if (customPackages != null && customPackages.Count > 0)
+                    {
+                        _cachedCatalog = customPackages;
+                        _logger.LogInformation("Successfully loaded {Count} distributions from custom URL", _cachedCatalog.Count);
+                        
+                        // Cache the result
+                        await CacheCatalogAsync(_cachedCatalog, cancellationToken);
+                        return _cachedCatalog;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to load catalog from custom URL. Falling back to PowerShell module.");
+                }
+            }
+
             _logger.LogInformation("Loading catalog via PowerShell Get-DistroNexusPackage");
             
             // Call PowerShell module to get packages
