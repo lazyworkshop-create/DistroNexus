@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Diagnostics;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -25,6 +26,7 @@ public class TemplateService : ITemplateService
     private readonly string _templatesCachePath;
     private readonly string _userTemplatesDirectory;
     private readonly string _localTemplatesPath;
+    private readonly string _applicationHistoryPath;
 
     public TemplateService(
         ILogger<TemplateService> logger,
@@ -45,6 +47,7 @@ public class TemplateService : ITemplateService
         }
         _templatesCachePath = Path.Combine(appFolder, "templates.json");
         _userTemplatesDirectory = Path.Combine(appFolder, "templates");
+        _applicationHistoryPath = Path.Combine(appFolder, "template-application-history.json");
 
         var baseDir = AppDomain.CurrentDomain.BaseDirectory;
         _localTemplatesPath = FindLocalTemplatesPath(baseDir);
@@ -174,6 +177,22 @@ public class TemplateService : ITemplateService
 
         var result = new TemplateApplicationResult { ExecutedScripts = new List<string>(), Errors = new List<string>() };
         var startTime = DateTime.Now;
+        var instanceHistoryRecord = new TemplateApplicationRecord
+        {
+            TemplateId = template.Id,
+            TemplateName = template.Name,
+            InstanceName = instanceName,
+            AppliedAt = DateTime.Now,
+            Success = false,
+            LogFilePath = _applicationHistoryPath
+        };
+
+        _logger.LogInformation(
+            "Applying template {TemplateId} ({TemplateName}) to instance {InstanceName}; Origin={Origin}",
+            template.Id,
+            template.Name,
+            instanceName,
+            template.IsCustom ? "custom" : "official");
 
         variables ??= new Dictionary<string, string>();
         
@@ -187,21 +206,72 @@ public class TemplateService : ITemplateService
                 cancellationToken.ThrowIfCancellationRequested();
                 scriptIndex++;
                 reportProgress((double)scriptIndex / template.Scripts.Count * 100, $"Executing script: {script.Name}", scriptIndex, template.Scripts.Count, script.Name);
+                var scriptStopwatch = Stopwatch.StartNew();
 
                 try
                 {
-                    await ExecuteScriptAsync(script, instanceName, variables, cancellationToken);
+                    var execution = await ExecuteScriptAsync(
+                        script,
+                        instanceName,
+                        variables,
+                        cancellationToken,
+                        progress == null
+                            ? null
+                            : line => reportProgress(
+                                (double)scriptIndex / template.Scripts.Count * 100,
+                                $"Executing script: {script.Name}",
+                                scriptIndex,
+                                template.Scripts.Count,
+                                script.Name,
+                                line));
                     result.ExecutedScripts.Add(script.Name);
+                    scriptStopwatch.Stop();
+
+                    reportProgress(
+                        (double)scriptIndex / template.Scripts.Count * 100,
+                        $"Executed: {script.Name}",
+                        scriptIndex,
+                        template.Scripts.Count,
+                        script.Name,
+                        execution.Output);
+
+                    _logger.LogInformation(
+                        "Template script executed; TemplateId={TemplateId}; ScriptName={ScriptName}; Phase={Phase}; Source={Source}; Result={Result}; DurationMs={DurationMs}",
+                        template.Id,
+                        script.Name,
+                        script.Phase,
+                        execution.Source,
+                        "Success",
+                        scriptStopwatch.ElapsedMilliseconds);
                 }
                 catch (Exception ex)
                 {
+                    scriptStopwatch.Stop();
                     if (script.ContinueOnError)
                     {
                         _logger.LogWarning(ex, "Script {ScriptName} failed, but continue on error is enabled.", script.Name);
                         result.Errors.Add($"Script {script.Name} failed: {ex.Message}");
+                        _logger.LogWarning(
+                            "Template script executed; TemplateId={TemplateId}; ScriptName={ScriptName}; Phase={Phase}; Source={Source}; Result={Result}; DurationMs={DurationMs}; Error={Error}",
+                            template.Id,
+                            script.Name,
+                            script.Phase,
+                            string.IsNullOrWhiteSpace(script.ScriptPath) ? "Content" : "ScriptPath",
+                            "Failed-Continue",
+                            scriptStopwatch.ElapsedMilliseconds,
+                            ex.Message);
                     }
                     else
                     {
+                        _logger.LogError(
+                            ex,
+                            "Template script executed; TemplateId={TemplateId}; ScriptName={ScriptName}; Phase={Phase}; Source={Source}; Result={Result}; DurationMs={DurationMs}",
+                            template.Id,
+                            script.Name,
+                            script.Phase,
+                            string.IsNullOrWhiteSpace(script.ScriptPath) ? "Content" : "ScriptPath",
+                            "Failed-Stop",
+                            scriptStopwatch.ElapsedMilliseconds);
                         throw;
                     }
                 }
@@ -219,11 +289,17 @@ public class TemplateService : ITemplateService
         finally
         {
             result.Duration = DateTime.Now - startTime;
+            instanceHistoryRecord.Success = result.Success;
+            instanceHistoryRecord.ExecutedScripts = result.ExecutedScripts;
+            instanceHistoryRecord.Errors = result.Errors;
+            instanceHistoryRecord.Duration = result.Duration;
+
+            await AppendApplicationHistoryAsync(instanceHistoryRecord, cancellationToken);
         }
 
         return result;
 
-        void reportProgress(double percent, string message, int current, int total, string currentScript = "")
+        void reportProgress(double percent, string message, int current, int total, string currentScript = "", string latestOutput = "")
         {
              progress?.Report(new TemplateProgress
              {
@@ -231,7 +307,8 @@ public class TemplateService : ITemplateService
                  StatusMessage = message,
                  CompletedScripts = current,
                  TotalScripts = total,
-                 CurrentScript = currentScript
+                 CurrentScript = currentScript,
+                 LatestOutput = latestOutput
              });
         }
     }
@@ -359,9 +436,19 @@ public class TemplateService : ITemplateService
         return null;
     }
 
-    public Task<List<TemplateApplicationRecord>> GetApplicationHistoryAsync(string? instanceName = null)
+    public async Task<List<TemplateApplicationRecord>> GetApplicationHistoryAsync(string? instanceName = null)
     {
-        return Task.FromResult(new List<TemplateApplicationRecord>());
+        var history = await LoadApplicationHistoryAsync();
+
+        if (string.IsNullOrWhiteSpace(instanceName))
+        {
+            return history.OrderByDescending(r => r.AppliedAt).ToList();
+        }
+
+        return history
+            .Where(r => r.InstanceName.Equals(instanceName, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(r => r.AppliedAt)
+            .ToList();
     }
 
     public string GetTemplatesCachePath() => _templatesCachePath;
@@ -369,29 +456,23 @@ public class TemplateService : ITemplateService
     public string GetTemplateScriptsPath() => _userTemplatesDirectory;
 
     
-    private async Task ExecuteScriptAsync(TemplateScript script, string instanceName, Dictionary<string, string> variables, CancellationToken cancellationToken)
+    private async Task<ScriptExecutionResult> ExecuteScriptAsync(
+        TemplateScript script,
+        string instanceName,
+        Dictionary<string, string> variables,
+        CancellationToken cancellationToken,
+        Action<string>? onOutputLine = null)
     {
         string scriptContent = script.Content;
         if (string.IsNullOrWhiteSpace(scriptContent) && !string.IsNullOrWhiteSpace(script.ScriptPath))
         {
-             var userScriptPath = Path.Combine(_userTemplatesDirectory, script.ScriptPath);
-             if (File.Exists(userScriptPath))
-             {
-                 scriptContent = await File.ReadAllTextAsync(userScriptPath, cancellationToken);
-             }
-             else
-             {
-                 var localBaseDir = Path.GetDirectoryName(_localTemplatesPath) ?? string.Empty;
-                 var localScriptPath = Path.Combine(localBaseDir, script.ScriptPath);
-                 if (File.Exists(localScriptPath))
-                 {
-                     scriptContent = await File.ReadAllTextAsync(localScriptPath, cancellationToken);
-                 }
-                 else
-                 {
-                     throw new FileNotFoundException($"Script file not found: {userScriptPath} or {localScriptPath}");
-                 }
-             }
+            var resolvedScriptPath = ResolveAndValidateScriptPath(script.ScriptPath);
+            if (resolvedScriptPath == null)
+            {
+                throw new FileNotFoundException($"Script file not found for path: {script.ScriptPath}");
+            }
+
+            scriptContent = await File.ReadAllTextAsync(resolvedScriptPath, cancellationToken);
         }
         
         foreach (var kvp in variables)
@@ -404,13 +485,107 @@ public class TemplateService : ITemplateService
             // Escape single quotes for bash -c '...' encapsulation
             var escapedContent = scriptContent.Replace("'", "'\\''");
             var command = $"wsl -d {instanceName} -- bash -c '{escapedContent}'";
-            await _powerShellService.ExecuteScriptAsync(command, cancellationToken);
+              var output = await ExecuteWithTimeoutAsync(command, script.TimeoutSeconds, cancellationToken, onOutputLine);
+            return new ScriptExecutionResult(string.IsNullOrWhiteSpace(script.ScriptPath) ? "Content" : "ScriptPath", output);
         }
         else if (script.Type == TemplateScriptType.PowerShell) 
         {
-             await _powerShellService.ExecuteScriptAsync(scriptContent, cancellationToken);
+               var output = await ExecuteWithTimeoutAsync(scriptContent, script.TimeoutSeconds, cancellationToken, onOutputLine);
+             return new ScriptExecutionResult(string.IsNullOrWhiteSpace(script.ScriptPath) ? "Content" : "ScriptPath", output);
+        }
+
+        return new ScriptExecutionResult("Content", string.Empty);
+    }
+
+    private string? ResolveAndValidateScriptPath(string scriptPath)
+    {
+        if (string.IsNullOrWhiteSpace(scriptPath))
+        {
+            return null;
+        }
+
+        if (Path.IsPathRooted(scriptPath))
+        {
+            throw new InvalidOperationException($"Absolute script path is not allowed: {scriptPath}");
+        }
+
+        var allowedRoots = new List<string>
+        {
+            Path.GetFullPath(_userTemplatesDirectory),
+            Path.GetFullPath(Path.GetDirectoryName(_localTemplatesPath) ?? string.Empty)
+        };
+
+        var candidatePaths = new[]
+        {
+            Path.Combine(_userTemplatesDirectory, scriptPath),
+            Path.Combine(Path.GetDirectoryName(_localTemplatesPath) ?? string.Empty, scriptPath)
+        };
+
+        foreach (var candidate in candidatePaths)
+        {
+            var fullPath = Path.GetFullPath(candidate);
+            if (!allowedRoots.Any(root => fullPath.StartsWith(root, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new InvalidOperationException($"Script path traversal detected: {scriptPath}");
+            }
+
+            if (File.Exists(fullPath))
+            {
+                return fullPath;
+            }
+        }
+
+        return null;
+    }
+
+    private async Task<List<TemplateApplicationRecord>> LoadApplicationHistoryAsync()
+    {
+        if (!File.Exists(_applicationHistoryPath))
+        {
+            return [];
+        }
+
+        try
+        {
+            var json = await File.ReadAllTextAsync(_applicationHistoryPath);
+            return JsonSerializer.Deserialize<List<TemplateApplicationRecord>>(json, TemplateJsonOptions) ?? [];
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to read template application history from {Path}", _applicationHistoryPath);
+            return [];
         }
     }
+
+    private async Task AppendApplicationHistoryAsync(TemplateApplicationRecord record, CancellationToken cancellationToken)
+    {
+        var history = await LoadApplicationHistoryAsync();
+        history.Add(record);
+
+        var retentionCutoff = DateTime.Now.AddDays(-30);
+        history = history.Where(h => h.AppliedAt >= retentionCutoff).ToList();
+
+        var options = new JsonSerializerOptions { WriteIndented = true };
+        var json = JsonSerializer.Serialize(history, options);
+        await File.WriteAllTextAsync(_applicationHistoryPath, json, cancellationToken);
+    }
+
+    private async Task<string> ExecuteWithTimeoutAsync(
+        string command,
+        int timeoutSeconds,
+        CancellationToken cancellationToken,
+        Action<string>? onOutputLine = null)
+    {
+        _ = timeoutSeconds;
+        if (onOutputLine == null)
+        {
+            return await _powerShellService.ExecuteScriptAsync(command, cancellationToken);
+        }
+
+        return await _powerShellService.ExecuteScriptStreamingAsync(command, onOutputLine, line => onOutputLine($"[ERR] {line}"), cancellationToken);
+    }
+
+    private sealed record ScriptExecutionResult(string Source, string Output);
 
     private List<Template>? ParseTemplatesJson(string json)
     {

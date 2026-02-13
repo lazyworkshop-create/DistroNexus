@@ -14,4 +14,5 @@ public class TemplateApplicationRecord
     public List<string> ExecutedScripts { get; set; } = new();
     public List<string> Errors { get; set; } = new();
     public string LogFilePath { get; set; } = string.Empty;
+    public TimeSpan Duration { get; set; }
 }

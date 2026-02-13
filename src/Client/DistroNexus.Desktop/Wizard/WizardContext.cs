@@ -99,7 +99,8 @@ public partial class WizardContext : ObservableObject
             Password = CreateUser ? Password : null,
             WslVersion = WslVersion,
             SetAsDefault = SetAsDefault,
-            LaunchAfterInstall = LaunchAfterInstall
+            LaunchAfterInstall = LaunchAfterInstall,
+            TemplateId = ApplyTemplateAfterInstall ? SelectedTemplate?.Id : null
         };
     }
 
@@ -118,6 +119,8 @@ public partial class WizardContext : ObservableObject
         ConfirmPassword = string.Empty;
         CreateUser = true;
         WslVersion = 2;
+        SelectedTemplate = null;
+        ApplyTemplateAfterInstall = true;
         SetAsDefault = false;
         LaunchAfterInstall = true;
         InstallProgress = 0;

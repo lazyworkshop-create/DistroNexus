@@ -103,6 +103,7 @@ public class TemplateProgress
     public int CompletedScripts { get; set; }
     public double PercentComplete { get; set; }
     public string StatusMessage { get; set; } = string.Empty;
+    public string LatestOutput { get; set; } = string.Empty;
 }
 
 /// <summary>

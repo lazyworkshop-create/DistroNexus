@@ -54,4 +54,9 @@ public class InstallOptions
     /// Gets or sets custom initialization commands to run after installation.
     /// </summary>
     public List<string> InitCommands { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the optional template ID to apply after installation.
+    /// </summary>
+    public string? TemplateId { get; set; }
 }

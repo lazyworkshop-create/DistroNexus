@@ -1,42 +1,119 @@
 [
   {
     "Id": "dotnet-dev",
-    "Name": ".NET 10 Development",
-    "Description": "Complete .NET 10 environment with SDK, Runtime and Tools. Optimized for Ubuntu/Debian.",
+    "Name": ".NET Development",
+    "Description": "Install .NET SDK and essential .NET development tools for Ubuntu and Debian.",
     "Category": "Development",
     "Icon": "Code24",
     "EstimatedDurationMinutes": 5,
-    "CompatibleDistros": ["Ubuntu-24.04", "Debian"],
+    "CompatibleDistros": ["Ubuntu", "Debian"],
     "Packages": [
-        { "Name": ".NET SDK 10.0", "Version": "10.0.100" },
-        { "Name": "ASP.NET Core Runtime", "Version": "10.0.0" }
+      { "Name": ".NET SDK", "Version": "latest" },
+      { "Name": "ASP.NET Core Runtime", "Version": "latest" }
     ],
     "Scripts": [
-       {
-           "Name": "Install .NET SDK",
-           "ScriptPath": "templates/dotnet-dev/install.sh",
-           "Type": "Bash",
-           "Phase": "PostConfigure",
-           "Order": 1,
-           "TimeoutSeconds": 600
-       }
+      {
+        "Name": "Install .NET SDK",
+        "ScriptPath": "templates/dotnet-dev/install.sh",
+        "Type": "Bash",
+        "Phase": "PostConfigure",
+        "Order": 1,
+        "TimeoutSeconds": 600
+      }
     ]
   },
   {
-      "Id": "nodejs-dev",
-      "Name": "Node.js Development",
-      "Category": "Development",
-      "Description": "Node.js LTS (via nvm), yarn, pnpm. Includes build tools.",
-      "Icon": "Code24",
-      "EstimatedDurationMinutes": 3,
-       "Scripts": [
-       {
-           "Name": "Install Node.js Environment",
-           "ScriptPath": "templates/nodejs-dev/install.sh",
-           "Type": "Bash",
-           "Phase": "PostConfigure",
-           "Order": 1
-       }
+    "Id": "nodejs-dev",
+    "Name": "Node.js Development",
+    "Category": "Development",
+    "Description": "Install Node.js LTS with npm, yarn, and pnpm.",
+    "Icon": "Code24",
+    "EstimatedDurationMinutes": 4,
+    "CompatibleDistros": ["Ubuntu", "Debian"],
+    "Packages": [
+      { "Name": "Node.js", "Version": "lts" },
+      { "Name": "npm", "Version": "latest" }
+    ],
+    "Scripts": [
+      {
+        "Name": "Install Node.js Environment",
+        "ScriptPath": "templates/nodejs-dev/install.sh",
+        "Type": "Bash",
+        "Phase": "PostConfigure",
+        "Order": 1,
+        "TimeoutSeconds": 600
+      }
+    ]
+  },
+  {
+    "Id": "python-dev",
+    "Name": "Python Development",
+    "Category": "Development",
+    "Description": "Install Python 3, pip, venv, and Poetry for Python development.",
+    "Icon": "Code24",
+    "EstimatedDurationMinutes": 4,
+    "CompatibleDistros": ["Ubuntu", "Debian"],
+    "Packages": [
+      { "Name": "Python 3", "Version": "latest" },
+      { "Name": "Poetry", "Version": "latest" }
+    ],
+    "Scripts": [
+      {
+        "Name": "Install Python Environment",
+        "ScriptPath": "templates/python-dev/install.sh",
+        "Type": "Bash",
+        "Phase": "PostConfigure",
+        "Order": 1,
+        "TimeoutSeconds": 600
+      }
+    ]
+  },
+  {
+    "Id": "docker-dev",
+    "Name": "Docker Development",
+    "Category": "Development",
+    "Description": "Install Docker Engine and Docker Compose plugin.",
+    "Icon": "Code24",
+    "EstimatedDurationMinutes": 6,
+    "CompatibleDistros": ["Ubuntu", "Debian"],
+    "Packages": [
+      { "Name": "Docker Engine", "Version": "latest" },
+      { "Name": "Docker Compose", "Version": "latest" }
+    ],
+    "Scripts": [
+      {
+        "Name": "Install Docker Environment",
+        "ScriptPath": "templates/docker-dev/install.sh",
+        "Type": "Bash",
+        "Phase": "PostConfigure",
+        "Order": 1,
+        "TimeoutSeconds": 900
+      }
+    ]
+  },
+  {
+    "Id": "fullstack-dev",
+    "Name": "Fullstack Development",
+    "Category": "Development",
+    "Description": "Install .NET, Node.js, Python, and Docker in one template.",
+    "Icon": "Code24",
+    "EstimatedDurationMinutes": 12,
+    "CompatibleDistros": ["Ubuntu", "Debian"],
+    "Packages": [
+      { "Name": ".NET SDK", "Version": "latest" },
+      { "Name": "Node.js", "Version": "lts" },
+      { "Name": "Python 3", "Version": "latest" },
+      { "Name": "Docker Engine", "Version": "latest" }
+    ],
+    "Scripts": [
+      {
+        "Name": "Install Fullstack Environment",
+        "ScriptPath": "templates/fullstack-dev/install.sh",
+        "Type": "Bash",
+        "Phase": "PostConfigure",
+        "Order": 1,
+        "TimeoutSeconds": 1200
+      }
     ]
   }
 ]

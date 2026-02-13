@@ -34,6 +34,20 @@ public interface IPowerShellService
     Task<PowerShellScriptResult> ExecuteScriptWithResultAsync(string script, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Executes a PowerShell script and streams output lines as they are produced.
+    /// </summary>
+    /// <param name="script">The script to execute.</param>
+    /// <param name="onOutputLine">Callback invoked for each standard output line.</param>
+    /// <param name="onErrorLine">Callback invoked for each standard error line.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The full standard output content.</returns>
+    Task<string> ExecuteScriptStreamingAsync(
+        string script,
+        Action<string>? onOutputLine = null,
+        Action<string>? onErrorLine = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Imports the DistroNexus PowerShell module.
     /// </summary>
     /// <param name="modulePath">The path to the module.</param>

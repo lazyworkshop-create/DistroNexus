@@ -212,6 +212,16 @@ public class PowerShellService : IPowerShellService, IDisposable
     /// <inheritdoc/>
     public async Task<string> ExecuteScriptAsync(string script, CancellationToken cancellationToken = default)
     {
+        return await ExecuteScriptStreamingAsync(script, null, null, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<string> ExecuteScriptStreamingAsync(
+        string script,
+        Action<string>? onOutputLine = null,
+        Action<string>? onErrorLine = null,
+        CancellationToken cancellationToken = default)
+    {
         ArgumentNullException.ThrowIfNull(script);
 
         // Prepend module import if available
@@ -238,31 +248,47 @@ public class PowerShellService : IPowerShellService, IDisposable
             using var process = new Process { StartInfo = startInfo };
             var outputBuilder = new StringBuilder();
             var errorBuilder = new StringBuilder();
+            var outputLock = new object();
 
             process.OutputDataReceived += (_, e) =>
             {
                 if (e.Data != null)
-                    outputBuilder.AppendLine(e.Data);
+                {
+                    lock (outputLock)
+                    {
+                        outputBuilder.AppendLine(e.Data);
+                    }
+
+                    onOutputLine?.Invoke(e.Data);
+                }
             };
 
             process.ErrorDataReceived += (_, e) =>
             {
                 if (e.Data != null)
-                    errorBuilder.AppendLine(e.Data);
+                {
+                    lock (outputLock)
+                    {
+                        errorBuilder.AppendLine(e.Data);
+                    }
+
+                    onErrorLine?.Invoke(e.Data);
+                }
             };
 
             process.Start();
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
 
-            // Add timeout to prevent hanging
-            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-            using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+            await process.WaitForExitAsync(cancellationToken);
 
-            await process.WaitForExitAsync(combinedCts.Token);
-
-            var output = outputBuilder.ToString().TrimEnd();
-            var error = errorBuilder.ToString().TrimEnd();
+            string output;
+            string error;
+            lock (outputLock)
+            {
+                output = outputBuilder.ToString().TrimEnd();
+                error = errorBuilder.ToString().TrimEnd();
+            }
 
             if (process.ExitCode != 0 && !string.IsNullOrEmpty(error))
             {
@@ -274,7 +300,7 @@ public class PowerShellService : IPowerShellService, IDisposable
         }
         catch (OperationCanceledException)
         {
-            _logger.LogWarning("PowerShell script execution timed out or was canceled");
+            _logger.LogWarning("PowerShell script execution was canceled");
             throw;
         }
         catch (Exception ex) when (ex is not InvalidOperationException)
