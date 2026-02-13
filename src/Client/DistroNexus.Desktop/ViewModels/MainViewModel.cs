@@ -339,6 +339,15 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void ShowTemplates()
+    {
+        StatusMessage = "Templates";
+        var page = _serviceProvider.GetRequiredService<TemplatesPage>();
+        CurrentPage = page;
+        IsOnDashboard = false;
+    }
+
+    [RelayCommand]
     private void ShowPackageManager()
     {
         StatusMessage = Properties.Resources.PackageManagerTitle;

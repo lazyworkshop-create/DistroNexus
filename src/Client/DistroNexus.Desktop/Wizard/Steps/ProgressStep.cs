@@ -13,6 +13,7 @@ namespace DistroNexus.Desktop.Wizard.Steps;
 public partial class ProgressStep : WizardStepBase
 {
     private readonly IWslManagerService _wslManager;
+    private readonly ITemplateService _templateService;
     private readonly ILogger _logger;
     private CancellationTokenSource? _installCts;
 
@@ -28,9 +29,10 @@ public partial class ProgressStep : WizardStepBase
     [ObservableProperty]
     private bool _canCancel = true;
 
-    public ProgressStep(IWslManagerService wslManager, ILogger logger)
+    public ProgressStep(IWslManagerService wslManager, ITemplateService templateService, ILogger logger)
     {
         _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
+        _templateService = templateService ?? throw new ArgumentNullException(nameof(templateService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -87,6 +89,25 @@ public partial class ProgressStep : WizardStepBase
             });
 
             await _wslManager.InstallInstanceAsync(options, progress, _installCts.Token);
+
+            if (Context.ApplyTemplateAfterInstall && Context.SelectedTemplate != null)
+            {
+                _logger.LogInformation("Applying template {TemplateId} to {Instance}", Context.SelectedTemplate.Id, Context.InstanceName);
+                Context.InstallStatusMessage = $"Applying template: {Context.SelectedTemplate.Name}...";
+                
+                var tplProgress = new Progress<DistroNexus.Core.Models.TemplateProgress>(p =>
+                {
+                    Context.InstallProgress = p.PercentComplete;
+                    Context.InstallStatusMessage = $"Template: {p.StatusMessage}";
+                });
+
+                await _templateService.ApplyTemplateAsync(
+                    Context.SelectedTemplate.Id, 
+                    Context.InstanceName, 
+                    null, 
+                    tplProgress, 
+                    _installCts.Token);
+            }
 
             Context.InstallProgress = 100;
             Context.InstallStatusMessage = "Installation completed successfully!";

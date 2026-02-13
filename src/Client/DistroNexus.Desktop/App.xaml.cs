@@ -98,6 +98,7 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<IDownloadService, DownloadService>();
                     services.AddSingleton<ICatalogService, CatalogService>();
                     services.AddSingleton<ICatalogSourceManager, CatalogSourceManager>();
+                    services.AddSingleton<ITemplateService, TemplateService>();
                     services.AddSingleton<INavigationService, NavigationService>();
                     services.AddSingleton<IUpdateService, UpdateService>();
                     services.AddSingleton<ITerminalService, TerminalService>();
@@ -107,6 +108,7 @@ public partial class App : System.Windows.Application
                     services.AddTransient<MainViewModel>();
                     services.AddTransient<SettingsViewModel>();
                     services.AddTransient<PackageManagerViewModel>();
+                    services.AddTransient<TemplatesViewModel>();
                     services.AddTransient<InstallWizardViewModel>();
                     services.AddTransient<SourceManagerViewModel>();
                     services.AddTransient<Wizard.InstallWizardWorkflowViewModel>();
@@ -115,6 +117,7 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<MainWindow>();
                     services.AddTransient<SettingsPage>();
                     services.AddTransient<PackageManagerPage>();
+                    services.AddTransient<TemplatesPage>();
                     services.AddTransient<InstallWizardDialog>();
                     services.AddTransient<InstallWizardDialogNew>();
 

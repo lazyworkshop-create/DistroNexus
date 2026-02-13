@@ -45,6 +45,13 @@ public partial class WizardContext : ObservableObject
     [ObservableProperty]
     private int _wslVersion = 2;
 
+    // Step 3b: Template Selection
+    [ObservableProperty]
+    private Template? _selectedTemplate;
+
+    [ObservableProperty]
+    private bool _applyTemplateAfterInstall = true;
+
     // Step 4: Review Options
     [ObservableProperty]
     private bool _setAsDefault;

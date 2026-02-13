@@ -65,6 +65,10 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                               Icon="{ui:SymbolIcon Symbol=Apps20}"
                               Command="{Binding ShowPackageManagerCommand}"
                               Margin="0,0,10,0"/>
+                    <ui:Button Content="Templates" 
+                              Icon="{ui:SymbolIcon Symbol=Library20}"
+                              Command="{Binding ShowTemplatesCommand}"
+                              Margin="0,0,10,0"/>
                     <ui:Button Content="{lex:Loc SettingsTitle}" 
                               Icon="{ui:SymbolIcon Symbol=Settings20}"
                               Command="{Binding ShowSettingsCommand}"/>
