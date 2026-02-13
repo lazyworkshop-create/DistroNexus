@@ -81,5 +81,32 @@ Describe "Apply-DistroNexusTemplate" -Tag 'Unit', 'Public' {
                 Assert-MockCalled wsl.exe -Times 1 
              }
         }
+
+        It "Should execute script content resolved from ScriptPath" {
+            InModuleScope DistroNexus {
+                $template = [PSCustomObject]@{
+                    Id = "t4"
+                    Name = "ScriptPath Template"
+                    Scripts = @(
+                        [PSCustomObject]@{
+                            Name = "S4"
+                            Type = "Bash"
+                            ScriptPath = "templates/test/install.sh"
+                            Order = 1
+                        }
+                    )
+                }
+
+                Mock wsl.exe { return "Ubuntu-22.04" } -ParameterFilter { $Args -contains "--list" }
+                Mock wsl.exe { }
+                Mock Test-Path { return $true } -ParameterFilter { $Path -match "templates[\\/]test[\\/]install.sh" }
+                Mock Get-Content { return "echo from path" } -ParameterFilter { $Path -match "templates[\\/]test[\\/]install.sh" }
+
+                Apply-DistroNexusTemplate -InstanceName "Ubuntu-22.04" -Template $template
+
+                Assert-MockCalled Get-Content -Times 1
+                Assert-MockCalled wsl.exe -Times 2
+            }
+        }
     }
 }

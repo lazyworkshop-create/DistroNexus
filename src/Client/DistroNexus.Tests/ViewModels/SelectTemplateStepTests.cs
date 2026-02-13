@@ -23,6 +23,10 @@ public class SelectTemplateStepTests
     {
         // Arrange
         var step = new SelectTemplateStep(_mockTemplateService.Object, _mockLogger.Object);
+        step.Context = new WizardContext
+        {
+            SelectedDistribution = new DistroPackage { Name = "Ubuntu" }
+        };
         var expectedTemplates = new List<Template>
         {
             new() { Id = "t1", Name = "Template 1" }
@@ -56,5 +60,65 @@ public class SelectTemplateStepTests
         // Assert
         Assert.NotNull(context.SelectedTemplate);
         Assert.Equal("t1", context.SelectedTemplate.Id);
+    }
+
+    [Fact]
+    public async Task OnEnterAsync_FiltersIncompatibleTemplates()
+    {
+        var step = new SelectTemplateStep(_mockTemplateService.Object, _mockLogger.Object);
+        step.Context = new WizardContext
+        {
+            SelectedDistribution = new DistroPackage { Name = "Ubuntu-24.04" }
+        };
+
+        var expectedTemplates = new List<Template>
+        {
+            new() { Id = "ubuntu", Name = "Ubuntu Template", CompatibleDistros = ["Ubuntu"] },
+            new() { Id = "fedora", Name = "Fedora Template", CompatibleDistros = ["Fedora"] }
+        };
+
+        _mockTemplateService
+            .Setup(x => x.LoadTemplatesAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedTemplates);
+
+        await step.OnEnterAsync();
+
+        Assert.Single(step.Templates);
+        Assert.Equal("ubuntu", step.Templates[0].Id);
+    }
+
+    [Fact]
+    public void Validate_RequiresSelectionOrSkip()
+    {
+        var step = new SelectTemplateStep(_mockTemplateService.Object, _mockLogger.Object);
+        step.Context = new WizardContext
+        {
+            ApplyTemplateAfterInstall = true,
+            SelectedDistribution = new DistroPackage { Name = "Ubuntu" }
+        };
+
+        var isValid = step.Validate();
+
+        Assert.False(isValid);
+        Assert.False(string.IsNullOrWhiteSpace(step.ErrorMessage));
+    }
+
+    [Fact]
+    public void Validate_SucceedsWhenSkipEnabled()
+    {
+        var step = new SelectTemplateStep(_mockTemplateService.Object, _mockLogger.Object);
+        step.Context = new WizardContext
+        {
+            ApplyTemplateAfterInstall = true,
+            SelectedDistribution = new DistroPackage { Name = "Ubuntu" }
+        };
+
+        step.SkipTemplate = true;
+
+        var isValid = step.Validate();
+
+        Assert.True(isValid);
+        Assert.False(step.Context.ApplyTemplateAfterInstall);
+        Assert.Null(step.Context.SelectedTemplate);
     }
 }

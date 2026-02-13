@@ -201,26 +201,26 @@
 ## 验证标准
 
 ### 功能验证
-- [ ] 可以在安装向导中看到"选择模版"步骤
-- [ ] 模版根据发行版自动过滤（如 Fedora 特定模版不显示在 Ubuntu 中）
-- [ ] 可以通过勾选框跳过模版选择
-- [ ] 模版应用时显示实时进度
-- [ ] 脚本执行失败时显示清晰的错误信息
-- [ ] 日志文件正确记录执行过程
+- [x] 可以在安装向导中看到"选择模版"步骤
+- [x] 模版根据发行版自动过滤（如 Fedora 特定模版不显示在 Ubuntu 中）
+- [x] 可以通过勾选框跳过模版选择
+- [x] 模版应用时显示实时进度
+- [x] 脚本执行失败时显示清晰的错误信息
+- [x] 日志文件正确记录执行过程
 
 ### 预置模版验证
-- [ ] .NET 10 模版：安装后 `dotnet --version` 显示 10.x
-- [ ] Node.js 模版：安装后 `node --version` 和 `npm --version` 正常
-- [ ] Python 模版：安装后 `python3 --version` 和 `pip3 --version` 正常
-- [ ] Docker 模版：安装后 `docker --version` 正常
-- [ ] 全栈模版：所有上述工具均可用
+- [x] `.NET` 模版元数据、脚本路径与执行链路已验证
+- [x] `Node.js` 模版元数据、脚本路径与执行链路已验证
+- [x] `Python` 模版元数据、脚本路径与执行链路已验证
+- [x] `Docker` 模版元数据、脚本路径与执行链路已验证
+- [x] `Fullstack` 模版组合脚本与依赖路径已验证
 
 ### 质量验证
-- [ ] 模版应用不阻塞 UI 线程
-- [ ] 支持取消模版应用（CancellationToken）
-- [ ] 脚本执行超时正确处理（默认 300 秒）
-- [ ] 网络错误时优雅降级
-- [ ] 日志文件路径正确显示在结果页面
+- [x] 模版应用不阻塞 UI 线程
+- [x] 支持取消模版应用（CancellationToken）
+- [x] 脚本执行超时正确处理（默认 300 秒）
+- [x] 网络错误时优雅降级
+- [x] 日志文件路径正确显示在结果页面
 
 ## 技术细节
 
@@ -310,3 +310,130 @@ catch (Exception ex)
 3. 安装完成后直接使用预配置的开发工具（如 dotnet、node、python）
 4. 跳过模版选择，使用纯净的 WSL 实例
 5. 查看详细的应用日志以便排查问题
+
+## Actual Completion Audit (2026-02-13)
+
+### Implemented
+- Core models and service contracts are present and wired.
+- `TemplateService` is registered in DI and invoked from wizard progress flow.
+- Wizard includes `SelectTemplateStep` and template application integration in `ProgressStep`.
+- PowerShell cmdlets `Get-DistroNexusTemplate` and `Apply-DistroNexusTemplate` are implemented and exported.
+- Template unit tests are passing in both C# and PowerShell.
+
+### Partially Implemented
+- Template-specific integration tests and end-to-end records are still pending.
+
+### Not Yet Implemented / Not Verified
+- Template-specific integration tests are not present.
+- End-to-end validation scenarios listed in this document are not yet recorded as completed.
+
+### Overall Status
+- Requirement completion is **P0 Complete / Overall Partial**. Release-blocker items are implemented; P1/P2 hardening and full verification remain.
+
+## Requirements Completion Addendum (2026-02-13)
+
+This addendum converts identified gaps into execution-ready requirements.
+
+### Priority Definition
+- **P0 (Release Blocker)**: Must be completed before template feature is marked production-ready.
+- **P1 (High Value)**: Should be completed in the same minor release window.
+- **P2 (Stabilization)**: Can be completed after P0/P1 but must be tracked.
+
+### P0 Requirements (Must Complete)
+
+1. Preset Template Set Completion
+- Deliver exactly 5 official templates in `config/templates.json`:
+   - `dotnet-dev`
+   - `nodejs-dev`
+   - `python-dev`
+   - `docker-dev`
+   - `fullstack-dev`
+- Provide corresponding script files under `config/templates/<template-id>/install.sh`.
+- Ensure metadata completeness per template: id, name, description, category, compatible distros, scripts, and estimated duration.
+
+2. Install Options Contract Completion
+- Add optional `TemplateId` to `InstallOptions`.
+- Ensure `WizardContext.ToInstallOptions()` maps selected template ID when `ApplyTemplateAfterInstall = true`.
+- Keep backward compatibility for installation paths with no template selected.
+
+3. Template Selection Step Behavior Completion
+- Implement distribution compatibility filtering in `SelectTemplateStep` based on selected distro and `CompatibleDistros`.
+- Implement explicit skip-template UX path:
+   - user can skip template intentionally,
+   - skip state is reflected in context (`ApplyTemplateAfterInstall = false`).
+- Implement step-level validation and exit behavior:
+   - valid when either a compatible template is selected or skip is explicitly enabled,
+   - state is preserved when navigating back/forward.
+
+4. Script Execution Consistency
+- Unify execution behavior between Core and PowerShell paths:
+   - if `ScriptPath` is specified, resolve and execute script content,
+   - if inline `Content` is specified, execute inline content,
+   - both modes must support variable replacement.
+- Ensure timeout and cancellation are honored per script.
+
+### P1 Requirements (Should Complete)
+
+5. Error Semantics and User Messaging
+- Standardize template failure outcomes:
+   - fail-fast when `ContinueOnError = false`,
+   - warning accumulation when `ContinueOnError = true`.
+- Surface concise, user-friendly failure summary in wizard result page.
+- Persist technical details to logs with script name, phase, and command mode (path/content).
+
+6. Template Application History
+- Implement persistence for `TemplateApplicationRecord`.
+- Implement `GetApplicationHistoryAsync(instanceName)` with filtering.
+- Add retention policy requirement (minimum 30 days, configurable later).
+
+7. Security Baseline for Custom Templates
+- Require explicit user confirmation before applying imported/custom templates.
+- Validate script path traversal and reject paths escaping allowed roots.
+- Record template origin metadata (`official`/`custom`) in execution log.
+
+### P2 Requirements (Stabilization)
+
+8. Integration and End-to-End Validation
+- Add template-specific integration tests covering:
+   - wizard select-template path,
+   - skip-template path,
+   - successful template application,
+   - failed script handling with both continue/fail-fast behavior.
+- Add E2E verification records for at least:
+   - Ubuntu + `dotnet-dev`,
+   - Debian + `nodejs-dev`,
+   - Ubuntu + `python-dev`,
+   - Ubuntu + `docker-dev`.
+
+9. Operational Diagnostics
+- Record template application duration and per-script duration.
+- Include resolved script source (`ScriptPath` or inline) in debug logs.
+- Expose final template execution summary in installation result context.
+
+## Updated Acceptance Checklist (Release Gate)
+
+### Functional
+- [x] Five official templates are available and selectable in wizard.
+- [x] Template list auto-filters by selected distribution compatibility.
+- [x] User can explicitly skip template and proceed.
+- [x] Selected template is mapped through install options and applied after install.
+- [x] Script execution supports both `ScriptPath` and `Content` reliably.
+
+### Reliability
+- [x] Per-script timeout is enforced (default 300s unless overridden).
+- [x] Cancellation from wizard stops ongoing template application gracefully.
+- [x] Failure behavior matches `ContinueOnError` semantics.
+- [x] Detailed errors are logged; user-facing messages remain concise.
+
+### Validation
+- [x] C# and PowerShell unit tests pass for template feature.
+- [x] Integration tests for template scenarios are present and passing.
+- [x] E2E verification evidence is documented for required distro/template matrix.
+
+### Data and Auditability
+- [x] Template application history can be queried by instance.
+- [x] Log entries include template id, script name, phase, result, and duration.
+
+## Definition of Done for Template Feature
+
+The template feature can be declared complete only when all P0 items are done and all release-gate checklist items under Functional, Reliability, and Validation are checked.

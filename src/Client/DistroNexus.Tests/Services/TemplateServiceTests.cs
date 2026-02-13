@@ -8,6 +8,7 @@ using Moq.Protected;
 
 namespace DistroNexus.Tests.Services;
 
+[Collection("TemplateServiceSerial")]
 public class TemplateServiceTests : IDisposable
 {
     private readonly Mock<ILogger<TemplateService>> _mockLogger;
@@ -15,7 +16,6 @@ public class TemplateServiceTests : IDisposable
     private readonly Mock<IPowerShellService> _mockPowerShellService;
     private readonly Mock<HttpMessageHandler> _mockHttpMessageHandler;
     private readonly HttpClient _httpClient;
-    private readonly string _testConfigPath;
     private readonly string _userTemplatesPath;
     private readonly string _userTemplatesBackupPath;
     private readonly bool _hadUserTemplatesFile;
@@ -27,15 +27,6 @@ public class TemplateServiceTests : IDisposable
         _mockPowerShellService = new Mock<IPowerShellService>();
         _mockHttpMessageHandler = new Mock<HttpMessageHandler>();
         _httpClient = new HttpClient(_mockHttpMessageHandler.Object);
-
-        // Setup test templates.json
-        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-        var configDir = Path.Combine(baseDir, "config");
-        if (!Directory.Exists(configDir))
-        {
-            Directory.CreateDirectory(configDir);
-        }
-        _testConfigPath = Path.Combine(configDir, "templates.json");
 
         var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         var appDataDistroNexusPath = Path.Combine(appDataPath, "DistroNexus");
@@ -62,17 +53,11 @@ public class TemplateServiceTests : IDisposable
                 }
             }
         };
-        File.WriteAllText(_testConfigPath, JsonSerializer.Serialize(testTemplates));
-        File.WriteAllText(_userTemplatesPath, "[]");
+        File.WriteAllText(_userTemplatesPath, JsonSerializer.Serialize(testTemplates));
     }
 
     public void Dispose()
     {
-        if (File.Exists(_testConfigPath))
-        {
-            File.Delete(_testConfigPath);
-        }
-
         if (_hadUserTemplatesFile && File.Exists(_userTemplatesBackupPath))
         {
             File.Copy(_userTemplatesBackupPath, _userTemplatesPath, true);
@@ -140,7 +125,7 @@ public class TemplateServiceTests : IDisposable
                 }
             }
         };
-        File.WriteAllText(_testConfigPath, JsonSerializer.Serialize(templateWithVar));
+        File.WriteAllText(_userTemplatesPath, JsonSerializer.Serialize(templateWithVar));
         
         var service = new TemplateService(
             _mockLogger.Object,
