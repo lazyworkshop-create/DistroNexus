@@ -1,0 +1,42 @@
+[
+  {
+    "Id": "dotnet-dev",
+    "Name": ".NET 10 Development",
+    "Description": "Complete .NET 10 environment with SDK, Runtime and Tools. Optimized for Ubuntu/Debian.",
+    "Category": "Development",
+    "Icon": "Code24",
+    "EstimatedDurationMinutes": 5,
+    "CompatibleDistros": ["Ubuntu-24.04", "Debian"],
+    "Packages": [
+        { "Name": ".NET SDK 10.0", "Version": "10.0.100" },
+        { "Name": "ASP.NET Core Runtime", "Version": "10.0.0" }
+    ],
+    "Scripts": [
+       {
+           "Name": "Install .NET SDK",
+           "ScriptPath": "templates/dotnet-dev/install.sh",
+           "Type": "Bash",
+           "Phase": "PostConfigure",
+           "Order": 1,
+           "TimeoutSeconds": 600
+       }
+    ]
+  },
+  {
+      "Id": "nodejs-dev",
+      "Name": "Node.js Development",
+      "Category": "Development",
+      "Description": "Node.js LTS (via nvm), yarn, pnpm. Includes build tools.",
+      "Icon": "Code24",
+      "EstimatedDurationMinutes": 3,
+       "Scripts": [
+       {
+           "Name": "Install Node.js Environment",
+           "ScriptPath": "templates/nodejs-dev/install.sh",
+           "Type": "Bash",
+           "Phase": "PostConfigure",
+           "Order": 1
+       }
+    ]
+  }
+]

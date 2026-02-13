@@ -28,6 +28,8 @@
         'Get-DistroNexusInstance',
         'Start-DistroNexusInstance',
         'Stop-DistroNexusInstance',
+        'Get-DistroNexusTemplate',
+        'Apply-DistroNexusTemplate',
         'Move-DistroNexusInstance',
         'Rename-DistroNexusInstance',
         'Remove-DistroNexusInstance',
