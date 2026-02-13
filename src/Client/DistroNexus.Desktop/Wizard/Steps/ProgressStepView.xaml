@@ -14,7 +14,6 @@ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     
     <Grid VerticalAlignment="Center">
         <StackPanel HorizontalAlignment="Center" Width="500">
-            <!-- Installing Distribution Info -->
             <StackPanel Orientation="Horizontal" 
                        HorizontalAlignment="Center"
                        Margin="0,0,0,30">
@@ -35,21 +34,18 @@ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                 </StackPanel>
             </StackPanel>
             
-            <!-- Progress Bar -->
             <ProgressBar Value="{Binding Context.InstallProgress}"
                         Minimum="0"
                         Maximum="100"
                         Height="8"
                         Margin="0,0,0,15"/>
             
-            <!-- Progress Percentage -->
             <TextBlock Text="{Binding Context.InstallProgress, StringFormat={}{0:F0}%}"
                       FontSize="24"
                       FontWeight="SemiBold"
                       HorizontalAlignment="Center"
                       Margin="0,0,0,10"/>
             
-            <!-- Status Message -->
             <TextBlock Text="{Binding Context.InstallStatusMessage}"
                       FontSize="14"
                       HorizontalAlignment="Center"
@@ -57,7 +53,6 @@ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                       TextWrapping="Wrap"
                       TextAlignment="Center"/>
             
-            <!-- Cancel Button -->
             <ui:Button Content="{lex:Loc CancelInstallation}"
                       HorizontalAlignment="Center"
                       Margin="0,30,0,0"

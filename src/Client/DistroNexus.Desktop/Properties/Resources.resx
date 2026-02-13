@@ -1160,6 +1160,9 @@ The installation process will be stopped and any partially downloaded files will
   <data name="TitleCancelInstallation" xml:space="preserve">
     <value>Cancel Installation</value>
   </data>
+  <data name="TooltipOnlyErrors" xml:space="preserve">
+    <value>Only errors</value>
+  </data>
   <data name="ErrorDeletePackage" xml:space="preserve">
     <value>Failed to delete package: {0}</value>
   </data>

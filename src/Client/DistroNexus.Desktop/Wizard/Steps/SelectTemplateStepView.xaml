@@ -19,13 +19,19 @@
         <Grid Grid.Column="0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
             
             <ui:TextBox PlaceholderText="Search templates..." Margin="0,0,10,10" 
                         Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"/>
 
-            <ListView Grid.Row="1" ItemsSource="{Binding Templates}" 
+            <ui:ToggleSwitch Grid.Row="1"
+                             Margin="0,0,10,10"
+                             Content="Skip template setup"
+                             IsChecked="{Binding SkipTemplate, Mode=TwoWay}"/>
+
+            <ListView Grid.Row="2" ItemsSource="{Binding Templates}" 
                       SelectedItem="{Binding SelectedTemplate}"
                       SelectionMode="Single"
                       ScrollViewer.HorizontalScrollBarVisibility="Disabled">
@@ -39,7 +45,7 @@
                 </ListView.ItemTemplate>
             </ListView>
              <!-- Loading Indicator -->
-             <ProgressBar Grid.Row="1" IsIndeterminate="True" 
+             <ProgressBar Grid.Row="2" IsIndeterminate="True" 
                           VerticalAlignment="Top" 
                           Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"/>
         </Grid>
@@ -63,7 +69,7 @@
                     </StackPanel.Style>
                     
                      <TextBlock Text="{Binding SelectedTemplate.Name}" FontSize="24" FontWeight="Bold" Margin="0,0,0,10"/>
-                     <TextBlock Text="{Binding SelectedTemplate.Category}" Foreground="CornflowerBlue" Margin="0,0,0,10"/>
+                     <TextBlock Text="{Binding SelectedTemplate.Category}" Margin="0,0,0,10"/>
                      
                      <TextBlock Text="Description" FontWeight="SemiBold" Margin="0,10,0,5"/>
                      <TextBlock Text="{Binding SelectedTemplate.Description}" TextWrapping="Wrap"/>
@@ -82,8 +88,7 @@
                         </ItemsControl.ItemTemplate>
                      </ItemsControl>
 
-                     <ui:CardAction Icon="Dismiss24" Command="{Binding ClearSelectionCommand}" Content="Do not use a template" Margin="0,20,0,0"
-                                    Visibility="Collapsed"/> 
+                     <ui:CardAction Icon="Dismiss24" Command="{Binding SkipTemplateSelectionCommand}" Content="Do not use a template" Margin="0,20,0,0"/> 
                 </StackPanel>
             </Grid>
         </ScrollViewer>

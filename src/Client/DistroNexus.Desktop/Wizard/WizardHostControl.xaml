@@ -84,6 +84,17 @@ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         <Border Grid.Row="0" 
                 Padding="0,0,0,20"
                 Visibility="{Binding Workflow.CurrentStep.ShowInStepIndicator, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Padding" Value="0,0,0,20"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Workflow.CurrentStep.IsLogFullscreen}" Value="True">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Setter Property="Padding" Value="0"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
             <TextBlock Text="{Binding Workflow.CurrentStepTitle}"
                       FontSize="18"
                       FontWeight="SemiBold"
@@ -93,7 +104,18 @@ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         <!-- Step Content -->
         <ContentControl Grid.Row="1" 
                        Content="{Binding Workflow.CurrentStep.Content}"
-                       Margin="0,0,0,20"/>
+                       Margin="0,0,0,20">
+            <ContentControl.Style>
+                <Style TargetType="ContentControl">
+                    <Setter Property="Margin" Value="0,0,0,20"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Workflow.CurrentStep.IsLogFullscreen}" Value="True">
+                            <Setter Property="Margin" Value="0"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </ContentControl.Style>
+        </ContentControl>
         
         <!-- Error Message -->
         <Border Grid.Row="1" 
@@ -117,6 +139,19 @@ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                 BorderThickness="0,1,0,0"
                 BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                 Padding="0,15,0,0">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="BorderThickness" Value="0,1,0,0"/>
+                    <Setter Property="Padding" Value="0,15,0,0"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Workflow.CurrentStep.IsLogFullscreen}" Value="True">
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="Padding" Value="0"/>
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
             <ItemsControl ItemsSource="{Binding Workflow.CurrentStep.Buttons}"
                          HorizontalAlignment="Right">
                 <ItemsControl.ItemsPanel>

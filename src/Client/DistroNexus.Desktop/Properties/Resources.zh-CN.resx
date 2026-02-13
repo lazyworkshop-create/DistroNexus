@@ -1160,6 +1160,9 @@
   <data name="TitleCancelInstallation" xml:space="preserve">
     <value>取消安装</value>
   </data>
+  <data name="TooltipOnlyErrors" xml:space="preserve">
+    <value>仅显示错误</value>
+  </data>
   <data name="ErrorDeletePackage" xml:space="preserve">
     <value>删除包失败：{0}</value>
   </data>

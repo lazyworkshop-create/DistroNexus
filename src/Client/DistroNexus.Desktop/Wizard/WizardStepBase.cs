@@ -29,6 +29,11 @@ public abstract partial class WizardStepBase : ObservableObject, IWizardStep
     public virtual bool ShowInStepIndicator => true;
 
     /// <summary>
+    /// Gets a value indicating whether this step should use fullscreen log layout.
+    /// </summary>
+    public virtual bool IsLogFullscreen => false;
+
+    /// <summary>
     /// Gets or sets the wizard context shared between steps.
     /// </summary>
     public WizardContext? Context { get; set; }
