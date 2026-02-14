@@ -35,6 +35,16 @@
                           Icon="{ui:SymbolIcon Symbol=ArrowImport20}"
                           Command="{Binding ImportTemplateCommand}"
                           Margin="0,0,10,0"/>
+                <ComboBox ItemsSource="{Binding CategoryOptions}"
+                          SelectedItem="{Binding SelectedCategory}"
+                          Width="170"
+                          Height="36"
+                          Margin="0,0,10,0"/>
+                <ComboBox ItemsSource="{Binding ScenarioTagOptions}"
+                          SelectedItem="{Binding SelectedScenarioTag}"
+                          Width="190"
+                          Height="36"
+                          Margin="0,0,10,0"/>
                 <ui:TextBox PlaceholderText="Search templates..." 
                            Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
                            Height="36"

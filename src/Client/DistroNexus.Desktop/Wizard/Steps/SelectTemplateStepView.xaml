@@ -20,6 +20,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
             
@@ -31,7 +32,16 @@
                              Content="Skip template setup"
                              IsChecked="{Binding SkipTemplate, Mode=TwoWay}"/>
 
-            <ListView Grid.Row="2" ItemsSource="{Binding Templates}" 
+            <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,10,10">
+                <ComboBox Width="130" Margin="0,0,8,0"
+                          ItemsSource="{Binding CategoryOptions}"
+                          SelectedItem="{Binding SelectedCategory}"/>
+                <ComboBox Width="150"
+                          ItemsSource="{Binding ScenarioTagOptions}"
+                          SelectedItem="{Binding SelectedScenarioTag}"/>
+            </StackPanel>
+
+            <ListView Grid.Row="3" ItemsSource="{Binding Templates}" 
                       SelectedItem="{Binding SelectedTemplate}"
                       SelectionMode="Single"
                       ScrollViewer.HorizontalScrollBarVisibility="Disabled">
@@ -45,7 +55,7 @@
                 </ListView.ItemTemplate>
             </ListView>
              <!-- Loading Indicator -->
-             <ProgressBar Grid.Row="2" IsIndeterminate="True" 
+             <ProgressBar Grid.Row="3" IsIndeterminate="True" 
                           VerticalAlignment="Top" 
                           Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"/>
         </Grid>
@@ -87,6 +97,28 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                      </ItemsControl>
+
+                     <Expander Header="Advanced Options" Margin="0,15,0,0" IsExpanded="{Binding ShowAdvancedOptions}">
+                        <StackPanel>
+                            <TextBlock Text="Version Options" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                            <ItemsControl ItemsSource="{Binding SelectedTemplate.VersionOptions}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Label}" Opacity="0.85"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <TextBlock Text="Preflight Checks" FontWeight="SemiBold" Margin="0,10,0,5"/>
+                            <ItemsControl ItemsSource="{Binding SelectedTemplate.PreflightChecks}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Name}" Opacity="0.85"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                     </Expander>
 
                      <ui:CardAction Icon="Dismiss24" Command="{Binding SkipTemplateSelectionCommand}" Content="Do not use a template" Margin="0,20,0,0"/> 
                 </StackPanel>

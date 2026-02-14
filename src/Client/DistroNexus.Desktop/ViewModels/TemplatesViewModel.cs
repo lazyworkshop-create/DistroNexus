@@ -24,6 +24,28 @@ public partial class TemplatesViewModel : ObservableObject
     [ObservableProperty]
     private string _searchQuery = "";
 
+    [ObservableProperty]
+    private string _selectedCategory = "All";
+
+    partial void OnSelectedCategoryChanged(string value)
+    {
+        FilterTemplates();
+    }
+
+    [ObservableProperty]
+    private string _selectedScenarioTag = "All";
+
+    partial void OnSelectedScenarioTagChanged(string value)
+    {
+        FilterTemplates();
+    }
+
+    [ObservableProperty]
+    private ObservableCollection<string> _categoryOptions = new(["All"]);
+
+    [ObservableProperty]
+    private ObservableCollection<string> _scenarioTagOptions = new(["All"]);
+
     partial void OnSearchQueryChanged(string value)
     {
         FilterTemplates();
@@ -68,6 +90,21 @@ public partial class TemplatesViewModel : ObservableObject
             
             var templates = await _templateService.LoadTemplatesAsync(true);
             _allTemplates = templates;
+            CategoryOptions = new ObservableCollection<string>(new[] { "All" }
+                .Concat(_allTemplates.Select(t => t.Category).Where(c => !string.IsNullOrWhiteSpace(c)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(c => c)));
+            ScenarioTagOptions = new ObservableCollection<string>(new[] { "All" }
+                .Concat(_allTemplates.SelectMany(t => t.ScenarioTags).Where(t => !string.IsNullOrWhiteSpace(t)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(t => t)));
+
+            if (!CategoryOptions.Contains(SelectedCategory))
+            {
+                SelectedCategory = "All";
+            }
+
+            if (!ScenarioTagOptions.Contains(SelectedScenarioTag))
+            {
+                SelectedScenarioTag = "All";
+            }
+
             FilterTemplates();
             
             var path = _templateService.GetTemplateScriptsPath();
@@ -88,16 +125,35 @@ public partial class TemplatesViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(SearchQuery))
         {
-            Templates = new ObservableCollection<Template>(_allTemplates);
+            Templates = new ObservableCollection<Template>(ApplyAdvancedFilters(_allTemplates));
         }
         else
         {
             var filtered = _allTemplates.Where(t => 
                 t.Name.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) || 
-                t.Description.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase)
+                t.Description.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                t.Category.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                t.ScenarioTags.Any(tag => tag.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase))
             ).ToList();
-            Templates = new ObservableCollection<Template>(filtered);
+            Templates = new ObservableCollection<Template>(ApplyAdvancedFilters(filtered));
         }
+    }
+
+    private IEnumerable<Template> ApplyAdvancedFilters(IEnumerable<Template> source)
+    {
+        var filtered = source;
+
+        if (!string.Equals(SelectedCategory, "All", StringComparison.OrdinalIgnoreCase))
+        {
+            filtered = filtered.Where(t => string.Equals(t.Category, SelectedCategory, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!string.Equals(SelectedScenarioTag, "All", StringComparison.OrdinalIgnoreCase))
+        {
+            filtered = filtered.Where(t => t.ScenarioTags.Any(tag => string.Equals(tag, SelectedScenarioTag, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        return filtered;
     }
 
     [RelayCommand]

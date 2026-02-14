@@ -166,7 +166,9 @@ public class TemplateService : ITemplateService
         var templates = await LoadTemplatesAsync(false, cancellationToken);
         if (string.IsNullOrWhiteSpace(query)) return templates;
         return templates.Where(t => t.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-                                    t.Description.Contains(query, StringComparison.OrdinalIgnoreCase))
+                                    t.Description.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                                    t.Category.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                                    t.ScenarioTags.Any(tag => tag.Contains(query, StringComparison.OrdinalIgnoreCase)))
                         .ToList();
     }
 
@@ -195,11 +197,25 @@ public class TemplateService : ITemplateService
             template.IsCustom ? "custom" : "official");
 
         variables ??= new Dictionary<string, string>();
+        var effectiveVariables = CreateEffectiveVariables(template, variables);
+
+        _logger.LogInformation(
+            "Template execution selections; TemplateId={TemplateId}; InstallMode={InstallMode}; Selections={Selections}; OutputArtifacts={OutputArtifacts}",
+            template.Id,
+            template.InstallMode,
+            JsonSerializer.Serialize(effectiveVariables),
+            JsonSerializer.Serialize(template.OutputArtifacts.Select(a => new { a.Type, a.Path, a.Optional })));
         
         reportProgress(0, "Initiating template application...", 0, template.Scripts.Count);
 
         try
         {
+            if (template.PreflightChecks.Count > 0)
+            {
+                reportProgress(0, "Running preflight checks...", 0, template.Scripts.Count);
+                await ExecutePreflightChecksAsync(template, instanceName, effectiveVariables, cancellationToken, progress);
+            }
+
             int scriptIndex = 0;
             foreach (var script in template.Scripts.OrderBy(s => s.Order))
             {
@@ -213,7 +229,7 @@ public class TemplateService : ITemplateService
                     var execution = await ExecuteScriptAsync(
                         script,
                         instanceName,
-                        variables,
+                        effectiveVariables,
                         cancellationToken,
                         progress == null
                             ? null
@@ -321,7 +337,59 @@ public class TemplateService : ITemplateService
     public Task<TemplateValidationResult> ValidateTemplateAsync(Template template, string? distributionName = null)
     {
         var result = new TemplateValidationResult { IsValid = true };
-        if (string.IsNullOrWhiteSpace(template.Id)) result.IsValid = false;
+
+        if (string.IsNullOrWhiteSpace(template.Id))
+        {
+            result.Errors.Add("Template Id is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(template.Name))
+        {
+            result.Errors.Add("Template Name is required.");
+        }
+
+        if (template.Scripts.Count == 0)
+        {
+            result.Errors.Add("At least one script is required.");
+        }
+
+        foreach (var script in template.Scripts)
+        {
+            if (string.IsNullOrWhiteSpace(script.Content) && string.IsNullOrWhiteSpace(script.ScriptPath))
+            {
+                result.Errors.Add($"Script '{script.Name}' must specify Content or ScriptPath.");
+            }
+        }
+
+        if (template.InstallMode == TemplateInstallMode.VersionManager && template.VersionOptions.Count == 0)
+        {
+            result.Warnings.Add("InstallMode is VersionManager but VersionOptions is empty.");
+        }
+
+        var categoryNeedsScenario = new[] { "CloudNative", "DataAndAI", "Database", "DevOps", "Platform" };
+        if (categoryNeedsScenario.Contains(template.Category, StringComparer.OrdinalIgnoreCase) && template.ScenarioTags.Count == 0)
+        {
+            result.Warnings.Add($"Category '{template.Category}' should declare at least one ScenarioTag.");
+        }
+
+        foreach (var versionOption in template.VersionOptions)
+        {
+            if (string.IsNullOrWhiteSpace(versionOption.Key))
+            {
+                result.Errors.Add("Version option key is required.");
+                continue;
+            }
+
+            if (versionOption.Required)
+            {
+                var hasDefaultSelection = template.DefaultSelections.ContainsKey(versionOption.Key) ||
+                                          !string.IsNullOrWhiteSpace(versionOption.DefaultValue);
+                if (!hasDefaultSelection)
+                {
+                    result.Warnings.Add($"Version option '{versionOption.Key}' has no default selection.");
+                }
+            }
+        }
         
         if (!string.IsNullOrEmpty(distributionName) && template.CompatibleDistros != null && template.CompatibleDistros.Count > 0)
         {
@@ -332,6 +400,8 @@ public class TemplateService : ITemplateService
                 result.Warnings.Add($"Template may not be compatible with {distributionName}");
             }
         }
+
+        result.IsValid = result.Errors.Count == 0;
         
         return Task.FromResult(result);
     }
@@ -583,6 +653,115 @@ public class TemplateService : ITemplateService
         }
 
         return await _powerShellService.ExecuteScriptStreamingAsync(command, onOutputLine, line => onOutputLine($"[ERR] {line}"), cancellationToken);
+    }
+
+    private Dictionary<string, string> CreateEffectiveVariables(Template template, Dictionary<string, string> runtimeVariables)
+    {
+        var effective = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var kv in template.Variables)
+        {
+            effective[kv.Key] = kv.Value;
+        }
+
+        foreach (var kv in template.DefaultSelections)
+        {
+            effective[kv.Key] = kv.Value;
+        }
+
+        foreach (var option in template.VersionOptions)
+        {
+            if (string.IsNullOrWhiteSpace(option.Key))
+            {
+                continue;
+            }
+
+            if (!effective.ContainsKey(option.Key) && !string.IsNullOrWhiteSpace(option.DefaultValue))
+            {
+                effective[option.Key] = option.DefaultValue;
+            }
+        }
+
+        foreach (var kv in runtimeVariables)
+        {
+            effective[kv.Key] = kv.Value;
+        }
+
+        return effective;
+    }
+
+    private async Task ExecutePreflightChecksAsync(
+        Template template,
+        string instanceName,
+        Dictionary<string, string> variables,
+        CancellationToken cancellationToken,
+        IProgress<TemplateProgress>? progress)
+    {
+        foreach (var check in template.PreflightChecks)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (!ShouldRunPreflightCheck(check, variables))
+            {
+                continue;
+            }
+
+            var command = BuildPreflightCommand(check, instanceName);
+            try
+            {
+                var output = await ExecuteWithTimeoutAsync(command, 60, cancellationToken);
+                progress?.Report(new TemplateProgress
+                {
+                    PercentComplete = 0,
+                    StatusMessage = $"Preflight passed: {check.Name}",
+                    LatestOutput = output
+                });
+            }
+            catch (Exception ex)
+            {
+                var message = string.IsNullOrWhiteSpace(check.ErrorMessage)
+                    ? $"Preflight check failed: {check.Name}. {ex.Message}"
+                    : check.ErrorMessage;
+
+                if (check.Required)
+                {
+                    throw new InvalidOperationException(message, ex);
+                }
+
+                _logger.LogWarning(ex, "Optional preflight check failed: {CheckName}", check.Name);
+            }
+        }
+    }
+
+    private static bool ShouldRunPreflightCheck(TemplatePreflightCheck check, Dictionary<string, string> variables)
+    {
+        if (string.IsNullOrWhiteSpace(check.AppliesToVariable))
+        {
+            return true;
+        }
+
+        if (!variables.TryGetValue(check.AppliesToVariable, out var value))
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(check.AppliesToValue))
+        {
+            return true;
+        }
+
+        return string.Equals(value, check.AppliesToValue, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string BuildPreflightCommand(TemplatePreflightCheck check, string instanceName)
+    {
+        if (check.Type == TemplateScriptType.Bash)
+        {
+            var escaped = check.Command.Replace("'", "'\\''");
+            return $"wsl -d {instanceName} -- bash -c '{escaped}'";
+        }
+
+        return check.Command;
     }
 
     private sealed record ScriptExecutionResult(string Source, string Output);

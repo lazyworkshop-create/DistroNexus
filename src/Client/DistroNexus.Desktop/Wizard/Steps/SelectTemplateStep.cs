@@ -31,6 +31,21 @@ public partial class SelectTemplateStep : WizardStepBase
     private string _searchQuery = string.Empty;
 
     [ObservableProperty]
+    private string _selectedCategory = "All";
+
+    [ObservableProperty]
+    private string _selectedScenarioTag = "All";
+
+    [ObservableProperty]
+    private ObservableCollection<string> _categoryOptions = new(["All"]);
+
+    [ObservableProperty]
+    private ObservableCollection<string> _scenarioTagOptions = new(["All"]);
+
+    [ObservableProperty]
+    private bool _showAdvancedOptions;
+
+    [ObservableProperty]
     private bool _skipTemplate;
 
     public Template? SelectedTemplate
@@ -53,6 +68,16 @@ public partial class SelectTemplateStep : WizardStepBase
     }
 
     partial void OnSearchQueryChanged(string value)
+    {
+        ApplyFilters();
+    }
+
+    partial void OnSelectedCategoryChanged(string value)
+    {
+        ApplyFilters();
+    }
+
+    partial void OnSelectedScenarioTagChanged(string value)
     {
         ApplyFilters();
     }
@@ -156,6 +181,21 @@ public partial class SelectTemplateStep : WizardStepBase
             var loaded = await _templateService.LoadTemplatesAsync();
 
             _allTemplates = loaded;
+            CategoryOptions = new ObservableCollection<string>(new[] { "All" }
+                .Concat(_allTemplates.Select(t => t.Category).Where(c => !string.IsNullOrWhiteSpace(c)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(c => c)));
+            ScenarioTagOptions = new ObservableCollection<string>(new[] { "All" }
+                .Concat(_allTemplates.SelectMany(t => t.ScenarioTags).Where(c => !string.IsNullOrWhiteSpace(c)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(c => c)));
+
+            if (!CategoryOptions.Contains(SelectedCategory))
+            {
+                SelectedCategory = "All";
+            }
+
+            if (!ScenarioTagOptions.Contains(SelectedScenarioTag))
+            {
+                SelectedScenarioTag = "All";
+            }
+
             ApplyFilters();
         }
         catch(Exception ex) 
@@ -185,7 +225,18 @@ public partial class SelectTemplateStep : WizardStepBase
             filtered = filtered.Where(t =>
                 t.Name.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
                 t.Description.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
-                t.Category.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase));
+                t.Category.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                t.ScenarioTags.Any(tag => tag.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        if (!string.Equals(SelectedCategory, "All", StringComparison.OrdinalIgnoreCase))
+        {
+            filtered = filtered.Where(t => string.Equals(t.Category, SelectedCategory, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!string.Equals(SelectedScenarioTag, "All", StringComparison.OrdinalIgnoreCase))
+        {
+            filtered = filtered.Where(t => t.ScenarioTags.Any(tag => string.Equals(tag, SelectedScenarioTag, StringComparison.OrdinalIgnoreCase)));
         }
 
         Templates = new ObservableCollection<Template>(filtered);

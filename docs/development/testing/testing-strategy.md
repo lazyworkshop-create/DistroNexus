@@ -52,6 +52,12 @@ We follow a balanced test pyramid approach:
 - **Coverlet 6.0.4**: Code coverage collection
 - **ReportGenerator 5.4.0**: Coverage report generation
 
+### Desktop UI Automation
+- **FlaUI (UIA3)**: Desktop UI automation for WPF flows
+- **xUnit Trait(Category=UIAutomation)**: UI automation test classification
+- **Opt-in execution flag**: `DISTRONEXUS_RUN_UI_AUTOMATION=1`
+- **Optional app path override**: `DISTRONEXUS_DESKTOP_EXE`
+
 ### CI/CD
 - **GitHub Actions**: Automated test execution
 - **Test Artifacts**: Store test results and coverage reports

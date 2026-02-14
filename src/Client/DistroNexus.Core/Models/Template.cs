@@ -22,11 +22,61 @@ public partial class Template : ObservableObject
     public List<TemplateScript> Scripts { get; set; } = new();
     public List<TemplatePackage> Packages { get; set; } = new();
     public Dictionary<string, string> Variables { get; set; } = new();
+    public Dictionary<string, string> DefaultSelections { get; set; } = new();
+    public List<TemplateVersionOption> VersionOptions { get; set; } = new();
+    public List<TemplatePreflightCheck> PreflightChecks { get; set; } = new();
+    public List<TemplateOutputArtifact> OutputArtifacts { get; set; } = new();
+    public List<string> ScenarioTags { get; set; } = new();
+    public TemplateInstallMode InstallMode { get; set; } = TemplateInstallMode.Scripted;
     public bool IsOfficial { get; set; }
     public bool IsCustom { get; set; }
 
     [ObservableProperty]
     private bool _isInstalled;
+}
+
+public class TemplateVersionOption
+{
+    public string Key { get; set; } = string.Empty;
+    public string Label { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public bool Required { get; set; }
+    public string DefaultValue { get; set; } = string.Empty;
+    public List<TemplateOptionValue> Options { get; set; } = new();
+}
+
+public class TemplateOptionValue
+{
+    public string Value { get; set; } = string.Empty;
+    public string Label { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+}
+
+public class TemplatePreflightCheck
+{
+    public string Id { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Command { get; set; } = string.Empty;
+    public TemplateScriptType Type { get; set; } = TemplateScriptType.Bash;
+    public bool Required { get; set; } = true;
+    public string ErrorMessage { get; set; } = string.Empty;
+    public string AppliesToVariable { get; set; } = string.Empty;
+    public string AppliesToValue { get; set; } = string.Empty;
+}
+
+public class TemplateOutputArtifact
+{
+    public string Type { get; set; } = string.Empty;
+    public string Path { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public bool Optional { get; set; }
+}
+
+public enum TemplateInstallMode
+{
+    PackageManager,
+    VersionManager,
+    Scripted
 }
 
 /// <summary>

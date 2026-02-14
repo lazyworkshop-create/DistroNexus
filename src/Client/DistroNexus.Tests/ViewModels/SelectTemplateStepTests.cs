@@ -121,4 +121,30 @@ public class SelectTemplateStepTests
         Assert.False(step.Context.ApplyTemplateAfterInstall);
         Assert.Null(step.Context.SelectedTemplate);
     }
+
+    [Fact]
+    public async Task OnEnterAsync_FiltersByScenarioTag()
+    {
+        var step = new SelectTemplateStep(_mockTemplateService.Object, _mockLogger.Object);
+        step.Context = new WizardContext
+        {
+            SelectedDistribution = new DistroPackage { Name = "Ubuntu" }
+        };
+
+        var expectedTemplates = new List<Template>
+        {
+            new() { Id = "k8s", Name = "Kubernetes", ScenarioTags = ["k8s"] },
+            new() { Id = "db", Name = "Database", ScenarioTags = ["database"] }
+        };
+
+        _mockTemplateService
+            .Setup(x => x.LoadTemplatesAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedTemplates);
+
+        await step.OnEnterAsync();
+        step.SelectedScenarioTag = "k8s";
+
+        Assert.Single(step.Templates);
+        Assert.Equal("k8s", step.Templates[0].Id);
+    }
 }
