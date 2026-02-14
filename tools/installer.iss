@@ -3,7 +3,7 @@
 ; Requires: Inno Setup 6.0 or later (https://jrsoftware.org/isinfo.php)
 
 #define MyAppName "DistroNexus"
-#define MyAppVersion "2.0.0"
+#define MyAppVersion "2.0.1"
 #define MyAppPublisher "LazyWorkshop"
 #define MyAppURL "https://github.com/lazyworkshop-create/DistroNexus"
 #define MyAppExeName "DistroNexus.Desktop.exe"

@@ -6,10 +6,10 @@
     Convenience script that builds and packages DistroNexus as a portable ZIP.
     Creates both framework-dependent and self-contained packages.
 .PARAMETER Version
-    Version number for the package. Default is 2.0.0
+    Version number for the package. Default is 2.0.1
 #>
 param(
-    [string]$Version = '2.0.0'
+    [string]$Version = '2.0.1'
 )
 
 $ErrorActionPreference = 'Stop'

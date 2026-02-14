@@ -140,14 +140,14 @@ public class CatalogServiceTests
         // Arrange
         _mockCatalogService
             .Setup(x => x.GetCatalogCachePath())
-            .Returns(@"C:\Users\Test\AppData\Roaming\DistroNexus\distros.json");
+            .Returns(@"C:\Users\Test\AppData\Roaming\DistroNexus\catalog.json");
 
         // Act
         var path = _mockCatalogService.Object.GetCatalogCachePath();
 
         // Assert
         Assert.NotNull(path);
-        Assert.Contains("distros.json", path);
+        Assert.Contains("catalog.json", path);
     }
 
     [Fact]

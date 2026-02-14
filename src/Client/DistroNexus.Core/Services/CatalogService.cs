@@ -50,16 +50,15 @@ public class CatalogService : ICatalogService
 
     private static string FindLocalCatalogPath(string baseDir)
     {
-        // Try multiple possible paths for the local distros.json file
+        // Try multiple possible paths for the local catalog.json file
         string[] possiblePaths =
         [
-            Path.Combine(baseDir, "config", "distros.json"),
-            Path.Combine(baseDir, @"..\config\distros.json"),
-            Path.Combine(baseDir, @"..\..\config\distros.json"),
-            Path.Combine(baseDir, @"..\..\..\config\distros.json"),
-            Path.Combine(baseDir, @"..\..\..\..\config\distros.json"),
-            Path.Combine(baseDir, @"..\..\..\..\..\config\distros.json"),
-            @"D:\wsl\DistroNexus\config\distros.json" // Direct path as final fallback
+            Path.Combine(baseDir, "config", "catalog.json"),
+            Path.Combine(baseDir, @"..\config\catalog.json"),
+            Path.Combine(baseDir, @"..\..\config\catalog.json"),
+            Path.Combine(baseDir, @"..\..\..\config\catalog.json"),
+            Path.Combine(baseDir, @"..\..\..\..\config\catalog.json"),
+            Path.Combine(baseDir, @"..\..\..\..\..\config\catalog.json")
         ];
 
         foreach (var path in possiblePaths)
@@ -72,7 +71,7 @@ public class CatalogService : ICatalogService
         }
 
         // Return a default path even if it doesn't exist
-        return Path.Combine(baseDir, "config", "distros.json");
+        return Path.Combine(baseDir, "config", "catalog.json");
     }
 
     /// <inheritdoc/>

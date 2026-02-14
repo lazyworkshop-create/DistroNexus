@@ -88,7 +88,7 @@ if (Test-Path $settingsPath) {
         EnableLogging = $true
         LogPath = ""
         CheckUpdatesOnStartup = $true
-        CatalogUrl = "https://raw.githubusercontent.com/lazyworkshop-create/DistroNexus/main/config/distros.json"
+        CatalogUrl = "https://raw.githubusercontent.com/lazyworkshop-create/DistroNexus/main/config/catalog.json"
         Theme = "Auto"
         Language = "en-US"
         ShowConfirmationDialogs = $true

@@ -1,3 +1,9 @@
+; DEPRECATED: Legacy v1 packaging script.
+; Use ..\installer.iss for current v2.x releases.
+#ifndef ALLOW_LEGACY_PACKAGING
+  #error "Deprecated script: use tools\\installer.iss (or define ALLOW_LEGACY_PACKAGING to continue intentionally)."
+#endif
+
 #define MyAppName "DistroNexus - The WSL Distro Manager"
 #ifndef MyAppVersion
   #define MyAppVersion "1.0.2"

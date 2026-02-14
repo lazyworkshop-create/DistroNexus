@@ -243,7 +243,7 @@ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                            Margin="0,0,10,0"/>
                 <ui:TextBox Grid.Column="1" 
                            Text="{Binding CustomSourceUrl, UpdateSourceTrigger=PropertyChanged}"
-                           PlaceholderText="https://example.com/distros.json"/>
+                           PlaceholderText="https://example.com/catalog.json"/>
                 <ui:Button Grid.Column="2" 
                           Content="{lex:Loc ActionAdd}" 
                           Icon="{ui:SymbolIcon Symbol=Add20}"

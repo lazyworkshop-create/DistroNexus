@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Build script for DistroNexus v2.0.0
+    Build script for DistroNexus v2.0.1
 .DESCRIPTION
     Builds the .NET application and packages it with the PowerShell module.
     Supports Debug/Release configurations, self-contained publishing, and portable ZIP creation.
@@ -16,7 +16,7 @@
 .PARAMETER CreateZip
     Create portable ZIP package after publishing
 .PARAMETER Version
-    Version string for the build. Default is 2.0.0
+    Version string for the build. Default is 2.0.1
 .EXAMPLE
     .\build_v2.ps1 -Configuration Release -Publish -CreateZip
 .EXAMPLE
@@ -34,7 +34,7 @@ param(
     
     [switch]$CreateZip,
     
-    [string]$Version = '2.0.0'
+    [string]$Version = '2.0.1'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -165,7 +165,7 @@ if ($Publish) {
             DefaultInstallPath = 'C:\WSL'
             DefaultWslVersion = 2
             DefaultUsername = 'root'
-            CatalogUrl = 'https://raw.githubusercontent.com/lazyworkshop-create/DistroNexus/main/config/distros.json'
+            CatalogUrl = 'https://raw.githubusercontent.com/lazyworkshop-create/DistroNexus/main/config/catalog.json'
             Theme = 'Auto'
             EnableLogging = $true
         }

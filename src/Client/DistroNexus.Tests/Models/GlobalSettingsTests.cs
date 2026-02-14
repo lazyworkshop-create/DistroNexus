@@ -31,7 +31,7 @@ public class GlobalSettingsTests
             TerminalStartPath = "/home/admin",
             EnableLogging = false,
             CheckUpdatesOnStartup = false,
-            CatalogUrl = "https://custom.example.com/distros.json"
+            CatalogUrl = "https://custom.example.com/catalog.json"
         };
 
         // Assert
@@ -41,7 +41,7 @@ public class GlobalSettingsTests
         Assert.Equal("/home/admin", settings.TerminalStartPath);
         Assert.False(settings.EnableLogging);
         Assert.False(settings.CheckUpdatesOnStartup);
-        Assert.Equal("https://custom.example.com/distros.json", settings.CatalogUrl);
+        Assert.Equal("https://custom.example.com/catalog.json", settings.CatalogUrl);
     }
 
     [Theory]

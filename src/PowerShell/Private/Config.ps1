@@ -1,7 +1,7 @@
 function Get-DistroNexusConfig {
     <#
     .SYNOPSIS
-        Loads configuration from distros.json and settings.json.
+        Loads configuration from catalog.json and settings.json.
 
     .DESCRIPTION
         Internal helper function to load distro catalog and global settings.
@@ -32,26 +32,22 @@ function Get-DistroNexusConfig {
         Settings = $null
     }
     
-    # Load catalog.json (or distros.json for compatibility)
+    # Load catalog.json
     $catalogPath = Join-Path $ConfigRoot "catalog.json"
-    if (-not (Test-Path $catalogPath)) {
-        # Fallback to distros.json for backward compatibility
-        $catalogPath = Join-Path $ConfigRoot "distros.json"
-    }
     
     if (Test-Path $catalogPath) {
         try {
             $distrosContent = Get-Content -Raw -Path $catalogPath | ConvertFrom-Json
             $result.Distros = $distrosContent
-            Write-Verbose "Loaded distros catalog from $catalogPath"
+            Write-Verbose "Loaded catalog from $catalogPath"
         }
         catch {
             Write-DistroNexusLog "Failed to load catalog: $_" -Level ERROR
-            throw "Failed to parse distros catalog. Please ensure it is valid JSON."
+            throw "Failed to parse catalog. Please ensure it is valid JSON."
         }
     }
     else {
-        Write-DistroNexusLog "Distros catalog not found at $catalogPath" -Level WARN
+        Write-DistroNexusLog "Catalog not found at $catalogPath" -Level WARN
     }
     
     # Load settings.json

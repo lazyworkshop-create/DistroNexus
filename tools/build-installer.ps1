@@ -6,12 +6,12 @@
     Creates a Windows installer (.exe) for DistroNexus using Inno Setup.
     Requires Inno Setup 6.0 or later to be installed.
 .PARAMETER Version
-    Version number for the installer. Default is 2.0.0
+    Version number for the installer. Default is 2.0.1
 .PARAMETER IssPath
     Path to the Inno Setup compiler (iscc.exe). Auto-detected if not specified.
 #>
 param(
-    [string]$Version = '2.0.0',
+    [string]$Version = '2.0.1',
     [string]$IssPath
 )
 

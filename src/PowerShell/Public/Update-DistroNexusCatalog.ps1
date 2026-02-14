@@ -4,7 +4,7 @@ function Update-DistroNexusCatalog {
         Updates the distribution catalog from the online source.
 
     .DESCRIPTION
-        Fetches the latest distros.json from the configured GitHub repository
+        Fetches the latest catalog.json from the configured GitHub repository
         and updates the local catalog. Falls back to existing local copy on failure.
 
     .PARAMETER SourceUrl
@@ -14,7 +14,7 @@ function Update-DistroNexusCatalog {
         Update-DistroNexusCatalog
 
     .EXAMPLE
-        Update-DistroNexusCatalog -SourceUrl "https://raw.githubusercontent.com/user/repo/main/config/distros.json"
+        Update-DistroNexusCatalog -SourceUrl "https://raw.githubusercontent.com/user/repo/main/config/catalog.json"
 
     .OUTPUTS
         Boolean indicating success or failure
@@ -37,17 +37,17 @@ function Update-DistroNexusCatalog {
             # Get source URL
             if (-not $SourceUrl) {
                 $config = Get-DistroNexusConfig
-                $SourceUrl = $config.Settings.DistroSourceUrl
+                $SourceUrl = $config.Settings.CatalogUrl
                 
                 if (-not $SourceUrl) {
-                    $SourceUrl = "https://raw.githubusercontent.com/LazyWorkshop-Create/DistroNexus/main/config/distros.json"
+                    $SourceUrl = "https://raw.githubusercontent.com/LazyWorkshop-Create/DistroNexus/main/config/catalog.json"
                 }
             }
             
             Write-DistroNexusLog "Fetching from: $SourceUrl"
             
             # Download catalog
-            $tempFile = Join-Path $env:TEMP "distros_temp.json"
+            $tempFile = Join-Path $env:TEMP "catalog_temp.json"
             $progressPreference = 'SilentlyContinue'
             
             try {
