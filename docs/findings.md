@@ -40,3 +40,42 @@
 - Project-level version pinning artifacts should be generated optionally by templates to improve reproducibility across teams.
 - WSL2-sensitive templates (systemd/container/GPU) require mandatory preflight checks and explicit fallback guidance.
 - A phased rollout is the safest path: metadata extension first, then language templates, then WSL2 scenario templates.
+
+---
+
+# Findings: Built-in Template Automation Test Suite (Local WSL2)
+
+## Baseline Observations
+- Existing PowerShell runner already supports local WSL2-gated execution via `-EnableWsl2Scenarios` and `DISTRONEXUS_RUN_WSL2_TESTS=1`.
+- Existing acceptance checklist still contains many `manual E2E required` items for real runtime verification.
+- Existing hybrid documents already define the right validation pattern: UI flow + WSL command probes.
+
+## External Research Notes
+- Pester v5 advanced configuration supports all required controls for local automation suite design:
+	- test selection by tag (`Filter.Tag`, `Filter.ExcludeTag`) and path,
+	- machine-readable test result files (`TestResult.OutputFormat`, `TestResult.OutputPath`),
+	- structured object output for post-processing (`Run.PassThru`).
+- Pester test result formats include `NUnitXml` and `JUnitXml`, suitable for deterministic run artifacts.
+- WSL command reference confirms host-side orchestration and diagnostics primitives are stable for runner logic:
+	- distro discovery and targeting (`wsl --list --verbose`, `wsl --distribution`),
+	- environment snapshot (`wsl --status`, `wsl --version`),
+	- lifecycle control (`wsl --shutdown`).
+- WSL systemd documentation confirms systemd capability differs by distro/configuration and must be explicitly checked for service-oriented templates.
+
+## Source References
+- https://pester.dev/docs/usage/configuration
+- https://pester.dev/docs/commands/New-PesterConfiguration
+- https://pester.dev/docs/commands/Invoke-Pester
+- https://pester.dev/docs/usage/test-results
+- https://learn.microsoft.com/windows/wsl/basic-commands
+- https://learn.microsoft.com/windows/wsl/systemd
+
+## Conclusions
+- The most suitable approach is a **local-only hybrid automation suite** driven by Pester and validated through real WSL probes.
+- Full-catalog testing and selective template testing can both be implemented cleanly with metadata-driven discovery + tag/template ID filtering.
+- Result persistence should be standardized as XML + JSON + markdown summaries under `docs/development/testing/results/` for auditability.
+- Capability-gated scenarios (GPU/systemd/Docker Desktop integration) should use `Blocked` classification instead of false-negative `Failed` when host prerequisites are missing.
+- Delivery-document mapping is now complete:
+	- implementation tasks define build sequence and ownership-ready work items,
+	- acceptance criteria define release gate conditions,
+	- test checklist defines executable verification path and pass standards.

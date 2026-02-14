@@ -42,3 +42,33 @@
 - Final local WSL2-enabled validation completed with zero skipped tests:
 	- `./tests/PowerShell/TestRunner.ps1 -TestType Unit -EnableWsl2Scenarios` => Passed 89, Failed 0, Skipped 0.
 	- `./tests/PowerShell/TestRunner.ps1 -EnableWsl2Scenarios` => Passed 91, Failed 0, Skipped 0.
+- Started requirement research for a dedicated built-in template automation suite focused on local WSL2 development execution.
+- Reviewed current runner capability (`tests/PowerShell/TestRunner.ps1`) and identified existing local WSL2 switch as reusable baseline.
+- Reviewed remaining acceptance backlog and hybrid automation docs to align requirement scope with unresolved manual E2E areas.
+- Performed web research on Pester v5 advanced configuration/filtering/test-result output and official WSL command/systemd constraints.
+- Authored requirements specification: `docs/specs/built-in-template-automation-test-suite-requirements.md`.
+- Updated planning and findings traceability documents for this requirement phase:
+	- `docs/task_plan.md`
+	- `docs/findings.md`
+	- `docs/progress.md`
+- Created implementation task breakdown for automation suite delivery:
+	- `docs/development/built-in-template-automation-implementation-task-list.md`
+- Created objective acceptance criteria document for release gate:
+	- `docs/development/testing/built-in-template-automation-acceptance-criteria.md`
+- Created executable verification checklist for full, selective, and artifact-output paths:
+	- `docs/development/testing/built-in-template-automation-test-checklist.md`
+- Implemented local template automation runner command in PowerShell module:
+	- `src/PowerShell/Public/Invoke-DistroNexusTemplateAutomation.ps1`
+- Exported new runner command from module manifest:
+	- `src/PowerShell/DistroNexus.psd1`
+- Added dedicated unit tests for runner policy, selection, dry-run artifacts, and non-dry-run execution path:
+	- `tests/PowerShell/Unit/Public/Invoke-DistroNexusTemplateAutomation.Tests.ps1`
+- Validation completed:
+	- `./tests/PowerShell/TestRunner.ps1 -TestType Unit` => Passed 90, Failed 0, Skipped 3.
+	- `./tests/PowerShell/TestRunner.ps1 -TestType All` => Passed 92, Failed 0, Skipped 3.
+	- `dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj` => Passed 197, Failed 0.
+	- `dotnet test tests/CSharp/Integration/IntegrationTests.csproj` => Build succeeded, 0 tests discovered, Failed 0.
+- Marked all automation delivery documents as completed:
+	- `docs/development/built-in-template-automation-implementation-task-list.md`
+	- `docs/development/testing/built-in-template-automation-acceptance-criteria.md`
+	- `docs/development/testing/built-in-template-automation-test-checklist.md`
