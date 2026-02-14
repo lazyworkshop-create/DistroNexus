@@ -44,6 +44,9 @@ public class DownloadTaskManager : IDownloadTaskManager
     /// <inheritdoc/>
     public DownloadTask AddTask(DistroPackage package, string destinationPath)
     {
+        ArgumentNullException.ThrowIfNull(package);
+        ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
+
         var task = new DownloadTask
         {
             PackageId = package.Id,
@@ -259,9 +262,14 @@ public class DownloadTaskManager : IDownloadTaskManager
     public bool CancelTask(string taskId)
     {
         var task = GetTask(taskId);
-        if (task != null && task.Status == DownloadStatus.Downloading)
+        if (task != null && (task.Status == DownloadStatus.Downloading || task.Status == DownloadStatus.Pending))
         {
             task.CancellationTokenSource?.Cancel();
+            if (task.Status == DownloadStatus.Pending)
+            {
+                task.Status = DownloadStatus.Cancelled;
+                OnTaskStatusChanged(task);
+            }
             _logger.LogInformation("Cancelled download task: {PackageName}", task.PackageName);
             return true;
         }

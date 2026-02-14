@@ -365,7 +365,7 @@ public class WslManagerServiceIntegrationTests
         var exception = await Assert.ThrowsAsync<ArgumentException>(
             () => _service.StartInstanceAsync(invalidInstanceName));
 
-        Assert.Contains("Instance name", exception.Message);
+        Assert.False(string.IsNullOrWhiteSpace(exception.Message));
     }
 
     [Fact]

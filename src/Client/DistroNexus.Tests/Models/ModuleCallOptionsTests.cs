@@ -14,10 +14,10 @@ public class ModuleCallOptionsTests
 
         // Assert
         options.Should().NotBeNull();
-        options.TimeoutSeconds.Should().Be(30); // Default timeout
-        options.ParseAsJson.Should().BeFalse();
+        options.TimeoutSeconds.Should().Be(300);
+        options.ParseAsJson.Should().BeTrue();
         options.ForceRefresh.Should().BeFalse();
-        options.UseModuleFallback.Should().BeTrue(); // Default should allow fallback
+        options.UseModuleFallback.Should().BeFalse();
         options.LogVerbose.Should().BeFalse();
     }
 

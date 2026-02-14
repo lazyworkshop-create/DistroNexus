@@ -157,9 +157,15 @@ public class DownloadTaskManagerTests : IDisposable
     public void CancelTask_WithValidId_ShouldCancelTask()
     {
         // Arrange
-        var package = new DistroPackage { Id = "test-package" };
-        var destinationPath = @"C:\Downloads";
-        var task = _downloadTaskManager.AddTask(package, destinationPath);
+        var task = new DownloadTask
+        {
+            PackageId = "test-package",
+            PackageName = "Test",
+            DestinationPath = @"C:\Downloads",
+            Status = DownloadStatus.Downloading,
+            CancellationTokenSource = new CancellationTokenSource()
+        };
+        _downloadTaskManager.Tasks.Add(task);
 
         // Act
         var cancelled = _downloadTaskManager.CancelTask(task.Id.ToString());
@@ -185,15 +191,24 @@ public class DownloadTaskManagerTests : IDisposable
     public void ClearCompletedTasks_ShouldRemoveCompletedTasks()
     {
         // Arrange
-        var package1 = new DistroPackage { Id = "test-package-1" };
-        var package2 = new DistroPackage { Id = "test-package-2" };
-        var destinationPath = @"C:\Downloads";
-        
-        var task1 = _downloadTaskManager.AddTask(package1, destinationPath);
-        var task2 = _downloadTaskManager.AddTask(package2, destinationPath);
-
-        // Manually set one task as completed
-        task1.Status = DownloadStatus.Completed;
+        var task1 = new DownloadTask
+        {
+            PackageId = "test-package-1",
+            PackageName = "Test 1",
+            DestinationPath = @"C:\Downloads",
+            Status = DownloadStatus.Completed,
+            CancellationTokenSource = new CancellationTokenSource()
+        };
+        var task2 = new DownloadTask
+        {
+            PackageId = "test-package-2",
+            PackageName = "Test 2",
+            DestinationPath = @"C:\Downloads",
+            Status = DownloadStatus.Downloading,
+            CancellationTokenSource = new CancellationTokenSource()
+        };
+        _downloadTaskManager.Tasks.Add(task1);
+        _downloadTaskManager.Tasks.Add(task2);
 
         // Act
         _downloadTaskManager.ClearCompletedTasks();
@@ -218,16 +233,24 @@ public class DownloadTaskManagerTests : IDisposable
     public void GetActiveTasksCount_ShouldReturnCorrectCount()
     {
         // Arrange
-        var package1 = new DistroPackage { Id = "test-package-1" };
-        var package2 = new DistroPackage { Id = "test-package-2" };
-        var destinationPath = @"C:\Downloads";
-        
-        var task1 = _downloadTaskManager.AddTask(package1, destinationPath);
-        var task2 = _downloadTaskManager.AddTask(package2, destinationPath);
-
-        // Set one task as completed
-        task1.Status = DownloadStatus.Completed;
-        task2.Status = DownloadStatus.Downloading;
+        var task1 = new DownloadTask
+        {
+            PackageId = "test-package-1",
+            PackageName = "Test 1",
+            DestinationPath = @"C:\Downloads",
+            Status = DownloadStatus.Completed,
+            CancellationTokenSource = new CancellationTokenSource()
+        };
+        var task2 = new DownloadTask
+        {
+            PackageId = "test-package-2",
+            PackageName = "Test 2",
+            DestinationPath = @"C:\Downloads",
+            Status = DownloadStatus.Downloading,
+            CancellationTokenSource = new CancellationTokenSource()
+        };
+        _downloadTaskManager.Tasks.Add(task1);
+        _downloadTaskManager.Tasks.Add(task2);
 
         // Act
         var count = _downloadTaskManager.GetActiveTasksCount();

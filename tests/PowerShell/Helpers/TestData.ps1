@@ -216,11 +216,13 @@ function Initialize-TestDataFiles {
     }
 }
 
-Export-ModuleMember -Function @(
-    'Get-TestWslListOutput',
-    'Get-TestCacheData',
-    'Get-TestDistroFile',
-    'New-TestPackageFile',
-    'Get-TestTerminalConfig',
-    'Initialize-TestDataFiles'
-)
+if ($ExecutionContext.SessionState.Module) {
+    Export-ModuleMember -Function @(
+        'Get-TestWslListOutput',
+        'Get-TestCacheData',
+        'Get-TestDistroFile',
+        'New-TestPackageFile',
+        'Get-TestTerminalConfig',
+        'Initialize-TestDataFiles'
+    )
+}

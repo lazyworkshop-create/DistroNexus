@@ -203,13 +203,15 @@ function Clear-TestEnvironment {
     }
 }
 
-Export-ModuleMember -Function @(
-    'Mock-WslCommand',
-    'Mock-WebRequest',
-    'Mock-RegistryAccess',
-    'Mock-DistroNexusConfig',
-    'New-MockWslInstance',
-    'New-MockDistroEntry',
-    'Initialize-TestEnvironment',
-    'Clear-TestEnvironment'
-)
+if ($ExecutionContext.SessionState.Module) {
+    Export-ModuleMember -Function @(
+        'Mock-WslCommand',
+        'Mock-WebRequest',
+        'Mock-RegistryAccess',
+        'Mock-DistroNexusConfig',
+        'New-MockWslInstance',
+        'New-MockDistroEntry',
+        'Initialize-TestEnvironment',
+        'Clear-TestEnvironment'
+    )
+}

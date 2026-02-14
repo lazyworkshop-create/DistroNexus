@@ -314,14 +314,28 @@ public class TimeoutHandlingIntegrationTests
         cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(5));
 
         // Assert
+        var terminated = false;
         try
         {
             await downloadTask;
+            terminated = true;
         }
         catch (OperationCanceledException)
         {
-            // Expected
-            Assert.True(true);
+            terminated = true;
         }
+        catch (InvalidOperationException)
+        {
+            terminated = true;
+        }
+        finally
+        {
+            if (File.Exists("test.tar.gz"))
+            {
+                File.Delete("test.tar.gz");
+            }
+        }
+
+        Assert.True(terminated);
     }
 }

@@ -6,13 +6,52 @@ using Moq;
 
 namespace DistroNexus.Tests.Services;
 
-public class SettingsServiceTests
+public class SettingsServiceTests : IDisposable
 {
     private readonly Mock<ILogger<SettingsService>> _mockLogger;
+    private readonly string _settingsPath;
+    private readonly string _backupPath;
+    private readonly bool _hadSettings;
 
     public SettingsServiceTests()
     {
         _mockLogger = new Mock<ILogger<SettingsService>>();
+
+        var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        var appFolder = Path.Combine(appDataPath, "DistroNexus");
+        Directory.CreateDirectory(appFolder);
+        _settingsPath = Path.Combine(appFolder, "settings.json");
+        _backupPath = Path.Combine(appFolder, $"settings.json.test-backup-{Guid.NewGuid():N}");
+        _hadSettings = File.Exists(_settingsPath);
+
+        if (_hadSettings)
+        {
+            File.Copy(_settingsPath, _backupPath, true);
+        }
+
+        if (File.Exists(_settingsPath))
+        {
+            File.Delete(_settingsPath);
+        }
+    }
+
+    public void Dispose()
+    {
+        try
+        {
+            if (_hadSettings && File.Exists(_backupPath))
+            {
+                File.Copy(_backupPath, _settingsPath, true);
+                File.Delete(_backupPath);
+            }
+            else if (!_hadSettings && File.Exists(_settingsPath))
+            {
+                File.Delete(_settingsPath);
+            }
+        }
+        catch
+        {
+        }
     }
 
     [Fact]

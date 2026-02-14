@@ -46,6 +46,8 @@ public partial class WslManagerService : IWslManagerService
     /// <inheritdoc/>
     public async Task<List<WslInstance>> GetInstancesAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         _logger.LogInformation("Retrieving WSL instances using PowerShell module");
 
         // Always use PowerShell module with SkipDiskSize to avoid auto-starting stopped instances
@@ -65,6 +67,11 @@ public partial class WslManagerService : IWslManagerService
                 UseModuleFallback = false  // Do not use fallback, always require module
             },
             cancellationToken: cancellationToken);
+
+        if (moduleResult == null)
+        {
+            throw new InvalidOperationException("PowerShell module execution returned no result.");
+        }
 
         // Check if module call succeeded
         if (!moduleResult.Success)
@@ -565,6 +572,7 @@ public partial class WslManagerService : IWslManagerService
     public async Task<bool> StartInstanceAsync(string instanceName, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(instanceName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(instanceName);
 
         try
         {

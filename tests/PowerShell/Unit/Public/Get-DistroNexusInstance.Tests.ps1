@@ -3,8 +3,8 @@
 
 BeforeAll {
     # Import the module
-    $modulePath = Split-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) -Parent
-    $modulePath = Join-Path $modulePath "src\PowerShell"
+    $rootPath = Resolve-Path "$PSScriptRoot/../../../.."
+    $modulePath = Join-Path $rootPath "src\PowerShell"
     Import-Module (Join-Path $modulePath "DistroNexus.psd1") -Force
     
     # Import test helpers

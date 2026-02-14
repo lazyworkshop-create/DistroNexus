@@ -26,8 +26,8 @@ Describe "Get-DistroNexusTemplate" -Tag 'Unit', 'Public' {
 
                 $result = Get-DistroNexusTemplate
                 
-                $result.Count | Should Be 2
-                $result[0].Id | Should Be "tpl-1"
+                $result.Count | Should -Be 2
+                $result[0].Id | Should -Be "tpl-1"
             }
         }
 
@@ -45,8 +45,8 @@ Describe "Get-DistroNexusTemplate" -Tag 'Unit', 'Public' {
 
                 $result = Get-DistroNexusTemplate -Id "tpl-2"
                 
-                $result.Count | Should Be 1
-                $result.Name | Should Be "Template 2"
+                $result.Count | Should -Be 1
+                $result.Name | Should -Be "Template 2"
              }
         }
 
@@ -64,8 +64,8 @@ Describe "Get-DistroNexusTemplate" -Tag 'Unit', 'Public' {
 
                 $result = Get-DistroNexusTemplate -Category "Dev"
                 
-                $result.Count | Should Be 1
-                $result.Id | Should Be "tpl-1"
+                $result.Count | Should -Be 1
+                $result.Id | Should -Be "tpl-1"
              }
         }
     }
