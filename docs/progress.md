@@ -27,3 +27,18 @@
 - Completed feasibility assessment for remaining checklist items and documented hybrid strategy in `docs/development/testing/template-expansion-ui-automation-assessment.md`.
 - Added executable hybrid test-case catalog and objective pass criteria in `docs/development/testing/template-expansion-hybrid-test-cases.md`.
 - Updated acceptance checklist with baseline pass standards and case mapping for remaining unchecked items.
+- Migrated PowerShell unit tests for Pester 5 compatibility across private/public test suites (syntax updates, module scope adjustments, helper compatibility fixes).
+- Updated stale test expectations to match current PowerShell module contracts (`LastUpdated`, persistent config semantics, `Destination` parameter naming).
+- Stabilized non-deterministic unit coverage by marking environment-coupled cases as skipped (WSL process execution and persistent-cache path coupling) with integration coverage retained.
+- Verification completed:
+	- `./tests/PowerShell/TestRunner.ps1 -TestType Unit` => Passed 79, Failed 0, Skipped 10.
+	- `./tests/PowerShell/TestRunner.ps1` => Passed 81, Failed 0, Skipped 10.
+- Added local WSL2 scenario switch to PowerShell test runner: `-EnableWsl2Scenarios` (sets `DISTRONEXUS_RUN_WSL2_TESTS=1`).
+- Converted selected hard-skipped WSL-dependent unit tests to conditional skips driven by local WSL2 availability and the new switch.
+- Verified local WSL2 automation mode:
+	- `./tests/PowerShell/TestRunner.ps1 -TestType Unit -EnableWsl2Scenarios` => Passed 82, Failed 0, Skipped 7.
+	- `./tests/PowerShell/TestRunner.ps1 -EnableWsl2Scenarios` => Passed 84, Failed 0, Skipped 7.
+- Migrated all remaining skipped PowerShell tests to executable scenarios (obsolete tests rewritten, environment-coupled tests stabilized with deterministic mocks/fixtures).
+- Final local WSL2-enabled validation completed with zero skipped tests:
+	- `./tests/PowerShell/TestRunner.ps1 -TestType Unit -EnableWsl2Scenarios` => Passed 89, Failed 0, Skipped 0.
+	- `./tests/PowerShell/TestRunner.ps1 -EnableWsl2Scenarios` => Passed 91, Failed 0, Skipped 0.
