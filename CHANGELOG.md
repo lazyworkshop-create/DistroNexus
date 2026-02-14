@@ -7,27 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0.1] - 2026-01-31
 
-### Cleanup
-
-- **Removed v1.0 Go/Fyne artifacts**:
-  - Deleted all Go source code (`src/go.mod`, `src/cmd/`, `src/internal/`)
-  - Removed Go build scripts (`tools/build.sh`, `tools/windows_release.ps1`, `tools/setup_go_env.sh`, `tools/gen_gear.go`)
-  - Deleted legacy standalone PowerShell scripts from `scripts/` directory (11 management scripts, 2 test utilities, 3 helper scripts) - all replaced by PowerShell module cmdlets
-  - Removed empty v1.0 release directory
-- **Archived v1 comparison documents** to `docs/archive/v1-comparison/` for historical reference
-- **Updated documentation**: Removed v1.0 references from README.md and README_CN.md, kept only v2.0 .NET/WPF + PowerShell module architecture
-
-## [2.0.0] - 2026-01-27
-
 ### 🎉 Major Release - Complete Rewrite
 
-This is a complete rewrite of DistroNexus, migrating from Go/Fyne to .NET 10/WPF.
+This is the first v2 release of DistroNexus, migrating directly from v1.0.0 to .NET 10/WPF.
 
 ### Added
 
 - **Modern WPF UI**: Native Windows application using WPF-UI (Fluent Design System)
 - **Dark Mode Support**: Automatic theme switching based on system preferences
-- **PowerShell Module**: 11 cmdlets for full automation capability
+- **PowerShell Module**: 15 cmdlets for full automation capability
   - `Get-DistroNexusInstance` - List all WSL instances
   - `Start-DistroNexusInstance` - Start instances
   - `Stop-DistroNexusInstance` - Stop instances
@@ -38,32 +26,34 @@ This is a complete rewrite of DistroNexus, migrating from Go/Fyne to .NET 10/WPF
   - `Set-DistroNexusCredential` - Update credentials
   - `Get-DistroNexusPackage` - Browse available distributions
   - `Save-DistroNexusPackage` - Download distribution packages
+  - `Remove-DistroNexusPackage` - Remove cached packages
   - `Update-DistroNexusCatalog` - Refresh catalog
+  - `Get-DistroNexusTemplate` - List built-in templates
+  - `Apply-DistroNexusTemplate` - Apply template to an instance
+  - `Invoke-DistroNexusTemplateAutomation` - Run template automation pipeline
 - **Package Manager**: Browse and download WSL distributions from catalog
 - **Installation Wizard**: Step-by-step installation process
 - **Settings Page**: Comprehensive configuration options
 - **Progress Tracking**: Real-time progress for downloads and operations
-- **Self-contained Package**: Option to run without .NET Runtime installed
+- **Template System**: Built-in templates for rapid environment bootstrapping
 
 ### Changed
 
 - Complete UI rewrite from Go/Fyne to .NET 10/WPF
 - Configuration now stored in `%APPDATA%\DistroNexus\settings.json`
+- Catalog contract standardized to `catalog.json`
 - PowerShell scripts consolidated into formal PowerShell module
 - Improved error handling and logging
 
-### Removed
+### Cleanup
 
-- Go/Fyne-based UI (replaced with .NET/WPF)
-- Legacy PowerShell scripts (replaced with module cmdlets)
-
-### Technical
-
-- .NET 10 with WPF UI Framework
-- MVVM architecture with CommunityToolkit.Mvvm
-- Dependency Injection via Microsoft.Extensions.DependencyInjection
-- Async/await patterns throughout
-- xUnit tests with Moq for unit testing
+- **Removed v1.0 Go/Fyne artifacts**:
+  - Deleted all Go source code (`src/go.mod`, `src/cmd/`, `src/internal/`)
+  - Removed Go build scripts (`tools/build.sh`, `tools/windows_release.ps1`, `tools/setup_go_env.sh`, `tools/gen_gear.go`)
+  - Deleted legacy standalone PowerShell scripts from `scripts/` directory (11 management scripts, 2 test utilities, 3 helper scripts) - all replaced by PowerShell module cmdlets
+  - Removed empty v1.0 release directory
+- **Archived v1 comparison documents** to `docs/archive/v1-comparison/` for historical reference
+- **Updated documentation**: Removed v1.0 references from README.md and README_CN.md, kept only v2.0 .NET/WPF + PowerShell module architecture
 
 ---
 
