@@ -12,6 +12,9 @@ param(
     
     [Parameter()]
     [switch]$CI,
+
+    [Parameter()]
+    [switch]$EnableWsl2Scenarios,
     
     [Parameter()]
     [string]$OutputPath = '../../TestResults'
@@ -96,7 +99,16 @@ Write-Host "Running DistroNexus PowerShell Tests" -ForegroundColor Cyan
 Write-Host "========================================`n" -ForegroundColor Cyan
 Write-Host "Test Type: $TestType" -ForegroundColor Yellow
 Write-Host "Code Coverage: $($CodeCoverage.IsPresent)" -ForegroundColor Yellow
-Write-Host "CI Mode: $($CI.IsPresent)`n" -ForegroundColor Yellow
+Write-Host "CI Mode: $($CI.IsPresent)" -ForegroundColor Yellow
+
+if ($EnableWsl2Scenarios) {
+    $env:DISTRONEXUS_RUN_WSL2_TESTS = '1'
+    Write-Host "WSL2 Scenarios: Enabled`n" -ForegroundColor Yellow
+}
+else {
+    Remove-Item Env:DISTRONEXUS_RUN_WSL2_TESTS -ErrorAction SilentlyContinue
+    Write-Host "WSL2 Scenarios: Disabled`n" -ForegroundColor Yellow
+}
 
 $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 $result = Invoke-Pester -Configuration $config

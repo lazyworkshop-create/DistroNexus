@@ -47,6 +47,13 @@ cd tests/PowerShell
 .\TestRunner.ps1 -TestType Integration -CodeCoverage
 ```
 
+**Run with local WSL2-dependent scenarios enabled:**
+```powershell
+.\TestRunner.ps1 -TestType All -EnableWsl2Scenarios
+```
+
+This enables tests guarded by `DISTRONEXUS_RUN_WSL2_TESTS=1` (for example, tests that execute scripts inside a real local WSL instance).
+
 **CI mode (for automation):**
 ```powershell
 .\TestRunner.ps1 -TestType All -CodeCoverage -CI

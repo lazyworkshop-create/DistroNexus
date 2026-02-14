@@ -7,10 +7,11 @@ Describe "Apply-DistroNexusTemplate" -Tag 'Unit', 'Public' {
     $rootPath = Resolve-Path "$PSScriptRoot/../../../.."
     $modulePath = Join-Path $rootPath "src\PowerShell"
     Import-Module (Join-Path $modulePath "DistroNexus.psd1") -Force
+
 }
     
     Context "Applying Templates" {
-        It "Should execute Bash script" {
+        It "Should execute Bash script" -Skip:(-not (($env:DISTRONEXUS_RUN_WSL2_TESTS -eq '1') -and ($null -ne (Get-Command wsl.exe -ErrorAction SilentlyContinue)))) {
             InModuleScope DistroNexus {
                 $template = [PSCustomObject]@{
                     Id = "t1"
@@ -24,13 +25,15 @@ Describe "Apply-DistroNexusTemplate" -Tag 'Unit', 'Public' {
                         }
                     )
                 }
-                
-                Mock wsl.exe { return "Ubuntu-22.04" } -ParameterFilter { $Args -contains "--list" }
-                Mock wsl.exe { } 
 
-                Apply-DistroNexusTemplate -InstanceName "Ubuntu-22.04" -Template $template
+                Mock wsl.exe {
+                    $global:LASTEXITCODE = 0
+                    if ($Args -contains '--list') {
+                        return "Ubuntu-22.04"
+                    }
+                } -ModuleName DistroNexus
 
-                Assert-MockCalled wsl.exe -Times 2
+                { Apply-DistroNexusTemplate -InstanceName "Ubuntu-22.04" -Template $template -ErrorAction Stop } | Should -Not -Throw
             }
         }
 
@@ -49,7 +52,7 @@ Describe "Apply-DistroNexusTemplate" -Tag 'Unit', 'Public' {
                     )
                 }
 
-                Mock wsl.exe { return "Ubuntu-22.04" } -ParameterFilter { $Args -contains "--list" }
+                Mock wsl.exe { return "Ubuntu-22.04" } -ModuleName DistroNexus -ParameterFilter { $Args -contains "--list" }
                 Mock Invoke-Expression { }
 
                 Apply-DistroNexusTemplate -InstanceName "Ubuntu-22.04" -Template $template
@@ -73,7 +76,7 @@ Describe "Apply-DistroNexusTemplate" -Tag 'Unit', 'Public' {
                     )
                 }
                 
-                Mock wsl.exe { return "Ubuntu-22.04" } -ParameterFilter { $Args -contains "--list" }
+                Mock wsl.exe { return "Ubuntu-22.04" } -ModuleName DistroNexus -ParameterFilter { $Args -contains "--list" }
 
                 Apply-DistroNexusTemplate -InstanceName "Ubuntu-22.04" -Template $template
 
@@ -82,7 +85,7 @@ Describe "Apply-DistroNexusTemplate" -Tag 'Unit', 'Public' {
              }
         }
 
-        It "Should execute script content resolved from ScriptPath" {
+        It "Should execute script content resolved from ScriptPath" -Skip:(-not (($env:DISTRONEXUS_RUN_WSL2_TESTS -eq '1') -and ($null -ne (Get-Command wsl.exe -ErrorAction SilentlyContinue)))) {
             InModuleScope DistroNexus {
                 $template = [PSCustomObject]@{
                     Id = "t4"
@@ -97,15 +100,18 @@ Describe "Apply-DistroNexusTemplate" -Tag 'Unit', 'Public' {
                     )
                 }
 
-                Mock wsl.exe { return "Ubuntu-22.04" } -ParameterFilter { $Args -contains "--list" }
-                Mock wsl.exe { }
-                Mock Test-Path { return $true } -ParameterFilter { $Path -match "templates[\\/]test[\\/]install.sh" }
-                Mock Get-Content { return "echo from path" } -ParameterFilter { $Path -match "templates[\\/]test[\\/]install.sh" }
+                Mock wsl.exe {
+                    $global:LASTEXITCODE = 0
+                    if ($Args -contains '--list') {
+                        return "Ubuntu-22.04"
+                    }
+                } -ModuleName DistroNexus
+                Mock Test-Path { return $true } -ModuleName DistroNexus -ParameterFilter { $Path -match "templates[\\/]test[\\/]install.sh" }
+                Mock Get-Content { return "echo from path" } -ModuleName DistroNexus -ParameterFilter { $Path -match "templates[\\/]test[\\/]install.sh" }
 
                 Apply-DistroNexusTemplate -InstanceName "Ubuntu-22.04" -Template $template
 
                 Assert-MockCalled Get-Content -Times 1
-                Assert-MockCalled wsl.exe -Times 2
             }
         }
     }

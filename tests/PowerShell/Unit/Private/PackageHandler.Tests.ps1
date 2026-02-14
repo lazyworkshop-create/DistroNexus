@@ -15,14 +15,14 @@ BeforeAll {
 
 Describe "Test-PackageFormat" -Tag 'Unit', 'PackageHandler' {
     BeforeEach {
-        $script:testPackagePath = $TestDrive
+        $global:testPackagePath = $TestDrive
     }
     
     Context "When testing supported formats" {
         It "Should return true for .tar file" {
             InModuleScope DistroNexus {
                 # Arrange
-                $tarFile = Join-Path $using:testPackagePath "ubuntu.tar"
+                $tarFile = Join-Path $global:testPackagePath "ubuntu.tar"
                 "mock content" | Out-File $tarFile
                 
                 # Act
@@ -36,7 +36,7 @@ Describe "Test-PackageFormat" -Tag 'Unit', 'PackageHandler' {
         It "Should return true for .tar.gz file" {
             InModuleScope DistroNexus {
                 # Arrange
-                $tarGzFile = Join-Path $using:testPackagePath "ubuntu.tar.gz"
+                $tarGzFile = Join-Path $global:testPackagePath "ubuntu.tar.gz"
                 "mock content" | Out-File $tarGzFile
                 
                 # Act
@@ -50,7 +50,7 @@ Describe "Test-PackageFormat" -Tag 'Unit', 'PackageHandler' {
         It "Should return true for .tar.bz2 file" {
             InModuleScope DistroNexus {
                 # Arrange
-                $tarBz2File = Join-Path $using:testPackagePath "ubuntu.tar.bz2"
+                $tarBz2File = Join-Path $global:testPackagePath "ubuntu.tar.bz2"
                 "mock content" | Out-File $tarBz2File
                 
                 # Act
@@ -64,7 +64,7 @@ Describe "Test-PackageFormat" -Tag 'Unit', 'PackageHandler' {
         It "Should return true for .tar.xz file" {
             InModuleScope DistroNexus {
                 # Arrange
-                $tarXzFile = Join-Path $using:testPackagePath "ubuntu.tar.xz"
+                $tarXzFile = Join-Path $global:testPackagePath "ubuntu.tar.xz"
                 "mock content" | Out-File $tarXzFile
                 
                 # Act
@@ -78,7 +78,7 @@ Describe "Test-PackageFormat" -Tag 'Unit', 'PackageHandler' {
         It "Should return true for .appx file" {
             InModuleScope DistroNexus {
                 # Arrange
-                $appxFile = Join-Path $using:testPackagePath "ubuntu.appx"
+                $appxFile = Join-Path $global:testPackagePath "ubuntu.appx"
                 "mock content" | Out-File $appxFile
                 
                 # Act
@@ -92,7 +92,7 @@ Describe "Test-PackageFormat" -Tag 'Unit', 'PackageHandler' {
         It "Should return true for .appxbundle file" {
             InModuleScope DistroNexus {
                 # Arrange
-                $appxBundleFile = Join-Path $using:testPackagePath "ubuntu.appxbundle"
+                $appxBundleFile = Join-Path $global:testPackagePath "ubuntu.appxbundle"
                 "mock content" | Out-File $appxBundleFile
                 
                 # Act
@@ -106,7 +106,7 @@ Describe "Test-PackageFormat" -Tag 'Unit', 'PackageHandler' {
         It "Should return true for .zip file" {
             InModuleScope DistroNexus {
                 # Arrange
-                $zipFile = Join-Path $using:testPackagePath "ubuntu.zip"
+                $zipFile = Join-Path $global:testPackagePath "ubuntu.zip"
                 "mock content" | Out-File $zipFile
                 
                 # Act
@@ -122,7 +122,7 @@ Describe "Test-PackageFormat" -Tag 'Unit', 'PackageHandler' {
         It "Should return false for .exe file" {
             InModuleScope DistroNexus {
                 # Arrange
-                $exeFile = Join-Path $using:testPackagePath "installer.exe"
+                $exeFile = Join-Path $global:testPackagePath "installer.exe"
                 "mock content" | Out-File $exeFile
                 
                 # Act
@@ -136,7 +136,7 @@ Describe "Test-PackageFormat" -Tag 'Unit', 'PackageHandler' {
         It "Should return false for .txt file" {
             InModuleScope DistroNexus {
                 # Arrange
-                $txtFile = Join-Path $using:testPackagePath "readme.txt"
+                $txtFile = Join-Path $global:testPackagePath "readme.txt"
                 "mock content" | Out-File $txtFile
                 
                 # Act
@@ -150,7 +150,7 @@ Describe "Test-PackageFormat" -Tag 'Unit', 'PackageHandler' {
         It "Should return false for non-existent file" {
             InModuleScope DistroNexus {
                 # Arrange
-                $nonExistentFile = Join-Path $using:testPackagePath "nonexistent.tar"
+                $nonExistentFile = Join-Path $global:testPackagePath "nonexistent.tar"
                 
                 # Act
                 $result = Test-PackageFormat -Path $nonExistentFile
@@ -165,7 +165,7 @@ Describe "Test-PackageFormat" -Tag 'Unit', 'PackageHandler' {
         It "Should handle uppercase extensions" {
             InModuleScope DistroNexus {
                 # Arrange
-                $upperFile = Join-Path $using:testPackagePath "UBUNTU.TAR.GZ"
+                $upperFile = Join-Path $global:testPackagePath "UBUNTU.TAR.GZ"
                 "mock content" | Out-File $upperFile
                 
                 # Act
@@ -179,7 +179,7 @@ Describe "Test-PackageFormat" -Tag 'Unit', 'PackageHandler' {
         It "Should handle mixed case extensions" {
             InModuleScope DistroNexus {
                 # Arrange
-                $mixedFile = Join-Path $using:testPackagePath "Ubuntu.Tar.Gz"
+                $mixedFile = Join-Path $global:testPackagePath "Ubuntu.Tar.Gz"
                 "mock content" | Out-File $mixedFile
                 
                 # Act
@@ -299,13 +299,24 @@ Describe "Get-PackageFormat" -Tag 'Unit', 'PackageHandler' {
 
 Describe "Expand-DistroPackage" -Tag 'Unit', 'PackageHandler' {
     BeforeEach {
-        $script:testPackagePath = $TestDrive
+        $global:testPackagePath = $TestDrive
     }
     
     Context "When expanding Tar format" {
-        It "Should copy tar file when already in tar format" -Skip {
-            # Skip this test as it requires actual tar file
-            # This should be an integration test
+        It "Should copy tar file when already in tar format" {
+            InModuleScope DistroNexus {
+                # Arrange
+                $tarFile = Join-Path $global:testPackagePath "source.tar"
+                $destination = Join-Path $global:testPackagePath "copied.tar"
+                "mock tar content" | Out-File $tarFile
+
+                # Act
+                $result = Expand-DistroPackage -PackagePath $tarFile -DestinationPath $destination -Force
+
+                # Assert
+                Test-Path $destination | Should -BeTrue
+                $result | Should -Be $destination
+            }
         }
     }
     
@@ -313,7 +324,7 @@ Describe "Expand-DistroPackage" -Tag 'Unit', 'PackageHandler' {
         It "Should throw when package file does not exist" {
             InModuleScope DistroNexus {
                 # Arrange
-                $nonExistentFile = Join-Path $using:testPackagePath "nonexistent.tar"
+                $nonExistentFile = Join-Path $global:testPackagePath "nonexistent.tar"
                 
                 # Act & Assert
                 { Expand-DistroPackage -PackagePath $nonExistentFile } | Should -Throw
@@ -323,10 +334,10 @@ Describe "Expand-DistroPackage" -Tag 'Unit', 'PackageHandler' {
         It "Should warn when destination exists and Force not specified" {
             InModuleScope DistroNexus {
                 # Arrange
-                $tarFile = Join-Path $using:testPackagePath "test.tar"
+                $tarFile = Join-Path $global:testPackagePath "test.tar"
                 "mock content" | Out-File $tarFile
                 
-                $destFile = Join-Path $using:testPackagePath "test.tar"
+                $destFile = Join-Path $global:testPackagePath "test.tar"
                 "existing content" | Out-File $destFile
                 
                 # Act
@@ -343,7 +354,7 @@ Describe "Expand-DistroPackage" -Tag 'Unit', 'PackageHandler' {
         It "Should throw for unknown format" {
             InModuleScope DistroNexus {
                 # Arrange
-                $exeFile = Join-Path $using:testPackagePath "installer.exe"
+                $exeFile = Join-Path $global:testPackagePath "installer.exe"
                 "mock content" | Out-File $exeFile
                 
                 # Act & Assert
@@ -356,10 +367,10 @@ Describe "Expand-DistroPackage" -Tag 'Unit', 'PackageHandler' {
         It "Should not actually expand package with WhatIf" {
             InModuleScope DistroNexus {
                 # Arrange
-                $tarFile = Join-Path $using:testPackagePath "test.tar"
+                $tarFile = Join-Path $global:testPackagePath "test.tar"
                 "mock content" | Out-File $tarFile
                 
-                $destFile = Join-Path $using:testPackagePath "output.tar"
+                $destFile = Join-Path $global:testPackagePath "output.tar"
                 
                 # Act
                 Expand-DistroPackage -PackagePath $tarFile -DestinationPath $destFile -WhatIf

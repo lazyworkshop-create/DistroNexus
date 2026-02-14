@@ -104,10 +104,10 @@ Describe "Find-TerminalPath" -Tag 'Unit', 'TerminalLauncher' {
 
 Describe "Invoke-Terminal" -Tag 'Unit', 'TerminalLauncher' {
     Context "When launching terminal" {
-        It "Should require InstanceName parameter" {
+        It "Should reject empty InstanceName parameter" {
             InModuleScope DistroNexus {
                 # Act & Assert
-                { Invoke-Terminal } | Should -Throw
+                { Invoke-Terminal -InstanceName '' -ErrorAction Stop } | Should -Throw
             }
         }
         
