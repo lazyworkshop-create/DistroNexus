@@ -13,25 +13,27 @@ Full documentation and user guides are hosted on our official website:
 
 ## ✨ Features
 
-### v2.0 Highlights
-*   **Native Windows UI**: Modern WPF interface with Fluent Design System
-*   **Dark Mode Support**: Automatic theme switching based on system preferences
-*   **PowerShell Module**: 11 cmdlets for full automation capability
-*   **Package Manager**: Browse and download WSL distributions from catalog
-*   **One-Click Operations**: Start, stop, remove instances with single click
-*   **Progress Tracking**: Real-time progress for downloads and operations
-
-### Core Features
-*   **Instance Management**: 
+### 1.0 Foundations
+*   **Instance Management**:
     *   ✅ Start/Stop instances
     *   ✅ Move instances to different drives
     *   ✅ Rename instances
     *   ✅ Remove instances
     *   ✅ Set credentials
 *   **Custom Installation**: Install WSL distributions to any directory
-*   **Distribution Catalog**: Browse and download from curated catalog
-*   **Settings Management**: Comprehensive configuration options
-*   **Logging System**: Detailed logging for troubleshooting
+*   **Distribution Catalog**: Browse and download distributions from curated sources
+
+### 2.0 Additions
+*   **Native Windows UI**: Modern WPF interface with Fluent Design System
+*   **Dark Mode Support**: Automatic theme switching based on system preferences
+*   **PowerShell Module**: 15 cmdlets for full automation and scripting workflows
+    *   ✅ Works both inside the app and in standalone PowerShell sessions
+    *   ✅ Supports repeatable operations for CI, provisioning, and batch management
+*   **Template System**: Built-in templates for fast environment bootstrapping
+    *   ✅ Covers common stacks like language runtimes, containers, and local dev setups
+    *   ✅ Supports parameterized template execution for environment-specific customization
+*   **Package Manager Experience**: Better browsing and package download workflow
+*   **Progress & Logging**: Real-time operation progress and detailed diagnostics
 
 ## 🚀 Quick Start
 
@@ -43,17 +45,17 @@ Full documentation and user guides are hosted on our official website:
 ### Installation
 
 #### Option 1: Installer (Recommended)
-1. Download `DistroNexus-2.0.0-Setup.exe` from [Releases](https://github.com/lazyworkshop-create/DistroNexus/releases)
+1. Download `DistroNexus-2.0.1-Setup.exe` from [Releases](https://github.com/lazyworkshop-create/DistroNexus/releases)
 2. Run the installer
 3. Launch from Start Menu
 
 #### Option 2: Portable
-1. Download `DistroNexus-v2.0.0-Release.zip`
+1. Download `DistroNexus-v2.0.1-Release.zip`
 2. Extract to any folder
 3. Run `DistroNexus.Desktop.exe`
 
 #### Option 3: Self-Contained (No .NET Required)
-1. Download `DistroNexus-v2.0.0-Release-selfcontained.zip`
+1. Download `DistroNexus-v2.0.1-Release-selfcontained.zip`
 2. Extract to any folder
 3. Run `DistroNexus.Desktop.exe`
 
@@ -66,27 +68,71 @@ DistroNexus 2.0 includes a PowerShell module for automation:
 Import-Module "C:\Program Files\DistroNexus\PowerShell\DistroNexus.psm1"
 
 # List all instances
-Get-WslInstance
+Get-DistroNexusInstance
 
 # Install a custom instance
 Install-DistroNexusInstance -DistroName "MyUbuntu" -InstallPath "D:\WSL\MyUbuntu" -Username "admin"
 
 # Start an instance
-Start-WslInstance -DistroName "Ubuntu-22.04"
+Start-DistroNexusInstance -DistroName "Ubuntu-22.04"
 ```
 
 Available cmdlets:
-- `Get-WslInstance` - List all WSL instances
-- `Start-WslInstance` - Start instances
-- `Stop-WslInstance` - Stop instances
-- `Move-WslInstance` - Relocate instances
-- `Rename-WslInstance` - Rename instances
-- `Remove-WslInstance` - Uninstall instances
+- `Get-DistroNexusInstance` - List all WSL instances
+- `Start-DistroNexusInstance` - Start instances
+- `Stop-DistroNexusInstance` - Stop instances
+- `Move-DistroNexusInstance` - Relocate instances
+- `Rename-DistroNexusInstance` - Rename instances
+- `Remove-DistroNexusInstance` - Uninstall instances
 - `Install-DistroNexusInstance` - Custom installation
-- `Set-WslCredentials` - Update credentials
+- `Set-DistroNexusCredential` - Update credentials
 - `Get-DistroNexusPackage` - Browse distributions
 - `Save-DistroNexusPackage` - Download packages
+- `Remove-DistroNexusPackage` - Remove cached packages
 - `Update-DistroNexusCatalog` - Refresh catalog
+- `Get-DistroNexusTemplate` - List built-in templates
+- `Apply-DistroNexusTemplate` - Apply template to an instance
+- `Invoke-DistroNexusTemplateAutomation` - Run template automation pipeline
+
+## 🧩 Template System
+
+DistroNexus includes a built-in template system for quickly turning a WSL instance into a ready-to-use development environment.
+
+- Template catalog file: `config/templates.json`
+- Template script assets: `config/templates/*`
+- Main commands: `Get-DistroNexusTemplate`, `Apply-DistroNexusTemplate`, `Invoke-DistroNexusTemplateAutomation`
+
+### Quick Start
+
+```powershell
+# List all templates
+Get-DistroNexusTemplate
+
+# Filter by category
+Get-DistroNexusTemplate -Category "Development"
+
+# Apply one template to an existing WSL instance
+Apply-DistroNexusTemplate -InstanceName "Ubuntu-22.04" -TemplateId "python-dev" -Verbose
+
+# Apply with runtime variables
+Apply-DistroNexusTemplate -InstanceName "Ubuntu-22.04" -TemplateId "nodejs-dev" -Variables @{ NodeVersion = "20" }
+```
+
+### Template Automation Validation
+
+```powershell
+# Dry run automation for selected templates
+Invoke-DistroNexusTemplateAutomation -Mode SelectedTemplates -TemplateIds "python-dev","nodejs-dev" -Distro "Ubuntu-22.04" -DryRun
+
+# Execute full automation for all templates (use in controlled test environment)
+Invoke-DistroNexusTemplateAutomation -Mode AllTemplates -Distro "Ubuntu-22.04"
+```
+
+### Safety Notes
+
+- Applying custom templates may execute shell scripts in the target distro.
+- Review template scripts before execution, especially third-party/custom templates.
+- Use `-WhatIf` / `-Confirm` where applicable for safer trial runs.
 
 ## ⚙️ Configuration
 
@@ -97,7 +143,7 @@ Settings are stored at `%APPDATA%\DistroNexus\settings.json`:
     "DefaultInstallPath": "C:\\WSL",
     "DefaultWslVersion": 2,
     "DefaultUsername": "root",
-    "CatalogUrl": "https://raw.githubusercontent.com/yourusername/DistroNexus/main/config/distros.json",
+    "CatalogUrl": "https://raw.githubusercontent.com/lazyworkshop-create/DistroNexus/main/config/catalog.json",
     "Theme": "Auto",
     "EnableLogging": true
 }
@@ -136,7 +182,7 @@ dotnet build src/Client/DistroNexus.slnx -c Release
 .\tools\build.ps1 -Publish -SelfContained -CreateZip -Configuration Release
 
 # Build Windows installer (requires Inno Setup)
-.\tools\build-installer.ps1 -Version 2.0.0
+.\tools\build-installer.ps1 -Version 2.0.1
 
 # Output will be in release/
 ```
@@ -161,13 +207,14 @@ DistroNexus/
 │   │   │   └── Interfaces/               # Service interfaces
 │   │   └── DistroNexus.Tests/            # Unit tests
 │   └── PowerShell/
-│       ├── Public/                       # Public cmdlets (11 cmdlets)
+│       ├── Public/                       # Public cmdlets (15 cmdlets)
 │       ├── Private/                      # Internal utilities
 │       ├── DistroNexus.psd1              # Module manifest
 │       └── DistroNexus.psm1              # Module script
 ├── config/
-│   ├── distros.json                      # Distribution catalog
-│   └── settings.json                     # Default settings
+│   ├── catalog.json                      # Distribution catalog
+│   ├── templates.json                    # Template metadata
+│   └── templates/                        # Template script assets
 ├── docs/                                 # Documentation
 │   ├── release_notes/                    # Version releases
 │   └── archive/                          # Historical docs and v1 comparison
@@ -208,7 +255,7 @@ Get-Module DistroNexus
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+We welcome contributions! Please open an issue or pull request directly on GitHub.
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
