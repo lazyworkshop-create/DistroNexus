@@ -72,3 +72,24 @@
 	- `docs/development/built-in-template-automation-implementation-task-list.md`
 	- `docs/development/testing/built-in-template-automation-acceptance-criteria.md`
 	- `docs/development/testing/built-in-template-automation-test-checklist.md`
+- Executed full built-in template automation suite on local WSL2 (`Ubuntu`) with capability-gated templates enabled:
+	- `Invoke-DistroNexusTemplateAutomation -Mode AllTemplates -IncludeCapabilityGated -Distro Ubuntu -TestResultFormat NUnitXml`
+	- RunId `150754-8e089550` => Total 15, Pass 0, Fail 15, Blocked 0.
+	- Artifacts generated under `docs/development/testing/results/20260214/150754-8e089550/` (`summary.md`, `run-manifest.json`, `test-results.xml`).
+- Executed focused confirmation run for `.NET` template:
+	- `Invoke-DistroNexusTemplateAutomation -Mode SelectedTemplates -TemplateIds dotnet-dev -Distro Ubuntu -TestResultFormat NUnitXml`
+	- RunId `150925-70dd1248` => Total 1, Pass 0, Fail 1, Blocked 0.
+	- Artifact summary generated at `docs/development/testing/results/20260214/150925-70dd1248/summary.md`.
+- Captured consistent runtime failure signal during script bootstrap: `bash: line 4: BASH_SOURCE[0]: unbound variable`; this indicates a shared shell-entry/bootstrap issue affecting all templates before template-specific probes execute.
+- Implemented per-template isolated WSL2 execution lifecycle in automation runner:
+	- Each template now runs in a freshly imported temporary distro instance derived from the selected base distro export.
+	- Temporary instances are automatically terminated/unregistered and local temp workspace is removed after each template run.
+	- Isolation mode is persisted in run artifacts as `PerTemplateIsolatedImport`.
+- Updated template execution reliability for isolated-root runs:
+	- `Apply-DistroNexusTemplate` executes Bash scripts as `root` in WSL to avoid interactive `sudo` password prompts.
+	- Fixed script-path execution to preserve `BASH_SOURCE` and relative shared-library sourcing.
+	- Hardened template scripts/probes for `nvm`/`sdkman`/`rustup`/Docker fallback behavior in clean instances.
+- Final full-catalog isolated validation completed:
+	- RunId `174259-9f5bd124` (`AllTemplates`, `Ubuntu`, `IncludeCapabilityGated`) => Total 15, Pass 15, Fail 0, Blocked 0.
+	- Artifacts: `docs/development/testing/results/20260214/174259-9f5bd124/summary.md`, `run-manifest.json`, `test-results.xml`.
+	- Verified no temporary `dnx-auto-*` distros remain after execution (automatic cleanup successful).

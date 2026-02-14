@@ -1,0 +1,20 @@
+{
+  "TemplateId": "java-jvm-dev",
+  "TemplateName": "Java/JVM Development",
+  "Status": "Pass",
+  "Reason": "",
+  "DurationSeconds": 58,
+  "ProbeResults": [
+    {
+      "Name": "bash -lc 'if command -v java >/dev/null 2>&1; then java -version; exit $?; fi; if [ -f \"$HOME/.sdkman/bin/sdkman-init.sh\" ]; then set +u; . \"$HOME/.sdkman/bin/sdkman-init.sh\"; fi; command -v java >/dev/null 2>&1 && java -version'",
+      "ExitCode": 0,
+      "Output": [
+        "openjdk version \"21.0.5\" 2024-10-15 LTS",
+        "OpenJDK Runtime Environment Temurin-21.0.5+11 (build 21.0.5+11-LTS)",
+        "OpenJDK 64-Bit Server VM Temurin-21.0.5+11 (build 21.0.5+11-LTS, mixed mode, sharing)"
+      ],
+      "Success": true
+    }
+  ],
+  "IsolatedInstance": "dnx-auto-java-jvm-dev-cba4d0"
+}

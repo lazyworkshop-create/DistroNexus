@@ -25,6 +25,9 @@ function Invoke-DistroNexusTemplateAutomation {
         [switch]$AllowCiOverride,
 
         [Parameter()]
+        [switch]$UseSharedDistro,
+
+        [Parameter()]
         [ValidateSet('NUnitXml', 'JUnitXml')]
         [string]$TestResultFormat = 'NUnitXml'
     )
@@ -51,6 +54,113 @@ function Invoke-DistroNexusTemplateAutomation {
         }
     }
 
+    function Initialize-IsolationContext {
+        param(
+            [Parameter(Mandatory = $true)]
+            [string]$RunId
+        )
+
+        $root = Join-Path ([System.IO.Path]::GetTempPath()) (Join-Path 'DistroNexus' (Join-Path 'template-automation' $RunId))
+        $instancesRoot = Join-Path $root 'instances'
+        [void](New-Item -Path $instancesRoot -ItemType Directory -Force)
+
+        [PSCustomObject]@{
+            Root = $root
+            InstancesRoot = $instancesRoot
+            BaseExportPath = (Join-Path $root 'base-distro.tar')
+            Prepared = $false
+        }
+    }
+
+    function Ensure-IsolationBaseExport {
+        param(
+            [Parameter(Mandatory = $true)]
+            [PSCustomObject]$Context,
+            [Parameter(Mandatory = $true)]
+            [string]$BaseDistro
+        )
+
+        if ($Context.Prepared -and (Test-Path $Context.BaseExportPath)) {
+            return
+        }
+
+        $stopResult = Invoke-RunnerCommand -Name 'base-terminate' -Script { wsl.exe --terminate $BaseDistro }
+        if (-not $stopResult.Success) {
+            Write-Verbose "Base distro terminate returned non-zero before export: $($stopResult.ExitCode)"
+        }
+
+        $exportResult = Invoke-RunnerCommand -Name 'base-export' -Script { wsl.exe --export $BaseDistro $Context.BaseExportPath }
+        if (-not $exportResult.Success) {
+            throw "Failed to export base distro '$BaseDistro' for isolation: $($exportResult.Output -join ' | ')"
+        }
+
+        $Context.Prepared = $true
+    }
+
+    function New-IsolatedTemplateInstance {
+        param(
+            [Parameter(Mandatory = $true)]
+            [PSCustomObject]$Context,
+            [Parameter(Mandatory = $true)]
+            [string]$BaseDistro,
+            [Parameter(Mandatory = $true)]
+            [string]$TemplateId
+        )
+
+        Ensure-IsolationBaseExport -Context $Context -BaseDistro $BaseDistro
+
+        $sanitizedTemplateId = ($TemplateId.ToLowerInvariant() -replace '[^a-z0-9-]', '-')
+        $uniqueSuffix = [Guid]::NewGuid().ToString('N').Substring(0, 6)
+        $instanceName = "dnx-auto-$sanitizedTemplateId-$uniqueSuffix"
+        $installPath = Join-Path $Context.InstancesRoot $instanceName
+        [void](New-Item -Path $installPath -ItemType Directory -Force)
+
+        $importResult = Invoke-RunnerCommand -Name 'isolation-import' -Script { wsl.exe --import $instanceName $installPath $Context.BaseExportPath --version 2 }
+        if (-not $importResult.Success) {
+            throw "Failed to import isolated distro '$instanceName': $($importResult.Output -join ' | ')"
+        }
+
+        [PSCustomObject]@{
+            InstanceName = $instanceName
+            InstallPath = $installPath
+        }
+    }
+
+    function Remove-IsolatedTemplateInstance {
+        param(
+            [Parameter(Mandatory = $true)]
+            [string]$InstanceName,
+            [Parameter(Mandatory = $false)]
+            [string]$InstallPath
+        )
+
+        $errors = @()
+
+        $terminateResult = Invoke-RunnerCommand -Name 'isolation-terminate' -Script { wsl.exe --terminate $InstanceName }
+        if (-not $terminateResult.Success) {
+            Write-Verbose "Terminate returned non-zero for ${InstanceName}: $($terminateResult.ExitCode)"
+        }
+
+        $unregisterResult = Invoke-RunnerCommand -Name 'isolation-unregister' -Script { wsl.exe --unregister $InstanceName }
+        if (-not $unregisterResult.Success) {
+            $errors += "unregister failed: $($unregisterResult.Output -join ' | ')"
+        }
+
+        if ($InstallPath -and (Test-Path $InstallPath)) {
+            try {
+                Remove-Item -Path $InstallPath -Recurse -Force -ErrorAction Stop
+            }
+            catch {
+                $errors += "install path cleanup failed: $($_.Exception.Message)"
+            }
+        }
+
+        [PSCustomObject]@{
+            Success = ($errors.Count -eq 0)
+            Message = ($errors -join '; ')
+        }
+    }
+
     function Test-TemplateProbe {
         param(
             [Parameter(Mandatory = $true)]
@@ -62,21 +172,21 @@ function Invoke-DistroNexusTemplateAutomation {
         $commands = @()
         switch -Wildcard ($Template.Id) {
             'dotnet*' { $commands = @('dotnet --list-sdks') }
-            'nodejs*' { $commands = @('node -v') }
-            'python*' { $commands = @('python --version') }
-            'java-jvm*' { $commands = @('java -version') }
-            'rust*' { $commands = @('rustc --version', 'cargo --version') }
-            'go*' { $commands = @('go version') }
+            'nodejs*' { $commands = @('bash -lc ''[ -s /root/.nvm/nvm.sh ] || command -v node >/dev/null 2>&1 || command -v nodejs >/dev/null 2>&1''') }
+            'python*' { $commands = @('bash -lc ''if command -v python >/dev/null; then python --version; elif command -v python3 >/dev/null; then python3 --version; else exit 127; fi''') }
+            'java-jvm*' { $commands = @('bash -lc ''if command -v java >/dev/null 2>&1; then java -version; exit $?; fi; if [ -f "$HOME/.sdkman/bin/sdkman-init.sh" ]; then set +u; . "$HOME/.sdkman/bin/sdkman-init.sh"; fi; command -v java >/dev/null 2>&1 && java -version''') }
+            'rust*' { $commands = @('bash -lc ''if [ -x "$HOME/.cargo/bin/rustc" ]; then "$HOME/.cargo/bin/rustc" --version; else if [ -f "$HOME/.cargo/env" ]; then . "$HOME/.cargo/env"; fi; export PATH="$HOME/.cargo/bin:$PATH"; rustc --version; fi''', 'bash -lc ''if [ -x "$HOME/.cargo/bin/cargo" ]; then "$HOME/.cargo/bin/cargo" --version; else if [ -f "$HOME/.cargo/env" ]; then . "$HOME/.cargo/env"; fi; export PATH="$HOME/.cargo/bin:$PATH"; cargo --version; fi''') }
+            'go*' { $commands = @('bash -lc ''export PATH="$PATH:/usr/local/go/bin"; go version''') }
             'container-runtime*' { $commands = @('bash -lc "if command -v docker >/dev/null; then docker --version; elif command -v podman >/dev/null; then podman --version; else exit 127; fi"') }
             'kubernetes-local*' { $commands = @('kubectl version --client') }
             'database-local-stack' { $commands = @('bash -lc "if command -v psql >/dev/null || command -v mysql >/dev/null || command -v redis-cli >/dev/null || command -v mongosh >/dev/null || command -v sqlite3 >/dev/null; then exit 0; else exit 127; fi"') }
-            'ai-ml-gpu-dev' { $commands = @('python --version') }
+            'ai-ml-gpu-dev' { $commands = @('bash -lc ''if command -v python >/dev/null; then python --version; elif command -v python3 >/dev/null; then python3 --version; else exit 127; fi''') }
             default { $commands = @('bash -lc "echo ok"') }
         }
 
         $results = @()
         foreach ($command in $commands) {
-            $cmdResult = Invoke-RunnerCommand -Name $command -Script { wsl.exe -d $TargetDistro -- bash -lc $command }
+            $cmdResult = Invoke-RunnerCommand -Name $command -Script { wsl.exe -d $TargetDistro -u root -- bash -lc $command }
             $results += $cmdResult
             if (-not $cmdResult.Success) {
                 return [PSCustomObject]@{ Success = $false; Results = $results }
@@ -251,6 +361,10 @@ function Invoke-DistroNexusTemplateAutomation {
     $runId = '{0}-{1}' -f $now.ToString('HHmmss'), ([Guid]::NewGuid().ToString('N').Substring(0, 8))
     $runDirectory = Join-Path (Join-Path $OutputRoot $dateFolder) $runId
     $logsDirectory = Join-Path $runDirectory 'logs'
+    $isolationContext = $null
+    if (-not $UseSharedDistro) {
+        $isolationContext = Initialize-IsolationContext -RunId $runId
+    }
 
     [void](New-Item -Path $logsDirectory -ItemType Directory -Force)
 
@@ -260,11 +374,14 @@ function Invoke-DistroNexusTemplateAutomation {
         WslStatus = (Invoke-RunnerCommand -Name 'wsl-status' -Script { wsl.exe --status })
         WslVersion = (Invoke-RunnerCommand -Name 'wsl-version' -Script { wsl.exe --version })
         WslList = (Invoke-RunnerCommand -Name 'wsl-list' -Script { wsl.exe --list --verbose })
+        InstanceIsolation = if ($UseSharedDistro) { 'SharedDistro' } else { 'PerTemplateIsolatedImport' }
     }
 
     $results = @()
     foreach ($template in $allTemplates) {
         $itemStart = Get-Date
+        $executionDistro = $Distro
+        $isolatedInstance = $null
         $item = [ordered]@{
             TemplateId = $template.Id
             TemplateName = $template.Name
@@ -274,29 +391,49 @@ function Invoke-DistroNexusTemplateAutomation {
             ProbeResults = @()
         }
 
-        $gate = Test-CapabilityGate -Template $template -TargetDistro $Distro -AllowCapabilityGated:$IncludeCapabilityGated.IsPresent
-        if ($gate.Blocked) {
-            $item.Status = 'Blocked'
-            $item.Reason = $gate.Reason
-        }
-        elseif (-not $DryRun) {
-            try {
-                Apply-DistroNexusTemplate -InstanceName $Distro -TemplateId $template.Id -Force -ErrorAction Stop | Out-Null
-                $probe = Test-TemplateProbe -Template $template -TargetDistro $Distro
+        try {
+            if (-not $DryRun -and -not $UseSharedDistro) {
+                $isolatedInstance = New-IsolatedTemplateInstance -Context $isolationContext -BaseDistro $Distro -TemplateId $template.Id
+                $executionDistro = $isolatedInstance.InstanceName
+                $item.IsolatedInstance = $executionDistro
+            }
+
+            $gate = Test-CapabilityGate -Template $template -TargetDistro $executionDistro -AllowCapabilityGated:$IncludeCapabilityGated.IsPresent
+            if ($gate.Blocked) {
+                $item.Status = 'Blocked'
+                $item.Reason = $gate.Reason
+            }
+            elseif (-not $DryRun) {
+                Apply-DistroNexusTemplate -InstanceName $executionDistro -TemplateId $template.Id -Force -ErrorAction Stop | Out-Null
+                $probe = Test-TemplateProbe -Template $template -TargetDistro $executionDistro
                 $item.ProbeResults = @($probe.Results)
                 if (-not $probe.Success) {
                     $item.Status = 'Fail'
                     $item.Reason = 'Runtime probe failed.'
                 }
             }
-            catch {
-                $item.Status = 'Fail'
-                $item.Reason = $_.Exception.Message
+            else {
+                $item.Status = 'Pass'
+                $item.Reason = 'Dry run'
             }
         }
-        else {
-            $item.Status = 'Pass'
-            $item.Reason = 'Dry run'
+        catch {
+            $item.Status = 'Fail'
+            $item.Reason = $_.Exception.Message
+        }
+        finally {
+            if ($isolatedInstance) {
+                $cleanup = Remove-IsolatedTemplateInstance -InstanceName $isolatedInstance.InstanceName -InstallPath $isolatedInstance.InstallPath
+                if (-not $cleanup.Success) {
+                    if ($item.Status -eq 'Pass') {
+                        $item.Status = 'Fail'
+                        $item.Reason = "Cleanup failed: $($cleanup.Message)"
+                    }
+                    else {
+                        $item.Reason = "$($item.Reason); cleanup failed: $($cleanup.Message)"
+                    }
+                }
+            }
         }
 
         $item.DurationSeconds = [int]((Get-Date) - $itemStart).TotalSeconds
@@ -314,6 +451,7 @@ function Invoke-DistroNexusTemplateAutomation {
         Timestamp = $now.ToString('o')
         Mode = $Mode
         Distro = $Distro
+        IsolationMode = if ($UseSharedDistro) { 'SharedDistro' } else { 'PerTemplateIsolatedImport' }
         DryRun = [bool]$DryRun
         IncludeCapabilityGated = [bool]$IncludeCapabilityGated
         Summary = [ordered]@{
@@ -341,6 +479,7 @@ function Invoke-DistroNexusTemplateAutomation {
         "- Timestamp: $($now.ToString('o'))",
         "- Mode: $Mode",
         "- Distro: $Distro",
+        "- Isolation: $(if ($UseSharedDistro) { 'SharedDistro' } else { 'PerTemplateIsolatedImport' })",
         "- Total: $($results.Count)",
         "- Pass: $passCount",
         "- Fail: $failCount",
@@ -379,6 +518,15 @@ function Invoke-DistroNexusTemplateAutomation {
 
     $relativeRunPath = "{0}/{1}" -f $dateFolder, $runId
     Add-Content -Path $indexPath -Value ("- {0} | {1} | {2} | pass={3}, fail={4}, blocked={5}" -f $now.ToString('yyyy-MM-dd HH:mm:ss'), $Mode, $relativeRunPath, $passCount, $failCount, $blockedCount)
+
+    if ($isolationContext -and (Test-Path $isolationContext.Root)) {
+        try {
+            Remove-Item -Path $isolationContext.Root -Recurse -Force -ErrorAction Stop
+        }
+        catch {
+            Write-Warning "Failed to remove isolation workspace '$($isolationContext.Root)': $($_.Exception.Message)"
+        }
+    }
 
     [PSCustomObject]@{
         Status = if ($failCount -gt 0) { 'Failed' } elseif ($blockedCount -gt 0) { 'CompletedWithBlocked' } else { 'Passed' }

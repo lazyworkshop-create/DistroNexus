@@ -1,0 +1,16 @@
+{
+  "TemplateId": "dotnet-multi-sdk-dev",
+  "TemplateName": ".NET Multi-SDK Development",
+  "Status": "Pass",
+  "Reason": "",
+  "DurationSeconds": 32,
+  "ProbeResults": [
+    {
+      "Name": "dotnet --list-sdks",
+      "ExitCode": 0,
+      "Output": "8.0.418 [/usr/share/dotnet/sdk]",
+      "Success": true
+    }
+  ],
+  "IsolatedInstance": "dnx-auto-dotnet-multi-sdk-dev-806aca"
+}

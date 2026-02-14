@@ -11,6 +11,16 @@ NODE_SPECIFIC_VERSION="${SDK_NODE_VERSION:-}"
 NODE_TARGET="${NODE_SPECIFIC_VERSION:-$NODE_CHANNEL}"
 PKG_MANAGERS="${NODE_PACKAGE_MANAGERS:-npm,pnpm,yarn}"
 
+NODE_NVM_ARG="${NODE_TARGET}"
+case "${NODE_TARGET}" in
+	lts|lts/*)
+		NODE_NVM_ARG="--lts"
+		;;
+	current)
+		NODE_NVM_ARG="node"
+		;;
+esac
+
 log_info "Installing Node.js with target '${NODE_TARGET}'"
 
 if [ ! -s "$HOME/.nvm/nvm.sh" ]; then
@@ -19,12 +29,27 @@ fi
 
 export NVM_DIR="$HOME/.nvm"
 # shellcheck source=/dev/null
-[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+if [ -s "$NVM_DIR/nvm.sh" ]; then
+	set +e
+	set +u
+	. "$NVM_DIR/nvm.sh"
+	set -e
+fi
+
+set +u
 
 if ! nvm ls | grep -q "$NODE_TARGET"; then
-	nvm install "$NODE_TARGET"
+	nvm install "$NODE_NVM_ARG" || true
 fi
-nvm use "$NODE_TARGET"
+nvm alias default "$NODE_NVM_ARG" >/dev/null 2>&1 || true
+nvm use default || true
+
+if ! command_exists node && ! ls -1 "$NVM_DIR"/versions/node/*/bin/node >/dev/null 2>&1; then
+	log_warn "nvm-managed node binary not found, falling back to apt nodejs/npm"
+	ensure_apt_updated
+	ensure_package nodejs
+	ensure_package npm
+fi
 
 IFS=',' read -r -a managers <<< "$PKG_MANAGERS"
 for manager in "${managers[@]}"; do
@@ -45,6 +70,13 @@ if [ "${GENERATE_NVMRC:-false}" = "true" ] && [ ! -f .nvmrc ]; then
 	log_info "Generated .nvmrc"
 fi
 
-node -v
-npm -v
+if command_exists node; then
+	node -v
+elif command_exists nodejs; then
+	nodejs -v
+fi
+
+if command_exists npm; then
+	npm -v
+fi
 log_info "Node.js environment installed"

@@ -15,7 +15,7 @@ if [ "${CONTAINER_RUNTIME_MODE}" = "docker-desktop" ] && command_exists docker; 
 fi
 
 if [ "${CONTAINER_RUNTIME_MODE}" = "docker-engine" ] && command_exists docker; then
-  sudo service docker start || true
+  run_with_privilege service docker start || true
   docker info >/dev/null 2>&1 || log_warn "Docker daemon not running yet"
 fi
 

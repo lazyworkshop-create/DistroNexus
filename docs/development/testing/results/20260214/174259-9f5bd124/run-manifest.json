@@ -1,0 +1,343 @@
+{
+  "RunId": "174259-9f5bd124",
+  "Timestamp": "2026-02-14T17:42:59.0997878+08:00",
+  "Mode": "AllTemplates",
+  "Distro": "Ubuntu",
+  "IsolationMode": "PerTemplateIsolatedImport",
+  "DryRun": false,
+  "IncludeCapabilityGated": true,
+  "Summary": {
+    "Total": 15,
+    "Pass": 15,
+    "Fail": 0,
+    "Blocked": 0
+  },
+  "Environment": {
+    "Timestamp": "2026-02-14T17:42:59.0997878+08:00",
+    "Distro": "Ubuntu",
+    "WslStatus": {
+      "Name": "wsl-status",
+      "ExitCode": 0,
+      "Output": [
+        "D\u0000e\u0000f\u0000a\u0000u\u0000l\u0000t\u0000 \u0000D\u0000i\u0000s\u0000t\u0000r\u0000i\u0000b\u0000u\u0000t\u0000i\u0000o\u0000n\u0000:\u0000 \u0000U\u0000b\u0000u\u0000n\u0000t\u0000u\u0000",
+        "\u0000",
+        "\u0000D\u0000e\u0000f\u0000a\u0000u\u0000l\u0000t\u0000 \u0000V\u0000e\u0000r\u0000s\u0000i\u0000o\u0000n\u0000:\u0000 \u00002\u0000",
+        "\u0000",
+        "\u0000"
+      ],
+      "Success": true
+    },
+    "WslVersion": {
+      "Name": "wsl-version",
+      "ExitCode": 0,
+      "Output": [
+        "W\u0000S\u0000L\u0000 \u0000v\u0000e\u0000r\u0000s\u0000i\u0000o\u0000n\u0000:\u0000 \u00002\u0000.\u00004\u0000.\u00001\u00003\u0000.\u00000\u0000",
+        "\u0000",
+        "\u0000K\u0000e\u0000r\u0000n\u0000e\u0000l\u0000 \u0000v\u0000e\u0000r\u0000s\u0000i\u0000o\u0000n\u0000:\u0000 \u00005\u0000.\u00001\u00005\u0000.\u00001\u00006\u00007\u0000.\u00004\u0000-\u00001\u0000",
+        "\u0000",
+        "\u0000W\u0000S\u0000L\u0000g\u0000 \u0000v\u0000e\u0000r\u0000s\u0000i\u0000o\u0000n\u0000:\u0000 \u00001\u0000.\u00000\u0000.\u00006\u00005\u0000",
+        "\u0000",
+        "\u0000M\u0000S\u0000R\u0000D\u0000C\u0000 \u0000v\u0000e\u0000r\u0000s\u0000i\u0000o\u0000n\u0000:\u0000 \u00001\u0000.\u00002\u0000.\u00005\u00007\u00001\u00006\u0000",
+        "\u0000",
+        "\u0000D\u0000i\u0000r\u0000e\u0000c\u0000t\u00003\u0000D\u0000 \u0000v\u0000e\u0000r\u0000s\u0000i\u0000o\u0000n\u0000:\u0000 \u00001\u0000.\u00006\u00001\u00001\u0000.\u00001\u0000-\u00008\u00001\u00005\u00002\u00008\u00005\u00001\u00001\u0000",
+        "\u0000",
+        "\u0000D\u0000X\u0000C\u0000o\u0000r\u0000e\u0000 \u0000v\u0000e\u0000r\u0000s\u0000i\u0000o\u0000n\u0000:\u0000 \u00001\u00000\u0000.\u00000\u0000.\u00002\u00006\u00001\u00000\u00000\u0000.\u00001\u0000-\u00002\u00004\u00000\u00003\u00003\u00001\u0000-\u00001\u00004\u00003\u00005\u0000.\u0000g\u0000e\u0000-\u0000r\u0000e\u0000l\u0000e\u0000a\u0000s\u0000e\u0000",
+        "\u0000",
+        "\u0000W\u0000i\u0000n\u0000d\u0000o\u0000w\u0000s\u0000 \u0000v\u0000e\u0000r\u0000s\u0000i\u0000o\u0000n\u0000:\u0000 \u00001\u00000\u0000.\u00000\u0000.\u00002\u00006\u00002\u00000\u00000\u0000.\u00007\u00008\u00004\u00000\u0000",
+        "\u0000",
+        "\u0000"
+      ],
+      "Success": true
+    },
+    "WslList": {
+      "Name": "wsl-list",
+      "ExitCode": 0,
+      "Output": [
+        " \u0000 \u0000N\u0000A\u0000M\u0000E\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000S\u0000T\u0000A\u0000T\u0000E\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000V\u0000E\u0000R\u0000S\u0000I\u0000O\u0000N\u0000",
+        "\u0000",
+        "\u0000*\u0000 \u0000U\u0000b\u0000u\u0000n\u0000t\u0000u\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000S\u0000t\u0000o\u0000p\u0000p\u0000e\u0000d\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u00002\u0000",
+        "\u0000",
+        "\u0000 \u0000 \u0000u\u0000b\u0000u\u0000n\u0000t\u0000u\u0000-\u00002\u00004\u00000\u00004\u0000-\u0000l\u0000t\u0000s\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000S\u0000t\u0000o\u0000p\u0000p\u0000e\u0000d\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u00002\u0000",
+        "\u0000",
+        "\u0000 \u0000 \u0000u\u0000b\u0000u\u0000n\u0000t\u0000u\u0000-\u00002\u00004\u00000\u00004\u0000-\u0000l\u0000t\u0000s\u00001\u00001\u0000 \u0000 \u0000 \u0000 \u0000S\u0000t\u0000o\u0000p\u0000p\u0000e\u0000d\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u00002\u0000",
+        "\u0000",
+        "\u0000 \u0000 \u0000u\u0000b\u0000u\u0000n\u0000t\u0000u\u00002\u00002\u00003\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000S\u0000t\u0000o\u0000p\u0000p\u0000e\u0000d\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u00002\u0000",
+        "\u0000",
+        "\u0000 \u0000 \u0000d\u0000e\u0000v\u0000_\u0000b\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000S\u0000t\u0000o\u0000p\u0000p\u0000e\u0000d\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u00002\u0000",
+        "\u0000",
+        "\u0000 \u0000 \u0000u\u0000b\u0000u\u0000n\u0000t\u0000u\u00003\u00003\u00004\u00003\u00005\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000S\u0000t\u0000o\u0000p\u0000p\u0000e\u0000d\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u00002\u0000",
+        "\u0000",
+        "\u0000 \u0000 \u0000d\u0000e\u0000v\u0000_\u0000a\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000S\u0000t\u0000o\u0000p\u0000p\u0000e\u0000d\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u00002\u0000",
+        "\u0000",
+        "\u0000 \u0000 \u0000u\u0000b\u0000u\u0000n\u0000t\u0000u\u00001\u00002\u00003\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000S\u0000t\u0000o\u0000p\u0000p\u0000e\u0000d\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u00002\u0000",
+        "\u0000",
+        "\u0000 \u0000 \u0000u\u0000b\u0000u\u0000n\u0000t\u0000u\u00001\u00002\u00003\u00004\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000S\u0000t\u0000o\u0000p\u0000p\u0000e\u0000d\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u00002\u0000",
+        "\u0000",
+        "\u0000 \u0000 \u0000u\u0000b\u0000u\u0000n\u0000t\u0000u\u00003\u00003\u00003\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000S\u0000t\u0000o\u0000p\u0000p\u0000e\u0000d\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u00002\u0000",
+        "\u0000",
+        "\u0000 \u0000 \u0000d\u0000o\u0000c\u0000k\u0000e\u0000r\u0000-\u0000d\u0000e\u0000s\u0000k\u0000t\u0000o\u0000p\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000S\u0000t\u0000o\u0000p\u0000p\u0000e\u0000d\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u00002\u0000",
+        "\u0000",
+        "\u0000 \u0000 \u0000u\u0000b\u0000u\u0000n\u0000t\u0000u\u00002\u00002\u00002\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000S\u0000t\u0000o\u0000p\u0000p\u0000e\u0000d\u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u0000 \u00002\u0000",
+        "\u0000",
+        "\u0000"
+      ],
+      "Success": true
+    },
+    "InstanceIsolation": "PerTemplateIsolatedImport"
+  },
+  "Results": [
+    {
+      "TemplateId": "dotnet-dev",
+      "TemplateName": ".NET Development",
+      "Status": "Pass",
+      "Reason": "",
+      "DurationSeconds": 57,
+      "ProbeResults": [
+        {
+          "Name": "dotnet --list-sdks",
+          "ExitCode": 0,
+          "Output": "8.0.418 [/usr/share/dotnet/sdk]",
+          "Success": true
+        }
+      ],
+      "IsolatedInstance": "dnx-auto-dotnet-dev-9f3094"
+    },
+    {
+      "TemplateId": "nodejs-dev",
+      "TemplateName": "Node.js Development",
+      "Status": "Pass",
+      "Reason": "",
+      "DurationSeconds": 21,
+      "ProbeResults": [
+        {
+          "Name": "bash -lc '[ -s /root/.nvm/nvm.sh ] || command -v node >/dev/null 2>&1 || command -v nodejs >/dev/null 2>&1'",
+          "ExitCode": 0,
+          "Output": null,
+          "Success": true
+        }
+      ],
+      "IsolatedInstance": "dnx-auto-nodejs-dev-2a482b"
+    },
+    {
+      "TemplateId": "python-dev",
+      "TemplateName": "Python Development",
+      "Status": "Pass",
+      "Reason": "",
+      "DurationSeconds": 217,
+      "ProbeResults": [
+        {
+          "Name": "bash -lc 'if command -v python >/dev/null; then python --version; elif command -v python3 >/dev/null; then python3 --version; else exit 127; fi'",
+          "ExitCode": 0,
+          "Output": "Python 3.12.3",
+          "Success": true
+        }
+      ],
+      "IsolatedInstance": "dnx-auto-python-dev-02df2e"
+    },
+    {
+      "TemplateId": "docker-dev",
+      "TemplateName": "Docker Development",
+      "Status": "Pass",
+      "Reason": "",
+      "DurationSeconds": 30,
+      "ProbeResults": [
+        {
+          "Name": "bash -lc \"echo ok\"",
+          "ExitCode": 0,
+          "Output": "ok",
+          "Success": true
+        }
+      ],
+      "IsolatedInstance": "dnx-auto-docker-dev-0f73f2"
+    },
+    {
+      "TemplateId": "fullstack-dev",
+      "TemplateName": "Fullstack Development",
+      "Status": "Pass",
+      "Reason": "",
+      "DurationSeconds": 219,
+      "ProbeResults": [
+        {
+          "Name": "bash -lc \"echo ok\"",
+          "ExitCode": 0,
+          "Output": "ok",
+          "Success": true
+        }
+      ],
+      "IsolatedInstance": "dnx-auto-fullstack-dev-c4f9fc"
+    },
+    {
+      "TemplateId": "dotnet-multi-sdk-dev",
+      "TemplateName": ".NET Multi-SDK Development",
+      "Status": "Pass",
+      "Reason": "",
+      "DurationSeconds": 32,
+      "ProbeResults": [
+        {
+          "Name": "dotnet --list-sdks",
+          "ExitCode": 0,
+          "Output": "8.0.418 [/usr/share/dotnet/sdk]",
+          "Success": true
+        }
+      ],
+      "IsolatedInstance": "dnx-auto-dotnet-multi-sdk-dev-806aca"
+    },
+    {
+      "TemplateId": "nodejs-multi-version-dev",
+      "TemplateName": "Node.js Multi-Version Development",
+      "Status": "Pass",
+      "Reason": "",
+      "DurationSeconds": 22,
+      "ProbeResults": [
+        {
+          "Name": "bash -lc '[ -s /root/.nvm/nvm.sh ] || command -v node >/dev/null 2>&1 || command -v nodejs >/dev/null 2>&1'",
+          "ExitCode": 0,
+          "Output": null,
+          "Success": true
+        }
+      ],
+      "IsolatedInstance": "dnx-auto-nodejs-multi-version-dev-c48d4d"
+    },
+    {
+      "TemplateId": "python-multi-version-dev",
+      "TemplateName": "Python Multi-Version Development",
+      "Status": "Pass",
+      "Reason": "",
+      "DurationSeconds": 166,
+      "ProbeResults": [
+        {
+          "Name": "bash -lc 'if command -v python >/dev/null; then python --version; elif command -v python3 >/dev/null; then python3 --version; else exit 127; fi'",
+          "ExitCode": 0,
+          "Output": "Python 3.12.3",
+          "Success": true
+        }
+      ],
+      "IsolatedInstance": "dnx-auto-python-multi-version-dev-75f815"
+    },
+    {
+      "TemplateId": "java-jvm-dev",
+      "TemplateName": "Java/JVM Development",
+      "Status": "Pass",
+      "Reason": "",
+      "DurationSeconds": 58,
+      "ProbeResults": [
+        {
+          "Name": "bash -lc 'if command -v java >/dev/null 2>&1; then java -version; exit $?; fi; if [ -f \"$HOME/.sdkman/bin/sdkman-init.sh\" ]; then set +u; . \"$HOME/.sdkman/bin/sdkman-init.sh\"; fi; command -v java >/dev/null 2>&1 && java -version'",
+          "ExitCode": 0,
+          "Output": [
+            "openjdk version \"21.0.5\" 2024-10-15 LTS",
+            "OpenJDK Runtime Environment Temurin-21.0.5+11 (build 21.0.5+11-LTS)",
+            "OpenJDK 64-Bit Server VM Temurin-21.0.5+11 (build 21.0.5+11-LTS, mixed mode, sharing)"
+          ],
+          "Success": true
+        }
+      ],
+      "IsolatedInstance": "dnx-auto-java-jvm-dev-cba4d0"
+    },
+    {
+      "TemplateId": "rust-dev",
+      "TemplateName": "Rust Development",
+      "Status": "Pass",
+      "Reason": "",
+      "DurationSeconds": 52,
+      "ProbeResults": [
+        {
+          "Name": "bash -lc 'if [ -x \"$HOME/.cargo/bin/rustc\" ]; then \"$HOME/.cargo/bin/rustc\" --version; else if [ -f \"$HOME/.cargo/env\" ]; then . \"$HOME/.cargo/env\"; fi; export PATH=\"$HOME/.cargo/bin:$PATH\"; rustc --version; fi'",
+          "ExitCode": 0,
+          "Output": "rustc 1.93.1 (01f6ddf75 2026-02-11)",
+          "Success": true
+        },
+        {
+          "Name": "bash -lc 'if [ -x \"$HOME/.cargo/bin/cargo\" ]; then \"$HOME/.cargo/bin/cargo\" --version; else if [ -f \"$HOME/.cargo/env\" ]; then . \"$HOME/.cargo/env\"; fi; export PATH=\"$HOME/.cargo/bin:$PATH\"; cargo --version; fi'",
+          "ExitCode": 0,
+          "Output": "cargo 1.93.1 (083ac5135 2025-12-15)",
+          "Success": true
+        }
+      ],
+      "IsolatedInstance": "dnx-auto-rust-dev-51140e"
+    },
+    {
+      "TemplateId": "go-dev",
+      "TemplateName": "Go Development",
+      "Status": "Pass",
+      "Reason": "",
+      "DurationSeconds": 21,
+      "ProbeResults": [
+        {
+          "Name": "bash -lc 'export PATH=\"$PATH:/usr/local/go/bin\"; go version'",
+          "ExitCode": 0,
+          "Output": "go version go1.23.6 linux/amd64",
+          "Success": true
+        }
+      ],
+      "IsolatedInstance": "dnx-auto-go-dev-eeb70b"
+    },
+    {
+      "TemplateId": "container-runtime-dev",
+      "TemplateName": "Container Runtime Development",
+      "Status": "Pass",
+      "Reason": "",
+      "DurationSeconds": 31,
+      "ProbeResults": [
+        {
+          "Name": "bash -lc \"if command -v docker >/dev/null; then docker --version; elif command -v podman >/dev/null; then podman --version; else exit 127; fi\"",
+          "ExitCode": 0,
+          "Output": "Docker version 29.2.1, build a5c7197",
+          "Success": true
+        }
+      ],
+      "IsolatedInstance": "dnx-auto-container-runtime-dev-484544"
+    },
+    {
+      "TemplateId": "kubernetes-local-dev",
+      "TemplateName": "Kubernetes Local Development",
+      "Status": "Pass",
+      "Reason": "",
+      "DurationSeconds": 27,
+      "ProbeResults": [
+        {
+          "Name": "kubectl version --client",
+          "ExitCode": 0,
+          "Output": [
+            "Client Version: v1.35.1",
+            "Kustomize Version: v5.7.1"
+          ],
+          "Success": true
+        }
+      ],
+      "IsolatedInstance": "dnx-auto-kubernetes-local-dev-86ff1e"
+    },
+    {
+      "TemplateId": "database-local-stack",
+      "TemplateName": "Database Local Stack",
+      "Status": "Pass",
+      "Reason": "",
+      "DurationSeconds": 42,
+      "ProbeResults": [
+        {
+          "Name": "bash -lc \"if command -v psql >/dev/null || command -v mysql >/dev/null || command -v redis-cli >/dev/null || command -v mongosh >/dev/null || command -v sqlite3 >/dev/null; then exit 0; else exit 127; fi\"",
+          "ExitCode": 0,
+          "Output": null,
+          "Success": true
+        }
+      ],
+      "IsolatedInstance": "dnx-auto-database-local-stack-60c370"
+    },
+    {
+      "TemplateId": "ai-ml-gpu-dev",
+      "TemplateName": "AI/ML GPU Development",
+      "Status": "Pass",
+      "Reason": "",
+      "DurationSeconds": 55,
+      "ProbeResults": [
+        {
+          "Name": "bash -lc 'if command -v python >/dev/null; then python --version; elif command -v python3 >/dev/null; then python3 --version; else exit 127; fi'",
+          "ExitCode": 0,
+          "Output": "Python 3.12.3",
+          "Success": true
+        }
+      ],
+      "IsolatedInstance": "dnx-auto-ai-ml-gpu-dev-1a1a0c"
+    }
+  ]
+}

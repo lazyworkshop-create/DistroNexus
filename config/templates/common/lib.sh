@@ -17,6 +17,14 @@ command_exists() {
   command -v "$1" >/dev/null 2>&1
 }
 
+run_with_privilege() {
+  if [ "$(id -u)" -eq 0 ]; then
+    "$@"
+  else
+    sudo "$@"
+  fi
+}
+
 detect_distro() {
   if [ -f /etc/os-release ]; then
     . /etc/os-release
@@ -44,7 +52,7 @@ retry() {
 }
 
 ensure_apt_updated() {
-  retry 3 3 sudo apt-get update -y
+  retry 3 3 run_with_privilege apt-get update -y
 }
 
 ensure_package() {
@@ -52,7 +60,7 @@ ensure_package() {
   if dpkg -s "$pkg" >/dev/null 2>&1; then
     log_info "Package already installed: ${pkg}"
   else
-    retry 3 3 sudo apt-get install -y "$pkg"
+    retry 3 3 run_with_privilege apt-get install -y "$pkg"
   fi
 }
 

@@ -15,8 +15,8 @@ fi
 
 tmp_tar="/tmp/go${GO_VERSION}.${GO_ARCH}.tar.gz"
 retry 3 3 wget "https://go.dev/dl/go${GO_VERSION}.${GO_ARCH}.tar.gz" -O "${tmp_tar}"
-sudo rm -rf /usr/local/go
-sudo tar -C /usr/local -xzf "${tmp_tar}"
+run_with_privilege rm -rf /usr/local/go
+run_with_privilege tar -C /usr/local -xzf "${tmp_tar}"
 rm -f "${tmp_tar}"
 
 append_line_if_missing 'export PATH=$PATH:/usr/local/go/bin' "$HOME/.bashrc"

@@ -1,0 +1,16 @@
+{
+  "TemplateId": "dotnet-dev",
+  "TemplateName": ".NET Development",
+  "Status": "Pass",
+  "Reason": "",
+  "DurationSeconds": 57,
+  "ProbeResults": [
+    {
+      "Name": "dotnet --list-sdks",
+      "ExitCode": 0,
+      "Output": "8.0.418 [/usr/share/dotnet/sdk]",
+      "Success": true
+    }
+  ],
+  "IsolatedInstance": "dnx-auto-dotnet-dev-9f3094"
+}

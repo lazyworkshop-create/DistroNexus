@@ -79,3 +79,28 @@
 	- implementation tasks define build sequence and ownership-ready work items,
 	- acceptance criteria define release gate conditions,
 	- test checklist defines executable verification path and pass standards.
+
+## Execution Findings (2026-02-14 Local Run)
+- Full-catalog execution completed and produced artifacts successfully:
+	- RunId `150754-8e089550`, Mode `AllTemplates`, Distro `Ubuntu`.
+	- Result summary: Total 15, Pass 0, Fail 15, Blocked 0.
+	- Artifacts: `summary.md`, `run-manifest.json`, `test-results.xml`, and per-template logs under `docs/development/testing/results/20260214/150754-8e089550/`.
+- Focused reproduction run confirms the same failure pattern in single-template mode:
+	- RunId `150925-70dd1248`, Mode `SelectedTemplates`, Template `dotnet-dev`.
+	- Result summary: Total 1, Pass 0, Fail 1, Blocked 0.
+- Terminal runtime output shows the consistent bootstrap error across runs:
+	- `bash: line 4: BASH_SOURCE[0]: unbound variable`
+- Implication:
+	- Failures are likely concentrated in shell bootstrap/shared script resolution, not in template-specific package/probe checks.
+	- Next repair focus should be shell entry strict-mode compatibility and shared library path resolution before re-running full catalog.
+
+## Execution Findings Update (2026-02-14 Isolated Per-Template Runs)
+- Runner isolation strategy validated:
+	- Each template can be executed from a clean imported distro instance cloned from the selected base distro snapshot.
+	- Automatic instance teardown (`terminate + unregister`) is reliable and leaves no residual `dnx-auto-*` distros.
+- Root-context execution is required for non-interactive local automation:
+	- Running template scripts as root avoids `sudo` password prompts in clean instances.
+- Version-manager based templates require probe logic aligned with non-login shell behavior:
+	- `nvm`, `sdkman`, and `rustup` workflows can succeed while default non-login PATH probes fail; probes must validate installation artifacts/initialized environments rather than assuming global PATH mutation.
+- Final objective met with full-catalog run:
+	- RunId `174259-9f5bd124` achieved `Pass 15 / Fail 0 / Blocked 0` in `PerTemplateIsolatedImport` mode.
