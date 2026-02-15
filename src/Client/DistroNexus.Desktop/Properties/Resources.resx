@@ -1,0 +1,1243 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="SettingsTitle" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="GeneralSettings" xml:space="preserve">
+    <value>General Settings</value>
+  </data>
+  <data name="DefaultInstallPath" xml:space="preserve">
+    <value>Default Installation Path</value>
+  </data>
+  <data name="PackageCachePath" xml:space="preserve">
+    <value>Package Cache Path</value>
+  </data>
+  <data name="DefaultWslVersion" xml:space="preserve">
+    <value>Default WSL Version</value>
+  </data>
+  <data name="DefaultUsername" xml:space="preserve">
+    <value>Default Username</value>
+  </data>
+  <data name="DefaultTerminalStartPath" xml:space="preserve">
+    <value>Default Terminal Start Path</value>
+  </data>
+  <data name="DefaultDistro" xml:space="preserve">
+    <value>Default Distribution</value>
+  </data>
+  <data name="Appearance" xml:space="preserve">
+    <value>Appearance</value>
+  </data>
+  <data name="Theme" xml:space="preserve">
+    <value>Theme</value>
+  </data>
+  <data name="Language" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="DownloadSettings" xml:space="preserve">
+    <value>Download Settings</value>
+  </data>
+  <data name="OnlineCatalogUrl" xml:space="preserve">
+    <value>Online Catalog Source URL</value>
+  </data>
+  <data name="MaxConcurrentDownloads" xml:space="preserve">
+    <value>Max Concurrent Downloads</value>
+  </data>
+  <data name="MaxRetryAttempts" xml:space="preserve">
+    <value>Max Retry Attempts</value>
+  </data>
+  <data name="AutoRetryFailedDownloads" xml:space="preserve">
+    <value>Auto Retry Failed Downloads</value>
+  </data>
+  <data name="CacheManagement" xml:space="preserve">
+    <value>Cache Management</value>
+  </data>
+  <data name="PackageCacheLocation" xml:space="preserve">
+    <value>Package Cache Location</value>
+  </data>
+  <data name="CachedPackages" xml:space="preserve">
+    <value>Cached Packages</value>
+  </data>
+  <data name="CachedFiles" xml:space="preserve">
+    <value>Cached Files</value>
+  </data>
+  <data name="OpenFolder" xml:space="preserve">
+    <value>Open Folder</value>
+  </data>
+  <data name="TotalSize" xml:space="preserve">
+    <value>Total Size</value>
+  </data>
+  <data name="Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="ClearAllCache" xml:space="preserve">
+    <value>Clear All Cache</value>
+  </data>
+  <data name="NoCachedFilesFound" xml:space="preserve">
+    <value>No cached files found</value>
+  </data>
+  <data name="CachedDateLabel" xml:space="preserve">
+    <value> | Cached: </value>
+  </data>
+  <data name="DeleteCachedFileTooltip" xml:space="preserve">
+    <value>Delete this cached file</value>
+  </data>
+  <data name="PowerShellModulePathHeader" xml:space="preserve">
+    <value>PowerShell Module Path (Optional)</value>
+  </data>
+  <data name="PowerShellModulePathDescription" xml:space="preserve">
+    <value>Leave empty to use automatic detection. Set this if the module is in a custom location.</value>
+  </data>
+  <data name="PowerShellModulePathPlaceholder" xml:space="preserve">
+    <value>Auto-detect module path</value>
+  </data>
+  <data name="ThemeLight" xml:space="preserve">
+    <value>Light</value>
+  </data>
+  <data name="ThemeDark" xml:space="preserve">
+    <value>Dark</value>
+  </data>
+  <data name="ThemeAuto" xml:space="preserve">
+    <value>Auto (System)</value>
+  </data>
+  <data name="LangEnglish" xml:space="preserve">
+    <value>English</value>
+  </data>
+  <data name="LangChinese" xml:space="preserve">
+    <value>Simplified Chinese</value>
+  </data>
+  <data name="TerminalPathPlaceholder" xml:space="preserve">
+    <value>~ (home directory)</value>
+  </data>
+  <data name="AdvancedSettings" xml:space="preserve">
+    <value>Advanced Settings</value>
+  </data>
+  <data name="Behavior" xml:space="preserve">
+    <value>Behavior</value>
+  </data>
+  <data name="EnableLogging" xml:space="preserve">
+    <value>Enable Logging</value>
+  </data>
+  <data name="CheckUpdatesOnStartup" xml:space="preserve">
+    <value>Check for Updates on Startup</value>
+  </data>
+  <data name="ShowConfirmationDialogs" xml:space="preserve">
+    <value>Show Confirmation Dialogs</value>
+  </data>
+  <data name="EnableAutoSave" xml:space="preserve">
+    <value>Enable Auto Save</value>
+  </data>
+  <data name="LogFilePath" xml:space="preserve">
+    <value>Log File Path</value>
+  </data>
+  <data name="SettingsSaved" xml:space="preserve">
+    <value>Settings saved successfully</value>
+  </data>
+  <data name="SettingsSavedRestart" xml:space="preserve">
+    <value>Settings saved successfully. Please restart the application for language changes to take full effect.</value>
+  </data>
+  <data name="Browse" xml:space="preserve">
+    <value>Browse...</value>
+  </data>
+  <data name="Back" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="ResetToDefaults" xml:space="preserve">
+    <value>Reset to Defaults</value>
+  </data>
+  <data name="SaveSettings" xml:space="preserve">
+    <value>Save Settings</value>
+  </data>
+    <data name="Clear" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="ModulePathConfigTitle" xml:space="preserve">
+    <value>Module Path Configuration</value>
+  </data>
+  <data name="ModulePathInfo1" xml:space="preserve">
+    <value>The PowerShell module is required for DistroNexus to manage WSL instances.</value>
+  </data>
+  <data name="ModulePathInfo2" xml:space="preserve">
+    <value>If not specified, the application will search in these locations:</value>
+  </data>
+  <data name="ModulePathSearchLoc1" xml:space="preserve">
+    <value>• Environment variable: DISTRONEXUS_MODULE_PATH</value>
+  </data>
+  <data name="ModulePathSearchLoc2" xml:space="preserve">
+    <value>• Development: src/PowerShell (relative to application)</value>
+  </data>
+  <data name="ModulePathSearchLoc3" xml:space="preserve">
+    <value>• Installed: %ProgramFiles%\DistroNexus\PowerShell</value>
+  </data>
+  <data name="ModulePathSearchLoc4" xml:space="preserve">
+    <value>• User modules: %USERPROFILE%\Documents\PowerShell\Modules\DistroNexus</value>
+  </data>
+  <data name="AutoSaveInterval" xml:space="preserve">
+    <value>Auto Save Interval (seconds)</value>
+  </data>
+  <data name="InstallNew" xml:space="preserve">
+    <value>Install New</value>
+  </data>
+  <data name="PackageManagerTitle" xml:space="preserve">
+    <value>Package Manager</value>
+  </data>
+  <data name="DownloadTasksTooltip" xml:space="preserve">
+    <value>Download Tasks</value>
+  </data>
+  <data name="ToggleThemeTooltip" xml:space="preserve">
+    <value>Toggle Theme (Dark/Light)</value>
+  </data>
+  <data name="SwitchLanguageTooltip" xml:space="preserve">
+    <value>Switch Language (EN/CN)</value>
+  </data>
+  <data name="Update" xml:space="preserve">
+    <value>Update</value>
+  </data>
+  <data name="UpdateCatalogTooltip" xml:space="preserve">
+    <value>Update distribution catalog from remote source</value>
+  </data>
+  <data name="Download" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="DownloadAllTooltip" xml:space="preserve">
+    <value>Download all uncached packages</value>
+  </data>
+  <data name="SearchPlaceholder" xml:space="preserve">
+    <value>Search distributions...</value>
+  </data>
+  <data name="AddSource" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="OfflineMode" xml:space="preserve">
+    <value>Offline Mode</value>
+  </data>
+  <data name="InstallWizardTitle" xml:space="preserve">
+    <value>Install WSL Distribution</value>
+  </data>
+  <data name="StepLabel" xml:space="preserve">
+    <value>Step </value>
+  </data>
+  <data name="OfLabel" xml:space="preserve">
+    <value> of </value>
+  </data>
+  <data name="SelectDistroLabel" xml:space="preserve">
+    <value>Select a distribution to install:</value>
+  </data>
+  <data name="ChooseLocationLabel" xml:space="preserve">
+    <value>Choose installation location:</value>
+  </data>
+  <data name="InstanceNameLabel" xml:space="preserve">
+    <value>Instance Name:</value>
+  </data>
+  <data name="InstallPathLabel" xml:space="preserve">
+    <value>Installation Path:</value>
+  </data>
+  <data name="InstallSuccessLabel" xml:space="preserve">
+    <value>Installation completed successfully!</value>
+  </data>
+  <data name="ErrorTitle" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Next" xml:space="preserve">
+    <value>Next</value>
+  </data>
+  <data name="Install" xml:space="preserve">
+    <value>Install</value>
+  </data>
+  <data name="Finish" xml:space="preserve">
+    <value>Finish</value>
+  </data>
+  <data name="InstanceNamePlaceholder" xml:space="preserve">
+    <value>Enter instance name</value>
+  </data>
+  <data name="Success" xml:space="preserve">
+    <value>Success</value>
+  </data>
+  <data name="SaveSettingsError" xml:space="preserve">
+    <value>Failed to save settings: {0}</value>
+  </data>
+  <data name="StatusInitializing" xml:space="preserve">
+    <value>Initializing...</value>
+  </data>
+  <data name="DashboardTitle" xml:space="preserve">
+    <value>Dashboard</value>
+  </data>
+  <data name="StatusOpeningWizard" xml:space="preserve">
+    <value>Opening installation wizard...</value>
+  </data>
+  <data name="StatusInstallCompleteRefresh" xml:space="preserve">
+    <value>Installation completed - refreshing instances...</value>
+  </data>
+  <data name="StatusReady" xml:space="preserve">
+    <value>Ready</value>
+  </data>
+  <data name="StatusThemeChanged" xml:space="preserve">
+    <value>Theme changed to {0}</value>
+  </data>
+  <data name="StatusThemeChangeFailed" xml:space="preserve">
+    <value>Failed to change theme</value>
+  </data>
+  <data name="StatusLanguageChangeFailed" xml:space="preserve">
+    <value>Failed to change language</value>
+  </data>
+  <data name="StatusGeneratingDiagnostics" xml:space="preserve">
+    <value>Generating diagnostics...</value>
+  </data>
+  <data name="DiagnosticsServiceUnavailable" xml:space="preserve">
+    <value>PowerShell service not available</value>
+  </data>
+  <data name="DiagnosticsErrorTitle" xml:space="preserve">
+    <value>Diagnostics Error</value>
+  </data>
+  <data name="DiagnosticsWindowTitle" xml:space="preserve">
+    <value>PowerShell Diagnostics</value>
+  </data>
+  <data name="LanguageChangedMessage" xml:space="preserve">
+    <value>Language changed to English. Please restart the application for the change to take full effect.</value>
+  </data>
+  <data name="LanguageChangedTitle" xml:space="preserve">
+    <value>Language Changed</value>
+  </data>
+  <data name="LoadInstancesError" xml:space="preserve">
+    <value>Failed to load WSL instances: {0}</value>
+  </data>
+  <data name="PackageManagerError" xml:space="preserve">
+    <value>Failed to open package manager: {0}</value>
+  </data>
+  <data name="InstallWizardError" xml:space="preserve">
+    <value>Failed to start installation wizard: {0}</value>
+  </data>
+  <data name="InformationTitle" xml:space="preserve">
+    <value>Information</value>
+  </data>
+  <data name="DeleteFileError" xml:space="preserve">
+    <value>Failed to delete file: {0}</value>
+  </data>
+  <data name="OpenCacheFolderError" xml:space="preserve">
+    <value>Failed to open cache folder.</value>
+  </data>
+  <data name="CachePathNotConfigured" xml:space="preserve">
+    <value>Cache folder path is not configured.</value>
+  </data>
+  <data name="StepTitleSelectDistro" xml:space="preserve">
+    <value>Select Distribution</value>
+  </data>
+  <data name="StepTitleQuickInstall" xml:space="preserve">
+    <value>Quick Installation</value>
+  </data>
+  <data name="StepTitleInstallation" xml:space="preserve">
+    <value>Installation</value>
+  </data>
+  <data name="StepTitleChoosePath" xml:space="preserve">
+    <value>Choose Installation Path</value>
+  </data>
+  <data name="StepTitleConfigUser" xml:space="preserve">
+    <value>Configure User Account</value>
+  </data>
+  <data name="StepTitleReview" xml:space="preserve">
+    <value>Review and Install</value>
+  </data>
+  <data name="ValMsgSelectDistro" xml:space="preserve">
+    <value>Please select a distribution to install.</value>
+  </data>
+  <data name="ValMsgSpecifyPath" xml:space="preserve">
+    <value>Please specify an installation path.</value>
+  </data>
+  <data name="ValMsgSpecifyName" xml:space="preserve">
+    <value>Please specify an instance name.</value>
+  </data>
+  <data name="ValMsgEnterUsername" xml:space="preserve">
+    <value>Please enter a username.</value>
+  </data>
+  <data name="ValMsgEnterPassword" xml:space="preserve">
+    <value>Please enter a password.</value>
+  </data>
+  <data name="ValMsgPasswordsNoMatch" xml:space="preserve">
+    <value>Passwords do not match.</value>
+  </data>
+  <data name="ValMsgPathRequired" xml:space="preserve">
+    <value>Installation path is required.</value>
+  </data>
+  <data name="ValMsgDirExists" xml:space="preserve">
+    <value>A directory already exists at this location.</value>
+  </data>
+  <data name="ValMsgCannotCreateDir" xml:space="preserve">
+    <value>Cannot create directory at this location.</value>
+  </data>
+  <data name="ValMsgInstallTarget" xml:space="preserve">
+    <value>Instance will be installed to: {0}</value>
+  </data>
+  <data name="ValMsgInvalidPath" xml:space="preserve">
+    <value>Invalid path: {0}</value>
+  </data>
+  <data name="StatusPreparingInstall" xml:space="preserve">
+    <value>Preparing installation...</value>
+  </data>
+  <data name="LogStartingInstall" xml:space="preserve">
+    <value>Starting installation...</value>
+  </data>
+  <data name="StatusInstallCancelled" xml:space="preserve">
+    <value>Installation cancelled.</value>
+  </data>
+  <data name="ErrorInstallCancelled" xml:space="preserve">
+    <value>Installation was cancelled.</value>
+  </data>
+  <data name="StatusInstallFailed" xml:space="preserve">
+    <value>Installation failed.</value>
+  </data>
+  <data name="ErrorInstallFailed" xml:space="preserve">
+    <value>Installation failed: {0}</value>
+  </data>
+  <data name="SelectInstallDirTitle" xml:space="preserve">
+    <value>Select Installation Directory</value>
+  </data>
+  <data name="LoadDistributionsError" xml:space="preserve">
+    <value>Failed to load distributions: {0}</value>
+  </data>
+  <data name="StatusLoadingCatalog" xml:space="preserve">
+    <value>Loading distribution catalog...</value>
+  </data>
+  <data name="StatusLoadedDistros" xml:space="preserve">
+    <value>Loaded {0} distribution(s)</value>
+  </data>
+  <data name="ErrorLoadingCatalogShort" xml:space="preserve">
+    <value>Error loading catalog: {0}</value>
+  </data>
+  <data name="LoadCatalogError" xml:space="preserve">
+    <value>Failed to load catalog: {0}</value>
+  </data>
+  <data name="StatusRefreshingCatalog" xml:space="preserve">
+    <value>Refreshing catalog from remote source...</value>
+  </data>
+  <data name="StatusCatalogRefreshed" xml:space="preserve">
+    <value>Catalog refreshed successfully</value>
+  </data>
+  <data name="ErrorOfflineModeMessage" xml:space="preserve">
+    <value>Unable to connect to remote catalog. Using cached data.
+
+Working in Offline Mode.</value>
+  </data>
+  <data name="OfflineModeTitle" xml:space="preserve">
+    <value>Offline Mode</value>
+  </data>
+  <data name="StatusOfflineCached" xml:space="preserve">
+    <value>Offline Mode - Using cached catalog</value>
+  </data>
+  <data name="StatusOfflineError" xml:space="preserve">
+    <value>Offline Mode - {0}</value>
+  </data>
+  <data name="ErrorRefreshCatalogFailed" xml:space="preserve">
+    <value>Failed to refresh catalog: {0}
+
+Using cached data.</value>
+  </data>
+  <data name="StatusFoundDistros" xml:space="preserve">
+    <value>Found {0} matching distribution(s)</value>
+  </data>
+  <data name="ErrorSearchFailed" xml:space="preserve">
+    <value>Search failed: {0}</value>
+  </data>
+  <data name="StatusDownloadQueued" xml:space="preserve">
+    <value>Download queued: {0}</value>
+  </data>
+  <data name="StatusQueueFailed" xml:space="preserve">
+    <value>Failed to queue download</value>
+  </data>
+  <data name="ErrorQueueDownload" xml:space="preserve">
+    <value>Failed to queue download: {0}</value>
+  </data>
+  <data name="StatusDownloadCancelled" xml:space="preserve">
+    <value>Download cancelled: {0}</value>
+  </data>
+  <data name="ErrorCancelDownload" xml:space="preserve">
+    <value>Failed to cancel download: {0}</value>
+  </data>
+  <data name="ErrorForceRefresh" xml:space="preserve">
+    <value>Failed to force refresh instance: {0}</value>
+  </data>
+  <data name="ErrorStartInstance" xml:space="preserve">
+    <value>Failed to start instance: {0}</value>
+  </data>
+  <data name="ErrorStopInstance" xml:space="preserve">
+    <value>Failed to stop instance: {0}</value>
+  </data>
+  <data name="ConfirmRemoveInstanceTitle" xml:space="preserve">
+    <value>Delete Instance</value>
+  </data>
+  <data name="ConfirmRemoveInstanceMessage" xml:space="preserve">
+    <value>Are you sure you want to remove '{0}'? This will delete all data permanently.</value>
+  </data>
+  <data name="StatusInstanceRemoved" xml:space="preserve">
+    <value>Instance '{0}' removed successfully</value>
+  </data>
+  <data name="ErrorRemoveInstance" xml:space="preserve">
+    <value>Failed to remove instance: {0}</value>
+  </data>
+  <data name="ErrorOpenTerminal" xml:space="preserve">
+    <value>Failed to open terminal: {0}</value>
+  </data>
+  <data name="ConfirmResetSettings" xml:space="preserve">
+    <value>Are you sure you want to reset all settings to defaults?</value>
+  </data>
+  <data name="StatusSettingsReset" xml:space="preserve">
+    <value>Settings reset to defaults</value>
+  </data>
+  <data name="ErrorResetSettings" xml:space="preserve">
+    <value>Failed to reset settings: {0}</value>
+  </data>
+  <data name="ConfirmClearCache" xml:space="preserve">
+    <value>Are you sure you want to delete all cached files? ({0} files)</value>
+  </data>
+  <data name="StatusCacheCleared" xml:space="preserve">
+    <value>Successfully cleared {0} cached files.</value>
+  </data>
+  <data name="ErrorClearCache" xml:space="preserve">
+    <value>Failed to clear cache: {0}</value>
+  </data>
+  <data name="ConfirmTitle" xml:space="preserve">
+    <value>Confirm</value>
+  </data>
+  <data name="StatusForceRefreshing" xml:space="preserve">
+    <value>Force refreshing...</value>
+  </data>
+  <data name="StatusLoading" xml:space="preserve">
+    <value>Loading...</value>
+  </data>
+  <data name="StatusClickToLoad" xml:space="preserve">
+    <value>Click to load</value>
+  </data>
+  <data name="StatusUnknown" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
+  <data name="ConfirmForceRefreshTitle" xml:space="preserve">
+    <value>Force Refresh</value>
+  </data>
+  <data name="ConfirmForceRefreshMessage" xml:space="preserve">
+    <value>This will start the instance and load complete information (including disk size). Continue?</value>
+  </data>
+  <data name="ErrorForceRefreshNull" xml:space="preserve">
+    <value>Failed to refresh instance information.</value>
+  </data>
+  <data name="ErrorForceRefreshEx" xml:space="preserve">
+    <value>Failed to force refresh instance: {0}</value>
+  </data>
+  <data name="ErrorStartInstanceFailed" xml:space="preserve">
+    <value>Failed to start instance '{0}'</value>
+  </data>
+  <data name="ErrorStartInstanceEx" xml:space="preserve">
+    <value>Failed to start instance: {0}</value>
+  </data>
+  <data name="ConfirmStopTitle" xml:space="preserve">
+    <value>Stop Instance</value>
+  </data>
+  <data name="ConfirmStopMessage" xml:space="preserve">
+    <value>Are you sure you want to stop '{0}'?
+
+All running processes in this instance will be terminated.</value>
+  </data>
+  <data name="ButtonStop" xml:space="preserve">
+    <value>Stop</value>
+  </data>
+  <data name="ErrorStopInstanceFailed" xml:space="preserve">
+    <value>Failed to stop instance '{0}'</value>
+  </data>
+  <data name="ErrorStopInstanceEx" xml:space="preserve">
+    <value>Failed to stop instance: {0}</value>
+  </data>
+  <data name="ConfirmRemoveTitle" xml:space="preserve">
+    <value>Remove Instance</value>
+  </data>
+  <data name="ConfirmRemoveMessage" xml:space="preserve">
+    <value>Are you sure you want to remove '{0}'?
+
+This action cannot be undone. All data in this instance will be permanently deleted.</value>
+  </data>
+  <data name="ButtonRemove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="SuccessInstanceRemoved" xml:space="preserve">
+    <value>Instance '{0}' removed successfully</value>
+  </data>
+  <data name="ErrorRemoveInstanceEx" xml:space="preserve">
+    <value>Failed to remove instance: {0}</value>
+  </data>
+  <data name="ErrorOpenTerminalFailed" xml:space="preserve">
+    <value>Failed to open terminal for instance '{0}'</value>
+  </data>
+  <data name="ErrorOpenTerminalEx" xml:space="preserve">
+    <value>Failed to open terminal: {0}</value>
+  </data>
+  <data name="SelectMoveLocationTitle" xml:space="preserve">
+    <value>Select new location for '{0}'</value>
+  </data>
+  <data name="ConfirmMoveTitle" xml:space="preserve">
+    <value>Confirm Move</value>
+  </data>
+  <data name="ConfirmMoveMessage" xml:space="preserve">
+    <value>Move instance '{0}' to:
+{1}
+
+This may take a while depending on the instance size.</value>
+  </data>
+  <data name="SuccessInstanceMoved" xml:space="preserve">
+    <value>Instance '{0}' moved successfully</value>
+  </data>
+  <data name="ErrorMoveInstanceEx" xml:space="preserve">
+    <value>Failed to move instance: {0}</value>
+  </data>
+  <data name="RenameTitle" xml:space="preserve">
+    <value>Rename Instance</value>
+  </data>
+  <data name="ButtonRename" xml:space="preserve">
+    <value>Rename</value>
+  </data>
+  <data name="SuccessInstanceRenamed" xml:space="preserve">
+    <value>Instance renamed to '{0}' successfully</value>
+  </data>
+  <data name="ErrorRenameInstanceEx" xml:space="preserve">
+    <value>Failed to rename instance: {0}</value>
+  </data>
+  <data name="SetCredentialsTitle" xml:space="preserve">
+    <value>Set Credentials</value>
+  </data>
+  <data name="PromptEnterUsername" xml:space="preserve">
+    <value>Enter username:</value>
+  </data>
+  <data name="PromptEnterPassword" xml:space="preserve">
+    <value>Enter password:</value>
+  </data>
+  <data name="SuccessCredentialsSet" xml:space="preserve">
+    <value>Credentials set successfully for '{0}'</value>
+  </data>
+  <data name="ErrorSetCredentialsEx" xml:space="preserve">
+    <value>Failed to set credentials: {0}</value>
+  </data>
+  <data name="StatusLoadingSources" xml:space="preserve">
+    <value>Loading sources...</value>
+  </data>
+  <data name="StatusLoadedSources" xml:space="preserve">
+    <value>Loaded {0} source(s)</value>
+  </data>
+  <data name="ErrorLoadSourcesEx" xml:space="preserve">
+    <value>Failed to load sources: {0}</value>
+  </data>
+  <data name="StatusLoadSourcesFailed" xml:space="preserve">
+    <value>Failed to load sources</value>
+  </data>
+  <data name="ValidationNameUrlRequired" xml:space="preserve">
+    <value>Name and URL are required.</value>
+  </data>
+  <data name="ValidationTitle" xml:space="preserve">
+    <value>Validation Error</value>
+  </data>
+  <data name="StatusSourceUpdated" xml:space="preserve">
+    <value>Source updated successfully</value>
+  </data>
+  <data name="StatusSourceAdded" xml:space="preserve">
+    <value>Source added successfully</value>
+  </data>
+  <data name="ErrorSaveSourceEx" xml:space="preserve">
+    <value>Failed to save source: {0}</value>
+  </data>
+  <data name="InfoSelectSourceRemove" xml:space="preserve">
+    <value>Please select a source to remove.</value>
+  </data>
+  <data name="InfoDefaultSourceRemove" xml:space="preserve">
+    <value>Default sources cannot be removed.</value>
+  </data>
+  <data name="ConfirmVerifyRemoveSource" xml:space="preserve">
+    <value>Are you sure you want to remove the source '{0}'?</value>
+  </data>
+  <data name="ConfirmRemoveSourceTitle" xml:space="preserve">
+    <value>Confirm Remove</value>
+  </data>
+  <data name="StatusSourceRemoved" xml:space="preserve">
+    <value>Source removed successfully</value>
+  </data>
+  <data name="ErrorRemoveSourceEx" xml:space="preserve">
+    <value>Failed to remove source: {0}</value>
+  </data>
+  <data name="StatusSourceEnabled" xml:space="preserve">
+    <value>enabled</value>
+  </data>
+  <data name="StatusSourceDisabled" xml:space="preserve">
+    <value>disabled</value>
+  </data>
+  <data name="StatusSourceToggled" xml:space="preserve">
+    <value>Source {0}</value>
+  </data>
+  <data name="ErrorToggleSourceEx" xml:space="preserve">
+    <value>Failed to toggle source: {0}</value>
+  </data>
+  <data name="TestResultUrlRequired" xml:space="preserve">
+    <value>URL is required</value>
+  </data>
+  <data name="TestResultTesting" xml:space="preserve">
+    <value>Testing...</value>
+  </data>
+  <data name="TestResultAccessible" xml:space="preserve">
+    <value>✓ Source is accessible</value>
+  </data>
+  <data name="TestResultNotAccessible" xml:space="preserve">
+    <value>✗ Source is not accessible</value>
+  </data>
+  <data name="TestResultFailed" xml:space="preserve">
+    <value>✗ Test failed: {0}</value>
+  </data>
+  <data name="StatusRefreshingSources" xml:space="preserve">
+    <value>Refreshing sources...</value>
+  </data>
+  <data name="StatusRefreshedSources" xml:space="preserve">
+    <value>Refreshed {0} source(s)</value>
+  </data>
+  <data name="StatusRefreshFailed" xml:space="preserve">
+    <value>Failed to refresh sources</value>
+  </data>
+  <data name="ErrorRefreshSourcesEx" xml:space="preserve">
+    <value>Failed to refresh sources: {0}</value>
+  </data>
+  <data name="ConfirmResetSourcesMessage" xml:space="preserve">
+    <value>Are you sure you want to reset to default sources? This will remove all custom sources.</value>
+  </data>
+  <data name="ConfirmResetTitle" xml:space="preserve">
+    <value>Confirm Reset</value>
+  </data>
+  <data name="StatusResetSourcesSuccess" xml:space="preserve">
+    <value>Reset to default sources successfully</value>
+  </data>
+  <data name="ErrorResetSourcesEx" xml:space="preserve">
+    <value>Failed to reset sources: {0}</value>
+  </data>
+  <data name="InfoSelectSourceEdit" xml:space="preserve">
+    <value>Please select a source to edit.</value>
+  </data>
+  <data name="ButtonCancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="StatusSourceMovedUp" xml:space="preserve">
+    <value>Source moved up</value>
+  </data>
+  <data name="StatusSourceMovedDown" xml:space="preserve">
+    <value>Source moved down</value>
+  </data>
+  <data name="SuccessTitle" xml:space="preserve">
+    <value>Success</value>
+  </data>
+  <data name="InstanceStateLabel" xml:space="preserve">
+    <value>State: </value>
+  </data>
+  <data name="InstanceDiskLabel" xml:space="preserve">
+    <value> | Disk: </value>
+  </data>
+  <data name="InstanceStart" xml:space="preserve">
+    <value>Start</value>
+  </data>
+  <data name="InstanceStop" xml:space="preserve">
+    <value>Stop</value>
+  </data>
+  <data name="InstanceTerminal" xml:space="preserve">
+    <value>Terminal</value>
+  </data>
+  <data name="InstanceMore" xml:space="preserve">
+    <value>More</value>
+  </data>
+  <data name="ActionMove" xml:space="preserve">
+    <value>Move...</value>
+  </data>
+  <data name="ActionRename" xml:space="preserve">
+    <value>Rename...</value>
+  </data>
+  <data name="ActionSetCredentials" xml:space="preserve">
+    <value>Set Credentials...</value>
+  </data>
+  <data name="ActionForceRefresh" xml:space="preserve">
+    <value>Force Refresh</value>
+  </data>
+  <data name="ActionRemove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="NoInstancesTitle" xml:space="preserve">
+    <value>No WSL instances found</value>
+  </data>
+  <data name="NoInstancesSubtitle" xml:space="preserve">
+    <value>Click 'Install New' to get started</value>
+  </data>
+  <data name="LoadingText" xml:space="preserve">
+    <value>Loading...</value>
+  </data>
+  <data name="DownloadPanelTitle" xml:space="preserve">
+    <value>Download Tasks</value>
+  </data>
+  <data name="ActiveDownloadsFormat" xml:space="preserve">
+    <value>{0} active downloads</value>
+  </data>
+  <data name="CloseTooltip" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="CancelTooltip" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="StateRunning" xml:space="preserve">
+    <value>Running</value>
+  </data>
+  <data name="StateStopped" xml:space="preserve">
+    <value>Stopped</value>
+  </data>
+  <data name="ActionDownload" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="ActionInstall" xml:space="preserve">
+    <value>Install</value>
+  </data>
+  <data name="ActionActions" xml:space="preserve">
+    <value>Actions</value>
+  </data>
+  <data name="ActionAdd" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="ActionRedownload" xml:space="preserve">
+    <value>Redownload</value>
+  </data>
+  <data name="ActionDeleteCache" xml:space="preserve">
+    <value>Delete Cache</value>
+  </data>
+  <data name="CustomSourceUrlLabel" xml:space="preserve">
+    <value>Custom Source URL:</value>
+  </data>
+  <data name="LoadingCatalog" xml:space="preserve">
+    <value>Loading catalog...</value>
+  </data>
+  <data name="BadgeCached" xml:space="preserve">
+    <value>Cached</value>
+  </data>
+  <data name="BadgeOnline" xml:space="preserve">
+    <value>Online</value>
+  </data>
+  <data name="BadgeCustom" xml:space="preserve">
+    <value>Custom</value>
+  </data>
+  <data name="StepConnector" xml:space="preserve">
+    <value> - </value>
+  </data>
+  <data name="SelectDistroHeader" xml:space="preserve">
+    <value>Select a Linux distribution to install:</value>
+  </data>
+  <data name="ReviewInstallTitle" xml:space="preserve">
+    <value>Review and Install</value>
+  </data>
+  <data name="ReviewInstallDescription" xml:space="preserve">
+    <value>Review your settings before installation</value>
+  </data>
+  <data name="DefaultUserRoot" xml:space="preserve">
+    <value>root (default)</value>
+  </data>
+  <data name="ResultCompleteTitle" xml:space="preserve">
+    <value>Complete</value>
+  </data>
+  <data name="ResultCompleteDescription" xml:space="preserve">
+    <value>Installation result</value>
+  </data>
+  <data name="ResultSuccess" xml:space="preserve">
+    <value>{0} has been installed successfully and is ready to use.</value>
+  </data>
+  <data name="ResultSuccessSimple" xml:space="preserve">
+    <value>Installation completed successfully.</value>
+  </data>
+  <data name="ButtonTryAgain" xml:space="preserve">
+    <value>Try Again</value>
+  </data>
+  <data name="ButtonFinish" xml:space="preserve">
+    <value>Finish</value>
+  </data>
+  <data name="ButtonClose" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="ButtonNext" xml:space="preserve">
+    <value>Next</value>
+  </data>
+  <data name="ButtonBack" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="InstallationSummaryTitle" xml:space="preserve">
+    <value>Installation Summary</value>
+  </data>
+  <data name="LabelDistribution" xml:space="preserve">
+    <value>Distribution:</value>
+  </data>
+  <data name="LabelInstanceName" xml:space="preserve">
+    <value>Instance Name:</value>
+  </data>
+  <data name="LabelInstallPath" xml:space="preserve">
+    <value>Install Path:</value>
+  </data>
+  <data name="LabelUsername" xml:space="preserve">
+    <value>Username:</value>
+  </data>
+  <data name="LabelWslVersion" xml:space="preserve">
+    <value>WSL Version:</value>
+  </data>
+  <data name="OptionSetDefault" xml:space="preserve">
+    <value>Set as default WSL distribution</value>
+  </data>
+  <data name="OptionLaunchAfter" xml:space="preserve">
+    <value>Launch after installation</value>
+  </data>
+  <data name="WslVersionFormat" xml:space="preserve">
+    <value>WSL {0}</value>
+  </data>
+  <data name="CreateUserAccount" xml:space="preserve">
+    <value>Create a new user account</value>
+  </data>
+  <data name="CancelInstallation" xml:space="preserve">
+    <value>Cancel Installation</value>
+  </data>
+  <data name="ButtonBrowse" xml:space="preserve">
+    <value>Browse...</value>
+  </data>
+  <data name="ButtonClearCompleted" xml:space="preserve">
+    <value>Clear Completed</value>
+  </data>
+  <data name="WslVersion1" xml:space="preserve">
+    <value>WSL 1</value>
+  </data>
+  <data name="WslVersion2" xml:space="preserve">
+    <value>WSL 2</value>
+  </data>
+  <data name="WslVersion2Recommended" xml:space="preserve">
+    <value>WSL 2 (Recommended)</value>
+  </data>
+  <data name="LabelPassword" xml:space="preserve">
+    <value>Password:</value>
+  </data>
+  <data name="LabelConfirmPassword" xml:space="preserve">
+    <value>Confirm Password:</value>
+  </data>
+  <data name="PlaceholderUsername" xml:space="preserve">
+    <value>Enter username</value>
+  </data>
+  <data name="PlaceholderPassword" xml:space="preserve">
+    <value>Enter password</value>
+  </data>
+  <data name="PlaceholderConfirmPassword" xml:space="preserve">
+    <value>Confirm password</value>
+  </data>
+  <data name="Wsl2RecommendedInfo" xml:space="preserve">
+    <value>WSL 2 is recommended for better performance.</value>
+  </data>
+  <data name="RootUserWarning" xml:space="preserve">
+    <value>If you don't create a user, the default root account will be used.</value>
+  </data>
+  <data name="PlaceholderInstanceName" xml:space="preserve">
+    <value>Enter a name for this instance</value>
+  </data>
+  <data name="PlaceholderInstallPath" xml:space="preserve">
+    <value>Select installation directory</value>
+  </data>
+  <data name="StatusValidating" xml:space="preserve">
+    <value>Validating...</value>
+  </data>
+  <data name="ConfigureUserAccount" xml:space="preserve">
+    <value>Configure user account:</value>
+  </data>
+  <data name="ReviewAndInstall" xml:space="preserve">
+    <value>Review and Install:</value>
+  </data>
+  <data name="InstallationSummary" xml:space="preserve">
+    <value>Installation Summary</value>
+  </data>
+  <data name="LabelInstance" xml:space="preserve">
+    <value>Instance:</value>
+  </data>
+  <data name="LabelLocation" xml:space="preserve">
+    <value>Location:</value>
+  </data>
+  <data name="InstallFailedLabel" xml:space="preserve">
+    <value>Installation Failed</value>
+  </data>
+  <data name="WizardStepSelectDistribution" xml:space="preserve">
+    <value>Select Distribution</value>
+  </data>
+  <data name="WizardStepChooseInstallPath" xml:space="preserve">
+    <value>Choose Installation Path</value>
+  </data>
+  <data name="WizardStepConfigureUser" xml:space="preserve">
+    <value>Configure User Account</value>
+  </data>
+  <data name="WizardStepInstalling" xml:space="preserve">
+    <value>Installing...</value>
+  </data>
+  <data name="ErrorSelectDistribution" xml:space="preserve">
+    <value>Please select a distribution to install.</value>
+  </data>
+  <data name="ErrorInvalidDownloadUrl" xml:space="preserve">
+    <value>The selected distribution does not have a valid download URL.</value>
+  </data>
+  <data name="ErrorInvalidUrlFormat" xml:space="preserve">
+    <value>The distribution download URL is not valid.</value>
+  </data>
+  <data name="ErrorInstanceNameRequired" xml:space="preserve">
+    <value>Please enter an instance name.</value>
+  </data>
+  <data name="ErrorInvalidInstanceName" xml:space="preserve">
+    <value>Instance name can only contain letters, numbers, hyphens, and underscores.</value>
+  </data>
+  <data name="ErrorInstanceAlreadyExists" xml:space="preserve">
+    <value>An instance with this name already exists.</value>
+  </data>
+  <data name="ErrorInstallPathRequired" xml:space="preserve">
+    <value>Please specify an installation path.</value>
+  </data>
+  <data name="ErrorPathNotAbsolute" xml:space="preserve">
+    <value>The installation path must be an absolute path.</value>
+  </data>
+  <data name="ErrorPasswordMismatch" xml:space="preserve">
+    <value>Passwords do not match. Please enter the same password in both fields.</value>
+  </data>
+  <data name="ErrorWeakPassword" xml:space="preserve">
+    <value>Password must be at least 6 characters long.</value>
+  </data>
+  <data name="ErrorInstanceNameStartWith" xml:space="preserve">
+    <value>Instance name must start with a letter or number.</value>
+  </data>
+  <data name="ErrorInstanceNameTooShort" xml:space="preserve">
+    <value>Instance name is too short (minimum 2 characters).</value>
+  </data>
+  <data name="ErrorInstanceNameTooLong" xml:space="preserve">
+    <value>Instance name is too long (maximum 50 characters).</value>
+  </data>
+  <data name="ErrorInstanceNameReserved" xml:space="preserve">
+    <value>'{0}' is a reserved name. Please choose a different name.</value>
+  </data>
+  <data name="StatusVerifyingInstanceName" xml:space="preserve">
+    <value>Verifying instance name availability...</value>
+  </data>
+  <data name="ErrorVerificationTimeout" xml:space="preserve">
+    <value>Verification timed out. Please try again.</value>
+  </data>
+  <data name="ErrorVerificationFailed" xml:space="preserve">
+    <value>Failed to verify instance name. Please try again.</value>
+  </data>
+  <data name="ErrorInstanceExistsFormat" xml:space="preserve">
+    <value>An instance named '{0}' already exists. Please choose a different name.</value>
+  </data>
+  <data name="ErrorInvalidPathOrName" xml:space="preserve">
+    <value>Invalid path or instance name.</value>
+  </data>
+  <data name="ErrorValidationFormat" xml:space="preserve">
+    <value>Validation error: {0}</value>
+  </data>
+  <data name="ErrorStartupTitle" xml:space="preserve">
+    <value>Startup Error</value>
+  </data>
+  <data name="ErrorApplicationTitle" xml:space="preserve">
+    <value>Application Error</value>
+  </data>
+  <data name="ErrorFatalTitle" xml:space="preserve">
+    <value>Fatal Error</value>
+  </data>
+  <data name="ErrorStartupMessage" xml:space="preserve">
+    <value>Failed to start DistroNexus:
+
+{0}
+
+Stack Trace:
+{1}</value>
+  </data>
+  <data name="ErrorUnexpectedException" xml:space="preserve">
+    <value>An unexpected error occurred:
+
+{0}
+
+The application will attempt to continue.</value>
+  </data>
+  <data name="ErrorFatalException" xml:space="preserve">
+    <value>A fatal error occurred:
+
+{0}
+
+The application will now close.</value>
+  </data>
+  <data name="UpdateAvailableTitle" xml:space="preserve">
+    <value>Update Available</value>
+  </data>
+  <data name="UpdateAvailableMessage" xml:space="preserve">
+    <value>A new version of DistroNexus is available!
+
+Current version: {0}
+Latest version: {1}
+
+Would you like to open the download page?</value>
+  </data>
+  <data name="ErrorGenerateDiagnostics" xml:space="preserve">
+    <value>Failed to generate diagnostics: {0}</value>
+  </data>
+  <data name="ErrorMoveSource" xml:space="preserve">
+    <value>Failed to move source: {0}</value>
+  </data>
+  <data name="ErrorLoadSettings" xml:space="preserve">
+    <value>Failed to load settings: {0}</value>
+  </data>
+  <data name="ErrorUsernameRequired" xml:space="preserve">
+    <value>Please enter a username.</value>
+  </data>
+  <data name="ErrorUsernameFormat" xml:space="preserve">
+    <value>Username must start with a letter and contain only lowercase letters, numbers, hyphens, or underscores.</value>
+  </data>
+  <data name="ErrorPasswordMinLength" xml:space="preserve">
+    <value>Password must be at least 4 characters long.</value>
+  </data>
+  <data name="ErrorInvalidWslVersion" xml:space="preserve">
+    <value>Please select a valid WSL version (1 or 2).</value>
+  </data>
+  <data name="ErrorOpenLogFolder" xml:space="preserve">
+    <value>Failed to open log folder: {0}</value>
+  </data>
+  <data name="ConfirmCancelInstallation" xml:space="preserve">
+    <value>Are you sure you want to cancel the installation?
+
+The installation process will be stopped and any partially downloaded files will be removed.</value>
+  </data>
+  <data name="TitleCancelInstallation" xml:space="preserve">
+    <value>Cancel Installation</value>
+  </data>
+  <data name="TooltipOnlyErrors" xml:space="preserve">
+    <value>Only errors</value>
+  </data>
+  <data name="ErrorDeletePackage" xml:space="preserve">
+    <value>Failed to delete package: {0}</value>
+  </data>
+  <data name="ErrorRedownloadPackage" xml:space="preserve">
+    <value>Failed to redownload package: {0}</value>
+  </data>
+  <data name="ErrorInvalidUrl" xml:space="preserve">
+    <value>Please enter a valid URL</value>
+  </data>
+  <data name="TitleInvalidUrl" xml:space="preserve">
+    <value>Invalid URL</value>
+  </data>
+  <data name="ErrorCustomUrlInvalidFormat" xml:space="preserve">
+    <value>Invalid URL format</value>
+  </data>
+  <data name="SuccessCustomSourceAdded" xml:space="preserve">
+    <value>Custom source added successfully</value>
+  </data>
+  <data name="TitleSuccess" xml:space="preserve">
+    <value>Success</value>
+  </data>
+  <data name="ErrorAddCustomSource" xml:space="preserve">
+    <value>Failed to add custom source: {0}</value>
+  </data>
+  <data name="ErrorUpdateSources" xml:space="preserve">
+    <value>Failed to update sources: {0}</value>
+  </data>
+  <data name="InfoAllPackagesCached" xml:space="preserve">
+    <value>All packages are already cached or currently downloading.</value>
+  </data>
+  <data name="TitleDownloadAll" xml:space="preserve">
+    <value>Download All</value>
+  </data>
+  <data name="ErrorStartDownloadAll" xml:space="preserve">
+    <value>Failed to start download all: {0}</value>
+  </data>
+  <data name="ConfirmInstallPackage" xml:space="preserve">
+    <value>Install {0} ({1})?
+
+This will start the installation process.</value>
+  </data>
+  <data name="TitleInstallPackage" xml:space="preserve">
+    <value>Install Package</value>
+  </data>
+  <data name="ErrorInstallPackage" xml:space="preserve">
+    <value>Failed to install {0}: {1}</value>
+  </data>
+  <data name="ErrorApplyTheme" xml:space="preserve">
+    <value>Failed to apply theme: {0}</value>
+  </data>
+  <data name="TitleThemeError" xml:space="preserve">
+    <value>Theme Error</value>
+  </data>
+  <data name="ErrorOpenCacheFolder" xml:space="preserve">
+    <value>Failed to open cache folder: {0}</value>
+  </data>
+  <data name="ErrorInitializeMainWindow" xml:space="preserve">
+    <value>Failed to initialize MainWindow:
+
+{0}</value>
+  </data>
+  <data name="TitleInitializationError" xml:space="preserve">
+    <value>Initialization Error</value>
+  </data>
+  <data name="ErrorInitializeApplication" xml:space="preserve">
+    <value>Failed to initialize application:
+
+{0}</value>
+  </data>
+  <data name="ErrorLoadWslInstances" xml:space="preserve">
+    <value>Failed to load WSL instances:
+
+{0}</value>
+  </data>
+  <data name="TitleLoadError" xml:space="preserve">
+    <value>Load Error</value>
+  </data>
+</root>

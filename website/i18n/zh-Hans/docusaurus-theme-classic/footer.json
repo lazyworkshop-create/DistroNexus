@@ -21,7 +21,7 @@
   },
   "link.item.label.GitHub": {
     "message": "GitHub",
-    "description": "The label of footer link with label=GitHub linking to https://github.com/DistroNexus/DistroNexus"
+    "description": "The label of footer link with label=GitHub linking to https://github.com/lazyworkshop-create/DistroNexus"
   },
   "copyright": {
     "message": "Copyright © 2026 DistroNexus. Built with Docusaurus.",

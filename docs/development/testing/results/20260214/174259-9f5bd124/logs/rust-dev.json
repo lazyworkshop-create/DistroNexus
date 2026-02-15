@@ -1,0 +1,22 @@
+{
+  "TemplateId": "rust-dev",
+  "TemplateName": "Rust Development",
+  "Status": "Pass",
+  "Reason": "",
+  "DurationSeconds": 52,
+  "ProbeResults": [
+    {
+      "Name": "bash -lc 'if [ -x \"$HOME/.cargo/bin/rustc\" ]; then \"$HOME/.cargo/bin/rustc\" --version; else if [ -f \"$HOME/.cargo/env\" ]; then . \"$HOME/.cargo/env\"; fi; export PATH=\"$HOME/.cargo/bin:$PATH\"; rustc --version; fi'",
+      "ExitCode": 0,
+      "Output": "rustc 1.93.1 (01f6ddf75 2026-02-11)",
+      "Success": true
+    },
+    {
+      "Name": "bash -lc 'if [ -x \"$HOME/.cargo/bin/cargo\" ]; then \"$HOME/.cargo/bin/cargo\" --version; else if [ -f \"$HOME/.cargo/env\" ]; then . \"$HOME/.cargo/env\"; fi; export PATH=\"$HOME/.cargo/bin:$PATH\"; cargo --version; fi'",
+      "ExitCode": 0,
+      "Output": "cargo 1.93.1 (083ac5135 2025-12-15)",
+      "Success": true
+    }
+  ],
+  "IsolatedInstance": "dnx-auto-rust-dev-51140e"
+}

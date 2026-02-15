@@ -1,0 +1,500 @@
+[
+  {
+    "Id": "dotnet-dev",
+    "Name": ".NET Development",
+    "Description": "Install .NET SDK and essential .NET development tools for Ubuntu and Debian.",
+    "Category": "Development",
+    "Icon": "Code24",
+    "InstallMode": "PackageManager",
+    "ScenarioTags": ["api", "web", "backend"],
+    "EstimatedDurationMinutes": 5,
+    "CompatibleDistros": ["Ubuntu", "Debian"],
+    "Packages": [
+      { "Name": ".NET SDK", "Version": "8.0" },
+      { "Name": "ASP.NET Core Runtime", "Version": "8.0" }
+    ],
+    "DefaultSelections": {
+      "SDK_DOTNET_VERSION": "8.0"
+    },
+    "Scripts": [
+      {
+        "Name": "Install .NET SDK",
+        "ScriptPath": "templates/dotnet-dev/install.sh",
+        "Type": "Bash",
+        "Phase": "PostConfigure",
+        "Order": 1,
+        "TimeoutSeconds": 600
+      }
+    ]
+  },
+  {
+    "Id": "nodejs-dev",
+    "Name": "Node.js Development",
+    "Category": "Development",
+    "Description": "Install Node.js LTS with npm, yarn, and pnpm.",
+    "Icon": "Code24",
+    "InstallMode": "VersionManager",
+    "ScenarioTags": ["frontend", "backend", "fullstack"],
+    "EstimatedDurationMinutes": 4,
+    "CompatibleDistros": ["Ubuntu", "Debian"],
+    "Packages": [
+      { "Name": "Node.js", "Version": "lts" },
+      { "Name": "npm", "Version": "latest" }
+    ],
+    "DefaultSelections": {
+      "SDK_NODE_CHANNEL": "lts/*",
+      "NODE_PACKAGE_MANAGERS": "npm,pnpm,yarn"
+    },
+    "Scripts": [
+      {
+        "Name": "Install Node.js Environment",
+        "ScriptPath": "templates/nodejs-dev/install.sh",
+        "Type": "Bash",
+        "Phase": "PostConfigure",
+        "Order": 1,
+        "TimeoutSeconds": 600
+      }
+    ]
+  },
+  {
+    "Id": "python-dev",
+    "Name": "Python Development",
+    "Category": "Development",
+    "Description": "Install Python 3, pip, venv, and Poetry for Python development.",
+    "Icon": "Code24",
+    "InstallMode": "VersionManager",
+    "ScenarioTags": ["data", "backend", "scripting"],
+    "EstimatedDurationMinutes": 4,
+    "CompatibleDistros": ["Ubuntu", "Debian"],
+    "Packages": [
+      { "Name": "Python", "Version": "3.12" },
+      { "Name": "Poetry", "Version": "latest" }
+    ],
+    "DefaultSelections": {
+      "SDK_PYTHON_CHANNEL": "3.12",
+      "PYTHON_ENV_TOOL": "poetry"
+    },
+    "Scripts": [
+      {
+        "Name": "Install Python Environment",
+        "ScriptPath": "templates/python-dev/install.sh",
+        "Type": "Bash",
+        "Phase": "PostConfigure",
+        "Order": 1,
+        "TimeoutSeconds": 600
+      }
+    ]
+  },
+  {
+    "Id": "docker-dev",
+    "Name": "Docker Development",
+    "Category": "Development",
+    "Description": "Install Docker Engine and Docker Compose plugin.",
+    "Icon": "Code24",
+    "InstallMode": "Scripted",
+    "ScenarioTags": ["containers", "cloudnative", "devops"],
+    "EstimatedDurationMinutes": 6,
+    "CompatibleDistros": ["Ubuntu", "Debian"],
+    "Packages": [
+      { "Name": "Docker Engine", "Version": "latest" },
+      { "Name": "Docker Compose", "Version": "latest" }
+    ],
+    "DefaultSelections": {
+      "CONTAINER_RUNTIME_MODE": "docker-engine"
+    },
+    "Scripts": [
+      {
+        "Name": "Install Docker Environment",
+        "ScriptPath": "templates/docker-dev/install.sh",
+        "Type": "Bash",
+        "Phase": "PostConfigure",
+        "Order": 1,
+        "TimeoutSeconds": 900
+      }
+    ]
+  },
+  {
+    "Id": "fullstack-dev",
+    "Name": "Fullstack Development",
+    "Category": "Development",
+    "Description": "Install .NET, Node.js, Python, and Docker in one template.",
+    "Icon": "Code24",
+    "InstallMode": "Scripted",
+    "ScenarioTags": ["fullstack", "web", "api"],
+    "EstimatedDurationMinutes": 12,
+    "CompatibleDistros": ["Ubuntu", "Debian"],
+    "Packages": [
+      { "Name": ".NET SDK", "Version": "latest" },
+      { "Name": "Node.js", "Version": "lts" },
+      { "Name": "Python", "Version": "latest" },
+      { "Name": "Docker Engine", "Version": "latest" }
+    ],
+    "Scripts": [
+      {
+        "Name": "Install Fullstack Environment",
+        "ScriptPath": "templates/fullstack-dev/install.sh",
+        "Type": "Bash",
+        "Phase": "PostConfigure",
+        "Order": 1,
+        "TimeoutSeconds": 1200
+      }
+    ]
+  },
+  {
+    "Id": "dotnet-multi-sdk-dev",
+    "Name": ".NET Multi-SDK Development",
+    "Category": "Development",
+    "Description": "Install .NET SDK with channel-based version selection and optional global.json generation.",
+    "Icon": "Code24",
+    "InstallMode": "VersionManager",
+    "ScenarioTags": ["api", "web", "dotnet"],
+    "EstimatedDurationMinutes": 7,
+    "CompatibleDistros": ["Ubuntu", "Debian"],
+    "VersionOptions": [
+      {
+        "Key": "SDK_DOTNET_CHANNEL",
+        "Label": "SDK Channel",
+        "Description": "Choose SDK channel for installation",
+        "Required": true,
+        "DefaultValue": "LTS",
+        "Options": [
+          { "Value": "LTS", "Label": "LTS" },
+          { "Value": "STS", "Label": "STS/Current" },
+          { "Value": "SpecificVersion", "Label": "Specific Version" }
+        ]
+      }
+    ],
+    "DefaultSelections": {
+      "SDK_DOTNET_CHANNEL": "LTS",
+      "SDK_DOTNET_VERSION": "8.0",
+      "GENERATE_GLOBAL_JSON": "true"
+    },
+    "OutputArtifacts": [
+      { "Type": "ConfigFile", "Path": "global.json", "Description": "Pinned .NET SDK selection", "Optional": true }
+    ],
+    "Scripts": [
+      {
+        "Name": "Install Multi-SDK .NET Environment",
+        "ScriptPath": "templates/dotnet-multi-sdk-dev/install.sh",
+        "Type": "Bash",
+        "Phase": "PostConfigure",
+        "Order": 1,
+        "TimeoutSeconds": 900
+      }
+    ]
+  },
+  {
+    "Id": "nodejs-multi-version-dev",
+    "Name": "Node.js Multi-Version Development",
+    "Category": "Development",
+    "Description": "Install Node.js via nvm with selectable channel and optional .nvmrc generation.",
+    "Icon": "Code24",
+    "InstallMode": "VersionManager",
+    "ScenarioTags": ["frontend", "backend", "nodejs"],
+    "EstimatedDurationMinutes": 6,
+    "CompatibleDistros": ["Ubuntu", "Debian"],
+    "VersionOptions": [
+      {
+        "Key": "SDK_NODE_CHANNEL",
+        "Label": "Node Channel",
+        "Required": true,
+        "DefaultValue": "lts/*",
+        "Options": [
+          { "Value": "lts/*", "Label": "LTS" },
+          { "Value": "current", "Label": "Current" },
+          { "Value": "specific", "Label": "Specific" }
+        ]
+      }
+    ],
+    "DefaultSelections": {
+      "SDK_NODE_CHANNEL": "lts/*",
+      "GENERATE_NVMRC": "true",
+      "NODE_PACKAGE_MANAGERS": "npm,pnpm,yarn"
+    },
+    "OutputArtifacts": [
+      { "Type": "ConfigFile", "Path": ".nvmrc", "Description": "Node version pin", "Optional": true }
+    ],
+    "Scripts": [
+      {
+        "Name": "Install Multi-Version Node.js Environment",
+        "ScriptPath": "templates/nodejs-multi-version-dev/install.sh",
+        "Type": "Bash",
+        "Phase": "PostConfigure",
+        "Order": 1,
+        "TimeoutSeconds": 900
+      }
+    ]
+  },
+  {
+    "Id": "python-multi-version-dev",
+    "Name": "Python Multi-Version Development",
+    "Category": "Development",
+    "Description": "Install Python via pyenv with optional project pinning and environment tool bootstrap.",
+    "Icon": "Code24",
+    "InstallMode": "VersionManager",
+    "ScenarioTags": ["python", "data", "backend"],
+    "EstimatedDurationMinutes": 8,
+    "CompatibleDistros": ["Ubuntu", "Debian"],
+    "VersionOptions": [
+      {
+        "Key": "SDK_PYTHON_CHANNEL",
+        "Label": "Python Channel",
+        "Required": true,
+        "DefaultValue": "3.12",
+        "Options": [
+          { "Value": "3.12", "Label": "3.12" },
+          { "Value": "3.11", "Label": "3.11" },
+          { "Value": "3.10", "Label": "3.10" }
+        ]
+      }
+    ],
+    "DefaultSelections": {
+      "SDK_PYTHON_CHANNEL": "3.12",
+      "GENERATE_PYTHON_VERSION_FILE": "true",
+      "PYTHON_ENV_TOOL": "poetry"
+    },
+    "OutputArtifacts": [
+      { "Type": "ConfigFile", "Path": ".python-version", "Description": "Python version pin", "Optional": true }
+    ],
+    "Scripts": [
+      {
+        "Name": "Install Multi-Version Python Environment",
+        "ScriptPath": "templates/python-multi-version-dev/install.sh",
+        "Type": "Bash",
+        "Phase": "PostConfigure",
+        "Order": 1,
+        "TimeoutSeconds": 1200
+      }
+    ]
+  },
+  {
+    "Id": "java-jvm-dev",
+    "Name": "Java/JVM Development",
+    "Category": "Platform",
+    "Description": "Install Java SDK with SDKMAN and optional .sdkmanrc generation.",
+    "Icon": "Code24",
+    "InstallMode": "VersionManager",
+    "ScenarioTags": ["java", "kotlin", "jvm"],
+    "EstimatedDurationMinutes": 8,
+    "CompatibleDistros": ["Ubuntu", "Debian"],
+    "DefaultSelections": {
+      "JAVA_SDKMAN_VERSION": "21.0.5-tem",
+      "GENERATE_SDKMANRC": "true"
+    },
+    "OutputArtifacts": [
+      { "Type": "ConfigFile", "Path": ".sdkmanrc", "Description": "JDK version pin", "Optional": true }
+    ],
+    "Scripts": [
+      {
+        "Name": "Install Java/JVM Environment",
+        "ScriptPath": "templates/java-jvm-dev/install.sh",
+        "Type": "Bash",
+        "Phase": "PostConfigure",
+        "Order": 1,
+        "TimeoutSeconds": 1200
+      }
+    ]
+  },
+  {
+    "Id": "rust-dev",
+    "Name": "Rust Development",
+    "Category": "Development",
+    "Description": "Install Rust with rustup channel selection.",
+    "Icon": "Code24",
+    "InstallMode": "VersionManager",
+    "ScenarioTags": ["rust", "cli", "systems"],
+    "EstimatedDurationMinutes": 6,
+    "CompatibleDistros": ["Ubuntu", "Debian"],
+    "VersionOptions": [
+      {
+        "Key": "RUST_CHANNEL",
+        "Label": "Rust Channel",
+        "Required": true,
+        "DefaultValue": "stable",
+        "Options": [
+          { "Value": "stable", "Label": "Stable" },
+          { "Value": "beta", "Label": "Beta" },
+          { "Value": "nightly", "Label": "Nightly" }
+        ]
+      }
+    ],
+    "DefaultSelections": {
+      "RUST_CHANNEL": "stable"
+    },
+    "Scripts": [
+      {
+        "Name": "Install Rust Environment",
+        "ScriptPath": "templates/rust-dev/install.sh",
+        "Type": "Bash",
+        "Phase": "PostConfigure",
+        "Order": 1,
+        "TimeoutSeconds": 900
+      }
+    ]
+  },
+  {
+    "Id": "go-dev",
+    "Name": "Go Development",
+    "Category": "Development",
+    "Description": "Install Go stable toolchain with version pin support.",
+    "Icon": "Code24",
+    "InstallMode": "Scripted",
+    "ScenarioTags": ["go", "backend", "cli"],
+    "EstimatedDurationMinutes": 6,
+    "CompatibleDistros": ["Ubuntu", "Debian"],
+    "DefaultSelections": {
+      "GO_VERSION": "1.23.6"
+    },
+    "Scripts": [
+      {
+        "Name": "Install Go Environment",
+        "ScriptPath": "templates/go-dev/install.sh",
+        "Type": "Bash",
+        "Phase": "PostConfigure",
+        "Order": 1,
+        "TimeoutSeconds": 900
+      }
+    ]
+  },
+  {
+    "Id": "container-runtime-dev",
+    "Name": "Container Runtime Development",
+    "Category": "CloudNative",
+    "Description": "Configure container runtime mode for WSL2 development workflows.",
+    "Icon": "Cube24",
+    "InstallMode": "Scripted",
+    "ScenarioTags": ["containers", "docker", "podman"],
+    "EstimatedDurationMinutes": 8,
+    "CompatibleDistros": ["Ubuntu", "Debian"],
+    "DefaultSelections": {
+      "CONTAINER_RUNTIME_MODE": "docker-engine"
+    },
+    "PreflightChecks": [
+      {
+        "Id": "wsl-check",
+        "Name": "WSL environment check",
+        "Type": "PowerShell",
+        "Command": "wsl --status",
+        "Required": true,
+        "ErrorMessage": "WSL is not available or not initialized on this system."
+      }
+    ],
+    "Scripts": [
+      {
+        "Name": "Install Container Runtime",
+        "ScriptPath": "templates/container-runtime-dev/install.sh",
+        "Type": "Bash",
+        "Phase": "PostConfigure",
+        "Order": 1,
+        "TimeoutSeconds": 1200
+      }
+    ]
+  },
+  {
+    "Id": "kubernetes-local-dev",
+    "Name": "Kubernetes Local Development",
+    "Category": "CloudNative",
+    "Description": "Install local Kubernetes tooling with selectable cluster mode.",
+    "Icon": "Server24",
+    "InstallMode": "Scripted",
+    "ScenarioTags": ["kubernetes", "kind", "k3d", "microk8s"],
+    "EstimatedDurationMinutes": 10,
+    "CompatibleDistros": ["Ubuntu", "Debian"],
+    "DefaultSelections": {
+      "K8S_CLUSTER_MODE": "kind"
+    },
+    "PreflightChecks": [
+      {
+        "Id": "microk8s-systemd",
+        "Name": "Systemd status check for microk8s mode",
+        "Type": "Bash",
+        "Command": "command -v systemctl >/dev/null && systemctl status >/dev/null",
+        "Required": true,
+        "ErrorMessage": "microk8s requires systemd in WSL. Enable systemd and retry.",
+        "AppliesToVariable": "K8S_CLUSTER_MODE",
+        "AppliesToValue": "microk8s"
+      }
+    ],
+    "Scripts": [
+      {
+        "Name": "Install Kubernetes Toolchain",
+        "ScriptPath": "templates/kubernetes-local-dev/install.sh",
+        "Type": "Bash",
+        "Phase": "PostConfigure",
+        "Order": 1,
+        "TimeoutSeconds": 1500
+      }
+    ]
+  },
+  {
+    "Id": "database-local-stack",
+    "Name": "Database Local Stack",
+    "Category": "Database",
+    "Description": "Install selectable local database services and tooling in WSL2.",
+    "Icon": "Database24",
+    "InstallMode": "Scripted",
+    "ScenarioTags": ["postgresql", "mysql", "redis", "sqlite", "mongodb"],
+    "EstimatedDurationMinutes": 10,
+    "CompatibleDistros": ["Ubuntu", "Debian"],
+    "DefaultSelections": {
+      "DB_COMPONENTS": "postgresql,redis,sqlite"
+    },
+    "Scripts": [
+      {
+        "Name": "Install Database Stack",
+        "ScriptPath": "templates/database-local-stack/install.sh",
+        "Type": "Bash",
+        "Phase": "PostConfigure",
+        "Order": 1,
+        "TimeoutSeconds": 1200
+      }
+    ]
+  },
+  {
+    "Id": "ai-ml-gpu-dev",
+    "Name": "AI/ML GPU Development",
+    "Category": "DataAndAI",
+    "Description": "Set up AI/ML environment with CPU or GPU-oriented profile and fallback guidance.",
+    "Icon": "BrainCircuit24",
+    "InstallMode": "Scripted",
+    "ScenarioTags": ["ai", "ml", "gpu", "python"],
+    "EstimatedDurationMinutes": 12,
+    "CompatibleDistros": ["Ubuntu", "Debian"],
+    "VersionOptions": [
+      {
+        "Key": "ML_PROFILE",
+        "Label": "ML Profile",
+        "Required": true,
+        "DefaultValue": "CPU",
+        "Options": [
+          { "Value": "CPU", "Label": "CPU" },
+          { "Value": "NVIDIA-CUDA", "Label": "NVIDIA CUDA" },
+          { "Value": "DirectML-Python", "Label": "DirectML Python" }
+        ]
+      }
+    ],
+    "DefaultSelections": {
+      "ML_PROFILE": "CPU"
+    },
+    "PreflightChecks": [
+      {
+        "Id": "wsl-kernel",
+        "Name": "WSL kernel check",
+        "Type": "PowerShell",
+        "Command": "wsl cat /proc/version",
+        "Required": true,
+        "ErrorMessage": "Unable to verify WSL kernel version."
+      }
+    ],
+    "Scripts": [
+      {
+        "Name": "Install AI/ML Profile",
+        "ScriptPath": "templates/ai-ml-gpu-dev/install.sh",
+        "Type": "Bash",
+        "Phase": "PostConfigure",
+        "Order": 1,
+        "TimeoutSeconds": 1500
+      }
+    ]
+  }
+]

@@ -1,0 +1,19 @@
+{
+  "TemplateId": "kubernetes-local-dev",
+  "TemplateName": "Kubernetes Local Development",
+  "Status": "Pass",
+  "Reason": "",
+  "DurationSeconds": 27,
+  "ProbeResults": [
+    {
+      "Name": "kubectl version --client",
+      "ExitCode": 0,
+      "Output": [
+        "Client Version: v1.35.1",
+        "Kustomize Version: v5.7.1"
+      ],
+      "Success": true
+    }
+  ],
+  "IsolatedInstance": "dnx-auto-kubernetes-local-dev-86ff1e"
+}

@@ -1,0 +1,8 @@
+{
+  "TemplateId": "java-jvm-dev",
+  "TemplateName": "Java/JVM Development",
+  "Status": "Pass",
+  "Reason": "Dry run",
+  "DurationSeconds": 0,
+  "ProbeResults": []
+}

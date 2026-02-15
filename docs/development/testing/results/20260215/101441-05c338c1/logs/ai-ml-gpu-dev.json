@@ -1,0 +1,8 @@
+{
+  "TemplateId": "ai-ml-gpu-dev",
+  "TemplateName": "AI/ML GPU Development",
+  "Status": "Blocked",
+  "Reason": "Capability-gated template excluded. Use -IncludeCapabilityGated to enable.",
+  "DurationSeconds": 0,
+  "ProbeResults": []
+}

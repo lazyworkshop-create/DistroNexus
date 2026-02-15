@@ -293,21 +293,21 @@
     "message": "开始使用 - 5分钟 ⏱️"
   },
   "feature.gui.title": {
-    "message": "现代图形界面"
+    "message": "原生 WPF 桌面体验"
   },
   "feature.gui.description": {
-    "message": "基于 Fyne 构建的跨平台图形化仪表盘，可视化轻松管理您的 WSL 发行版。"
+    "message": "基于 .NET 10 的原生 Windows WPF 界面，提供更清晰的诊断信息、进度反馈与稳定的日常 WSL 管理体验。"
   },
   "feature.install.title": {
-    "message": "自定义安装"
+    "message": "命令平台驱动"
   },
   "feature.install.description": {
-    "message": "将任何 WSL 发行版安装到您选择的自定义目录，绕过默认系统驱动器限制。轻松移动实例。"
+    "message": "基于模块化 cmdlet 工作流执行安装、移动、重命名、启动、停止与移除等实例生命周期操作。"
   },
   "feature.offline.title": {
-    "message": "离线支持"
+    "message": "模板与自动化"
   },
   "feature.offline.description": {
-    "message": "自动下载并缓存 Ubuntu, Debian, Kali 等的离线包 (Appx/AppxBundle)。无需网络即可安装。"
+    "message": "使用内置模板与自动化流程快速构建开发环境，实现可复用、可审计的一致化交付。"
   }
 }

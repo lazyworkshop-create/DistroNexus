@@ -1,0 +1,16 @@
+{
+  "TemplateId": "go-dev",
+  "TemplateName": "Go Development",
+  "Status": "Pass",
+  "Reason": "",
+  "DurationSeconds": 21,
+  "ProbeResults": [
+    {
+      "Name": "bash -lc 'export PATH=\"$PATH:/usr/local/go/bin\"; go version'",
+      "ExitCode": 0,
+      "Output": "go version go1.23.6 linux/amd64",
+      "Success": true
+    }
+  ],
+  "IsolatedInstance": "dnx-auto-go-dev-eeb70b"
+}

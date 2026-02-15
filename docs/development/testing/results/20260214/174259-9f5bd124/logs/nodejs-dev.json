@@ -1,0 +1,16 @@
+{
+  "TemplateId": "nodejs-dev",
+  "TemplateName": "Node.js Development",
+  "Status": "Pass",
+  "Reason": "",
+  "DurationSeconds": 21,
+  "ProbeResults": [
+    {
+      "Name": "bash -lc '[ -s /root/.nvm/nvm.sh ] || command -v node >/dev/null 2>&1 || command -v nodejs >/dev/null 2>&1'",
+      "ExitCode": 0,
+      "Output": null,
+      "Success": true
+    }
+  ],
+  "IsolatedInstance": "dnx-auto-nodejs-dev-2a482b"
+}

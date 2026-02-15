@@ -19,7 +19,12 @@ const sidebars = {
     'installation',
     'usage',
     'configuration',
-    'scripts-reference'
+    'scripts-reference',
+    {
+      type: 'link',
+      label: 'Template System',
+      href: '/template-system',
+    }
   ],
 
   // But you can create a sidebar manually

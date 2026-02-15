@@ -1,0 +1,1243 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="SettingsTitle" xml:space="preserve">
+    <value>设置</value>
+  </data>
+  <data name="GeneralSettings" xml:space="preserve">
+    <value>常规设置</value>
+  </data>
+  <data name="DefaultInstallPath" xml:space="preserve">
+    <value>默认安装路径</value>
+  </data>
+  <data name="PackageCachePath" xml:space="preserve">
+    <value>包缓存路径</value>
+  </data>
+  <data name="DefaultWslVersion" xml:space="preserve">
+    <value>默认 WSL 版本</value>
+  </data>
+  <data name="DefaultUsername" xml:space="preserve">
+    <value>默认用户名</value>
+  </data>
+  <data name="DefaultTerminalStartPath" xml:space="preserve">
+    <value>默认终端启动路径</value>
+  </data>
+  <data name="DefaultDistro" xml:space="preserve">
+    <value>默认发行版</value>
+  </data>
+  <data name="Appearance" xml:space="preserve">
+    <value>外观</value>
+  </data>
+  <data name="Theme" xml:space="preserve">
+    <value>主题</value>
+  </data>
+  <data name="Language" xml:space="preserve">
+    <value>语言</value>
+  </data>
+  <data name="DownloadSettings" xml:space="preserve">
+    <value>下载设置</value>
+  </data>
+  <data name="OnlineCatalogUrl" xml:space="preserve">
+    <value>在线目录源 URL</value>
+  </data>
+  <data name="MaxConcurrentDownloads" xml:space="preserve">
+    <value>最大并发下载数</value>
+  </data>
+  <data name="MaxRetryAttempts" xml:space="preserve">
+    <value>最大重试次数</value>
+  </data>
+  <data name="AutoRetryFailedDownloads" xml:space="preserve">
+    <value>自动重试失败的下载</value>
+  </data>
+  <data name="CacheManagement" xml:space="preserve">
+    <value>缓存管理</value>
+  </data>
+  <data name="PackageCacheLocation" xml:space="preserve">
+    <value>包缓存位置</value>
+  </data>
+  <data name="CachedPackages" xml:space="preserve">
+    <value>已缓存的包</value>
+  </data>
+  <data name="CachedFiles" xml:space="preserve">
+    <value>已缓存文件</value>
+  </data>
+  <data name="OpenFolder" xml:space="preserve">
+    <value>打开文件夹</value>
+  </data>
+  <data name="TotalSize" xml:space="preserve">
+    <value>总大小</value>
+  </data>
+  <data name="Refresh" xml:space="preserve">
+    <value>刷新</value>
+  </data>
+  <data name="ClearAllCache" xml:space="preserve">
+    <value>清除所有缓存</value>
+  </data>
+  <data name="NoCachedFilesFound" xml:space="preserve">
+    <value>未找到缓存文件</value>
+  </data>
+  <data name="CachedDateLabel" xml:space="preserve">
+    <value> | 缓存时间: </value>
+  </data>
+  <data name="DeleteCachedFileTooltip" xml:space="preserve">
+    <value>删除此缓存文件</value>
+  </data>
+  <data name="PowerShellModulePathHeader" xml:space="preserve">
+    <value>PowerShell 模块路径 (可选)</value>
+  </data>
+  <data name="PowerShellModulePathDescription" xml:space="preserve">
+    <value>留空以使用自动检测。如果模块位于自定义位置，请设置此项。</value>
+  </data>
+  <data name="PowerShellModulePathPlaceholder" xml:space="preserve">
+    <value>自动检测模块路径</value>
+  </data>
+  <data name="ThemeLight" xml:space="preserve">
+    <value>浅色</value>
+  </data>
+  <data name="ThemeDark" xml:space="preserve">
+    <value>深色</value>
+  </data>
+  <data name="ThemeAuto" xml:space="preserve">
+    <value>跟随系统</value>
+  </data>
+  <data name="LangEnglish" xml:space="preserve">
+    <value>English</value>
+  </data>
+  <data name="LangChinese" xml:space="preserve">
+    <value>简体中文</value>
+  </data>
+  <data name="TerminalPathPlaceholder" xml:space="preserve">
+    <value>~ (主目录)</value>
+  </data>
+  <data name="AdvancedSettings" xml:space="preserve">
+    <value>高级设置</value>
+  </data>
+  <data name="Behavior" xml:space="preserve">
+    <value>行为</value>
+  </data>
+  <data name="EnableLogging" xml:space="preserve">
+    <value>启用日志记录</value>
+  </data>
+  <data name="CheckUpdatesOnStartup" xml:space="preserve">
+    <value>启动时检查更新</value>
+  </data>
+  <data name="ShowConfirmationDialogs" xml:space="preserve">
+    <value>显示确认对话框</value>
+  </data>
+  <data name="EnableAutoSave" xml:space="preserve">
+    <value>启用自动保存</value>
+  </data>
+  <data name="LogFilePath" xml:space="preserve">
+    <value>日志文件路径</value>
+  </data>
+  <data name="SettingsSaved" xml:space="preserve">
+    <value>设置已成功保存</value>
+  </data>
+  <data name="SettingsSavedRestart" xml:space="preserve">
+    <value>设置已成功保存。请重启应用程序以使语言更改完全生效。</value>
+  </data>
+  <data name="Browse" xml:space="preserve">
+    <value>浏览...</value>
+  </data>
+  <data name="Back" xml:space="preserve">
+    <value>返回</value>
+  </data>
+  <data name="ResetToDefaults" xml:space="preserve">
+    <value>恢复默认值</value>
+  </data>
+  <data name="SaveSettings" xml:space="preserve">
+    <value>保存设置</value>
+  </data>
+  <data name="Clear" xml:space="preserve">
+    <value>清除</value>
+  </data>
+  <data name="ModulePathConfigTitle" xml:space="preserve">
+    <value>模块路径配置</value>
+  </data>
+  <data name="ModulePathInfo1" xml:space="preserve">
+    <value>DistroNexus 需要 PowerShell 模块来管理 WSL 实例。</value>
+  </data>
+  <data name="ModulePathInfo2" xml:space="preserve">
+    <value>如果未指定，应用程序将在以下位置搜索：</value>
+  </data>
+  <data name="ModulePathSearchLoc1" xml:space="preserve">
+    <value>• 环境变量: DISTRONEXUS_MODULE_PATH</value>
+  </data>
+  <data name="ModulePathSearchLoc2" xml:space="preserve">
+    <value>• 开发环境: src/PowerShell (相对于应用程序)</value>
+  </data>
+  <data name="ModulePathSearchLoc3" xml:space="preserve">
+    <value>• 安装目录: %ProgramFiles%\DistroNexus\PowerShell</value>
+  </data>
+  <data name="ModulePathSearchLoc4" xml:space="preserve">
+    <value>• 用户模块: %USERPROFILE%\Documents\PowerShell\Modules\DistroNexus</value>
+  </data>
+  <data name="AutoSaveInterval" xml:space="preserve">
+    <value>自动保存间隔（秒）</value>
+  </data>
+  <data name="InstallNew" xml:space="preserve">
+    <value>安装新实例</value>
+  </data>
+  <data name="PackageManagerTitle" xml:space="preserve">
+    <value>包管理器</value>
+  </data>
+  <data name="DownloadTasksTooltip" xml:space="preserve">
+    <value>下载任务</value>
+  </data>
+  <data name="ToggleThemeTooltip" xml:space="preserve">
+    <value>切换主题 (深色/浅色)</value>
+  </data>
+  <data name="SwitchLanguageTooltip" xml:space="preserve">
+    <value>切换语言 (中/英)</value>
+  </data>
+  <data name="Update" xml:space="preserve">
+    <value>更新</value>
+  </data>
+  <data name="UpdateCatalogTooltip" xml:space="preserve">
+    <value>从远程源更新发行版目录</value>
+  </data>
+  <data name="Download" xml:space="preserve">
+    <value>下载</value>
+  </data>
+  <data name="DownloadAllTooltip" xml:space="preserve">
+    <value>下载所有未缓存的包</value>
+  </data>
+  <data name="SearchPlaceholder" xml:space="preserve">
+    <value>搜索发行版...</value>
+  </data>
+  <data name="AddSource" xml:space="preserve">
+    <value>添加</value>
+  </data>
+  <data name="OfflineMode" xml:space="preserve">
+    <value>离线模式</value>
+  </data>
+  <data name="InstallWizardTitle" xml:space="preserve">
+    <value>安装 WSL 发行版</value>
+  </data>
+  <data name="StepLabel" xml:space="preserve">
+    <value>步骤 </value>
+  </data>
+  <data name="OfLabel" xml:space="preserve">
+    <value> / </value>
+  </data>
+  <data name="SelectDistroLabel" xml:space="preserve">
+    <value>选择要安装的发行版:</value>
+  </data>
+  <data name="ChooseLocationLabel" xml:space="preserve">
+    <value>选择安装位置:</value>
+  </data>
+  <data name="InstanceNameLabel" xml:space="preserve">
+    <value>实例名称:</value>
+  </data>
+  <data name="InstallPathLabel" xml:space="preserve">
+    <value>安装路径:</value>
+  </data>
+  <data name="InstallSuccessLabel" xml:space="preserve">
+    <value>安装成功完成！</value>
+  </data>
+  <data name="ErrorTitle" xml:space="preserve">
+    <value>错误</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="Next" xml:space="preserve">
+    <value>下一步</value>
+  </data>
+  <data name="Install" xml:space="preserve">
+    <value>安装</value>
+  </data>
+  <data name="Finish" xml:space="preserve">
+    <value>完成</value>
+  </data>
+  <data name="InstanceNamePlaceholder" xml:space="preserve">
+    <value>输入实例名称</value>
+  </data>
+  <data name="Success" xml:space="preserve">
+    <value>成功</value>
+  </data>
+  <data name="SaveSettingsError" xml:space="preserve">
+    <value>保存设置失败: {0}</value>
+  </data>
+  <data name="StatusInitializing" xml:space="preserve">
+    <value>正在初始化...</value>
+  </data>
+  <data name="DashboardTitle" xml:space="preserve">
+    <value>仪表盘</value>
+  </data>
+  <data name="StatusOpeningWizard" xml:space="preserve">
+    <value>正在打开安装向导...</value>
+  </data>
+  <data name="StatusInstallCompleteRefresh" xml:space="preserve">
+    <value>安装完成 - 正在刷新实例...</value>
+  </data>
+  <data name="StatusReady" xml:space="preserve">
+    <value>就绪</value>
+  </data>
+  <data name="StatusThemeChanged" xml:space="preserve">
+    <value>主题已更改为 {0}</value>
+  </data>
+  <data name="StatusThemeChangeFailed" xml:space="preserve">
+    <value>更换主题失败</value>
+  </data>
+  <data name="StatusLanguageChangeFailed" xml:space="preserve">
+    <value>切换语言失败</value>
+  </data>
+  <data name="StatusGeneratingDiagnostics" xml:space="preserve">
+    <value>正在生成诊断信息...</value>
+  </data>
+  <data name="DiagnosticsServiceUnavailable" xml:space="preserve">
+    <value>PowerShell 服务不可用</value>
+  </data>
+  <data name="DiagnosticsErrorTitle" xml:space="preserve">
+    <value>诊断错误</value>
+  </data>
+  <data name="DiagnosticsWindowTitle" xml:space="preserve">
+    <value>PowerShell 诊断</value>
+  </data>
+  <data name="LanguageChangedMessage" xml:space="preserve">
+    <value>语言已切换为中文。请重启应用程序以使更改完全生效。</value>
+  </data>
+  <data name="LanguageChangedTitle" xml:space="preserve">
+    <value>语言已更改</value>
+  </data>
+  <data name="LoadInstancesError" xml:space="preserve">
+    <value>加载 WSL 实例失败: {0}</value>
+  </data>
+  <data name="PackageManagerError" xml:space="preserve">
+    <value>无法打开包管理器: {0}</value>
+  </data>
+  <data name="InstallWizardError" xml:space="preserve">
+    <value>无法启动安装向导: {0}</value>
+  </data>
+  <data name="InformationTitle" xml:space="preserve">
+    <value>信息</value>
+  </data>
+  <data name="DeleteFileError" xml:space="preserve">
+    <value>删除文件失败: {0}</value>
+  </data>
+  <data name="OpenCacheFolderError" xml:space="preserve">
+    <value>无法打开缓存文件夹。</value>
+  </data>
+  <data name="CachePathNotConfigured" xml:space="preserve">
+    <value>未配置缓存文件夹路径。</value>
+  </data>
+  <data name="StepTitleSelectDistro" xml:space="preserve">
+    <value>选择发行版</value>
+  </data>
+  <data name="StepTitleQuickInstall" xml:space="preserve">
+    <value>快速安装</value>
+  </data>
+  <data name="StepTitleInstallation" xml:space="preserve">
+    <value>安装</value>
+  </data>
+  <data name="StepTitleChoosePath" xml:space="preserve">
+    <value>选择安装路径</value>
+  </data>
+  <data name="StepTitleConfigUser" xml:space="preserve">
+    <value>配置用户账户</value>
+  </data>
+  <data name="StepTitleReview" xml:space="preserve">
+    <value>检查并安装</value>
+  </data>
+  <data name="ValMsgSelectDistro" xml:space="preserve">
+    <value>请选择要安装的发行版。</value>
+  </data>
+  <data name="ValMsgSpecifyPath" xml:space="preserve">
+    <value>请指定安装路径。</value>
+  </data>
+  <data name="ValMsgSpecifyName" xml:space="preserve">
+    <value>请指定实例名称。</value>
+  </data>
+  <data name="ValMsgEnterUsername" xml:space="preserve">
+    <value>请输入用户名。</value>
+  </data>
+  <data name="ValMsgEnterPassword" xml:space="preserve">
+    <value>请输入密码。</value>
+  </data>
+  <data name="ValMsgPasswordsNoMatch" xml:space="preserve">
+    <value>密码不匹配。</value>
+  </data>
+  <data name="ValMsgPathRequired" xml:space="preserve">
+    <value>必须指定安装路径。</value>
+  </data>
+  <data name="ValMsgDirExists" xml:space="preserve">
+    <value>此位置已存在目录。</value>
+  </data>
+  <data name="ValMsgCannotCreateDir" xml:space="preserve">
+    <value>无法在此位置创建目录。</value>
+  </data>
+  <data name="ValMsgInstallTarget" xml:space="preserve">
+    <value>实例将安装到: {0}</value>
+  </data>
+  <data name="ValMsgInvalidPath" xml:space="preserve">
+    <value>无效路径: {0}</value>
+  </data>
+  <data name="StatusPreparingInstall" xml:space="preserve">
+    <value>正在准备安装...</value>
+  </data>
+  <data name="LogStartingInstall" xml:space="preserve">
+    <value>开始安装...</value>
+  </data>
+  <data name="StatusInstallCancelled" xml:space="preserve">
+    <value>安装已取消。</value>
+  </data>
+  <data name="ErrorInstallCancelled" xml:space="preserve">
+    <value>安装已取消。</value>
+  </data>
+  <data name="StatusInstallFailed" xml:space="preserve">
+    <value>安装失败。</value>
+  </data>
+  <data name="ErrorInstallFailed" xml:space="preserve">
+    <value>安装失败: {0}</value>
+  </data>
+  <data name="SelectInstallDirTitle" xml:space="preserve">
+    <value>选择安装目录</value>
+  </data>
+  <data name="LoadDistributionsError" xml:space="preserve">
+    <value>加载发行版失败: {0}</value>
+  </data>
+  <data name="StatusLoadingCatalog" xml:space="preserve">
+    <value>正在加载发行版目录...</value>
+  </data>
+  <data name="StatusLoadedDistros" xml:space="preserve">
+    <value>已加载 {0} 个发行版</value>
+  </data>
+  <data name="ErrorLoadingCatalogShort" xml:space="preserve">
+    <value>加载目录错误: {0}</value>
+  </data>
+  <data name="LoadCatalogError" xml:space="preserve">
+    <value>加载目录失败: {0}</value>
+  </data>
+  <data name="StatusRefreshingCatalog" xml:space="preserve">
+    <value>正在从远程源刷新目录...</value>
+  </data>
+  <data name="StatusCatalogRefreshed" xml:space="preserve">
+    <value>目录刷新成功</value>
+  </data>
+  <data name="ErrorOfflineModeMessage" xml:space="preserve">
+    <value>无法连接到远程目录。使用缓存数据。
+
+正在以离线模式工作。</value>
+  </data>
+  <data name="OfflineModeTitle" xml:space="preserve">
+    <value>离线模式</value>
+  </data>
+  <data name="StatusOfflineCached" xml:space="preserve">
+    <value>离线模式 - 使用缓存目录</value>
+  </data>
+  <data name="StatusOfflineError" xml:space="preserve">
+    <value>离线模式 - {0}</value>
+  </data>
+  <data name="ErrorRefreshCatalogFailed" xml:space="preserve">
+    <value>刷新目录失败: {0}
+
+正在使用缓存数据。</value>
+  </data>
+  <data name="StatusFoundDistros" xml:space="preserve">
+    <value>找到 {0} 个匹配的发行版</value>
+  </data>
+  <data name="ErrorSearchFailed" xml:space="preserve">
+    <value>搜索失败: {0}</value>
+  </data>
+  <data name="StatusDownloadQueued" xml:space="preserve">
+    <value>下载已排队: {0}</value>
+  </data>
+  <data name="StatusQueueFailed" xml:space="preserve">
+    <value>排队下载失败</value>
+  </data>
+  <data name="ErrorQueueDownload" xml:space="preserve">
+    <value>排队下载失败: {0}</value>
+  </data>
+  <data name="StatusDownloadCancelled" xml:space="preserve">
+    <value>下载已取消: {0}</value>
+  </data>
+  <data name="ErrorCancelDownload" xml:space="preserve">
+    <value>取消下载失败: {0}</value>
+  </data>
+  <data name="ErrorForceRefresh" xml:space="preserve">
+    <value>强制刷新实例失败: {0}</value>
+  </data>
+  <data name="ErrorStartInstance" xml:space="preserve">
+    <value>启动实例失败: {0}</value>
+  </data>
+  <data name="ErrorStopInstance" xml:space="preserve">
+    <value>停止实例失败: {0}</value>
+  </data>
+  <data name="ConfirmRemoveInstanceTitle" xml:space="preserve">
+    <value>删除实例</value>
+  </data>
+  <data name="ConfirmRemoveInstanceMessage" xml:space="preserve">
+    <value>您确定要删除 '{0}' 吗？这将永久删除所有数据。</value>
+  </data>
+  <data name="StatusInstanceRemoved" xml:space="preserve">
+    <value>实例 '{0}' 已成功删除</value>
+  </data>
+  <data name="ErrorRemoveInstance" xml:space="preserve">
+    <value>删除实例失败: {0}</value>
+  </data>
+  <data name="ErrorOpenTerminal" xml:space="preserve">
+    <value>打开终端失败: {0}</value>
+  </data>
+  <data name="ConfirmResetSettings" xml:space="preserve">
+    <value>确定要将所有设置重置为默认值吗？</value>
+  </data>
+  <data name="StatusSettingsReset" xml:space="preserve">
+    <value>设置已重置为默认值</value>
+  </data>
+  <data name="ErrorResetSettings" xml:space="preserve">
+    <value>重置设置失败: {0}</value>
+  </data>
+  <data name="ConfirmClearCache" xml:space="preserve">
+    <value>确定要删除所有缓存文件吗？({0} 个文件)</value>
+  </data>
+  <data name="StatusCacheCleared" xml:space="preserve">
+    <value>成功清除 {0} 个缓存文件。</value>
+  </data>
+  <data name="ErrorClearCache" xml:space="preserve">
+    <value>清除缓存失败: {0}</value>
+  </data>
+  <data name="ConfirmTitle" xml:space="preserve">
+    <value>确认</value>
+  </data>
+  <data name="StatusForceRefreshing" xml:space="preserve">
+    <value>正在强制刷新...</value>
+  </data>
+  <data name="StatusLoading" xml:space="preserve">
+    <value>正在加载...</value>
+  </data>
+  <data name="StatusClickToLoad" xml:space="preserve">
+    <value>点击加载</value>
+  </data>
+  <data name="StatusUnknown" xml:space="preserve">
+    <value>未知</value>
+  </data>
+  <data name="ConfirmForceRefreshTitle" xml:space="preserve">
+    <value>强制刷新</value>
+  </data>
+  <data name="ConfirmForceRefreshMessage" xml:space="preserve">
+    <value>这将启动实例并加载完整信息（包括磁盘大小）。是否继续？</value>
+  </data>
+  <data name="ErrorForceRefreshNull" xml:space="preserve">
+    <value>刷新实例信息失败。</value>
+  </data>
+  <data name="ErrorForceRefreshEx" xml:space="preserve">
+    <value>强制刷新实例失败: {0}</value>
+  </data>
+  <data name="ErrorStartInstanceFailed" xml:space="preserve">
+    <value>启动实例 '{0}' 失败</value>
+  </data>
+  <data name="ErrorStartInstanceEx" xml:space="preserve">
+    <value>启动实例失败: {0}</value>
+  </data>
+  <data name="ConfirmStopTitle" xml:space="preserve">
+    <value>停止实例</value>
+  </data>
+  <data name="ConfirmStopMessage" xml:space="preserve">
+    <value>确定要停止 '{0}' 吗？
+
+此实例中的所有运行进程将被终止。</value>
+  </data>
+  <data name="ButtonStop" xml:space="preserve">
+    <value>停止</value>
+  </data>
+  <data name="ErrorStopInstanceFailed" xml:space="preserve">
+    <value>停止实例 '{0}' 失败</value>
+  </data>
+  <data name="ErrorStopInstanceEx" xml:space="preserve">
+    <value>停止实例失败: {0}</value>
+  </data>
+  <data name="ConfirmRemoveTitle" xml:space="preserve">
+    <value>删除实例</value>
+  </data>
+  <data name="ConfirmRemoveMessage" xml:space="preserve">
+    <value>确定要删除 '{0}' 吗？
+
+此操作无法撤销。此实例中的所有数据将被永久删除。</value>
+  </data>
+  <data name="ButtonRemove" xml:space="preserve">
+    <value>删除</value>
+  </data>
+  <data name="SuccessInstanceRemoved" xml:space="preserve">
+    <value>实例 '{0}' 已成功删除</value>
+  </data>
+  <data name="ErrorRemoveInstanceEx" xml:space="preserve">
+    <value>删除实例失败: {0}</value>
+  </data>
+  <data name="ErrorOpenTerminalFailed" xml:space="preserve">
+    <value>为实例 '{0}' 打开终端失败</value>
+  </data>
+  <data name="ErrorOpenTerminalEx" xml:space="preserve">
+    <value>打开终端失败: {0}</value>
+  </data>
+  <data name="SelectMoveLocationTitle" xml:space="preserve">
+    <value>选择 '{0}' 的新位置</value>
+  </data>
+  <data name="ConfirmMoveTitle" xml:space="preserve">
+    <value>确认移动</value>
+  </data>
+  <data name="ConfirmMoveMessage" xml:space="preserve">
+    <value>将实例 '{0}' 移动到:
+{1}
+
+这可能需要一段时间，具体取决于实例大小。</value>
+  </data>
+  <data name="SuccessInstanceMoved" xml:space="preserve">
+    <value>实例 '{0}' 已成功移动</value>
+  </data>
+  <data name="ErrorMoveInstanceEx" xml:space="preserve">
+    <value>移动实例失败: {0}</value>
+  </data>
+  <data name="RenameTitle" xml:space="preserve">
+    <value>重命名实例</value>
+  </data>
+  <data name="ButtonRename" xml:space="preserve">
+    <value>重命名</value>
+  </data>
+  <data name="SuccessInstanceRenamed" xml:space="preserve">
+    <value>实例已成功重命名为 '{0}'</value>
+  </data>
+  <data name="ErrorRenameInstanceEx" xml:space="preserve">
+    <value>重命名实例失败: {0}</value>
+  </data>
+  <data name="SetCredentialsTitle" xml:space="preserve">
+    <value>设置凭据</value>
+  </data>
+  <data name="PromptEnterUsername" xml:space="preserve">
+    <value>请输入用户名:</value>
+  </data>
+  <data name="PromptEnterPassword" xml:space="preserve">
+    <value>请输入密码:</value>
+  </data>
+  <data name="SuccessCredentialsSet" xml:space="preserve">
+    <value>已成功设置 '{0}' 的凭据</value>
+  </data>
+  <data name="ErrorSetCredentialsEx" xml:space="preserve">
+    <value>设置凭据失败: {0}</value>
+  </data>
+  <data name="StatusLoadingSources" xml:space="preserve">
+    <value>正在加载源...</value>
+  </data>
+  <data name="StatusLoadedSources" xml:space="preserve">
+    <value>已加载 {0} 个源</value>
+  </data>
+  <data name="ErrorLoadSourcesEx" xml:space="preserve">
+    <value>加载源失败: {0}</value>
+  </data>
+  <data name="StatusLoadSourcesFailed" xml:space="preserve">
+    <value>加载源失败</value>
+  </data>
+  <data name="ValidationNameUrlRequired" xml:space="preserve">
+    <value>名称和 URL 为必填项。</value>
+  </data>
+  <data name="ValidationTitle" xml:space="preserve">
+    <value>验证错误</value>
+  </data>
+  <data name="StatusSourceUpdated" xml:space="preserve">
+    <value>源更新成功</value>
+  </data>
+  <data name="StatusSourceAdded" xml:space="preserve">
+    <value>源添加成功</value>
+  </data>
+  <data name="ErrorSaveSourceEx" xml:space="preserve">
+    <value>保存源失败: {0}</value>
+  </data>
+  <data name="InfoSelectSourceRemove" xml:space="preserve">
+    <value>请选择要删除的源。</value>
+  </data>
+  <data name="InfoDefaultSourceRemove" xml:space="preserve">
+    <value>默认源无法删除。</value>
+  </data>
+  <data name="ConfirmVerifyRemoveSource" xml:space="preserve">
+    <value>确定要删除源 '{0}' 吗？</value>
+  </data>
+  <data name="ConfirmRemoveSourceTitle" xml:space="preserve">
+    <value>确认删除</value>
+  </data>
+  <data name="StatusSourceRemoved" xml:space="preserve">
+    <value>源已成功删除</value>
+  </data>
+  <data name="ErrorRemoveSourceEx" xml:space="preserve">
+    <value>删除源失败: {0}</value>
+  </data>
+  <data name="StatusSourceEnabled" xml:space="preserve">
+    <value>已启用</value>
+  </data>
+  <data name="StatusSourceDisabled" xml:space="preserve">
+    <value>已禁用</value>
+  </data>
+  <data name="StatusSourceToggled" xml:space="preserve">
+    <value>源 {0}</value>
+  </data>
+  <data name="ErrorToggleSourceEx" xml:space="preserve">
+    <value>切换源状态失败: {0}</value>
+  </data>
+  <data name="TestResultUrlRequired" xml:space="preserve">
+    <value>URL 为必填项</value>
+  </data>
+  <data name="TestResultTesting" xml:space="preserve">
+    <value>正在测试...</value>
+  </data>
+  <data name="TestResultAccessible" xml:space="preserve">
+    <value>✓ 源可访问</value>
+  </data>
+  <data name="TestResultNotAccessible" xml:space="preserve">
+    <value>✗ 源不可访问</value>
+  </data>
+  <data name="TestResultFailed" xml:space="preserve">
+    <value>✗ 测试失败: {0}</value>
+  </data>
+  <data name="StatusRefreshingSources" xml:space="preserve">
+    <value>正在刷新源...</value>
+  </data>
+  <data name="StatusRefreshedSources" xml:space="preserve">
+    <value>已刷新 {0} 个源</value>
+  </data>
+  <data name="StatusRefreshFailed" xml:space="preserve">
+    <value>刷新源失败</value>
+  </data>
+  <data name="ErrorRefreshSourcesEx" xml:space="preserve">
+    <value>刷新源失败: {0}</value>
+  </data>
+  <data name="ConfirmResetSourcesMessage" xml:space="preserve">
+    <value>确定要重置为默认源吗？这将删除所有自定义源。</value>
+  </data>
+  <data name="ConfirmResetTitle" xml:space="preserve">
+    <value>确认重置</value>
+  </data>
+  <data name="StatusResetSourcesSuccess" xml:space="preserve">
+    <value>重置为默认源成功</value>
+  </data>
+  <data name="ErrorResetSourcesEx" xml:space="preserve">
+    <value>重置源失败: {0}</value>
+  </data>
+  <data name="InfoSelectSourceEdit" xml:space="preserve">
+    <value>请选择要编辑的源。</value>
+  </data>
+  <data name="ButtonCancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="StatusSourceMovedUp" xml:space="preserve">
+    <value>源已上移</value>
+  </data>
+  <data name="StatusSourceMovedDown" xml:space="preserve">
+    <value>源已下移</value>
+  </data>
+  <data name="SuccessTitle" xml:space="preserve">
+    <value>成功</value>
+  </data>
+  <data name="InstanceStateLabel" xml:space="preserve">
+    <value>状态: </value>
+  </data>
+  <data name="InstanceDiskLabel" xml:space="preserve">
+    <value> | 磁盘: </value>
+  </data>
+  <data name="InstanceStart" xml:space="preserve">
+    <value>启动</value>
+  </data>
+  <data name="InstanceStop" xml:space="preserve">
+    <value>停止</value>
+  </data>
+  <data name="InstanceTerminal" xml:space="preserve">
+    <value>终端</value>
+  </data>
+  <data name="InstanceMore" xml:space="preserve">
+    <value>更多</value>
+  </data>
+  <data name="ActionMove" xml:space="preserve">
+    <value>移动...</value>
+  </data>
+  <data name="ActionRename" xml:space="preserve">
+    <value>重命名...</value>
+  </data>
+  <data name="ActionSetCredentials" xml:space="preserve">
+    <value>设置凭据...</value>
+  </data>
+  <data name="ActionForceRefresh" xml:space="preserve">
+    <value>强制刷新</value>
+  </data>
+  <data name="ActionRemove" xml:space="preserve">
+    <value>删除</value>
+  </data>
+  <data name="NoInstancesTitle" xml:space="preserve">
+    <value>未找到 WSL 实例</value>
+  </data>
+  <data name="NoInstancesSubtitle" xml:space="preserve">
+    <value>点击“安装新实例”开始</value>
+  </data>
+  <data name="LoadingText" xml:space="preserve">
+    <value>加载中...</value>
+  </data>
+  <data name="DownloadPanelTitle" xml:space="preserve">
+    <value>下载任务</value>
+  </data>
+  <data name="ActiveDownloadsFormat" xml:space="preserve">
+    <value>{0} 个活跃下载</value>
+  </data>
+  <data name="CloseTooltip" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="CancelTooltip" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="StateRunning" xml:space="preserve">
+    <value>运行中</value>
+  </data>
+  <data name="StateStopped" xml:space="preserve">
+    <value>已停止</value>
+  </data>
+  <data name="ActionDownload" xml:space="preserve">
+    <value>下载</value>
+  </data>
+  <data name="ActionInstall" xml:space="preserve">
+    <value>安装</value>
+  </data>
+  <data name="ActionActions" xml:space="preserve">
+    <value>操作</value>
+  </data>
+  <data name="ActionAdd" xml:space="preserve">
+    <value>添加</value>
+  </data>
+  <data name="ActionRedownload" xml:space="preserve">
+    <value>重新下载</value>
+  </data>
+  <data name="ActionDeleteCache" xml:space="preserve">
+    <value>删除缓存</value>
+  </data>
+  <data name="CustomSourceUrlLabel" xml:space="preserve">
+    <value>自定义源 URL:</value>
+  </data>
+  <data name="LoadingCatalog" xml:space="preserve">
+    <value>加载目录中...</value>
+  </data>
+  <data name="BadgeCached" xml:space="preserve">
+    <value>已缓存</value>
+  </data>
+  <data name="BadgeOnline" xml:space="preserve">
+    <value>在线</value>
+  </data>
+  <data name="BadgeCustom" xml:space="preserve">
+    <value>自定义</value>
+  </data>
+  <data name="StepConnector" xml:space="preserve">
+    <value> - </value>
+  </data>
+  <data name="SelectDistroHeader" xml:space="preserve">
+    <value>选择要安装的 Linux 发行版:</value>
+  </data>
+  <data name="ReviewInstallTitle" xml:space="preserve">
+    <value>查看并安装</value>
+  </data>
+  <data name="ReviewInstallDescription" xml:space="preserve">
+    <value>安装前查看您的设置</value>
+  </data>
+  <data name="DefaultUserRoot" xml:space="preserve">
+    <value>root (默认)</value>
+  </data>
+  <data name="ResultCompleteTitle" xml:space="preserve">
+    <value>完成</value>
+  </data>
+  <data name="ResultCompleteDescription" xml:space="preserve">
+    <value>安装结果</value>
+  </data>
+  <data name="ResultSuccess" xml:space="preserve">
+    <value>{0} 已成功安装并可使用。</value>
+  </data>
+  <data name="ResultSuccessSimple" xml:space="preserve">
+    <value>安装成功完成。</value>
+  </data>
+  <data name="ButtonTryAgain" xml:space="preserve">
+    <value>重试</value>
+  </data>
+  <data name="ButtonFinish" xml:space="preserve">
+    <value>完成</value>
+  </data>
+  <data name="ButtonClose" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="ButtonNext" xml:space="preserve">
+    <value>下一步</value>
+  </data>
+  <data name="ButtonBack" xml:space="preserve">
+    <value>上一步</value>
+  </data>
+  <data name="InstallationSummaryTitle" xml:space="preserve">
+    <value>安装摘要</value>
+  </data>
+  <data name="LabelDistribution" xml:space="preserve">
+    <value>发行版:</value>
+  </data>
+  <data name="LabelInstanceName" xml:space="preserve">
+    <value>实例名称:</value>
+  </data>
+  <data name="LabelInstallPath" xml:space="preserve">
+    <value>安装路径:</value>
+  </data>
+  <data name="LabelUsername" xml:space="preserve">
+    <value>用户名:</value>
+  </data>
+  <data name="LabelWslVersion" xml:space="preserve">
+    <value>WSL 版本:</value>
+  </data>
+  <data name="OptionSetDefault" xml:space="preserve">
+    <value>设为默认 WSL 发行版</value>
+  </data>
+  <data name="OptionLaunchAfter" xml:space="preserve">
+    <value>安装后启动</value>
+  </data>
+  <data name="WslVersionFormat" xml:space="preserve">
+    <value>WSL {0}</value>
+  </data>
+  <data name="CreateUserAccount" xml:space="preserve">
+    <value>创建新用户账户</value>
+  </data>
+  <data name="CancelInstallation" xml:space="preserve">
+    <value>取消安装</value>
+  </data>
+  <data name="ButtonBrowse" xml:space="preserve">
+    <value>浏览...</value>
+  </data>
+  <data name="ButtonClearCompleted" xml:space="preserve">
+    <value>清除已完成项</value>
+  </data>
+  <data name="WslVersion1" xml:space="preserve">
+    <value>WSL 1</value>
+  </data>
+  <data name="WslVersion2" xml:space="preserve">
+    <value>WSL 2</value>
+  </data>
+  <data name="WslVersion2Recommended" xml:space="preserve">
+    <value>WSL 2 (推荐)</value>
+  </data>
+  <data name="LabelPassword" xml:space="preserve">
+    <value>密码:</value>
+  </data>
+  <data name="LabelConfirmPassword" xml:space="preserve">
+    <value>确认密码:</value>
+  </data>
+  <data name="PlaceholderUsername" xml:space="preserve">
+    <value>输入用户名</value>
+  </data>
+  <data name="PlaceholderPassword" xml:space="preserve">
+    <value>输入密码</value>
+  </data>
+  <data name="PlaceholderConfirmPassword" xml:space="preserve">
+    <value>确认密码</value>
+  </data>
+  <data name="Wsl2RecommendedInfo" xml:space="preserve">
+    <value>建议使用 WSL 2 以获得更好的性能。</value>
+  </data>
+  <data name="RootUserWarning" xml:space="preserve">
+    <value>如果您不创建用户，将使用默认的 root 账户。</value>
+  </data>
+  <data name="PlaceholderInstanceName" xml:space="preserve">
+    <value>输入实例名称</value>
+  </data>
+  <data name="PlaceholderInstallPath" xml:space="preserve">
+    <value>选择安装目录</value>
+  </data>
+  <data name="StatusValidating" xml:space="preserve">
+    <value>正在验证...</value>
+  </data>
+  <data name="ConfigureUserAccount" xml:space="preserve">
+    <value>配置用户账户:</value>
+  </data>
+  <data name="ReviewAndInstall" xml:space="preserve">
+    <value>查看并安装:</value>
+  </data>
+  <data name="InstallationSummary" xml:space="preserve">
+    <value>安装摘要</value>
+  </data>
+  <data name="LabelInstance" xml:space="preserve">
+    <value>实例:</value>
+  </data>
+  <data name="LabelLocation" xml:space="preserve">
+    <value>位置:</value>
+  </data>
+  <data name="InstallFailedLabel" xml:space="preserve">
+    <value>安装失败</value>
+  </data>
+  <data name="WizardStepSelectDistribution" xml:space="preserve">
+    <value>选择发行版</value>
+  </data>
+  <data name="WizardStepChooseInstallPath" xml:space="preserve">
+    <value>选择安装路径</value>
+  </data>
+  <data name="WizardStepConfigureUser" xml:space="preserve">
+    <value>配置用户账户</value>
+  </data>
+  <data name="WizardStepInstalling" xml:space="preserve">
+    <value>正在安装...</value>
+  </data>
+  <data name="ErrorSelectDistribution" xml:space="preserve">
+    <value>请选择要安装的发行版。</value>
+  </data>
+  <data name="ErrorInvalidDownloadUrl" xml:space="preserve">
+    <value>所选发行版没有有效的下载地址。</value>
+  </data>
+  <data name="ErrorInvalidUrlFormat" xml:space="preserve">
+    <value>发行版下载地址无效。</value>
+  </data>
+  <data name="ErrorInstanceNameRequired" xml:space="preserve">
+    <value>请输入实例名称。</value>
+  </data>
+  <data name="ErrorInvalidInstanceName" xml:space="preserve">
+    <value>实例名称只能包含字母、数字、连字符和下划线。</value>
+  </data>
+  <data name="ErrorInstanceAlreadyExists" xml:space="preserve">
+    <value>此名称的实例已存在。</value>
+  </data>
+  <data name="ErrorInstallPathRequired" xml:space="preserve">
+    <value>请指定安装路径。</value>
+  </data>
+  <data name="ErrorPathNotAbsolute" xml:space="preserve">
+    <value>安装路径必须是绝对路径。</value>
+  </data>
+  <data name="ErrorPasswordMismatch" xml:space="preserve">
+    <value>密码不匹配。请在两个字段中输入相同的密码。</value>
+  </data>
+  <data name="ErrorWeakPassword" xml:space="preserve">
+    <value>密码长度至少为 6 个字符。</value>
+  </data>
+  <data name="ErrorInstanceNameStartWith" xml:space="preserve">
+    <value>实例名称必须以字母或数字开头。</value>
+  </data>
+  <data name="ErrorInstanceNameTooShort" xml:space="preserve">
+    <value>实例名称太短（最少 2 个字符）。</value>
+  </data>
+  <data name="ErrorInstanceNameTooLong" xml:space="preserve">
+    <value>实例名称太长（最多 50 个字符）。</value>
+  </data>
+  <data name="ErrorInstanceNameReserved" xml:space="preserve">
+    <value>'{0}' 是保留名称。请选择其他名称。</value>
+  </data>
+  <data name="StatusVerifyingInstanceName" xml:space="preserve">
+    <value>正在验证实例名称可用性...</value>
+  </data>
+  <data name="ErrorVerificationTimeout" xml:space="preserve">
+    <value>验证超时。请重试。</value>
+  </data>
+  <data name="ErrorVerificationFailed" xml:space="preserve">
+    <value>验证实例名称失败。请重试。</value>
+  </data>
+  <data name="ErrorInstanceExistsFormat" xml:space="preserve">
+    <value>名为 '{0}' 的实例已存在。请选择其他名称。</value>
+  </data>
+  <data name="ErrorInvalidPathOrName" xml:space="preserve">
+    <value>路径或实例名称无效。</value>
+  </data>
+  <data name="ErrorValidationFormat" xml:space="preserve">
+    <value>验证错误: {0}</value>
+  </data>
+  <data name="ErrorStartupTitle" xml:space="preserve">
+    <value>启动错误</value>
+  </data>
+  <data name="ErrorApplicationTitle" xml:space="preserve">
+    <value>应用程序错误</value>
+  </data>
+  <data name="ErrorFatalTitle" xml:space="preserve">
+    <value>致命错误</value>
+  </data>
+  <data name="ErrorStartupMessage" xml:space="preserve">
+    <value>无法启动 DistroNexus：
+
+{0}
+
+堆栈跟踪：
+{1}</value>
+  </data>
+  <data name="ErrorUnexpectedException" xml:space="preserve">
+    <value>发生意外错误：
+
+{0}
+
+应用程序将尝试继续运行。</value>
+  </data>
+  <data name="ErrorFatalException" xml:space="preserve">
+    <value>发生致命错误：
+
+{0}
+
+应用程序即将关闭。</value>
+  </data>
+  <data name="UpdateAvailableTitle" xml:space="preserve">
+    <value>有可用更新</value>
+  </data>
+  <data name="UpdateAvailableMessage" xml:space="preserve">
+    <value>DistroNexus 有新版本可用！
+
+当前版本：{0}
+最新版本：{1}
+
+是否打开下载页面？</value>
+  </data>
+  <data name="ErrorGenerateDiagnostics" xml:space="preserve">
+    <value>生成诊断信息失败：{0}</value>
+  </data>
+  <data name="ErrorMoveSource" xml:space="preserve">
+    <value>移动源失败：{0}</value>
+  </data>
+  <data name="ErrorLoadSettings" xml:space="preserve">
+    <value>加载设置失败：{0}</value>
+  </data>
+  <data name="ErrorUsernameRequired" xml:space="preserve">
+    <value>请输入用户名。</value>
+  </data>
+  <data name="ErrorUsernameFormat" xml:space="preserve">
+    <value>用户名必须以字母开头，且只能包含小写字母、数字、连字符或下划线。</value>
+  </data>
+  <data name="ErrorPasswordMinLength" xml:space="preserve">
+    <value>密码长度至少为 4 个字符。</value>
+  </data>
+  <data name="ErrorInvalidWslVersion" xml:space="preserve">
+    <value>请选择有效的 WSL 版本（1 或 2）。</value>
+  </data>
+  <data name="ErrorOpenLogFolder" xml:space="preserve">
+    <value>打开日志文件夹失败：{0}</value>
+  </data>
+  <data name="ConfirmCancelInstallation" xml:space="preserve">
+    <value>确定要取消安装吗？
+
+安装过程将被停止，所有部分下载的文件将被删除。</value>
+  </data>
+  <data name="TitleCancelInstallation" xml:space="preserve">
+    <value>取消安装</value>
+  </data>
+  <data name="TooltipOnlyErrors" xml:space="preserve">
+    <value>仅显示错误</value>
+  </data>
+  <data name="ErrorDeletePackage" xml:space="preserve">
+    <value>删除包失败：{0}</value>
+  </data>
+  <data name="ErrorRedownloadPackage" xml:space="preserve">
+    <value>重新下载包失败：{0}</value>
+  </data>
+  <data name="ErrorInvalidUrl" xml:space="preserve">
+    <value>请输入有效的 URL</value>
+  </data>
+  <data name="TitleInvalidUrl" xml:space="preserve">
+    <value>无效的 URL</value>
+  </data>
+  <data name="ErrorCustomUrlInvalidFormat" xml:space="preserve">
+    <value>无效的 URL 格式</value>
+  </data>
+  <data name="SuccessCustomSourceAdded" xml:space="preserve">
+    <value>成功添加自定义源</value>
+  </data>
+  <data name="TitleSuccess" xml:space="preserve">
+    <value>成功</value>
+  </data>
+  <data name="ErrorAddCustomSource" xml:space="preserve">
+    <value>添加自定义源失败：{0}</value>
+  </data>
+  <data name="ErrorUpdateSources" xml:space="preserve">
+    <value>更新源失败：{0}</value>
+  </data>
+  <data name="InfoAllPackagesCached" xml:space="preserve">
+    <value>所有包已缓存或正在下载中。</value>
+  </data>
+  <data name="TitleDownloadAll" xml:space="preserve">
+    <value>全部下载</value>
+  </data>
+  <data name="ErrorStartDownloadAll" xml:space="preserve">
+    <value>开始下载全部失败：{0}</value>
+  </data>
+  <data name="ConfirmInstallPackage" xml:space="preserve">
+    <value>安装 {0} ({1})？
+
+这将开始安装过程。</value>
+  </data>
+  <data name="TitleInstallPackage" xml:space="preserve">
+    <value>安装包</value>
+  </data>
+  <data name="ErrorInstallPackage" xml:space="preserve">
+    <value>安装 {0} 失败：{1}</value>
+  </data>
+  <data name="ErrorApplyTheme" xml:space="preserve">
+    <value>应用主题失败：{0}</value>
+  </data>
+  <data name="TitleThemeError" xml:space="preserve">
+    <value>主题错误</value>
+  </data>
+  <data name="ErrorOpenCacheFolder" xml:space="preserve">
+    <value>打开缓存文件夹失败：{0}</value>
+  </data>
+  <data name="ErrorInitializeMainWindow" xml:space="preserve">
+    <value>初始化主窗口失败：
+
+{0}</value>
+  </data>
+  <data name="TitleInitializationError" xml:space="preserve">
+    <value>初始化错误</value>
+  </data>
+  <data name="ErrorInitializeApplication" xml:space="preserve">
+    <value>初始化应用程序失败：
+
+{0}</value>
+  </data>
+  <data name="ErrorLoadWslInstances" xml:space="preserve">
+    <value>加载 WSL 实例失败：
+
+{0}</value>
+  </data>
+  <data name="TitleLoadError" xml:space="preserve">
+    <value>加载错误</value>
+  </data>
+</root>

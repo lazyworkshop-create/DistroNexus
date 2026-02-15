@@ -1,0 +1,76 @@
+name: Quick Tests (PR Validation)
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - '.github/workflows/quick-test.yml'
+
+jobs:
+  quick-validation:
+    name: Quick Validation
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup PowerShell
+      uses: PowerShell/setup-powershell@v2
+      with:
+        pwsh-version: 'latest'
+
+    - name: Install Pester
+      shell: pwsh
+      run: |
+        Install-Module -Name Pester -Repository PSGallery -Force -MinimumVersion 5.0
+
+    - name: Run Quick PowerShell Tests
+      shell: pwsh
+      working-directory: ./tests/PowerShell
+      run: |
+        # Run a quick subset of tests (not full integration suite)
+        $quickTestConfig = @{
+          Run = @{
+            Path = './Unit'
+            ExcludePath = './Unit/**/*Slow*'
+          }
+          TestResult = @{
+            Enabled = $true
+            OutputPath = '../test-results/quick-pester-results.xml'
+            OutputFormat = 'NUnitXml'
+          }
+        }
+        
+        $result = Invoke-Pester -Configuration $quickTestConfig -SkipSummary
+        
+        if ($result.FailedCount -gt 0) {
+          exit 1
+        }
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Build C# solution
+      run: dotnet build src/Client/ --configuration Debug
+
+    - name: Run Quick C# Tests
+      run: |
+        # Run only unit tests, not full integration suite
+        dotnet test src/Client/DistroNexus.Tests/ `
+          --configuration Debug `
+          --no-build `
+          --filter "Category!=Integration" `
+          --logger "trx;LogFileName=../../test-results/quick-csharp-results.trx"
+
+    - name: Publish Test Results
+      if: always()
+      uses: EnricoMi/publish-unit-test-result-action/windows@v2
+      with:
+        files: test-results/*.trx, tests/test-results/*.xml
+        check_name: 'Quick Validation Tests'
+        compare_to_earlier_commit: true

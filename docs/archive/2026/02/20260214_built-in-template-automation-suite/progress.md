@@ -1,0 +1,95 @@
+# Progress Log: Built-in Template Expansion
+
+## 2026-02-14
+- Initialized planning artifacts (`task_plan.md`, `findings.md`, `progress.md`).
+- Reviewed current `config/templates.json` and existing template requirements baseline.
+- Performed web-based research on WSL2 scenarios and multi-SDK version strategies using official Microsoft and ecosystem sources.
+- Synthesized findings into `docs/findings.md` with source references and actionable conclusions.
+- Authored requirements specification: `docs/specs/built-in-template-expansion-requirements.md`.
+- Marked all planned phases in `docs/task_plan.md` as completed.
+- Added implementation task list: `docs/development/template-expansion-implementation-task-list.md`.
+- Added acceptance test checklist: `docs/development/testing/template-expansion-acceptance-test-checklist.md`.
+- Implemented template metadata model expansion (`VersionOptions`, `DefaultSelections`, `PreflightChecks`, `OutputArtifacts`, `InstallMode`, `ScenarioTags`).
+- Implemented template service preflight execution, enhanced validation rules, and structured selection/artifact logging.
+- Added category/scenario filtering in templates page and wizard template step.
+- Added 10 mandatory phase-1 template definitions and corresponding scripts.
+- Added shared template script helper library (`config/templates/common/lib.sh`) and made existing scripts idempotent-aware.
+- Added/updated template-focused automated tests and executed targeted suite:
+	- `TemplateServiceTests`
+	- `TemplateServiceIntegrationTests`
+	- `SelectTemplateStepTests`
+	- `TemplateCatalogTests`
+- Targeted test result: passed (17/17).
+- Script validation result: `shell syntax ok` for all template scripts and shared helper.
+- Remaining blocker: full acceptance checklist items requiring real package installation/runtime verification on Ubuntu/Debian and optional GPU/systemd scenarios must be executed as manual E2E in target environments.
+- Introduced desktop UI automation framework based on `FlaUI (UIA3) + xUnit` in `src/Client/DistroNexus.Tests`.
+- Added UI automation session helper and smoke tests for launch/navigation.
+- Completed feasibility assessment for remaining checklist items and documented hybrid strategy in `docs/development/testing/template-expansion-ui-automation-assessment.md`.
+- Added executable hybrid test-case catalog and objective pass criteria in `docs/development/testing/template-expansion-hybrid-test-cases.md`.
+- Updated acceptance checklist with baseline pass standards and case mapping for remaining unchecked items.
+- Migrated PowerShell unit tests for Pester 5 compatibility across private/public test suites (syntax updates, module scope adjustments, helper compatibility fixes).
+- Updated stale test expectations to match current PowerShell module contracts (`LastUpdated`, persistent config semantics, `Destination` parameter naming).
+- Stabilized non-deterministic unit coverage by marking environment-coupled cases as skipped (WSL process execution and persistent-cache path coupling) with integration coverage retained.
+- Verification completed:
+	- `./tests/PowerShell/TestRunner.ps1 -TestType Unit` => Passed 79, Failed 0, Skipped 10.
+	- `./tests/PowerShell/TestRunner.ps1` => Passed 81, Failed 0, Skipped 10.
+- Added local WSL2 scenario switch to PowerShell test runner: `-EnableWsl2Scenarios` (sets `DISTRONEXUS_RUN_WSL2_TESTS=1`).
+- Converted selected hard-skipped WSL-dependent unit tests to conditional skips driven by local WSL2 availability and the new switch.
+- Verified local WSL2 automation mode:
+	- `./tests/PowerShell/TestRunner.ps1 -TestType Unit -EnableWsl2Scenarios` => Passed 82, Failed 0, Skipped 7.
+	- `./tests/PowerShell/TestRunner.ps1 -EnableWsl2Scenarios` => Passed 84, Failed 0, Skipped 7.
+- Migrated all remaining skipped PowerShell tests to executable scenarios (obsolete tests rewritten, environment-coupled tests stabilized with deterministic mocks/fixtures).
+- Final local WSL2-enabled validation completed with zero skipped tests:
+	- `./tests/PowerShell/TestRunner.ps1 -TestType Unit -EnableWsl2Scenarios` => Passed 89, Failed 0, Skipped 0.
+	- `./tests/PowerShell/TestRunner.ps1 -EnableWsl2Scenarios` => Passed 91, Failed 0, Skipped 0.
+- Started requirement research for a dedicated built-in template automation suite focused on local WSL2 development execution.
+- Reviewed current runner capability (`tests/PowerShell/TestRunner.ps1`) and identified existing local WSL2 switch as reusable baseline.
+- Reviewed remaining acceptance backlog and hybrid automation docs to align requirement scope with unresolved manual E2E areas.
+- Performed web research on Pester v5 advanced configuration/filtering/test-result output and official WSL command/systemd constraints.
+- Authored requirements specification: `docs/specs/built-in-template-automation-test-suite-requirements.md`.
+- Updated planning and findings traceability documents for this requirement phase:
+	- `docs/task_plan.md`
+	- `docs/findings.md`
+	- `docs/progress.md`
+- Created implementation task breakdown for automation suite delivery:
+	- `docs/development/built-in-template-automation-implementation-task-list.md`
+- Created objective acceptance criteria document for release gate:
+	- `docs/development/testing/built-in-template-automation-acceptance-criteria.md`
+- Created executable verification checklist for full, selective, and artifact-output paths:
+	- `docs/development/testing/built-in-template-automation-test-checklist.md`
+- Implemented local template automation runner command in PowerShell module:
+	- `src/PowerShell/Public/Invoke-DistroNexusTemplateAutomation.ps1`
+- Exported new runner command from module manifest:
+	- `src/PowerShell/DistroNexus.psd1`
+- Added dedicated unit tests for runner policy, selection, dry-run artifacts, and non-dry-run execution path:
+	- `tests/PowerShell/Unit/Public/Invoke-DistroNexusTemplateAutomation.Tests.ps1`
+- Validation completed:
+	- `./tests/PowerShell/TestRunner.ps1 -TestType Unit` => Passed 90, Failed 0, Skipped 3.
+	- `./tests/PowerShell/TestRunner.ps1 -TestType All` => Passed 92, Failed 0, Skipped 3.
+	- `dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj` => Passed 197, Failed 0.
+	- `dotnet test tests/CSharp/Integration/IntegrationTests.csproj` => Build succeeded, 0 tests discovered, Failed 0.
+- Marked all automation delivery documents as completed:
+	- `docs/development/built-in-template-automation-implementation-task-list.md`
+	- `docs/development/testing/built-in-template-automation-acceptance-criteria.md`
+	- `docs/development/testing/built-in-template-automation-test-checklist.md`
+- Executed full built-in template automation suite on local WSL2 (`Ubuntu`) with capability-gated templates enabled:
+	- `Invoke-DistroNexusTemplateAutomation -Mode AllTemplates -IncludeCapabilityGated -Distro Ubuntu -TestResultFormat NUnitXml`
+	- RunId `150754-8e089550` => Total 15, Pass 0, Fail 15, Blocked 0.
+	- Artifacts generated under `docs/development/testing/results/20260214/150754-8e089550/` (`summary.md`, `run-manifest.json`, `test-results.xml`).
+- Executed focused confirmation run for `.NET` template:
+	- `Invoke-DistroNexusTemplateAutomation -Mode SelectedTemplates -TemplateIds dotnet-dev -Distro Ubuntu -TestResultFormat NUnitXml`
+	- RunId `150925-70dd1248` => Total 1, Pass 0, Fail 1, Blocked 0.
+	- Artifact summary generated at `docs/development/testing/results/20260214/150925-70dd1248/summary.md`.
+- Captured consistent runtime failure signal during script bootstrap: `bash: line 4: BASH_SOURCE[0]: unbound variable`; this indicates a shared shell-entry/bootstrap issue affecting all templates before template-specific probes execute.
+- Implemented per-template isolated WSL2 execution lifecycle in automation runner:
+	- Each template now runs in a freshly imported temporary distro instance derived from the selected base distro export.
+	- Temporary instances are automatically terminated/unregistered and local temp workspace is removed after each template run.
+	- Isolation mode is persisted in run artifacts as `PerTemplateIsolatedImport`.
+- Updated template execution reliability for isolated-root runs:
+	- `Apply-DistroNexusTemplate` executes Bash scripts as `root` in WSL to avoid interactive `sudo` password prompts.
+	- Fixed script-path execution to preserve `BASH_SOURCE` and relative shared-library sourcing.
+	- Hardened template scripts/probes for `nvm`/`sdkman`/`rustup`/Docker fallback behavior in clean instances.
+- Final full-catalog isolated validation completed:
+	- RunId `174259-9f5bd124` (`AllTemplates`, `Ubuntu`, `IncludeCapabilityGated`) => Total 15, Pass 15, Fail 0, Blocked 0.
+	- Artifacts: `docs/development/testing/results/20260214/174259-9f5bd124/summary.md`, `run-manifest.json`, `test-results.xml`.
+	- Verified no temporary `dnx-auto-*` distros remain after execution (automatic cleanup successful).

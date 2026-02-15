@@ -2,158 +2,293 @@
 
 [中文文档](README_CN.md) | **English**
 
-**DistroNexus** is a comprehensive GUI application (powered by PowerShell) designed to simplify the management, downloading, and custom installation of Windows Subsystem for Linux (WSL) distributions. It acts as a central hub for your WSL needs, allowing you to forge your perfect Linux environment on Windows.
+> **🎉 Version 2.0 Released!** - Complete rewrite with .NET 10 + WPF for native Windows experience.
+
+**DistroNexus** is a modern Windows application for managing Windows Subsystem for Linux (WSL) distributions. Built with .NET 10 and WPF, it provides a native, intuitive interface for downloading, installing, and managing your WSL instances.
 
 ## 📘 Documentation
 
 Full documentation and user guides are hosted on our official website:
 👉 **[https://lazyworkshop-create.github.io/DistroNexus/](https://lazyworkshop-create.github.io/DistroNexus/)**
 
-## Features
+## ✨ Features
 
-*   **Modern GUI Dashboard**: A cross-platform graphical interface (built with Fyne) to manage everything visually.
-*   **Centralized Download**: Automatically download the latest offline packages (Appx/AppxBundle) for popular distributions like Ubuntu, Debian, Kali Linux, and Oracle Linux.
-*   **Custom Installation**: Install any WSL distro into a custom directory of your choice, bypassing the default system drive location.
-*   **Advanced Instance Management**: 
-    *   **Start**: Start the instance in the background.
-    *   **Open Terminal**: Open a new terminal window for a running instance (supports custom starting directory).
-    *   **Stop/Terminate**: Immediately stop running instances.
-    *   **Move**: Relocate an existing distro to a new drive or folder without data loss.
-    *   **Rename**: Change the registered name of your WSL instance.
-    *   **Credentials**: Reset or set the default username and password for any instance.
-*   **Safety Checks**: Built-in validation prevents overwriting existing instances or installing into valid directories.
-*   **Side-by-Side Versions**: Easily install multiple versions of the same distro (e.g., Ubuntu 20.04 and 22.04) or multiple instances of the same version.
-*   **Offline Support**: Uses a local cache of downloaded packages to speed up re-installations.
-*   **Package Management**: View and manage the local cache of downloaded distro packages.
-*   **Uninstall Helper**: Easily unregister and remove custom WSL instances with a single click.
+### 1.0 Foundations
+*   **Instance Management**:
+    *   ✅ Start/Stop instances
+    *   ✅ Open terminal for an instance (with configurable start path)
+    *   ✅ Move instances to different drives
+    *   ✅ Rename instances
+    *   ✅ Remove instances
+    *   ✅ Set or reset default credentials
+*   **Custom Installation**: Install WSL distributions to any directory
+*   **Distribution Catalog**: Browse and download distributions from curated sources
 
-## Configuration
+### 2.0 Additions
+*   **Native Windows UI**: Modern WPF interface with Fluent Design System
+*   **Dark Mode Support**: Automatic theme switching based on system preferences
+*   **Bilingual Experience**: English and Simplified Chinese support across WPF client UI and project documentation
+*   **PowerShell Module**: 15 cmdlets for full automation and scripting workflows
+    *   ✅ Works both inside the app and in standalone PowerShell sessions
+    *   ✅ Supports repeatable operations for CI, provisioning, and batch management
+*   **Template System**: Built-in templates for fast environment bootstrapping
+    *   ✅ Covers common stacks like language runtimes, containers, and local dev setups
+    *   ✅ Supports parameterized template execution for environment-specific customization
+*   **Package Manager Experience**: Better browsing and package download workflow
+*   **Progress & Logging**: Real-time operation progress and detailed diagnostics
 
-Global settings are stored in `config/settings.json`:
+## 🚀 Quick Start
+
+### Requirements
+- Windows 10 version 2004 or later, or Windows 11
+- .NET 10 Desktop Runtime (included in installer)
+- WSL2 enabled (for usage)
+
+### Installation
+
+#### Option 1: Installer (Recommended)
+1. Download `DistroNexus-2.0.1-Setup.exe` from [Releases](https://github.com/lazyworkshop-create/DistroNexus/releases)
+2. Run the installer
+3. Launch from Start Menu
+
+#### Option 2: Portable
+1. Download `DistroNexus-v2.0.1-Release.zip`
+2. Extract to any folder
+3. Run `DistroNexus.Desktop.exe`
+
+#### Option 3: Self-Contained (No .NET Required)
+1. Download `DistroNexus-v2.0.1-Release-selfcontained.zip`
+2. Extract to any folder
+3. Run `DistroNexus.Desktop.exe`
+
+## 🛠️ PowerShell Module
+
+DistroNexus 2.0 includes a PowerShell module for automation:
+
+```powershell
+# Import the module
+Import-Module "C:\Program Files\DistroNexus\PowerShell\DistroNexus.psm1"
+
+# List all instances
+Get-DistroNexusInstance
+
+# Install a custom instance
+Install-DistroNexusInstance -DistroName "MyUbuntu" -InstallPath "D:\WSL\MyUbuntu" -Username "admin"
+
+# Start an instance
+Start-DistroNexusInstance -DistroName "Ubuntu-22.04"
+```
+
+Available cmdlets:
+- `Get-DistroNexusInstance` - List all WSL instances
+- `Start-DistroNexusInstance` - Start instances
+- `Stop-DistroNexusInstance` - Stop instances
+- `Move-DistroNexusInstance` - Relocate instances
+- `Rename-DistroNexusInstance` - Rename instances
+- `Remove-DistroNexusInstance` - Uninstall instances
+- `Install-DistroNexusInstance` - Custom installation
+- `Set-DistroNexusCredential` - Update credentials
+- `Get-DistroNexusPackage` - Browse distributions
+- `Save-DistroNexusPackage` - Download packages
+- `Remove-DistroNexusPackage` - Remove cached packages
+- `Update-DistroNexusCatalog` - Refresh catalog
+- `Get-DistroNexusTemplate` - List built-in templates
+- `Apply-DistroNexusTemplate` - Apply template to an instance
+- `Invoke-DistroNexusTemplateAutomation` - Run template automation pipeline
+
+## 🧩 Template System
+
+DistroNexus includes a built-in template system for quickly turning a WSL instance into a ready-to-use development environment.
+
+Template documentation index:
+- Comprehensive guide: `docs/development/template-system-comprehensive-guide.md`
+- Requirements analysis: `docs/specs/template-system-requirements-analysis.md`
+- System design: `docs/architecture/template-system-design.md`
+- User manual: `docs/development/template-system-user-manual.md`
+- Template development manual: `docs/development/template-development-manual.md`
+- Test suite manual: `docs/development/template-automation-test-suite-manual.md`
+
+- Template catalog file: `config/templates.json`
+- Template script assets: `config/templates/*`
+- Main commands: `Get-DistroNexusTemplate`, `Apply-DistroNexusTemplate`, `Invoke-DistroNexusTemplateAutomation`
+
+### Quick Start
+
+```powershell
+# List all templates
+Get-DistroNexusTemplate
+
+# Filter by category
+Get-DistroNexusTemplate -Category "Development"
+
+# Apply one template to an existing WSL instance
+Apply-DistroNexusTemplate -InstanceName "Ubuntu-22.04" -TemplateId "python-dev" -Verbose
+
+# Apply with runtime variables
+Apply-DistroNexusTemplate -InstanceName "Ubuntu-22.04" -TemplateId "nodejs-dev" -Variables @{ NodeVersion = "20" }
+```
+
+### Template Automation Validation
+
+```powershell
+# Dry run automation for selected templates
+Invoke-DistroNexusTemplateAutomation -Mode SelectedTemplates -TemplateIds "python-dev","nodejs-dev" -Distro "Ubuntu-22.04" -DryRun
+
+# Execute full automation for all templates (use in controlled test environment)
+Invoke-DistroNexusTemplateAutomation -Mode AllTemplates -Distro "Ubuntu-22.04"
+```
+
+### Safety Notes
+
+- Applying custom templates may execute shell scripts in the target distro.
+- Review template scripts before execution, especially third-party/custom templates.
+- Use `-WhatIf` / `-Confirm` where applicable for safer trial runs.
+
+## ⚙️ Configuration
+
+Settings are stored at `%APPDATA%\DistroNexus\settings.json`:
 
 ```json
 {
-    "DefaultInstallPath": "D:\\WSL",
-    "PackageCachePath": "D:\\WSL_Cache",
-    "DefaultTerminalStartPath": "~",
-    "DefaultDistro": "Ubuntu-24.04"
+    "DefaultInstallPath": "C:\\WSL",
+    "DefaultWslVersion": 2,
+    "DefaultUsername": "root",
+    "CatalogUrl": "https://raw.githubusercontent.com/lazyworkshop-create/DistroNexus/main/config/catalog.json",
+    "Theme": "Auto",
+    "EnableLogging": true
 }
 ```
 
-*   `DefaultInstallPath`: The root directory where distros will be installed if no path is provided.
-*   `PackageCachePath`: Directory to store downloaded offline packages.
-*   `DefaultTerminalStartPath`: Default starting directory when opening a terminal (e.g., `~` for home, or `/mnt/c/`).
-*   `DefaultDistro`: The identifier (DefaultName) of the distro to use for Quick Mode.
+Configure via Settings page in the application or edit JSON directly.
 
-## Graphical User Interface (GUI)
-
-DistroNexus now comes with a unified Dashboard application (`DistroNexus.exe`) that wraps the powerful PowerShell scripts into a user-friendly experience.
-
-### Main Capabilities
-- **Install Tab**: Select family/version, configure users, and monitor installation logs. Supports "Quick Mode" for one-click setup.
-- **My Installs Tab**: 
-    - View all registered WSL distributions.
-    - **Actions Dashboard**: Stop, Move, Rename, Set Credentials, and Uninstall instances directly from the card.
-    - **Disk Usage**: Monitor the size of each distro's virtual disk.
-- **Package Manager**: View locally cached distro packages, see their size, and delete unused files.
-- **Settings**: Configure default paths (Install, Cache, Terminal) and reset configuration.
-
-![App Icon](tools/icon.png)
-
-## Building from Source
-
-The project includes a comprehensive build system for Windows target.
+## 🏗️ Building from Source
 
 ### Prerequisites
-- **Go**: Version 1.22 or higher.
-- **Fyne CLI**: Automatically installed by setup script.
-- **MinGW-w64**: Required for cross-compiling to Windows from Linux (package `gcc-mingw-w64`).
-- **PowerShell**: Required on the target Windows machine to run the backend scripts.
+- .NET 10 SDK
+- PowerShell 7.0 or later
+- Windows 10/11
 
-### Setup & Build
-1.  **Initialize Environment** (Linux/WSL):
-    ```bash
-    ./tools/setup_go_env.sh
-    ```
-2.  **Compile**:
-    ```bash
-    ./tools/build.sh
-    ```
-    This will generate `build/DistroNexus.exe` with the embedded Application Icon.
+### Build Steps
 
-## Scripts
-
-The repository contains the following scripts in the `scripts/` directory:
-
-### 1. `download_all_distros.ps1`
-
-Downloads all supported WSL distribution packages to a local `distro` directory. This is useful for preparing an offline repository or ensuring you have the latest versions available.
-
-**Usage:**
 ```powershell
-.\scripts\download_all_distros.ps1
+# Clone the repository
+git clone https://github.com/lazyworkshop-create/DistroNexus.git
+cd DistroNexus
+
+# Build with the provided script
+.\tools\build.ps1 -Configuration Release
+
+# Or use dotnet CLI directly
+dotnet build src/Client/DistroNexus.slnx -c Release
 ```
 
-### 2. `install_wsl_custom.ps1`
+### Publish for Distribution
 
-The main installer script. It can be used interactively or with command-line arguments.
-
-**List Available Distros:**
-View all supported distributions and their identifiers (for configuration or selection).
 ```powershell
-.\scripts\install_wsl_custom.ps1 -ls
+# Create portable ZIP package (framework-dependent)
+.\tools\build.ps1 -Publish -CreateZip -Configuration Release
+
+# Create self-contained package (no .NET runtime required)
+.\tools\build.ps1 -Publish -SelfContained -CreateZip -Configuration Release
+
+# Build Windows installer (requires Inno Setup)
+.\tools\build-installer.ps1 -Version 2.0.1
+
+# Output will be in release/
 ```
 
-### 3. Management Scripts
 
-*   **`move_instance.ps1`**: Moves a WSL instance to a new location (Safe Export -> Unregister -> Import).
-*   **`rename_instance.ps1`**: Renames a registry entry for a WSL instance.
-*   **`start_instance.ps1`**: Starts a distro, optionally with a specific starting directory (`-StartPath`).
-*   **`stop_instance.ps1`**: Terminates a running instance.
-*   **`set_credentials.ps1`**: Configures the default user and password inside the distro.
 
-### 4. `download_all_distros.ps1`
-
-Downloads all (or specific) WSL distribution packages to the configured cache path.
-
-### 5. `scan_wsl_instances.ps1`
-
-Scans the output of `wsl -l -v` and synchronizes the internal `config/instances.json` registry.
-
-### Infrastructure
-
-*   **`pwsh_utils.ps1`**: Shared library for logging and common utilities. Logs are stored in `logs/` directory with rotation support.
-
-## Project Structure
+## 📁 Project Structure
 
 ```
 DistroNexus/
-├── build/                        # Compiled executable output
-├── config/                       # JSON configuration
-│   ├── distros.json              # Distro definitions
-│   └── settings.json             # User settings
-├── scripts/                      # PowerShell backend
-│   ├── download_all_distros.ps1  # Downloader
-│   ├── install_wsl_custom.ps1    # Installer
-│   ├── move_instance.ps1         # Move logic
-│   ├── pwsh_utils.ps1            # Logging & Utils
-│   ├── rename_instance.ps1       # Rename logic
-│   ├── scan_wsl_instances.ps1    # Registry Sync
-│   ├── set_credentials.ps1       # User/Pass logic
-│   ├── start_instance.ps1        # Launcher
-│   ├── stop_instance.ps1         # Terminator
-│   └── uninstall_wsl_custom.ps1  # Uninstaller
-├── src/                          # Go Source Code
-│   ├── cmd/                      # Entry points
-│   ├── internal/                 # App logic & UI
-│   │   ├── config/               # Config loader
-│   │   ├── logic/                # Backend logic
-│   │   ├── model/                # Data types
-│   │   └── ui/                   # Fyne UI components
-│   ├── go.mod                    # Go dependencies
-│   └── vendor/                   # Vendored dependencies
-├── tools/                        # Build tools & resources
-├── docs/                         # Documentation & Archive
-├── README.md                     # Documentation (English)
-└── README_CN.md                  # Documentation (Chinese)
+├── src/
+│   ├── Client/
+│   │   ├── DistroNexus.Desktop/          # WPF Application
+│   │   │   ├── Views/                    # XAML Views
+│   │   │   ├── ViewModels/               # ViewModels (MVVM)
+│   │   │   ├── Converters/               # Value Converters
+│   │   │   ├── Resources/                # Images, Icons
+│   │   │   └── App.xaml                  # Application entry
+│   │   ├── DistroNexus.Core/             # Core Library
+│   │   │   ├── Services/                 # Service implementations
+│   │   │   ├── Models/                   # Data models
+│   │   │   └── Interfaces/               # Service interfaces
+│   │   └── DistroNexus.Tests/            # Unit tests
+│   └── PowerShell/
+│       ├── Public/                       # Public cmdlets (15 cmdlets)
+│       ├── Private/                      # Internal utilities
+│       ├── DistroNexus.psd1              # Module manifest
+│       └── DistroNexus.psm1              # Module script
+├── config/
+│   ├── catalog.json                      # Distribution catalog
+│   ├── templates.json                    # Template metadata
+│   └── templates/                        # Template script assets
+├── docs/                                 # Documentation
+│   ├── release_notes/                    # Version releases
+│   └── archive/                          # Historical docs and v1 comparison
+├── tools/
+│   ├── build.ps1                         # Build automation
+│   ├── build-installer.ps1               # Installer builder
+│   ├── package-portable.ps1              # Portable package creator
+│   └── installer.iss                     # Inno Setup installer definition
+├── tests/                                # Test suites
+│   ├── PowerShell/                       # Pester tests
+│   ├── CSharp/                           # xUnit tests
+│   └── TestUtilities/                    # Shared test utilities
+├── website/                              # Docusaurus documentation site
+├── README.md                             # English documentation
+└── README_CN.md                          # Chinese documentation
 ```
+
+## 🔍 Troubleshooting
+
+### Application Won't Start
+- Ensure .NET 10 Desktop Runtime is installed
+- Check `%APPDATA%\DistroNexus\logs\` for error messages
+- Try running as Administrator
+
+### PowerShell Module Not Working
+```powershell
+# Verify module path
+Import-Module "C:\Program Files\DistroNexus\PowerShell\DistroNexus.psm1" -Verbose
+
+# Check for errors
+Get-Module DistroNexus
+```
+
+### WSL Instance Issues
+- Verify WSL2 is installed: `wsl --status`
+- Check WSL version: `wsl --list --verbose`
+- Update WSL: `wsl --update`
+
+## 🤝 Contributing
+
+We welcome contributions! Please open an issue or pull request directly on GitHub.
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📜 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [WPF-UI](https://github.com/lepoco/wpfui) - Modern Fluent Design controls
+- [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) - MVVM infrastructure
+- Microsoft WSL Team - For making Linux on Windows possible
+
+## 📞 Support
+
+- 📖 [Documentation](https://lazyworkshop-create.github.io/DistroNexus/)
+- 🐛 [Issue Tracker](https://github.com/lazyworkshop-create/DistroNexus/issues)
+- 💬 [Discussions](https://github.com/lazyworkshop-create/DistroNexus/discussions)
+
+---
+
+**DistroNexus v2.0** - Forge your perfect Linux environment on Windows with native .NET performance and elegance.

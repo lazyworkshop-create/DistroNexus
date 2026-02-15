@@ -1,0 +1,1 @@
+<test-results name="DistroNexus.TemplateAutomation" total="2" failures="0" not-run="0"><test-suite name="DistroNexus.TemplateAutomation"><test-case name="dotnet-dev" executed="true" success="true" /><test-case name="nodejs-dev" executed="true" success="true" /></test-suite></test-results>

@@ -1,0 +1,8 @@
+{
+  "TemplateId": "container-runtime-dev",
+  "TemplateName": "Container Runtime Development",
+  "Status": "Pass",
+  "Reason": "Dry run",
+  "DurationSeconds": 0,
+  "ProbeResults": []
+}

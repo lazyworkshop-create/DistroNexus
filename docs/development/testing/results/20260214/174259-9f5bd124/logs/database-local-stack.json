@@ -1,0 +1,16 @@
+{
+  "TemplateId": "database-local-stack",
+  "TemplateName": "Database Local Stack",
+  "Status": "Pass",
+  "Reason": "",
+  "DurationSeconds": 42,
+  "ProbeResults": [
+    {
+      "Name": "bash -lc \"if command -v psql >/dev/null || command -v mysql >/dev/null || command -v redis-cli >/dev/null || command -v mongosh >/dev/null || command -v sqlite3 >/dev/null; then exit 0; else exit 127; fi\"",
+      "ExitCode": 0,
+      "Output": null,
+      "Success": true
+    }
+  ],
+  "IsolatedInstance": "dnx-auto-database-local-stack-60c370"
+}

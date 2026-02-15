@@ -1,0 +1,67 @@
+<Application x:Class="DistroNexus.Desktop.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:lex="http://wpflocalizeextension.codeplex.com"
+             xmlns:converters="clr-namespace:DistroNexus.Desktop.Converters"
+             Startup="OnStartup"
+             Exit="OnExit">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ui:ThemesDictionary Theme="Dark" />
+                <ui:ControlsDictionary />
+            </ResourceDictionary.MergedDictionaries>
+            
+            <!-- Custom Theme Colors -->
+            <!-- Dark Theme Colors -->
+            <Color x:Key="SystemAccentColorDark">#0078D4</Color>
+            <Color x:Key="SystemAccentColorLightDark">#1E88E5</Color>
+            <SolidColorBrush x:Key="SystemAccentBrushDark" Color="#0078D4"/>
+            
+            <!-- Light Theme Colors -->
+            <Color x:Key="SystemAccentColorLight">#0063B1</Color>
+            <Color x:Key="SystemAccentColorLightLight">#1976D2</Color>
+            <SolidColorBrush x:Key="SystemAccentBrushLight" Color="#0063B1"/>
+            
+            <!-- Common Brushes -->
+            <SolidColorBrush x:Key="PrimaryBrush" Color="#0078D4"/>
+            <SolidColorBrush x:Key="SuccessBrush" Color="#107C10"/>
+            <SolidColorBrush x:Key="WarningBrush" Color="#FF8C00"/>
+            <SolidColorBrush x:Key="DangerBrush" Color="#D13438"/>
+            <SolidColorBrush x:Key="InfoBrush" Color="#0078D4"/>
+            
+            <!-- Text Brushes for Theme Compatibility -->
+            <SolidColorBrush x:Key="TextFillColorSecondaryBrush" Color="#8A8A8A"/>
+            <SolidColorBrush x:Key="TextFillColorTertiaryBrush" Color="#737373"/>
+            
+            <!-- Background and Control Brushes -->
+            <SolidColorBrush x:Key="ApplicationBackgroundBrush" Color="#1F1F1F"/>
+            <SolidColorBrush x:Key="ControlStrokeColorDefaultBrush" Color="#3F3F3F"/>
+            <SolidColorBrush x:Key="CardBackgroundFillColorDefaultBrush" Color="#2D2D2D"/>
+            <SolidColorBrush x:Key="ControlFillColorDefaultBrush" Color="#3F3F3F"/>
+            
+            <!-- Converters -->
+            <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+            <converters:IntToVisibilityConverter x:Key="IntToVisibilityConverter"/>
+            <converters:FileSizeFormatter x:Key="FileSizeFormatter"/>
+            <converters:InstanceStateToColorConverter x:Key="InstanceStateToColorConverter"/>
+            <converters:StepToVisibilityConverter x:Key="StepToVisibilityConverter"/>
+            <converters:StepToBadgeAppearanceConverter x:Key="StepToBadgeAppearance"/>
+            <converters:BoolToValidationColorConverter x:Key="BoolToValidationColorConverter"/>
+            <converters:IntToBoolConverter x:Key="IntToBoolConverter"/>
+            <converters:StringToBoolConverter x:Key="StringToBoolConverter"/>
+            <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
+            <converters:BoolToPrimaryAppearanceConverter x:Key="BoolToPrimaryAppearanceConverter"/>
+            <converters:DownloadStatusToColorConverter x:Key="DownloadStatusToColorConverter"/>
+            <converters:DownloadingToVisibilityConverter x:Key="DownloadingToVisibilityConverter"/>
+            <converters:FailedToVisibilityConverter x:Key="FailedToVisibilityConverter"/>
+            <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
+            <converters:BoolToVisibilityWithInverseConverter x:Key="BoolToVisibilityConverterWithInverse"/>
+            <converters:DownloadStatusToActionVisibilityConverter x:Key="DownloadStatusToActionVisibilityConverter"/>
+            <converters:DownloadStatusToRetryVisibilityConverter x:Key="DownloadStatusToRetryVisibilityConverter"/>
+            <converters:MultiConditionVisibilityConverter x:Key="MultiConditionVisibilityConverter"/>
+            <converters:CachedNotDownloadingVisibilityConverter x:Key="CachedNotDownloadingVisibilityConverter"/>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

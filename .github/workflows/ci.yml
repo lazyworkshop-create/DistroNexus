@@ -1,0 +1,173 @@
+name: CI Build
+
+on:
+  push:
+    branches: [ main, feature/*, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+        dotnet-quality: 'preview'
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Restore dependencies
+      run: dotnet restore src/Client/DistroNexus.slnx
+
+    - name: Build
+      run: dotnet build src/Client/DistroNexus.slnx --configuration Release --no-restore
+
+    - name: Run C# tests with coverage
+      run: dotnet test src/Client/DistroNexus.slnx --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx" --collect:"XPlat Code Coverage" --results-directory TestResults
+
+    - name: Generate coverage report
+      run: |
+        dotnet tool install -g dotnet-reportgenerator-globaltool
+        reportgenerator -reports:TestResults/**/coverage.cobertura.xml -targetdir:CoverageReport -reporttypes:"Html;Badges"
+      shell: pwsh
+      continue-on-error: true
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: csharp-test-results
+        path: "TestResults/*.trx"
+        retention-days: 7
+
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: coverage-report
+        path: CoverageReport/
+        retention-days: 7
+
+  lint-powershell:
+    name: Lint PowerShell Module
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install PSScriptAnalyzer
+      run: |
+        Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
+      shell: pwsh
+
+    - name: Analyze PowerShell scripts
+      run: |
+        $results = Invoke-ScriptAnalyzer -Path src/PowerShell -Recurse -Severity Error,Warning
+        if ($results) {
+          $results | Format-Table -AutoSize
+          if ($results | Where-Object Severity -eq 'Error') {
+            exit 1
+          }
+        } else {
+          Write-Host "No issues found!" -ForegroundColor Green
+        }
+      shell: pwsh
+
+  test-powershell:
+    name: PowerShell Module Tests
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Pester
+      run: |
+        Install-Module -Name Pester -MinimumVersion 5.0.0 -Force -Scope CurrentUser -SkipPublisherCheck -AllowClobber
+      shell: pwsh
+
+    - name: Run PowerShell tests
+      run: |
+        Import-Module Pester -MinimumVersion 5.0.0
+        
+        $config = New-PesterConfiguration
+        $config.Run.Path = 'tests/PowerShell'
+        $config.Run.PassThru = $true
+        $config.Run.Exit = $false
+        
+        $config.CodeCoverage.Enabled = $true
+        $config.CodeCoverage.Path = @('src/PowerShell/Private/*.ps1', 'src/PowerShell/Public/*.ps1')
+        $config.CodeCoverage.OutputFormat = 'CoverageGutters'
+        $config.CodeCoverage.OutputPath = 'coverage/powershell-coverage.xml'
+        
+        $config.TestResult.Enabled = $true
+        $config.TestResult.OutputFormat = 'NUnitXml'
+        $config.TestResult.OutputPath = 'TestResults/powershell-results.xml'
+        
+        $config.Output.Verbosity = 'Detailed'
+        
+        $result = Invoke-Pester -Configuration $config
+        
+        if ($result.FailedCount -gt 0) {
+          Write-Error "PowerShell tests failed: $($result.FailedCount) test(s) did not pass"
+          exit 1
+        }
+      shell: pwsh
+
+    - name: Upload PowerShell test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: powershell-test-results
+        path: TestResults/powershell-results.xml
+        retention-days: 7
+
+    - name: Upload PowerShell coverage
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: powershell-coverage
+        path: coverage/powershell-coverage.xml
+        retention-days: 7
+
+  build-portable:
+    name: Build Portable Package
+    runs-on: windows-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+        dotnet-quality: 'preview'
+
+    - name: Build portable package
+      run: |
+        ./tools/build.ps1 -Configuration Release -Publish -CreateZip -Version "2.0.0-ci.${{ github.run_number }}"
+      shell: pwsh
+
+    - name: Upload portable package
+      uses: actions/upload-artifact@v4
+      with:
+        name: DistroNexus-portable-ci
+        path: release/*.zip
+        retention-days: 7

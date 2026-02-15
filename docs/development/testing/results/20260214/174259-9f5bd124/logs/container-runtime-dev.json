@@ -1,0 +1,16 @@
+{
+  "TemplateId": "container-runtime-dev",
+  "TemplateName": "Container Runtime Development",
+  "Status": "Pass",
+  "Reason": "",
+  "DurationSeconds": 31,
+  "ProbeResults": [
+    {
+      "Name": "bash -lc \"if command -v docker >/dev/null; then docker --version; elif command -v podman >/dev/null; then podman --version; else exit 127; fi\"",
+      "ExitCode": 0,
+      "Output": "Docker version 29.2.1, build a5c7197",
+      "Success": true
+    }
+  ],
+  "IsolatedInstance": "dnx-auto-container-runtime-dev-484544"
+}

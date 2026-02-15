@@ -1,0 +1,16 @@
+{
+  "TemplateId": "docker-dev",
+  "TemplateName": "Docker Development",
+  "Status": "Pass",
+  "Reason": "",
+  "DurationSeconds": 30,
+  "ProbeResults": [
+    {
+      "Name": "bash -lc \"echo ok\"",
+      "ExitCode": 0,
+      "Output": "ok",
+      "Success": true
+    }
+  ],
+  "IsolatedInstance": "dnx-auto-docker-dev-0f73f2"
+}
