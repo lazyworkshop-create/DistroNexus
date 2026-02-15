@@ -11,6 +11,10 @@
     "message": "文档",
     "description": "Navbar item with label Documentation"
   },
+  "item.label.Template System": {
+    "message": "模板系统",
+    "description": "Navbar item with label Template System"
+  },
   "item.label.Release Notes": {
     "message": "发布日志",
     "description": "Navbar item with label Release Notes"
