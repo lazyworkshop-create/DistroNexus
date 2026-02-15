@@ -168,3 +168,27 @@ Date: 2026-02-14
 
 ### Validation
 - Executed `npm run build` in `website/` successfully for both `en` and `zh-Hans`.
+
+---
+
+## Packaging Script Validation and Fix (2026-02-15)
+
+### Completed
+- Audited packaging scripts in `tools/` and confirmed wrapper chain:
+	- `package-portable.ps1` -> `build.ps1`
+	- `build-installer.ps1` -> `build.ps1` + Inno Setup (`ISCC.exe`)
+- Ran `tools/build_v2.ps1 -Configuration Release -Clean -Publish -CreateZip -Version 2.0.1`.
+- Identified and fixed ZIP completion log error in both `build_v2.ps1` and `build.ps1`.
+- Re-ran `build_v2.ps1` successfully end-to-end.
+- Ran `tools/package-portable.ps1 -Version 2.0.1` successfully end-to-end.
+
+### Validation
+- Portable artifact outputs verified:
+	- `release/DistroNexus-v2.0.1-Release.zip` (~4.01 MB)
+	- `release/DistroNexus-v2.0.1-Release-selfcontained.zip` (~76.57 MB)
+- `tools/build-installer.ps1 -Version 2.0.1` executed and exited early with expected prerequisite error (`ISCC.exe` not found), indicating environment dependency rather than script logic failure.
+
+### Current Status
+- Packaging script defect: Resolved.
+- Portable packaging flow: Pass.
+- Installer packaging flow: Blocked by missing local Inno Setup compiler.

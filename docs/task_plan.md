@@ -206,3 +206,39 @@ Status: Completed
 3. `website/sidebars-template-system.js`
 4. `website/template-docs/intro.md`
 5. `website/i18n/zh-Hans/docusaurus-plugin-content-docs-template-system/current/intro.md`
+
+---
+
+# Packaging Script Local Validation Plan
+
+Last Updated: 2026-02-15
+Owner: Copilot (GPT-5.3-Codex)
+
+## Objective
+Validate packaging scripts locally, fix any blocking defects, and confirm successful output generation for portable distributions.
+
+## Phases
+
+### Phase 1 — Script Audit
+Status: Completed
+- Reviewed `tools/build_v2.ps1`, `tools/build.ps1`, `tools/package-portable.ps1`, and `tools/build-installer.ps1`.
+- Verified packaging dependency chain and parameter flow.
+
+### Phase 2 — Local Execution and Defect Isolation
+Status: Completed
+- Executed `tools/build_v2.ps1 -Configuration Release -Clean -Publish -CreateZip -Version 2.0.1`.
+- Isolated failure at ZIP completion log due to `Write-Host` format operator and `-ForegroundColor` parameter binding conflict.
+
+### Phase 3 — Fix and Regression Validation
+Status: Completed
+- Applied the same ZIP message formatting fix to `tools/build_v2.ps1` and `tools/build.ps1`.
+- Re-ran `build_v2.ps1` successfully end-to-end.
+- Re-ran `package-portable.ps1` successfully for framework-dependent and self-contained outputs.
+- Executed `build-installer.ps1`; confirmed script-level guard works and fails early only because `ISCC.exe` is not installed locally.
+
+## Deliverables
+1. `tools/build_v2.ps1` (fixed)
+2. `tools/build.ps1` (fixed)
+3. Local artifacts under `release/`:
+	- `DistroNexus-v2.0.1-Release.zip`
+	- `DistroNexus-v2.0.1-Release-selfcontained.zip`

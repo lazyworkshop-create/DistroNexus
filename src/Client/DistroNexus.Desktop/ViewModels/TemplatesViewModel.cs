@@ -29,6 +29,7 @@ public partial class TemplatesViewModel : ObservableObject
 
     partial void OnSelectedCategoryChanged(string value)
     {
+        RebuildScenarioTagOptions();
         FilterTemplates();
     }
 
@@ -92,18 +93,13 @@ public partial class TemplatesViewModel : ObservableObject
             _allTemplates = templates;
             CategoryOptions = new ObservableCollection<string>(new[] { "All" }
                 .Concat(_allTemplates.Select(t => t.Category).Where(c => !string.IsNullOrWhiteSpace(c)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(c => c)));
-            ScenarioTagOptions = new ObservableCollection<string>(new[] { "All" }
-                .Concat(_allTemplates.SelectMany(t => t.ScenarioTags).Where(t => !string.IsNullOrWhiteSpace(t)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(t => t)));
 
             if (!CategoryOptions.Contains(SelectedCategory))
             {
                 SelectedCategory = "All";
             }
 
-            if (!ScenarioTagOptions.Contains(SelectedScenarioTag))
-            {
-                SelectedScenarioTag = "All";
-            }
+            RebuildScenarioTagOptions();
 
             FilterTemplates();
             
@@ -136,6 +132,27 @@ public partial class TemplatesViewModel : ObservableObject
                 t.ScenarioTags.Any(tag => tag.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase))
             ).ToList();
             Templates = new ObservableCollection<Template>(ApplyAdvancedFilters(filtered));
+        }
+    }
+
+    private void RebuildScenarioTagOptions()
+    {
+        IEnumerable<Template> source = _allTemplates;
+
+        if (!string.Equals(SelectedCategory, "All", StringComparison.OrdinalIgnoreCase))
+        {
+            source = source.Where(t => string.Equals(t.Category, SelectedCategory, StringComparison.OrdinalIgnoreCase));
+        }
+
+        ScenarioTagOptions = new ObservableCollection<string>(new[] { "All" }
+            .Concat(source.SelectMany(t => t.ScenarioTags)
+                .Where(t => !string.IsNullOrWhiteSpace(t))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(t => t)));
+
+        if (!ScenarioTagOptions.Contains(SelectedScenarioTag))
+        {
+            SelectedScenarioTag = "All";
         }
     }
 

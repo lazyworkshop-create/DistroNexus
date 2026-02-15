@@ -3,7 +3,9 @@
 ; Requires: Inno Setup 6.0 or later (https://jrsoftware.org/isinfo.php)
 
 #define MyAppName "DistroNexus"
-#define MyAppVersion "2.0.1"
+#ifndef MyAppVersion
+  #define MyAppVersion "2.0.1"
+#endif
 #define MyAppPublisher "LazyWorkshop"
 #define MyAppURL "https://github.com/lazyworkshop-create/DistroNexus"
 #define MyAppExeName "DistroNexus.Desktop.exe"
@@ -25,7 +27,7 @@ AllowNoIcons=yes
 ; Output settings
 OutputDir=..\release\installer
 OutputBaseFilename=DistroNexus-{#MyAppVersion}-Setup
-SetupIconFile=..\assets\icon.ico
+; SetupIconFile=..\src\Client\DistroNexus.Desktop\Resources\icon.ico
 Compression=lzma2/ultra64
 SolidCompression=yes
 ; Windows version requirements
@@ -42,22 +44,20 @@ UninstallDisplayName={#MyAppName}
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
-Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked; OnlyBelowVersion: 6.1; Check: not IsAdminInstallMode
 
 [Files]
 ; Main application files (from publish output)
 Source: "..\release\DistroNexus-v{#MyAppVersion}-Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-; Note: Adjust the source path to match your actual publish output directory
+; Default configuration files copied to user profile AppData (do not overwrite existing user files)
+Source: "..\release\DistroNexus-v{#MyAppVersion}-Release\config\*"; DestDir: "{userappdata}\{#MyAppName}\config"; Flags: ignoreversion recursesubdirs createallsubdirs onlyifdoesntexist uninsneveruninstall
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Comment: "{#MyAppDescription}"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; Comment: "{#MyAppDescription}"
-Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: quicklaunchicon
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
@@ -81,6 +81,35 @@ begin
   end;
   // Check if already in path
   Result := Pos(';' + Param + ';', ';' + OrigPath + ';') = 0;
+end;
+
+function GetUserConfigDir(): string;
+begin
+  Result := ExpandConstant('{userappdata}\{#MyAppName}\config');
+end;
+
+procedure EnsureDefaultSettingsFile();
+var
+  SettingsPath: string;
+  SettingsContent: string;
+begin
+  SettingsPath := GetUserConfigDir() + '\settings.json';
+
+  if FileExists(SettingsPath) then
+    exit;
+
+  ForceDirectories(GetUserConfigDir());
+
+  SettingsContent := '{' + #13#10 +
+    '  "DefaultInstallPath": "C:\\WSL",' + #13#10 +
+    '  "DefaultWslVersion": 2,' + #13#10 +
+    '  "DefaultUsername": "root",' + #13#10 +
+    '  "CatalogUrl": "https://raw.githubusercontent.com/lazyworkshop-create/DistroNexus/main/config/catalog.json",' + #13#10 +
+    '  "Theme": "Auto",' + #13#10 +
+    '  "EnableLogging": true' + #13#10 +
+    '}';
+
+  SaveStringToFile(SettingsPath, SettingsContent, False);
 end;
 
 // Custom welcome page message
@@ -127,6 +156,14 @@ begin
     begin
       Result := False;
     end;
+  end;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then
+  begin
+    EnsureDefaultSettingsFile();
   end;
 end;
 

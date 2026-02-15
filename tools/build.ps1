@@ -211,7 +211,8 @@ if ($CreateZip -and $Publish) {
     Compress-Archive -Path "$PublishDir\*" -DestinationPath $zipPath -CompressionLevel Optimal
     
     $zipSize = (Get-Item $zipPath).Length / 1MB
-    Write-Host "✅ ZIP package created: $zipPath ({0:N2} MB)" -f $zipSize -ForegroundColor Green
+    $zipMessage = "✅ ZIP package created: {0} ({1:N2} MB)" -f $zipPath, $zipSize
+    Write-Host $zipMessage -ForegroundColor Green
 }
 
 Write-Host ""

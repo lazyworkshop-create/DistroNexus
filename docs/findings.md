@@ -179,3 +179,23 @@ The comprehensive guide has been successfully decomposed into five role-oriented
 
 ### Outcome
 - Template System module now serves documentation-style internal navigation pages rather than external-link placeholders.
+
+---
+
+## Findings - Packaging Script Local Validation (2026-02-15)
+
+### Root Cause
+- In `tools/build_v2.ps1` and `tools/build.ps1`, ZIP completion output used:
+  - `Write-Host "... ({0:N2} MB)" -f $zipSize -ForegroundColor Green`
+- PowerShell evaluates `-f` before `Write-Host` parameter binding here, causing the formatted numeric result to be interpreted as `ForegroundColor` in this call shape, which throws and forces script exit after ZIP creation.
+
+### Fix Applied
+- Replaced inline formatting call with precomputed message:
+  - `$zipMessage = "✅ ZIP package created: {0} ({1:N2} MB)" -f $zipPath, $zipSize`
+  - `Write-Host $zipMessage -ForegroundColor Green`
+- Applied in both scripts to keep direct and wrapper-driven packaging flows consistent.
+
+### Validation Findings
+- `build_v2.ps1` now completes successfully with `-Clean -Publish -CreateZip`.
+- `package-portable.ps1` now completes successfully and produces both package variants.
+- `build-installer.ps1` correctly fails fast on missing Inno Setup (`ISCC.exe`) with actionable guidance; no packaging logic defect found in that path.
