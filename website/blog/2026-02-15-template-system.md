@@ -1,12 +1,12 @@
 ---
 slug: template-system
-title: Template System Documentation Hub
+title: DistroNexus Template System Release Notes
 authors: []
 tags: [template, docs, automation]
 date: 2026-02-15
 ---
 
-Set up reliable WSL development environments in minutes, not hours. This post introduces the DistroNexus Template System and gives you one clear entry point to all complete template documentation.
+This release introduces the DistroNexus Template System documentation module. It gives you a single starting point to access the complete template document set and standardize WSL environment setup faster.
 
 <!--truncate-->
 
@@ -46,20 +46,20 @@ All complete template documents are available from the module page:
 
 The module includes links to:
 
-1. Comprehensive guide
-2. Requirements analysis
-3. System design
-4. User manual
-5. Template development manual
-6. Template automation test suite manual
+1. [Comprehensive guide](https://lazyworkshop-create.github.io/DistroNexus/template-system/comprehensive-guide)
+2. [Requirements analysis](https://lazyworkshop-create.github.io/DistroNexus/template-system/requirements-analysis)
+3. [System design](https://lazyworkshop-create.github.io/DistroNexus/template-system/system-design)
+4. [User manual](https://lazyworkshop-create.github.io/DistroNexus/template-system/user-manual)
+5. [Template development manual](https://lazyworkshop-create.github.io/DistroNexus/template-system/template-development-manual)
+6. [Template automation test suite manual](https://lazyworkshop-create.github.io/DistroNexus/template-system/automation-test-suite-manual)
 
-## Direct source links
+## Documentation links
 
-- https://github.com/lazyworkshop-create/DistroNexus/blob/main/docs/development/template-system-comprehensive-guide.md
-- https://github.com/lazyworkshop-create/DistroNexus/blob/main/docs/specs/template-system-requirements-analysis.md
-- https://github.com/lazyworkshop-create/DistroNexus/blob/main/docs/architecture/template-system-design.md
-- https://github.com/lazyworkshop-create/DistroNexus/blob/main/docs/development/template-system-user-manual.md
-- https://github.com/lazyworkshop-create/DistroNexus/blob/main/docs/development/template-development-manual.md
-- https://github.com/lazyworkshop-create/DistroNexus/blob/main/docs/development/template-automation-test-suite-manual.md
+- Comprehensive guide: https://lazyworkshop-create.github.io/DistroNexus/template-system/comprehensive-guide
+- Requirements analysis: https://lazyworkshop-create.github.io/DistroNexus/template-system/requirements-analysis
+- System design: https://lazyworkshop-create.github.io/DistroNexus/template-system/system-design
+- User manual: https://lazyworkshop-create.github.io/DistroNexus/template-system/user-manual
+- Template development manual: https://lazyworkshop-create.github.io/DistroNexus/template-system/template-development-manual
+- Template automation test suite manual: https://lazyworkshop-create.github.io/DistroNexus/template-system/automation-test-suite-manual
 
 If you are starting from scratch, open the module page first and follow the documents in order.
