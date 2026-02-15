@@ -6,6 +6,8 @@
 
 **DistroNexus** is a modern Windows application for managing Windows Subsystem for Linux (WSL) distributions. Built with .NET 10 and WPF, it provides a native, intuitive interface for downloading, installing, and managing your WSL instances.
 
+![DistroNexus Main Interface](docs/promotion/image/20260215181619-Main.png)
+
 ## 📘 Documentation
 
 Full documentation and user guides are hosted on our official website:
@@ -35,6 +37,9 @@ Full documentation and user guides are hosted on our official website:
     *   ✅ Covers common stacks like language runtimes, containers, and local dev setups
     *   ✅ Supports parameterized template execution for environment-specific customization
 *   **Package Manager Experience**: Better browsing and package download workflow
+
+![DistroNexus Package Manager](docs/promotion/image/20260215181646-Package.png)
+
 *   **Progress & Logging**: Real-time operation progress and detailed diagnostics
 
 ## 🚀 Quick Start
@@ -97,6 +102,10 @@ Available cmdlets:
 - `Invoke-DistroNexusTemplateAutomation` - Run template automation pipeline
 
 ## 🧩 Template System
+
+![DistroNexus Template System](docs/promotion/image/20260215181721-Template.png)
+
+DistroNexus provides a curated list of templates to quickly bootstrap your WSL environment for specific development scenarios:
 
 DistroNexus includes a built-in template system for quickly turning a WSL instance into a ready-to-use development environment.
 

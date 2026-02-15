@@ -6,6 +6,8 @@
 
 **DistroNexus** 是一个现代化的 Windows 应用程序，用于管理 Windows Subsystem for Linux (WSL) 发行版。采用 .NET 10 和 WPF 构建，提供原生、直观的界面用于下载、安装和管理 WSL 实例。
 
+![DistroNexus 主界面](docs/promotion/image/20260215181619-Main.png)
+
 ## 📘 官方文档
 
 完整的文档、使用指南和发布日志请访问我们的官方网站：
@@ -35,6 +37,9 @@
     *   ✅ 覆盖常见语言运行时、容器与本地开发场景
     *   ✅ 支持参数化模板执行，满足不同环境定制需求
 *   **包管理体验**：更完善的浏览与下载流程
+
+![DistroNexus 包管理器](docs/promotion/image/20260215181646-Package.png)
+
 *   **进度与日志**：实时操作进度与详细诊断信息
 
 ## 🚀 快速开始
@@ -97,6 +102,8 @@ Start-DistroNexusInstance -DistroName "Ubuntu-22.04"
 - `Invoke-DistroNexusTemplateAutomation` - 运行模板自动化流程
 
 ## 🧩 模板系统
+
+![DistroNexus 模板系统](docs/promotion/image/20260215181721-Template.png)
 
 DistroNexus 内置了模板系统，可将 WSL 实例快速配置为可直接使用的开发环境。
 
