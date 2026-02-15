@@ -277,3 +277,38 @@ Status: Completed
 4. `website/i18n/zh-Hans/docusaurus-plugin-content-docs-template-system/current/user-manual.md`
 5. `website/i18n/zh-Hans/docusaurus-plugin-content-docs-template-system/current/template-development-manual.md`
 6. `website/i18n/zh-Hans/docusaurus-plugin-content-docs-template-system/current/automation-test-suite-manual.md`
+
+---
+
+# Website Template System English-to-zh-Hans Translation Plan
+
+Last Updated: 2026-02-15
+Owner: Copilot (GPT-5.3-Codex)
+
+## Objective
+Produce native zh-Hans template-system documentation pages translated from the full English site docs, replacing import-based fallback rendering.
+
+## Phases
+
+### Phase 1 — Source Baseline Confirmation
+Status: Completed
+- Confirmed six English full-content pages under `website/template-docs/` are the source baseline.
+- Confirmed six zh-Hans pages currently render English content through MDX imports.
+
+### Phase 2 — Translation Authoring
+Status: Completed
+- Translated full content for six template-system pages into zh-Hans.
+- Preserved existing document IDs, sidebar order, and route structure.
+
+### Phase 3 — Validation and Delivery
+Status: Completed
+- Executed website build for `en` and `zh-Hans` successfully.
+- Verified zh-Hans pages no longer depend on English MDX import for body content.
+
+## Deliverables
+1. `website/i18n/zh-Hans/docusaurus-plugin-content-docs-template-system/current/comprehensive-guide.md`
+2. `website/i18n/zh-Hans/docusaurus-plugin-content-docs-template-system/current/requirements-analysis.md`
+3. `website/i18n/zh-Hans/docusaurus-plugin-content-docs-template-system/current/system-design.md`
+4. `website/i18n/zh-Hans/docusaurus-plugin-content-docs-template-system/current/user-manual.md`
+5. `website/i18n/zh-Hans/docusaurus-plugin-content-docs-template-system/current/template-development-manual.md`
+6. `website/i18n/zh-Hans/docusaurus-plugin-content-docs-template-system/current/automation-test-suite-manual.md`

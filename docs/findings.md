@@ -215,3 +215,20 @@ The comprehensive guide has been successfully decomposed into five role-oriented
 ### Outcome
 - zh-Hans template-system routes now display full document content with the same scope/depth as English routes.
 - Future English content updates are reflected in zh-Hans pages automatically via imports, avoiding stale placeholder drift.
+
+---
+
+## Findings - Template Docs zh-Hans Translation from Site English Docs (2026-02-15)
+
+### Context
+- Previous zh-Hans full-content sync used MDX imports from English pages.
+- This ensured parity but did not provide native Chinese body content.
+
+### Implemented
+- Translated six English template-system site docs into native zh-Hans and wrote full Chinese content directly into localized docs files.
+- Removed import-based fallback rendering from those six files.
+- Preserved IDs, sidebar positions, and route structure to keep navigation stable.
+
+### Outcome
+- zh-Hans template-system documentation now has complete native Chinese content.
+- English and zh-Hans routes remain structurally aligned while allowing independent localized wording.

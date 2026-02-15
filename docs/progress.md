@@ -214,3 +214,25 @@ Date: 2026-02-14
 ### Current Status
 - zh-Hans template docs now provide full content parity with English docs on site routes.
 - Outstanding blockers: None.
+
+---
+
+## Template Docs English-to-zh-Hans Translation (2026-02-15)
+
+### Completed
+- Translated full English content into zh-Hans for six template-system pages:
+	- comprehensive-guide
+	- requirements-analysis
+	- system-design
+	- user-manual
+	- template-development-manual
+	- automation-test-suite-manual
+- Replaced MDX import-based English fallback with native Chinese body content in localized files.
+- Kept front matter IDs and sidebar order unchanged.
+
+### Validation
+- Website build succeeded for both `en` and `zh-Hans` after translation changes.
+
+### Current Status
+- zh-Hans template-system pages now contain native Chinese full documentation.
+- Outstanding blockers: None.
