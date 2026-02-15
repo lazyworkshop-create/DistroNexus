@@ -199,3 +199,19 @@ The comprehensive guide has been successfully decomposed into five role-oriented
 - `build_v2.ps1` now completes successfully with `-Clean -Publish -CreateZip`.
 - `package-portable.ps1` now completes successfully and produces both package variants.
 - `build-installer.ps1` correctly fails fast on missing Inno Setup (`ISCC.exe`) with actionable guidance; no packaging logic defect found in that path.
+
+---
+
+## Findings - zh-Hans Template Docs Full-Content Sync (2026-02-15)
+
+### Root Cause
+- English template docs under `website/template-docs/` were full-content copies.
+- zh-Hans template docs under `website/i18n/zh-Hans/docusaurus-plugin-content-docs-template-system/current/` (except intro) remained placeholder navigation summaries with external source links.
+
+### Fix Strategy
+- Replaced placeholder body content in zh-Hans template docs with MDX component imports from corresponding English full-content docs.
+- Preserved zh-Hans front matter to keep localized nav labels and stable document IDs.
+
+### Outcome
+- zh-Hans template-system routes now display full document content with the same scope/depth as English routes.
+- Future English content updates are reflected in zh-Hans pages automatically via imports, avoiding stale placeholder drift.

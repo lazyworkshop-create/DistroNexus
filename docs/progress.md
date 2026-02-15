@@ -192,3 +192,25 @@ Date: 2026-02-14
 - Packaging script defect: Resolved.
 - Portable packaging flow: Pass.
 - Installer packaging flow: Blocked by missing local Inno Setup compiler.
+
+---
+
+## zh-Hans Template Docs Full-Content Sync (2026-02-15)
+
+### Completed
+- Confirmed zh-Hans template docs (except intro) were placeholder summary pages.
+- Updated zh-Hans template docs pages to render full English source docs via MDX imports:
+	- `comprehensive-guide`
+	- `requirements-analysis`
+	- `system-design`
+	- `user-manual`
+	- `template-development-manual`
+	- `automation-test-suite-manual`
+- Preserved zh-Hans front matter metadata and sidebar order.
+
+### Validation
+- Website build succeeded for both `en` and `zh-Hans` after localization sync changes.
+
+### Current Status
+- zh-Hans template docs now provide full content parity with English docs on site routes.
+- Outstanding blockers: None.

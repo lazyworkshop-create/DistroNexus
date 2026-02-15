@@ -242,3 +242,38 @@ Status: Completed
 3. Local artifacts under `release/`:
 	- `DistroNexus-v2.0.1-Release.zip`
 	- `DistroNexus-v2.0.1-Release-selfcontained.zip`
+
+---
+
+# Website Template System zh-Hans Full-Content Sync Plan
+
+Last Updated: 2026-02-15
+Owner: Copilot (GPT-5.3-Codex)
+
+## Objective
+Ensure zh-Hans template-system docs pages provide full in-site content parity with English pages, instead of placeholder summary pages.
+
+## Phases
+
+### Phase 1 — Source and Localization Gap Confirmation
+Status: Completed
+- Confirmed English template docs under `website/template-docs/` are full-content pages.
+- Confirmed several zh-Hans template docs pages are placeholder-only summaries with source links.
+
+### Phase 2 — Sync Mechanism Implementation
+Status: Completed
+- Updated zh-Hans placeholder pages to import and render corresponding English full-content docs components.
+- Kept zh-Hans front matter (`id`, localized `title`, `sidebar_position`) for localized navigation.
+
+### Phase 3 — Build Validation and Delivery
+Status: Completed
+- Built website for `en` and `zh-Hans` successfully.
+- Verified no localization compile errors after sync change.
+
+## Deliverables
+1. `website/i18n/zh-Hans/docusaurus-plugin-content-docs-template-system/current/comprehensive-guide.md`
+2. `website/i18n/zh-Hans/docusaurus-plugin-content-docs-template-system/current/requirements-analysis.md`
+3. `website/i18n/zh-Hans/docusaurus-plugin-content-docs-template-system/current/system-design.md`
+4. `website/i18n/zh-Hans/docusaurus-plugin-content-docs-template-system/current/user-manual.md`
+5. `website/i18n/zh-Hans/docusaurus-plugin-content-docs-template-system/current/template-development-manual.md`
+6. `website/i18n/zh-Hans/docusaurus-plugin-content-docs-template-system/current/automation-test-suite-manual.md`
