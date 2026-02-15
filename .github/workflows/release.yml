@@ -48,7 +48,6 @@ jobs:
 
     - name: Run tests
       run: dotnet test src/Client/DistroNexus.slnx --configuration Release --no-build --verbosity normal
-      continue-on-error: true
 
     - name: Build portable package (framework-dependent)
       run: |
@@ -70,7 +69,6 @@ jobs:
       run: |
         ./tools/build-installer.ps1 -Version ${{ steps.version.outputs.VERSION }}
       shell: pwsh
-      continue-on-error: true
 
     - name: List release artifacts
       run: |

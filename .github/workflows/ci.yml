@@ -37,7 +37,6 @@ jobs:
 
     - name: Run C# tests with coverage
       run: dotnet test src/Client/DistroNexus.slnx --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx" --collect:"XPlat Code Coverage" --results-directory TestResults
-      continue-on-error: true
 
     - name: Generate coverage report
       run: |
@@ -128,7 +127,6 @@ jobs:
           exit 1
         }
       shell: pwsh
-      continue-on-error: true
 
     - name: Upload PowerShell test results
       uses: actions/upload-artifact@v4
