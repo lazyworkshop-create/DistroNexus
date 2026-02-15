@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="Current" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectGuid>36f8d8a6-954b-4fdd-b356-3f751f39fd1f</ProjectGuid>
+    <EntryPointProjectUniqueName>..\Client\DistroNexus.Desktop\DistroNexus.Desktop.csproj</EntryPointProjectUniqueName>
+    <TargetPlatformVersion>10.0.26100.0</TargetPlatformVersion>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <AppxBundle>Always</AppxBundle>
+    <AppxBundlePlatforms>x64|ARM64</AppxBundlePlatforms>
+    <GenerateAppInstallerFile>false</GenerateAppInstallerFile>
+    <UapAppxPackageBuildMode>StoreUpload</UapAppxPackageBuildMode>
+    <AppxPackageSigningEnabled>false</AppxPackageSigningEnabled>
+    <AppxSymbolPackageEnabled>false</AppxSymbolPackageEnabled>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <DesktopBridgePath Condition="'$(DesktopBridgePath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\DesktopBridge\</DesktopBridgePath>
+    <DesktopBridgePath Condition="!Exists('$(DesktopBridgePath)Microsoft.DesktopBridge.props')">$(MSBuildExtensionsPath)\Microsoft\DesktopBridge\</DesktopBridgePath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AppxManifest Include="Package.appxmanifest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\**\*.*" />
+    <Content Include="..\PowerShell\**\*.*">
+      <Link>PowerShell\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Client\DistroNexus.Desktop\DistroNexus.Desktop.csproj" />
+  </ItemGroup>
+
+  <Import Project="$(DesktopBridgePath)Microsoft.DesktopBridge.props" Condition="Exists('$(DesktopBridgePath)Microsoft.DesktopBridge.props')" />
+
+  <Target Name="EnsureDesktopBridgeTargets" BeforeTargets="Build" Condition="!Exists('$(DesktopBridgePath)Microsoft.DesktopBridge.props')">
+    <Error Text="Desktop Bridge targets were not found. Install Visual Studio Build Tools with the Universal Windows Platform build tools/Desktop Bridge workload." />
+  </Target>
+
+  <Import Project="$(DesktopBridgePath)Microsoft.DesktopBridge.targets" Condition="Exists('$(DesktopBridgePath)Microsoft.DesktopBridge.targets')" />
+</Project>
