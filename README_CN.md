@@ -16,16 +16,18 @@
 ### 1.0 基础能力
 *   **实例管理**：
     *   ✅ 启动/停止实例
+    *   ✅ 打开实例终端（支持自定义起始路径）
     *   ✅ 移动到不同驱动器
     *   ✅ 重命名实例
     *   ✅ 移除实例
-    *   ✅ 设置凭据
+    *   ✅ 设置或重置默认凭据
 *   **自定义安装**：将 WSL 发行版安装到任意目录
 *   **发行版目录**：从精选源浏览并下载发行版
 
 ### 2.0 新增能力
 *   **原生 Windows UI**：采用 Fluent Design System 的现代 WPF 界面
 *   **深色模式支持**：根据系统偏好自动切换主题
+*   **双语体验**：WPF 客户端界面与项目文档同步支持英文与简体中文
 *   **PowerShell 模块**：15 个 cmdlet，支持自动化与脚本化工作流
     *   ✅ 可在应用内调用，也可在独立 PowerShell 会话中使用
     *   ✅ 支持 CI、环境初始化与批量管理的可重复操作
@@ -97,6 +99,14 @@ Start-DistroNexusInstance -DistroName "Ubuntu-22.04"
 ## 🧩 模板系统
 
 DistroNexus 内置了模板系统，可将 WSL 实例快速配置为可直接使用的开发环境。
+
+模板系统文档索引：
+- 综合说明：`docs/development/template-system-comprehensive-guide.md`
+- 需求分析：`docs/specs/template-system-requirements-analysis.md`
+- 系统设计：`docs/architecture/template-system-design.md`
+- 用户手册：`docs/development/template-system-user-manual.md`
+- 模板开发手册：`docs/development/template-development-manual.md`
+- 测试套件手册：`docs/development/template-automation-test-suite-manual.md`
 
 - 模板目录文件：`config/templates.json`
 - 模板脚本资源：`config/templates/*`

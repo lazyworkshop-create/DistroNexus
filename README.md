@@ -16,16 +16,18 @@ Full documentation and user guides are hosted on our official website:
 ### 1.0 Foundations
 *   **Instance Management**:
     *   ✅ Start/Stop instances
+    *   ✅ Open terminal for an instance (with configurable start path)
     *   ✅ Move instances to different drives
     *   ✅ Rename instances
     *   ✅ Remove instances
-    *   ✅ Set credentials
+    *   ✅ Set or reset default credentials
 *   **Custom Installation**: Install WSL distributions to any directory
 *   **Distribution Catalog**: Browse and download distributions from curated sources
 
 ### 2.0 Additions
 *   **Native Windows UI**: Modern WPF interface with Fluent Design System
 *   **Dark Mode Support**: Automatic theme switching based on system preferences
+*   **Bilingual Experience**: English and Simplified Chinese support across WPF client UI and project documentation
 *   **PowerShell Module**: 15 cmdlets for full automation and scripting workflows
     *   ✅ Works both inside the app and in standalone PowerShell sessions
     *   ✅ Supports repeatable operations for CI, provisioning, and batch management
@@ -97,6 +99,14 @@ Available cmdlets:
 ## 🧩 Template System
 
 DistroNexus includes a built-in template system for quickly turning a WSL instance into a ready-to-use development environment.
+
+Template documentation index:
+- Comprehensive guide: `docs/development/template-system-comprehensive-guide.md`
+- Requirements analysis: `docs/specs/template-system-requirements-analysis.md`
+- System design: `docs/architecture/template-system-design.md`
+- User manual: `docs/development/template-system-user-manual.md`
+- Template development manual: `docs/development/template-development-manual.md`
+- Test suite manual: `docs/development/template-automation-test-suite-manual.md`
 
 - Template catalog file: `config/templates.json`
 - Template script assets: `config/templates/*`
