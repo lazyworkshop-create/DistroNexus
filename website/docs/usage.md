@@ -4,59 +4,51 @@ sidebar_position: 3
 
 # User Guide
 
-DistroNexus provides a unified Dashboard application (`DistroNexus.exe`) that wraps powerful PowerShell scripts into a user-friendly experience.
+DistroNexus provides a native WPF desktop workflow backed by a PowerShell module command surface.
 
-## Dashboard Overview
+## Core Workflows
 
-The application is divided into several tabs for easy navigation.
+### Install and Bootstrap
 
-### Install Tab
+Use DistroNexus to install new WSL instances to custom locations and apply initial setup options.
 
-Use this tab to download and install new Linux distributions.
+Typical flow:
+1.  Select distribution family and version.
+2.  Choose install location.
+3.  Configure initial credentials if required.
+4.  Start installation and monitor progress.
 
-*   **Quick Install**: Select a default distro (configurable in Settings) and install it with one click.
-*   **Custom Install**: 
-    1.  **Select Family**: Choose the distribution family (e.g., Ubuntu, Debian).
-    2.  **Select Version**: Pick specific versions (e.g., 20.04 vs 22.04).
-    3.  **Install Location**: Browse and select a custom directory on any drive.
-    4.  **Credentials**: Set the default username and root password during installation.
+### Instance Lifecycle Management
 
-### My Installs Tab
+Manage registered WSL instances through lifecycle operations:
 
-View and manage all your currently registered WSL distributions.
+*   Start
+*   Stop
+*   Open terminal
+*   Move
+*   Rename
+*   Remove
+*   Set or reset default credentials
 
-*   **List View**: Shows Distro Name, Version, State (Running/Stopped), and WSL Version (1 or 2).
-*   **Actions**:
-    *   **Start**: Boot the instance in the background.
-    *   **Terminal**: Open a generic terminal or Windows Terminal specifically for this instance.
-    *   **Stop**: Gracefully shut down the instance.
-    *   **Terminate**: Force kill the instance.
-    *   **Move**: Relocate the instance to another disk (e.g., move from C: to D: due to space).
-    *   **Rename**: Change the display name of the instance.
+### Package and Catalog Operations
 
-### Package Manager Tab
+Use package and catalog actions to maintain offline assets and metadata:
 
-Manage the offline `.appx` or `.appxbundle` files downloaded by DistroNexus.
+*   Query available package definitions
+*   Save/remove cached packages
+*   Refresh catalog metadata
 
-*   View downloaded files and their sizes.
-*   Delete old packages to free up space.
-*   Manually add packages if you downloaded them elsewhere.
+### Template-Assisted Automation
 
-## Common Tasks
+Built-in templates help bootstrap development environments consistently.
 
-### Moving a Distro to Another Drive
+*   Discover templates through the template list.
+*   Apply a template to execute a guided setup.
+*   Use template automation commands for repeatable provisioning.
 
-1.  Go to **My Installs**.
-2.  Select the distro you want to move.
-3.  Click **Move**.
-4.  Select the new target folder.
-5.  Wait for the export/import process to complete. **Do not close the application** during this process.
+## Common Example: Move an Instance to Another Drive
 
-### Installing Multiple Instances
-
-You can install multiple copies of the same distro (e.g., "Ubuntu-Work" and "Ubuntu-Personal").
-
-1.  Go to **Install**.
-2.  Select "Ubuntu".
-3.  For the first install, name it "Ubuntu-Work".
-4.  For the second install, repeat the process but name it "Ubuntu-Personal" and choose a different folder.
+1.  Select the target instance.
+2.  Choose **Move** and set destination path.
+3.  Confirm operation and wait for completion.
+4.  Verify the instance appears with the updated location/state.

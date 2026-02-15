@@ -33,8 +33,8 @@ const FeatureList = [
     title: <Translate id="feature.gui.title">Modern GUI Dashboard</Translate>,
     description: (
       <Translate id="feature.gui.description">
-        A cross-platform graphical interface built with Fyne to manage your WSL distributions 
-        visually and effortlessly.
+        A native Windows WPF dashboard on .NET 10 with clearer diagnostics,
+        progress visibility, and reliable day-to-day WSL operations.
       </Translate>
     ),
   },
@@ -42,17 +42,17 @@ const FeatureList = [
     title: <Translate id="feature.install.title">Custom Installation</Translate>,
     description: (
       <Translate id="feature.install.description">
-        Install any WSL distro into a custom directory of your choice, bypassing the 
-        default system drive limitations. Move instances easily.
+        Install and manage WSL instances with cmdlet-backed workflows,
+        including install, move, rename, start, stop, and removal.
       </Translate>
     ),
   },
   {
-    title: <Translate id="feature.offline.title">Offline Support</Translate>,
+    title: <Translate id="feature.offline.title">Templates and Automation</Translate>,
     description: (
       <Translate id="feature.offline.description">
-        Automatically download and cache offline packages (Appx/AppxBundle) for 
-        Ubuntu, Debian, Kali, and more. Install without internet.
+        Use built-in templates and automation workflows to bootstrap developer
+        environments with repeatable, auditable execution.
       </Translate>
     ),
   },
