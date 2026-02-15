@@ -1,0 +1,8 @@
+{
+  "TemplateId": "kubernetes-local-dev",
+  "TemplateName": "Kubernetes Local Development",
+  "Status": "Blocked",
+  "Reason": "Capability-gated template excluded. Use -IncludeCapabilityGated to enable.",
+  "DurationSeconds": 0,
+  "ProbeResults": []
+}

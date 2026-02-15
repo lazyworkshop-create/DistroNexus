@@ -1,0 +1,8 @@
+{
+  "TemplateId": "dotnet-dev",
+  "TemplateName": ".NET Development",
+  "Status": "Pass",
+  "Reason": "Dry run",
+  "DurationSeconds": 0,
+  "ProbeResults": []
+}

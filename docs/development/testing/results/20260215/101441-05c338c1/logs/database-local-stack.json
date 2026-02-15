@@ -1,0 +1,8 @@
+{
+  "TemplateId": "database-local-stack",
+  "TemplateName": "Database Local Stack",
+  "Status": "Pass",
+  "Reason": "Dry run",
+  "DurationSeconds": 0,
+  "ProbeResults": []
+}
