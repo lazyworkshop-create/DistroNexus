@@ -4,7 +4,8 @@
 - Use a **hybrid distribution strategy**:
     - Keep the existing standalone packaging flow (`.zip` / Inno Setup) for GitHub/manual distribution.
     - Add a dedicated **Store-only MSIX packaging flow** for Microsoft Store submission.
-- Store channel format: **`.msixbundle`**.
+- Store channel package: **`.msixbundle`** (multi-arch artifact).
+- Store submission upload: **prefer `.msixupload`** (officially recommended for Windows 10/11 submissions; `.msixbundle` is accepted but not preferred).
 - Architecture strategy: **x64 + ARM64** in one bundle.
 
 ## Confirmed Store Identity
@@ -22,12 +23,15 @@
 - Add `Package.appxmanifest` with:
     - Identity values exactly matching Partner Center.
     - `<rescap:Capability Name="runFullTrust" />` for WSL-related process execution.
+    - `xmlns:rescap` namespace and `IgnorableNamespaces` including `rescap`.
+    - `TargetDeviceFamily` constrained to `Windows.Desktop`.
 - Keep `src/Client/DistroNexus.Desktop/DistroNexus.Desktop.csproj` as the main runtime project.
 - Update `tools/build.ps1` with a Store-specific path (e.g., `-StoreBuild`) without changing existing standalone outputs.
 
 ## Submission-Blocking Items
-- Generate required Store visual assets (including unplated variants for taskbar quality).
+- Generate required Store visual assets; add unplated variants as a quality recommendation.
 - Publish a valid privacy policy URL before submission.
+- In Partner Center **Submission options**, provide detailed justification for restricted capability `runFullTrust` (this can extend certification time).
 - Run pre-submission validation:
     - Windows App Certification Kit (WACK)
     - Install / upgrade / uninstall verification
@@ -44,3 +48,4 @@
 - Distribution strategy selection (MSIX for Store + existing packaging retained): **Completed**
 - Engineering implementation (`.wapproj`, manifest, build script updates): **Pending**
 - Store assets + privacy policy publication: **Pending**
+- Submission options capability justification (`runFullTrust`): **Pending**
