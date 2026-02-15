@@ -55,25 +55,7 @@ public class TemplateService : ITemplateService
 
     private static string FindLocalTemplatesPath(string baseDir)
     {
-        string[] possiblePaths =
-        [
-            Path.Combine(baseDir, "config", "templates.json"),
-            Path.Combine(baseDir, @"..\config\templates.json"),
-            Path.Combine(baseDir, @"..\..\config\templates.json"),
-            Path.Combine(baseDir, @"..\..\..\config\templates.json"),
-            Path.Combine(baseDir, @"..\..\..\..\config\templates.json"),
-            Path.Combine(baseDir, @"..\..\..\..\..\config\templates.json")
-        ];
-
-        foreach (var path in possiblePaths)
-        {
-            var fullPath = Path.GetFullPath(path);
-            if (File.Exists(fullPath))
-            {
-                return fullPath;
-            }
-        }
-        return Path.Combine(baseDir, "config", "templates.json");
+        return AppResourcePathResolver.FindFileInBaseOrParents(baseDir, Path.Combine("config", "templates.json"));
     }
 
     public async Task<List<Template>> LoadTemplatesAsync(bool forceReload = false, CancellationToken cancellationToken = default)

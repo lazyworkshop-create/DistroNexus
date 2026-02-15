@@ -50,28 +50,7 @@ public class CatalogService : ICatalogService
 
     private static string FindLocalCatalogPath(string baseDir)
     {
-        // Try multiple possible paths for the local catalog.json file
-        string[] possiblePaths =
-        [
-            Path.Combine(baseDir, "config", "catalog.json"),
-            Path.Combine(baseDir, @"..\config\catalog.json"),
-            Path.Combine(baseDir, @"..\..\config\catalog.json"),
-            Path.Combine(baseDir, @"..\..\..\config\catalog.json"),
-            Path.Combine(baseDir, @"..\..\..\..\config\catalog.json"),
-            Path.Combine(baseDir, @"..\..\..\..\..\config\catalog.json")
-        ];
-
-        foreach (var path in possiblePaths)
-        {
-            var fullPath = Path.GetFullPath(path);
-            if (File.Exists(fullPath))
-            {
-                return fullPath;
-            }
-        }
-
-        // Return a default path even if it doesn't exist
-        return Path.Combine(baseDir, "config", "catalog.json");
+        return AppResourcePathResolver.FindFileInBaseOrParents(baseDir, Path.Combine("config", "catalog.json"));
     }
 
     /// <inheritdoc/>

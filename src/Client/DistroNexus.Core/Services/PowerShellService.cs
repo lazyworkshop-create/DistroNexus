@@ -59,25 +59,10 @@ public class PowerShellService : IPowerShellService, IDisposable
 
     private string? FindModulePath()
     {
-        var baseDir = AppContext.BaseDirectory;
-        var searchPaths = new[]
-        {
-            Path.Combine(baseDir, "PowerShell"), // Release layout
-            Path.Combine(baseDir, "..", "..", "..", "..", "PowerShell"), // Source layout (Dev)
-            Path.Combine(baseDir, "..", "..", "..", "..", "..", "PowerShell") // Alternative Source layout
-        };
-
-        foreach (var path in searchPaths)
-        {
-            var fullPath = Path.GetFullPath(path);
-            var manifestPath = Path.Combine(fullPath, "DistroNexus.psd1");
-            if (File.Exists(manifestPath))
-            {
-                return fullPath;
-            }
-        }
-
-        return null;
+        return AppResourcePathResolver.FindDirectoryWithFileInBaseOrParents(
+            AppContext.BaseDirectory,
+            "PowerShell",
+            "DistroNexus.psd1");
     }
 
     private static string FindPowerShellPath()
