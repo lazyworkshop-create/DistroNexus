@@ -18,9 +18,9 @@
 .PARAMETER Version
     Version string for the build. Default is 2.0.1
 .EXAMPLE
-    .\build_v2.ps1 -Configuration Release -Publish -CreateZip
+    .\build.ps1 -Configuration Release -Publish -CreateZip
 .EXAMPLE
-    .\build_v2.ps1 -Clean -Publish -SelfContained -CreateZip
+    .\build.ps1 -Clean -Publish -SelfContained -CreateZip
 #>
 param(
     [ValidateSet('Debug', 'Release')]

@@ -227,10 +227,10 @@ DistroNexus/
 │   ├── release_notes/                    # 版本发布说明
 │   └── archive/                          # 历史文档和 v1 比对
 ├── tools/
-│   ├── build_v2.ps1                      # 构建自动化
+│   ├── build.ps1                         # 构建自动化
 │   ├── build-installer.ps1               # 安装程序构建器
 │   ├── package-portable.ps1              # 便携包创建器
-│   └── packaging/                        # 安装程序资源
+│   └── installer.iss                     # Inno Setup 安装器定义
 ├── tests/                                # 测试套件
 │   ├── PowerShell/                       # Pester 测试
 │   ├── CSharp/                           # xUnit 测试

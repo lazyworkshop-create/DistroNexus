@@ -229,10 +229,10 @@ DistroNexus/
 │   ├── release_notes/                    # Version releases
 │   └── archive/                          # Historical docs and v1 comparison
 ├── tools/
-│   ├── build_v2.ps1                      # Build automation
+│   ├── build.ps1                         # Build automation
 │   ├── build-installer.ps1               # Installer builder
 │   ├── package-portable.ps1              # Portable package creator
-│   └── packaging/                        # Installer resources
+│   └── installer.iss                     # Inno Setup installer definition
 ├── tests/                                # Test suites
 │   ├── PowerShell/                       # Pester tests
 │   ├── CSharp/                           # xUnit tests
