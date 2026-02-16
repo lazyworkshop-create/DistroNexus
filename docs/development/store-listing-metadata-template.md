@@ -34,6 +34,123 @@ Windows desktop WSL manager for installing distros and applying reusable develop
 - Support Email: lazyworkshop.deron@gmail.com
 - Privacy Policy URL: https://lazyworkshop-create.github.io/DistroNexus/docs/privacy-policy
 
+## Store Listing Assets (Copy-Ready, Partner Center)
+
+### 1) Quick Submit (Windows Desktop Minimum)
+Use this block for the fastest valid submission path.
+
+1. Desktop screenshot 1
+  - File: `<desktop-screenshot-01.png>`
+  - Caption: Main dashboard for browsing and managing WSL distributions with status visibility and quick actions.
+2. Desktop screenshot 2
+  - File: `<desktop-screenshot-02.png>`
+  - Caption: Package and instance management workflow showing guided install operations and progress feedback.
+3. Desktop screenshot 3
+  - File: `<desktop-screenshot-03.png>`
+  - Caption: Template library view for applying reusable development environment templates to WSL instances.
+4. App tile icon (recommended override)
+  - Slot: 1:1 App tile icon (300 x 300)
+  - File: `<store-logo-300x300.png>`
+5. Short title
+  - DistroNexus
+6. Short description
+  - Windows desktop WSL manager for installing distros and applying reusable development templates with a guided workflow.
+7. Keywords
+  - WSL; Windows Subsystem for Linux; Linux distro manager; developer tools; template automation; local dev environment; Windows utilities
+8. Privacy policy URL
+  - https://lazyworkshop-create.github.io/DistroNexus/docs/privacy-policy
+9. Support email
+  - lazyworkshop.deron@gmail.com
+
+### 2) Full Copy-Ready (Page Order, includes already-filled fields)
+Use this block on **Store listing - English (United States)** from top to bottom.
+
+1. Product name
+  - DistroNexus
+2. Description
+  - DistroNexus is a Windows desktop manager for Windows Subsystem for Linux (WSL).
+  - It helps developers discover distributions, install instances, and apply reusable environment templates for common development scenarios.
+  -
+  - Key capabilities:
+  - Discover and manage WSL distributions from one desktop UI.
+  - Apply built-in templates for language/runtime stacks and development workflows.
+  - Run local WSL provisioning operations with transparent progress and logs.
+  - Work offline for local management after initial setup.
+  -
+  - Important prerequisites:
+  - Windows 10/11 with WSL feature enabled.
+  - Administrator permission may be required for selected operations.
+3. What's new in this version
+  - Added Microsoft Store packaging pipeline (`.msixbundle` / `.msixupload`).
+  - Added Store identity-aligned manifest and `runFullTrust` declaration.
+  - Improved packaged path compatibility for config/templates/PowerShell module resolution.
+4. Product feature 1
+  - Windows desktop WSL manager for installing distros and applying reusable development templates with a guided workflow.
+5. Product feature 2
+  - Discover and manage WSL distributions from one desktop UI.
+6. Product feature 3
+  - Apply built-in templates for language/runtime stacks and development workflows.
+7. Desktop screenshot 1
+  - File: `<desktop-screenshot-01.png>`
+  - Caption: Main dashboard for browsing and managing WSL distributions with status visibility and quick actions.
+8. Desktop screenshot 2
+  - File: `<desktop-screenshot-02.png>`
+  - Caption: Package and instance management workflow showing guided install operations and progress feedback.
+9. Desktop screenshot 3
+  - File: `<desktop-screenshot-03.png>`
+  - Caption: Template library view for applying reusable development environment templates to WSL instances.
+10. App tile icon 300x300 (recommended override)
+  - File: `<store-logo-300x300.png>`
+11. Short title
+  - DistroNexus
+12. Voice title
+  - DistroNexus
+13. Short description
+  - Windows desktop WSL manager for installing distros and applying reusable development templates with a guided workflow.
+14. Keywords
+  - WSL; Windows Subsystem for Linux; Linux distro manager; developer tools; template automation; local dev environment; Windows utilities
+15. Copyright and trademark info
+  - DistroNexus © LazyWorkshop Create. All product names, logos, and brands are property of their respective owners.
+16. Additional license terms
+  - This application is provided "as is" without warranties. Users are responsible for system-level changes they initiate (for example WSL instance creation, import, or removal).
+17. Developed by
+  - LazyWorkshop Create
+18. Privacy policy URL
+  - https://lazyworkshop-create.github.io/DistroNexus/docs/privacy-policy
+19. Support URL
+  - https://github.com/lazyworkshop-create/DistroNexus/issues
+20. Support email
+  - lazyworkshop.deron@gmail.com
+
+### 3) Asset Specs Reference
+Desktop screenshots:
+- At least 1 required.
+- Recommended: 1366 x 768 or higher.
+- 4K supported: 3840 x 2160.
+- PNG only, landscape or portrait.
+- Up to 30 files, each <= 50 MB.
+
+Store logos (Windows 10/11 listing override):
+- Store can use package logos by default.
+- Use override logos only when needed.
+- PNG only, each <= 5 MB.
+- Suggested placeholders:
+  - 300 x 300: `<store-logo-300x300.png>`
+  - 150 x 150: `<store-logo-150x150.png>`
+  - 71 x 71: `<store-logo-71x71.png>`
+
+Optional trailer and hero image:
+- Trailer is optional.
+- If trailer is shown at top, add 16:9 super hero art.
+- Placeholder: `<super-hero-16x9.png>` (1920 x 1080 or 3840 x 2160, PNG, <= 50 MB).
+
+Optional Xbox-only assets (skip for Windows desktop-only submission):
+- `<xbox-poster-720x1080.png>`
+- `<xbox-box-1080x1080.png>`
+- `<xbox-key-art-584x800.png>`
+- `<xbox-titled-hero-1920x1080.png>`
+- `<xbox-featured-1080x1080.png>`
+
 ## Privacy Policy Text (Copy-Ready)
 Effective Date: 2026-02-16
 
@@ -71,3 +188,6 @@ Publication note: Host the full privacy policy at a public HTTPS URL and submit 
   1. Launch app and load catalog/templates.
   2. Trigger WSL instance operations through guided workflow.
   3. Verify offline startup and local template-driven operations.
+
+### Restricted Capability Justification (runFullTrust, Copy-Ready)
+DistroNexus requires the `runFullTrust` capability because it is a desktop WSL management tool that must invoke local Windows and WSL command-line components (including `wsl.exe`) to perform user-requested operations such as listing distributions, creating/importing/removing instances, and applying setup templates. These operations cannot be completed with restricted app-container permissions alone. The capability is used only for explicit, user-initiated management actions and local process execution on the user’s device. DistroNexus does not use this capability for background surveillance, privilege escalation, or hidden remote control. No in-app purchases are used. User data (settings/cache/logs) is stored locally, and network access is limited to configured catalog/template endpoints required for product functionality.
