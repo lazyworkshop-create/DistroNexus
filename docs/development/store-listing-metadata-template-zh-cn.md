@@ -191,3 +191,30 @@ DistroNexus 是一款本地优先的 Windows 应用，用于管理 Windows Subsy
 
 ### 受限能力说明（runFullTrust，可直接复制）
 DistroNexus 需要 `runFullTrust` 能力，是因为它作为桌面 WSL 管理工具，必须调用本地 Windows/WSL 命令组件（包括 `wsl.exe`）来执行用户主动发起的操作，例如列出发行版、创建/导入/删除实例、应用环境模板等。这些功能仅依赖受限容器权限无法完成。该能力仅用于用户显式触发的本地管理流程，不用于后台监控、提权或隐藏远程控制。应用不包含内购。用户数据（设置/缓存/日志）默认保存在本地，网络访问仅用于已配置的目录/模板来源。
+
+### 补充测试信息（Additional Testing Information，可直接复制）
+将以下内容粘贴到 **Supplemental info -> Additional Testing Information -> Description**：
+
+DistroNexus is a desktop WSL management tool.
+This app uses runFullTrust to invoke local Windows/WSL tooling (including wsl.exe) for user-initiated operations only.
+
+Prerequisites:
+1) Windows 10/11 with WSL enabled.
+2) No account sign-in required.
+3) No special credentials required.
+
+Validation steps:
+1) Launch DistroNexus.
+2) Open distribution/catalog view and verify data loads.
+3) Open template view and verify templates are listed.
+4) Start a user-initiated WSL management action (for example list/import/create/remove flow) and verify progress/log output.
+5) Close and relaunch the app; verify settings/cache are still available.
+6) Optional: disconnect network and verify core local operations still work.
+
+Notes:
+- No in-app purchases.
+- User data is stored locally (settings/cache/logs).
+- Network access is only used for configured catalog/template endpoints.
+
+Credentials 区域填写建议：
+- 如果应用不需要登录账号，可留空。
