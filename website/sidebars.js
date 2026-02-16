@@ -20,6 +20,7 @@ const sidebars = {
     'usage',
     'configuration',
     'scripts-reference',
+    'privacy-policy',
     {
       type: 'link',
       label: 'Template System',

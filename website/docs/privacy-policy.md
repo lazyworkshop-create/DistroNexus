@@ -1,3 +1,8 @@
+---
+id: privacy-policy
+title: Privacy Policy
+---
+
 # DistroNexus Privacy Policy
 
 Effective Date: 2026-02-16
@@ -47,6 +52,3 @@ This policy may be updated from time to time. Material changes should be reflect
 
 ## Contact
 For privacy or support questions, contact: `lazyworkshop.deron@gmail.com`.
-
-## Store Submission Note
-Publish this policy at a public HTTPS URL and provide that URL in Partner Center before submission.

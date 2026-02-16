@@ -486,7 +486,7 @@ Save-DistroNexusPackage -Family "Ubuntu" -Verbose
 ### 问题报告
 
 - GitHub Issues: [项目地址]
-- 邮件: support@example.com
+- 邮件: lazyworkshop.deron@gmail.com
 
 ### 社区
 

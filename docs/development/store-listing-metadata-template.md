@@ -31,7 +31,38 @@ Windows desktop WSL manager for installing distros and applying reusable develop
 
 ## Support Information
 - Support URL: https://github.com/lazyworkshop-create/DistroNexus/issues
-- Support Email: support@lazyworkshop-create.example
+- Support Email: lazyworkshop.deron@gmail.com
+- Privacy Policy URL: https://lazyworkshop-create.github.io/DistroNexus/docs/privacy-policy
+
+## Privacy Policy Text (Copy-Ready)
+Effective Date: 2026-02-16
+
+DistroNexus is a local-first Windows application for managing Windows Subsystem for Linux (WSL) distributions and applying development templates. Most operations are executed on the user device.
+
+Data we process:
+- Local app settings and preferences under `AppData\\Roaming\\DistroNexus`.
+- Local cache files used for catalog/template loading and offline usability.
+- User-triggered operational data required to run WSL management commands.
+- Local command output and logs.
+
+How we use data:
+- Provide requested WSL management and template automation features.
+- Save user preferences and improve local usability.
+- Show execution progress and diagnostics.
+
+Network and sharing:
+- The app may access configured network endpoints for catalog/template downloads.
+- The app does not require account sign-in for core local workflows.
+- The app does not include in-app purchases.
+- DistroNexus does not intentionally sell personal data.
+
+Retention and deletion:
+- Local settings/cache/log data remains on the device until removed by the user.
+- Users can delete local data manually or by uninstalling the app.
+
+Privacy contact: lazyworkshop.deron@gmail.com
+
+Publication note: Host the full privacy policy at a public HTTPS URL and submit that URL in Partner Center.
 
 ## Certification Notes (Draft)
 - This app requires `runFullTrust` to invoke local Windows/WSL tooling (`wsl.exe`) for user-requested operations.
