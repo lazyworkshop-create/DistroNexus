@@ -53,3 +53,14 @@ DistroNexus is a Windows Subsystem for Linux (WSL) manager (v2.0).
 - **PowerShell**: Use `[CmdletBinding()]`, validate parameters, use `Write-Error/Verbose`.
 - **Testing**: xUnit + Moq (C#), Pester (PowerShell).
 - **Security**: No hardcoded credentials. Validate all paths. Sanitize inputs.
+
+## Build Environment Memory (Persistent)
+- Local machine has both VS2022 BuildTools and VS2026 installed.
+- VS2026 details (preferred for Store packaging):
+   - Display: `Visual Studio Community 2026`
+   - Version: `18.4.11506.43` (Insiders)
+   - Path: `C:\Program Files\Microsoft Visual Studio\18\Insiders`
+   - MSBuild: `C:\Program Files\Microsoft Visual Studio\18\Insiders\MSBuild\Current\Bin\MSBuild.exe`
+- VS2022 BuildTools path:
+   - `C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools`
+- Store packaging rule: always prefer the highest Visual Studio installation version (including prerelease) for DesktopBridge/MSBuild discovery to avoid .NET 10 and MSBuild 17 mismatch.
