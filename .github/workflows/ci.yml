@@ -171,3 +171,33 @@ jobs:
         name: DistroNexus-portable-ci
         path: release/*.zip
         retention-days: 7
+
+  build-store-package:
+    name: Build Store Package
+    runs-on: windows-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+        dotnet-quality: 'preview'
+
+    - name: Build Store package
+      run: |
+        ./tools/build.ps1 -Configuration Release -StoreBuild -Version "2.0.0-ci.${{ github.run_number }}"
+      shell: pwsh
+
+    - name: Upload Store package artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: DistroNexus-store-ci
+        path: |
+          release/store/**/*.msixbundle
+          release/store/**/*.msixupload
+        retention-days: 7

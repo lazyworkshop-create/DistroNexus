@@ -59,6 +59,11 @@ jobs:
         ./tools/build.ps1 -Configuration Release -Publish -SelfContained -CreateZip -Version ${{ steps.version.outputs.VERSION }}
       shell: pwsh
 
+    - name: Build Microsoft Store package
+      run: |
+        ./tools/build.ps1 -Configuration Release -StoreBuild -Version ${{ steps.version.outputs.VERSION }}
+      shell: pwsh
+
     - name: Install Inno Setup
       run: |
         choco install innosetup --no-progress -y
@@ -83,6 +88,8 @@ jobs:
         files: |
           release/*.zip
           release/installer/*.exe
+          release/store/**/*.msixbundle
+          release/store/**/*.msixupload
         fail_on_unmatched_files: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -95,4 +102,6 @@ jobs:
         path: |
           release/*.zip
           release/installer/*.exe
+          release/store/**/*.msixbundle
+          release/store/**/*.msixupload
         retention-days: 30
