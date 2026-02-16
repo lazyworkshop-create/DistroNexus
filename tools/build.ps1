@@ -89,6 +89,35 @@ function Get-StoreVersion {
     return "$major.$minor.$patch.0"
 }
 
+function Get-VisualStudioInstallations {
+    $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+    if (-not (Test-Path $vswhere)) {
+        return @()
+    }
+
+    $json = & $vswhere -all -prerelease -products * -format json 2>$null | Out-String
+    if ([string]::IsNullOrWhiteSpace($json)) {
+        return @()
+    }
+
+    try {
+        $instances = $json | ConvertFrom-Json
+    }
+    catch {
+        return @()
+    }
+
+    if ($instances -isnot [System.Collections.IEnumerable] -or $instances -is [string]) {
+        $instances = @($instances)
+    }
+
+    return @(
+        $instances |
+            Where-Object { $_.installationPath -and $_.isComplete } |
+            Sort-Object @{ Expression = { [version]$_.installationVersion }; Descending = $true }
+    )
+}
+
 function Get-DesktopBridgeTargetsPath {
     $candidates = New-Object System.Collections.Generic.List[string]
 
@@ -97,13 +126,11 @@ function Get-DesktopBridgeTargetsPath {
         $candidates.Add($msbuildDesktopBridge)
     }
 
-    $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
-    if (Test-Path $vswhere) {
-        $installPaths = & $vswhere -all -products * -property installationPath 2>$null
-        foreach ($installPath in $installPaths) {
-            if (-not [string]::IsNullOrWhiteSpace($installPath)) {
-                $candidates.Add((Join-Path $installPath 'MSBuild\Microsoft\DesktopBridge\'))
-            }
+    $installations = Get-VisualStudioInstallations
+    foreach ($installation in $installations) {
+        $installPath = $installation.installationPath
+        if (-not [string]::IsNullOrWhiteSpace($installPath)) {
+            $candidates.Add((Join-Path $installPath 'MSBuild\Microsoft\DesktopBridge\'))
         }
     }
 
@@ -143,13 +170,11 @@ function Get-DesktopBridgeTargetsPath {
 function Get-VisualStudioMsBuildPath {
     $candidates = New-Object System.Collections.Generic.List[string]
 
-    $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
-    if (Test-Path $vswhere) {
-        $installPaths = & $vswhere -all -products * -property installationPath 2>$null
-        foreach ($installPath in $installPaths) {
-            if (-not [string]::IsNullOrWhiteSpace($installPath)) {
-                $candidates.Add((Join-Path $installPath 'MSBuild\Current\Bin\MSBuild.exe'))
-            }
+    $installations = Get-VisualStudioInstallations
+    foreach ($installation in $installations) {
+        $installPath = $installation.installationPath
+        if (-not [string]::IsNullOrWhiteSpace($installPath)) {
+            $candidates.Add((Join-Path $installPath 'MSBuild\Current\Bin\MSBuild.exe'))
         }
     }
 
