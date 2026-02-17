@@ -190,31 +190,30 @@ Publication note: Host the full privacy policy at a public HTTPS URL and submit 
   3. Verify offline startup and local template-driven operations.
 
 ### Restricted Capability Justification (runFullTrust, Copy-Ready)
-DistroNexus requires the `runFullTrust` capability because it is a desktop WSL management tool that must invoke local Windows and WSL command-line components (including `wsl.exe`) to perform user-requested operations such as listing distributions, creating/importing/removing instances, and applying setup templates. These operations cannot be completed with restricted app-container permissions alone. The capability is used only for explicit, user-initiated management actions and local process execution on the user’s device. DistroNexus does not use this capability for background surveillance, privilege escalation, or hidden remote control. No in-app purchases are used. User data (settings/cache/logs) is stored locally, and network access is limited to configured catalog/template endpoints required for product functionality.
+
+**Reason for using runFullTrust:**
+
+This is a WPF Desktop Bridge app for managing WSL. It uses `System.Diagnostics.Process` to invoke `wsl.exe` and `powershell.exe` on the host to list, install, and configure distributions. These interop operations are blocked in standard AppContainers and have no UWP API alternatives. `runFullTrust` is required for this core local functionality.
 
 ### Additional Testing Information (Copy-Ready)
-Paste this into **Supplemental info -> Additional Testing Information -> Description**:
+**Notes for certification**:
 
-DistroNexus is a desktop WSL management tool.
-This app uses runFullTrust to invoke local Windows/WSL tooling (including wsl.exe) for user-initiated operations only.
+This app is a desktop bridge application that manages WSL distributions. It requires `runFullTrust` to function.
 
-Prerequisites:
-1) Windows 10/11 with WSL enabled.
-2) No account sign-in required.
-3) No special credentials required.
+**Prerequisites for testing**:
+1.  **Workstation Check**: Please ensure the test machine has **Windows Subsystem for Linux (WSL)** enabled. The app will show an error if WSL is missing.
+2.  **No Account Needed**: The app is fully functional without any user account or login.
 
-Validation steps:
-1) Launch DistroNexus.
-2) Open distribution/catalog view and verify data loads.
-3) Open template view and verify templates are listed.
-4) Start a user-initiated WSL management action (for example list/import/create/remove flow) and verify progress/log output.
-5) Close and relaunch the app; verify settings/cache are still available.
-6) Optional: disconnect network and verify core local operations still work.
+**Validation Steps**:
+1.  Launch the app.
+2.  Navigate to the "Distributions" tab to see installed WSL distros (runs `wsl.exe -l -v`).
+3.  Navigate to "Templates" to see built-in configuration templates.
+4.  Try to "Create New Instance" -> "Quick Create" to test the instance creation flow.
 
-Notes:
-- No in-app purchases.
-- User data is stored locally (settings/cache/logs).
-- Network access is only used for configured catalog/template endpoints.
+**Capability Usage**:
+-   `runFullTrust`: Used to spawn `wsl.exe` processes.
+-   `internetClient`: Used to download distribution rootfs and templates from GitHub/configured mirrors.
 
-Credentials section:
-- Leave empty if no sign-in is required.
+**Privacy**:
+-   No personal data is collected or transmitted.
+-   Logs are stored locally in `%LOCALAPPDATA%\DistroNexus`.
