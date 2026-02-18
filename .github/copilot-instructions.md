@@ -39,6 +39,12 @@ DistroNexus is a Windows Subsystem for Linux (WSL) manager (v2.0).
    - Use zero-padded numeric folders for year/month (for example `docs/archive/2026/02/20260214_template-system-audit/`).
    - Do not store archived documents directly under `docs/archive/`.
 - **Living Docs**: Update `docs/architecture/` and `docs/development/` when code changes. do NOT create new "Update Report" files; update the original doc instead.
+- **Release Documentation**:
+   - Always create English release notes in `docs/release_notes/vX.Y.Z.md` before tagging a release.
+   - Create a corresponding Chinese translation of the release notes.
+   - Generate bilingual website blog posts summarizing the release:
+     - English: `website/blog/{YYYY-MM-DD}-release-v{X.Y.Z}.md`
+     - Chinese: `website/i18n/zh-Hans/docusaurus-plugin-content-blog/{YYYY-MM-DD}-release-v{X.Y.Z}.md`
 
 ## Project Structure
 - `src/Client`:
