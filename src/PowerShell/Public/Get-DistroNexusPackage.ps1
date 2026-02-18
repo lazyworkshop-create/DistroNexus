@@ -99,10 +99,24 @@ function Get-DistroNexusPackage {
                 # Add PSTypeName manually
                 $package.PSObject.TypeNames.Insert(0, 'DistroNexus.Package')
                 
-                # Update properties
-                $package.IsCached = $isCached
-                $package.LocalPath = if ($localPath) { $localPath } else { '' }
-                $package.FileSize = $fileSize
+                # Add extra properties if missing
+                if (-not $package.PSObject.Properties['IsCached']) {
+                    $package | Add-Member -MemberType NoteProperty -Name 'IsCached' -Value $isCached -Force
+                } else {
+                    $package.IsCached = $isCached
+                }
+                
+                if (-not $package.PSObject.Properties['LocalPath']) {
+                    $package | Add-Member -MemberType NoteProperty -Name 'LocalPath' -Value $(if ($localPath) { $localPath } else { '' }) -Force
+                } else {
+                    $package.LocalPath = if ($localPath) { $localPath } else { '' }
+                }
+                
+                if (-not $package.PSObject.Properties['FileSize']) {
+                    $package | Add-Member -MemberType NoteProperty -Name 'FileSize' -Value $fileSize -Force
+                } else {
+                     $package.FileSize = $fileSize
+                }
                 
                 $packages += $package
             }

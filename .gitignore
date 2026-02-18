@@ -23,6 +23,8 @@ distro/
 config/*.json
 !config/distros.json
 !config/settings.json
+!config/catalog.json
+!config/templates.json
 
 # Logs
 *.log

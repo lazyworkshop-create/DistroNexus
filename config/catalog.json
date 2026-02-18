@@ -1,0 +1,250 @@
+[
+  {
+    "Id": "Ubuntu",
+    "Name": "Ubuntu",
+    "Version": "Ubuntu",
+    "DefaultName": "Ubuntu",
+    "Description": "Ubuntu (Ubuntu)",
+    "Category": "Ubuntu",
+    "DownloadUrl": "https://releases.ubuntu.com/24.04.4/ubuntu-24.04.4-wsl-amd64.wsl",
+    "Sha256": "9b2f7730dc68227dd04a9f3e5eab86ad85caf556b8606ad94f1f29ff5c4fd3f5",
+    "FileSize": 0,
+    "Metadata": {
+      "Source": "Microsoft Checkpoint",
+      "DownloadUrl_ARM64": "https://cdimages.ubuntu.com/releases/24.04.4/release/ubuntu-24.04.4-wsl-arm64.wsl",
+      "Sha256_ARM64": "6b244d89f412a68f51e58f396fab65bed3b5896a25c045a99bef9c78a07df507"
+    }
+  },
+  {
+    "Id": "Ubuntu-24.04",
+    "Name": "Ubuntu 24.04 LTS",
+    "Version": "24.04",
+    "DefaultName": "Ubuntu-24.04",
+    "Description": "Ubuntu 24.04 LTS (Ubuntu)",
+    "Category": "Ubuntu",
+    "DownloadUrl": "https://releases.ubuntu.com/24.04.4/ubuntu-24.04.4-wsl-amd64.wsl",
+    "Sha256": "9b2f7730dc68227dd04a9f3e5eab86ad85caf556b8606ad94f1f29ff5c4fd3f5",
+    "FileSize": 0,
+    "Metadata": {
+      "Source": "Microsoft Checkpoint",
+      "DownloadUrl_ARM64": "https://cdimages.ubuntu.com/releases/24.04.4/release/ubuntu-24.04.4-wsl-arm64.wsl",
+      "Sha256_ARM64": "6b244d89f412a68f51e58f396fab65bed3b5896a25c045a99bef9c78a07df507"
+    }
+  },
+  {
+    "Id": "openSUSE-Tumbleweed",
+    "Name": "openSUSE Tumbleweed",
+    "Version": "openSUSE-Tumbleweed",
+    "DefaultName": "openSUSE-Tumbleweed",
+    "Description": "openSUSE Tumbleweed (openSUSE)",
+    "Category": "openSUSE",
+    "DownloadUrl": "https://github.com/openSUSE/WSL-instarball/releases/download/v20260106.0/openSUSE-Tumbleweed-20260103.x86_64-1.224-Build1.224.wsl",
+    "Sha256": "0x394be699da2821b331355f3541e237aa3aa00bc4068f33283d68303d8336d484",
+    "FileSize": 0,
+    "Metadata": {
+      "Source": "Microsoft Checkpoint",
+      "DownloadUrl_ARM64": "https://github.com/openSUSE/WSL-instarball/releases/download/v20260106.0/openSUSE-Tumbleweed-20260103.aarch64-2.195-Build2.195.wsl",
+      "Sha256_ARM64": "0xbcbb88e957091c425ecb42f3076b8882b5976fd94885e453afaee40de3b79470"
+    }
+  },
+  {
+    "Id": "openSUSE-Leap-16.0",
+    "Name": "openSUSE Leap 16.0",
+    "Version": "16.0",
+    "DefaultName": "openSUSE-Leap-16.0",
+    "Description": "openSUSE Leap 16.0 (openSUSE)",
+    "Category": "openSUSE",
+    "DownloadUrl": "https://github.com/openSUSE/WSL-instarball/releases/download/v20251001.0/openSUSE-Leap-16.0-16.0.x86_64-22.57-Build22.57.wsl",
+    "Sha256": "0x0d1faa095153beee0a9b5089b0f9aa3d2aec95e2cdcffdeeff84dd54c48b8393",
+    "FileSize": 0,
+    "Metadata": {
+      "Source": "Microsoft Checkpoint",
+      "DownloadUrl_ARM64": "https://github.com/openSUSE/WSL-instarball/releases/download/v20251001.0/openSUSE-Leap-16.0-16.0.aarch64-22.57-Build22.57.wsl",
+      "Sha256_ARM64": "0x91bcdc7e9f42d7a60a4464ad867d91243aaaecab7b3a057039f77a989daac51e"
+    }
+  },
+  {
+    "Id": "SUSE-Linux-Enterprise-15-SP7",
+    "Name": "SUSE Linux Enterprise 15 SP7",
+    "Version": "SUSE-Linux-Enterprise-15-SP7",
+    "DefaultName": "SUSE-Linux-Enterprise-15-SP7",
+    "Description": "SUSE Linux Enterprise 15 SP7 (SUSE)",
+    "Category": "SUSE",
+    "DownloadUrl": "https://github.com/SUSE/WSL-instarball/releases/download/v20251201.0/SUSE-Linux-Enterprise-15-SP7-15.7.x86_64-30.1-Build30.1.wsl",
+    "Sha256": "0x60924e13286ed15bdcf9069e3a24d3394fb858954de3bdfcb1ea576900b81b2e",
+    "FileSize": 0,
+    "Metadata": {
+      "Source": "Microsoft Checkpoint"
+    }
+  },
+  {
+    "Id": "SUSE-Linux-Enterprise-16.0",
+    "Name": "SUSE Linux Enterprise 16.0",
+    "Version": "16.0",
+    "DefaultName": "SUSE-Linux-Enterprise-16.0",
+    "Description": "SUSE Linux Enterprise 16.0 (SUSE)",
+    "Category": "SUSE",
+    "DownloadUrl": "https://github.com/SUSE/WSL-instarball/releases/download/v20251201.0/SUSE-Linux-Enterprise-16.0-16.0.x86_64-1.9-Build1.9.wsl",
+    "Sha256": "0xf0fc07ed3543d3dc24cfb35b4194bbecf98485cefdd720c521034ac1c54bffd3",
+    "FileSize": 0,
+    "Metadata": {
+      "Source": "Microsoft Checkpoint"
+    }
+  },
+  {
+    "Id": "kali-linux",
+    "Name": "Kali Linux Rolling",
+    "Version": "kali-linux",
+    "DefaultName": "kali-linux",
+    "Description": "Kali Linux Rolling (kali)",
+    "Category": "kali",
+    "DownloadUrl": "https://kali.download/wsl-images/kali-2025.4/kali-linux-2025.4-wsl-rootfs-amd64.wsl",
+    "Sha256": "86aba7bb3d74d313e349f9f50d3f6119ee3b1491072920d063f17ce9b3f706ab",
+    "FileSize": 0,
+    "Metadata": {
+      "Source": "Microsoft Checkpoint",
+      "DownloadUrl_ARM64": "https://kali.download/wsl-images/kali-2025.4/kali-linux-2025.4-wsl-rootfs-arm64.wsl",
+      "Sha256_ARM64": "bd8cdfe340ec596e470b6853ac662382897bc656c0ac3d3096eb399d0780e25e"
+    }
+  },
+  {
+    "Id": "Debian",
+    "Name": "Debian GNU/Linux",
+    "Version": "Debian",
+    "DefaultName": "Debian",
+    "Description": "Debian GNU/Linux (Debian)",
+    "Category": "Debian",
+    "DownloadUrl": "https://salsa.debian.org/debian/WSL/-/jobs/7949331/artifacts/raw/Debian_WSL_AMD64_v1.22.0.0.wsl",
+    "Sha256": "543123ccc5f838e63dac81634fb0223dc8dcaa78fdb981387d625feb1ed168c7",
+    "FileSize": 0,
+    "Metadata": {
+      "Source": "Microsoft Checkpoint",
+      "DownloadUrl_ARM64": "https://salsa.debian.org/debian/WSL/-/jobs/7949331/artifacts/raw/Debian_WSL_ARM64_v1.22.0.0.wsl",
+      "Sha256_ARM64": "5701f1add55f8cf3b56528109a6220ae5c89f2189d7ae97b9a4b5302b80e967c"
+    }
+  },
+  {
+    "Id": "AlmaLinux-8",
+    "Name": "AlmaLinux OS 8",
+    "Version": "8",
+    "DefaultName": "AlmaLinux-8",
+    "Description": "AlmaLinux OS 8 (AlmaLinux)",
+    "Category": "AlmaLinux",
+    "DownloadUrl": "https://github.com/AlmaLinux/wsl-images/releases/download/v8.10.20250415.0/AlmaLinux-8.10_x64_20250415.0.wsl",
+    "Sha256": "34c3bc6d3ac693968737c65db52b67f68b8c1a6f8b024450819841a967f59a3d",
+    "FileSize": 0,
+    "Metadata": {
+      "Source": "Microsoft Checkpoint",
+      "DownloadUrl_ARM64": "https://github.com/AlmaLinux/wsl-images/releases/download/v8.10.20250415.0/AlmaLinux-8.10_ARM64_20250415.0.wsl",
+      "Sha256_ARM64": "bd34f64b4822f6f115058f79cdbba85a1560360efbec14c3d699695023f8ca19"
+    }
+  },
+  {
+    "Id": "AlmaLinux-9",
+    "Name": "AlmaLinux OS 9",
+    "Version": "9",
+    "DefaultName": "AlmaLinux-9",
+    "Description": "AlmaLinux OS 9 (AlmaLinux)",
+    "Category": "AlmaLinux",
+    "DownloadUrl": "https://github.com/AlmaLinux/wsl-images/releases/download/v9.7.20251119.0/AlmaLinux-9.7_x64_20251119.0.wsl",
+    "Sha256": "0a6588f4f723fcb3edbc37dd3e3e13be8ffe0a5027e47513e3d4d2a4451794e7",
+    "FileSize": 0,
+    "Metadata": {
+      "Source": "Microsoft Checkpoint",
+      "DownloadUrl_ARM64": "https://github.com/AlmaLinux/wsl-images/releases/download/v9.7.20251119.0/AlmaLinux-9.7_ARM64_20251119.0.wsl",
+      "Sha256_ARM64": "b3e2632efe029a81db1ae7a914ea3b7e9e6e20d8c71c158270c331e6fea39bf8"
+    }
+  },
+  {
+    "Id": "AlmaLinux-Kitten-10",
+    "Name": "AlmaLinux OS Kitten 10",
+    "Version": "10",
+    "DefaultName": "AlmaLinux-Kitten-10",
+    "Description": "AlmaLinux OS Kitten 10 (AlmaLinux)",
+    "Category": "AlmaLinux",
+    "DownloadUrl": "https://github.com/AlmaLinux/wsl-images/releases/download/v10-kitten.20251030.0/AlmaLinux-Kitten-10_x64_20251030.0.wsl",
+    "Sha256": "d765d65076b041f3a67ba60edc37d056eeab2a260aed8e077684e05b78ecd9f5",
+    "FileSize": 0,
+    "Metadata": {
+      "Source": "Microsoft Checkpoint",
+      "DownloadUrl_ARM64": "https://github.com/AlmaLinux/wsl-images/releases/download/v10-kitten.20251030.0/AlmaLinux-Kitten-10_ARM64_20251030.0.wsl",
+      "Sha256_ARM64": "90c30b0adbf8d414c4b0a02eaeb6a5d8e488a2187a67dbaf11f4a3e843baae53"
+    }
+  },
+  {
+    "Id": "AlmaLinux-10",
+    "Name": "AlmaLinux OS 10",
+    "Version": "10",
+    "DefaultName": "AlmaLinux-10",
+    "Description": "AlmaLinux OS 10 (AlmaLinux)",
+    "Category": "AlmaLinux",
+    "DownloadUrl": "https://github.com/AlmaLinux/wsl-images/releases/download/v10.1.20251124.0/AlmaLinux-10.1_x64_20251124.0.wsl",
+    "Sha256": "24e8fa286a4081979d97e83a227fb89f332bcf731fe4b422679a3b455ab0be37",
+    "FileSize": 0,
+    "Metadata": {
+      "Source": "Microsoft Checkpoint",
+      "DownloadUrl_ARM64": "https://github.com/AlmaLinux/wsl-images/releases/download/v10.1.20251124.0/AlmaLinux-10.1_ARM64_20251124.0.wsl",
+      "Sha256_ARM64": "20700a4467214074f8a1a3d4e0e1cad25af36b8127d047ab6d5b4a1355e998b8"
+    }
+  },
+  {
+    "Id": "archlinux",
+    "Name": "Arch Linux",
+    "Version": "archlinux",
+    "DefaultName": "archlinux",
+    "Description": "Arch Linux (archlinux)",
+    "Category": "archlinux",
+    "DownloadUrl": "https://fastly.mirror.pkgbuild.com/wsl/2026.02.01.158360/archlinux-2026.02.01.158360.wsl",
+    "Sha256": "e3287ab9f0458240fc6a966849dbc69188bdc7ef376dc27d441aef6f13dd45e5",
+    "FileSize": 0,
+    "Metadata": {
+      "Source": "Microsoft Checkpoint"
+    }
+  },
+  {
+    "Id": "FedoraLinux-43",
+    "Name": "Fedora Linux 43",
+    "Version": "43",
+    "DefaultName": "FedoraLinux-43",
+    "Description": "Fedora Linux 43 (Fedora)",
+    "Category": "Fedora",
+    "DownloadUrl": "https://download.fedoraproject.org/pub/fedora/linux/releases/43/Container/x86_64/images/Fedora-WSL-Base-43-1.6.x86_64.wsl",
+    "Sha256": "220780af9cf225e9645313b4c7b0457a26a38a53285eb203b2ab6188d54d5b82",
+    "FileSize": 0,
+    "Metadata": {
+      "Source": "Microsoft Checkpoint",
+      "DownloadUrl_ARM64": "https://download.fedoraproject.org/pub/fedora/linux/releases/43/Container/aarch64/images/Fedora-WSL-Base-43-1.6.aarch64.wsl",
+      "Sha256_ARM64": "7eef7a83260218d8c878b3c7bbdaf11772103145184d0c65df27557f4cd49548"
+    }
+  },
+  {
+    "Id": "FedoraLinux-42",
+    "Name": "Fedora Linux 42",
+    "Version": "42",
+    "DefaultName": "FedoraLinux-42",
+    "Description": "Fedora Linux 42 (Fedora)",
+    "Category": "Fedora",
+    "DownloadUrl": "https://download.fedoraproject.org/pub/fedora/linux/releases/42/Container/x86_64/images/Fedora-WSL-Base-42-1.1.x86_64.tar.xz",
+    "Sha256": "99fb3d05d78ca17c6815bb03cf528da8ef82ebc6260407f2b09461e0da8a1b8d",
+    "FileSize": 0,
+    "Metadata": {
+      "Source": "Microsoft Checkpoint",
+      "DownloadUrl_ARM64": "https://download.fedoraproject.org/pub/fedora/linux/releases/42/Container/aarch64/images/Fedora-WSL-Base-42-1.1.aarch64.tar.xz",
+      "Sha256_ARM64": "a5a2ceb8ca56b7245b909d021b0fd620427db349f02b8ef3b82b741bcb5611cd"
+    }
+  },
+  {
+    "Id": "eLxr",
+    "Name": "eLxr 12.12.0.0 GNU/Linux",
+    "Version": "eLxr",
+    "DefaultName": "eLxr",
+    "Description": "eLxr 12.12.0.0 GNU/Linux (eLxr)",
+    "Category": "eLxr",
+    "DownloadUrl": "https://gitlab.com/api/v4/projects/68007430/packages/generic/wsl/12.12.0.0/eLxr_WSL_AMD64_12.12.0.0.wsl",
+    "Sha256": "f94e0c44be51550478100ea150b80535f955bf87487d1b964f4636d97478c05d",
+    "FileSize": 0,
+    "Metadata": {
+      "Source": "Microsoft Checkpoint"
+    }
+  }
+]

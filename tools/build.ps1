@@ -318,11 +318,34 @@ if ($Publish) {
     # Copy configuration files
     Write-Host "⚙️  Copying configuration files..." -ForegroundColor Yellow
     $configDestination = Join-Path $PublishDir 'config'
-    
+
     if (Test-Path $ConfigDir) {
         Copy-Item -Path $ConfigDir -Destination $configDestination -Recurse -Force
+        
+         # Update catalog.json if building for release (fetch from MS source)
+        if ($Configuration -eq 'Release' -and $StoreBuild -eq $false) {
+            try {
+                Write-Host "🌐 Updating catalog.json from Microsoft Official Source..." -ForegroundColor Yellow
+                
+                $updateScript = Join-Path $PSScriptRoot 'update_catalog_from_ms.ps1'
+                $pkgCatalogPath = Join-Path $configDestination 'catalog.json'
+                
+                & $updateScript -OutputPath $pkgCatalogPath
+                
+                if ($LASTEXITCODE -eq 0) {
+                     Write-Host "✅ Included latest catalog from Microsoft" -ForegroundColor Green
+                } else {
+                     Write-Host "⚠️  Failed to update catalog (Exit Code: $LASTEXITCODE). Using local version." -ForegroundColor Yellow
+                }
+            }
+            catch {
+                Write-Host "⚠️  Failed to fetch latest catalog: $_" -ForegroundColor Yellow
+            }
+        }
+        
         Write-Host "✅ Configuration files copied" -ForegroundColor Green
     } else {
+
         # Create default config directory
         New-Item -Path $configDestination -ItemType Directory -Force | Out-Null
         
