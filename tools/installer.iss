@@ -104,7 +104,7 @@ begin
     '  "DefaultInstallPath": "C:\\WSL",' + #13#10 +
     '  "DefaultWslVersion": 2,' + #13#10 +
     '  "DefaultUsername": "root",' + #13#10 +
-    '  "CatalogUrl": "https://raw.githubusercontent.com/lazyworkshop-create/DistroNexus/main/config/catalog.json",' + #13#10 +
+    '  "CatalogUrl": "https://raw.githubusercontent.com/lazyworkshop-create/DistroNexus/master/config/catalog.json",' + #13#10 +
     '  "Theme": "Auto",' + #13#10 +
     '  "EnableLogging": true' + #13#10 +
     '}';

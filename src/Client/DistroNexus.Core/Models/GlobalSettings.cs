@@ -53,7 +53,7 @@ public class GlobalSettings
     /// <summary>
     /// Gets or sets the URL for the distribution catalog.
     /// </summary>
-    public string CatalogUrl { get; set; } = "https://raw.githubusercontent.com/lazyworkshop-create/DistroNexus/main/config/catalog.json";
+    public string CatalogUrl { get; set; } = "https://raw.githubusercontent.com/lazyworkshop-create/DistroNexus/master/config/catalog.json";
 
     /// <summary>
     /// Gets or sets the theme preference (Light, Dark, Auto).

@@ -14,7 +14,7 @@ function Update-DistroNexusCatalog {
         Update-DistroNexusCatalog
 
     .EXAMPLE
-        Update-DistroNexusCatalog -SourceUrl "https://raw.githubusercontent.com/user/repo/main/config/catalog.json"
+        Update-DistroNexusCatalog -SourceUrl "https://raw.githubusercontent.com/user/repo/master/config/catalog.json"
 
     .OUTPUTS
         Boolean indicating success or failure
@@ -40,7 +40,7 @@ function Update-DistroNexusCatalog {
                 $SourceUrl = $config.Settings.CatalogUrl
                 
                 if (-not $SourceUrl) {
-                    $SourceUrl = "https://raw.githubusercontent.com/LazyWorkshop-Create/DistroNexus/main/config/catalog.json"
+                    $SourceUrl = "https://raw.githubusercontent.com/LazyWorkshop-Create/DistroNexus/master/config/catalog.json"
                 }
             }
             

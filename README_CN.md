@@ -160,7 +160,7 @@ Invoke-DistroNexusTemplateAutomation -Mode AllTemplates -Distro "Ubuntu-22.04"
     "DefaultInstallPath": "C:\\WSL",
     "DefaultWslVersion": 2,
     "DefaultUsername": "root",
-    "CatalogUrl": "https://raw.githubusercontent.com/lazyworkshop-create/DistroNexus/main/config/catalog.json",
+    "CatalogUrl": "https://raw.githubusercontent.com/lazyworkshop-create/DistroNexus/master/config/catalog.json",
     "Theme": "Auto",
     "EnableLogging": true
 }
