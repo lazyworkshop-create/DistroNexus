@@ -24,7 +24,7 @@ $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot/../Helpers/MockHelpers.ps1"
 
 # Get module path for testing
-$ModulePath = Resolve-Path "$PSScriptRoot/../../../PowerShell/DistroNexus.psm1"
+$ModulePath = Resolve-Path "$PSScriptRoot/../../../src/PowerShell/DistroNexus.psm1"
 
 # Import the module
 Import-Module $ModulePath -Force

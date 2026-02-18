@@ -24,7 +24,7 @@ $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot/../Helpers/MockHelpers.ps1"
 
 # Get module path for testing
-$ModulePath = Resolve-Path "$PSScriptRoot/../../../PowerShell/DistroNexus.psm1"
+$ModulePath = Resolve-Path "$PSScriptRoot/../../../src/PowerShell/DistroNexus.psm1"
 $ModuleDirectory = Split-Path -Parent $ModulePath
 
 # Import the module
@@ -41,7 +41,7 @@ Describe "Cache Integration Workflow" {
 
     AfterAll {
         Remove-Item -Path $testCacheDir -Recurse -Force -ErrorAction SilentlyContinue
-        Remove-Item -Env:DISTRONEXUS_CACHE_PATH -ErrorAction SilentlyContinue
+        Remove-Item -Path Env:\DISTRONEXUS_CACHE_PATH -ErrorAction SilentlyContinue
     }
 
     Context "Cache Save and Load Operations" {

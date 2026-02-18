@@ -24,7 +24,7 @@ $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot/../Helpers/MockHelpers.ps1"
 
 # Get module path for testing
-$ModulePath = Resolve-Path "$PSScriptRoot/../../../PowerShell/DistroNexus.psm1"
+$ModulePath = Resolve-Path "$PSScriptRoot/../../../src/PowerShell/DistroNexus.psm1"
 $ModuleDirectory = Split-Path -Parent $ModulePath
 
 # Import the module
@@ -186,7 +186,7 @@ Describe "Batch Download Coordination" {
                 ETA = "00:02:30"
             }
 
-            $progressReport.Percentage | Should -BeLessThanOrEqual 100
+            $progressReport.Percentage | Should -BeLessOrEqual 100
         }
 
         It "Should update progress in real-time during downloads" {
@@ -194,7 +194,7 @@ Describe "Batch Download Coordination" {
             # Target: Update every 100ms or per 1% progress
 
             $updateFrequency = 100  # milliseconds
-            $updateFrequency | Should -BeLessThanOrEqual 1000
+            $updateFrequency | Should -BeLessOrEqual 1000
         }
     }
 
