@@ -2,11 +2,15 @@ name: Quick Tests (PR Validation)
 
 on:
   pull_request:
-    branches: [ main, develop ]
+    branches: [ master, develop ]
     paths:
       - 'src/**'
       - 'tests/**'
       - '.github/workflows/quick-test.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   quick-validation:
