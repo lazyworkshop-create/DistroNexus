@@ -44,6 +44,45 @@ jobs:
         echo "Building version: $VERSION"
       shell: pwsh
 
+    - name: Verify Version consistency
+      shell: pwsh
+      run: |
+        $Version = "${{ steps.version.outputs.VERSION }}"
+        Write-Host "Verifying version: $Version"
+        
+        # 1. Check Directory.Build.props
+        $propsContent = Get-Content src/Client/Directory.Build.props -Raw
+        # Escape version for regex just in case it contains special chars like dots
+        $EscapedVersion = [regex]::Escape($Version)
+        
+        if ($propsContent -notmatch "<Version>$EscapedVersion</Version>") {
+            Write-Error "Version check failed: src/Client/Directory.Build.props does not contain <Version>$Version</Version>."
+            exit 1
+        }
+        
+        # 2. Check DistroNexus.psd1
+        $psd1Content = Get-Content src/PowerShell/DistroNexus.psd1 -Raw
+        if ($psd1Content -notmatch "ModuleVersion\s*=\s*['`"]$EscapedVersion['`"]") {
+            Write-Error "Version check failed: src/PowerShell/DistroNexus.psd1 does not contain ModuleVersion = '$Version'."
+            exit 1
+        }
+        
+        # 3. Check installer.iss
+        $issContent = Get-Content tools/installer.iss -Raw
+        if ($issContent -notmatch "#define\s+MyAppVersion\s+`"$EscapedVersion`"") {
+            Write-Error "Version check failed: tools/installer.iss does not contain #define MyAppVersion `"$Version`"."
+            exit 1
+        }
+
+        # 4. Check website/package.json
+        $pkgContent = Get-Content website/package.json -Raw
+        if ($pkgContent -notmatch "`"version`":\s*`"$EscapedVersion`"") {
+             Write-Error "Version check failed: website/package.json does not contain `"version`": `"$Version`"."
+             exit 1
+        }
+
+        Write-Host "All version checks passed."
+
     - name: Restore dependencies
       run: dotnet restore src/Client/DistroNexus.slnx
 

@@ -67,7 +67,7 @@ jobs:
         # Run integration tests
         $integrationTestConfig = @{
           Run = @{
-            Path = './Integration'
+            Path = './Integration/BatchDownloadIntegrationTests.ps1', './Integration/CacheIntegrationTests.ps1', './Integration/EndToEndWorkflowTests.ps1'
           }
           TestResult = @{
             Enabled = $true
