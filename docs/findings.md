@@ -3,6 +3,18 @@
 Date: 2026-02-19
 
 ## Active Milestone
+- Project quality remediation checklist synchronization and template-test hang mitigation
+
+## Findings
+- Current template-focused test subset does not reproduce a deterministic deadlock; repeated local runs are stable and complete within expected time.
+- The highest practical reliability risk is CI-visible indefinite waiting during test host/runtime edge cases rather than a consistent logic deadlock in template tests.
+- Adding `--blame-hang` with bounded timeout to workflow `dotnet test` invocations is the most direct root-level mitigation: prevents infinite wait, forces diagnosable failure, and preserves future triage artifacts.
+- `TestScope` metadata split behaves as intended after remediation (`Quick != Full`), and non-UI full lane remains independently executable.
+- Remaining acceptance closure gaps are governance/store verification artifacts, which require release-lane evidence and were explicitly deferred with owner/milestone to avoid false closure.
+
+Date: 2026-02-19
+
+## Active Milestone
 - Template toggle semantics refinement and ScriptPath sibling-template staging fix
 
 ## Findings

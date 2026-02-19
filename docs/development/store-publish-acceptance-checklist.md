@@ -55,6 +55,26 @@ Source Spec: `docs/specs/store-publish-analysis.md`
 - [ ] All test checklist items are complete.
 - [ ] No known blocker remains for Partner Center submission.
 
+## Deferred Closure Tracking (v2.0.2 Store Readiness Gate)
+- Owner: `Release Manager`
+- Supporting owners: `QA`, `Engineering`
+- Milestone: `v2.0.2 store-readiness gate`
+
+Deferred high-value items (must be closed before final submission):
+- AC-2: Store ID linkage in release records.
+- AC-3: Monotonic first-three version progression verification across resubmissions.
+- AC-4: Privacy policy publication/compliance, product declarations, system requirements declaration.
+- AC-5: Sideload install matrix, fresh install/upgrade/uninstall matrix, MinVersion validation, offline baseline validation.
+- AC-6: Desktop screenshots and age rating/submission metadata completion.
+
+Evidence placeholders for sections C/D/E/F/G/I:
+- C (Packaging/Versioning): Pending release evidence link.
+- D (Capabilities/Policy): Pending compliance evidence link.
+- E (Product Quality): Pending test matrix evidence link.
+- F (Store Listing): Pending listing asset evidence link.
+- G (Release Ops): Pending release runbook/sign-off evidence link.
+- I (Final Submission): Pending Partner Center submission evidence link.
+
 ## Sign-off
 - Implementation Owner: Pending
 - QA Owner: Pending

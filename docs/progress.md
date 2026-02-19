@@ -3,6 +3,25 @@
 Date: 2026-02-19
 
 ## Active Milestone
+- Project quality remediation checklist synchronization and template-test hang mitigation
+
+## Progress
+- Reproduced template-focused test slice with hang diagnostics enabled and confirmed no active deadlock in current code path.
+- Added CI hang safeguards to C# test commands in `.github/workflows/ci.yml`, `.github/workflows/test.yml`, and `.github/workflows/quick-test.yml` using `--blame-hang` and bounded hang timeout.
+- Verified metadata-split execution paths after remediation:
+	- `dotnet test ... --filter "TestScope!=Full"` -> `152 passed, 0 failed`
+	- `dotnet test ... --filter "TestScope=Full&Category!=UIAutomation"` -> `72 passed, 0 failed`
+	- `dotnet test ... --filter "FullyQualifiedName~TemplateServiceTests|FullyQualifiedName~SelectTemplateStepTests|FullyQualifiedName~InstallWizardWorkflowViewModelTests|FullyQualifiedName~ReviewStepTests"` -> `22 passed, 0 failed` (stable across repeated runs)
+- Verified PowerShell regression baseline remains green:
+	- `Get-Module Pester -ListAvailable; Invoke-Pester -Path tests/PowerShell -Output Detailed` -> passed (`ExitCode 0`).
+- Synchronized remediation implementation/test/acceptance checklists with completed P0/P1-002/P1-003 status and explicit deferred ownership for remaining P1-001/P2 governance items.
+- Post-freeze lightweight verification completed successfully:
+	- `dotnet test ... FullyQualifiedName~TemplateServiceTests|...|ReviewStepTests --no-restore` -> `22 passed, 0 failed`
+	- `dotnet build src/Client/DistroNexus.Desktop/DistroNexus.Desktop.csproj -c Debug --no-restore` -> `Build succeeded`
+
+Date: 2026-02-19
+
+## Active Milestone
 - Template toggle semantics refinement and ScriptPath sibling-template staging fix
 
 ## Progress
