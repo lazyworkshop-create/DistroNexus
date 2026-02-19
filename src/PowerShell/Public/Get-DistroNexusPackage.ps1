@@ -43,6 +43,12 @@ function Get-DistroNexusPackage {
             $packages = @()
             $cachePath = $config.Settings.PackageCachePath
             
+            # Use default cache path if not configured
+            if (-not $cachePath) {
+                $appDataPath = [System.Environment]::GetFolderPath([System.Environment+SpecialFolder]::ApplicationData)
+                $cachePath = Join-Path $appDataPath "DistroNexus\Cache"
+            }
+            
             # Assume flat array format
             $distroList = @()
             if ($config.Distros -is [Array]) {
@@ -79,7 +85,19 @@ function Get-DistroNexusPackage {
                     }
                 }
                 elseif ($cachePath -and $distro.DownloadUrl) {
-                    $filename = Split-Path $distro.DownloadUrl -Leaf
+                    # improved filename resolution to match C# logic
+                    $filename = $null
+                    try {
+                         if ($distro.DownloadUrl -match "^http") {
+                             $uri = [System.Uri]$distro.DownloadUrl
+                             $filename = [System.IO.Path]::GetFileName($uri.LocalPath)
+                         }
+                    } catch {}
+                    
+                    if (-not $filename) {
+                        $filename = Split-Path $distro.DownloadUrl -Leaf
+                    }
+
                     if ($filename) {
                         $cachedFile = Join-Path $cachePath $filename
                         if (Test-Path $cachedFile) {
