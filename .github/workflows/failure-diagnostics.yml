@@ -1,0 +1,119 @@
+name: Workflow Failure Diagnostics
+
+on:
+  workflow_run:
+    workflows:
+      - CI Build
+      - Integration Tests
+      - Quick Tests (PR Validation)
+      - Release Build
+      - WSL2 Validation
+    types:
+      - completed
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  collect-diagnostics:
+    name: Collect Failure Diagnostics
+    if: github.event.workflow_run.conclusion != 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Build diagnostics payload
+        id: payload
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const runId = context.payload.workflow_run.id;
+            const runName = context.payload.workflow_run.name;
+            const runUrl = context.payload.workflow_run.html_url;
+            const conclusion = context.payload.workflow_run.conclusion;
+            const headSha = context.payload.workflow_run.head_sha;
+            const headBranch = context.payload.workflow_run.head_branch;
+
+            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+              owner,
+              repo,
+              run_id: runId,
+              per_page: 100,
+            });
+
+            const failedJobs = jobs
+              .filter((job) => job.conclusion && job.conclusion !== 'success')
+              .map((job) => ({
+                name: job.name,
+                conclusion: job.conclusion,
+                html_url: job.html_url,
+                started_at: job.started_at,
+                completed_at: job.completed_at,
+                failed_steps: (job.steps || [])
+                  .filter((step) => step.conclusion && step.conclusion !== 'success')
+                  .map((step) => ({
+                    number: step.number,
+                    name: step.name,
+                    conclusion: step.conclusion,
+                    status: step.status,
+                  })),
+              }));
+
+            const payload = {
+              workflow_run: {
+                id: runId,
+                name: runName,
+                url: runUrl,
+                conclusion,
+                head_sha: headSha,
+                head_branch: headBranch,
+              },
+              failed_jobs: failedJobs,
+            };
+
+            const fs = require('fs');
+            fs.writeFileSync('failure-diagnostics.json', JSON.stringify(payload, null, 2));
+
+            const lines = [];
+            lines.push(`# Failure diagnostics for ${runName}`);
+            lines.push('');
+            lines.push(`- Run: ${runUrl}`);
+            lines.push(`- Conclusion: ${conclusion}`);
+            lines.push(`- Branch: ${headBranch}`);
+            lines.push(`- Commit: ${headSha}`);
+            lines.push('');
+
+            if (failedJobs.length === 0) {
+              lines.push('No failed jobs were detected, but workflow conclusion is non-success.');
+            } else {
+              lines.push('## Failed jobs');
+              lines.push('');
+              for (const job of failedJobs) {
+                lines.push(`- **${job.name}** (${job.conclusion})`);
+                lines.push(`  - Logs: ${job.html_url}`);
+                if (job.failed_steps.length === 0) {
+                  lines.push('  - Failed steps: none reported');
+                } else {
+                  for (const step of job.failed_steps) {
+                    lines.push(`  - Step ${step.number}: ${step.name} (${step.conclusion})`);
+                  }
+                }
+              }
+            }
+
+            fs.writeFileSync('failure-diagnostics.md', lines.join('\n'));
+            core.setOutput('failed_jobs_count', String(failedJobs.length));
+
+      - name: Publish diagnostics summary
+        run: cat failure-diagnostics.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload diagnostics artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: failure-diagnostics-run-${{ github.event.workflow_run.id }}
+          path: |
+            failure-diagnostics.json
+            failure-diagnostics.md
+          retention-days: 14
