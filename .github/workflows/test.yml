@@ -2,9 +2,13 @@ name: Integration Tests
 
 on:
   push:
-    branches: [ master, develop ]
+    branches: [ main, master, develop ]
   pull_request:
-    branches: [ master, develop ]
+    branches: [ main, master, develop ]
+
+env:
+  DOTNET_SDK_VERSION: '10.0.x'
+  DOTNET_SDK_QUALITY: 'preview'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -41,6 +45,9 @@ jobs:
           Run = @{
             Path = './Unit'
           }
+          Filter = @{
+            Tag = @('Unit')
+          }
           TestResult = @{
             Enabled = $true
             OutputPath = '../test-results/pester-unit-results.xml'
@@ -67,7 +74,10 @@ jobs:
         # Run integration tests
         $integrationTestConfig = @{
           Run = @{
-            Path = './Integration/BatchDownloadIntegrationTests.ps1', './Integration/CacheIntegrationTests.ps1', './Integration/EndToEndWorkflowTests.ps1'
+            Path = './Integration'
+          }
+          Filter = @{
+            Tag = @('Integration')
           }
           TestResult = @{
             Enabled = $true
@@ -113,35 +123,38 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '8.0.x'
+        dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
+        dotnet-quality: ${{ env.DOTNET_SDK_QUALITY }}
 
     - name: Restore dependencies
-      run: dotnet restore src/Client/
+      run: dotnet restore src/Client/DistroNexus.slnx
 
     - name: Build C# solution
-      run: dotnet build src/Client/ --configuration Release --no-restore
+      run: dotnet build src/Client/DistroNexus.slnx --configuration Release --no-restore
 
     - name: Run C# Unit Tests
       run: |
-        dotnet test src/Client/DistroNexus.Tests/ `
+        dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj `
           --configuration Release `
           --no-build `
           --verbosity normal `
-          --logger "trx;LogFileName=../../test-results/csharp-unit-results.trx" `
-          --collect:"XPlat Code Coverage" `
-          /p:CoverletOutput=../../test-results/ `
-          /p:CoverletOutputFormat=cobertura
+          --filter "TestScope!=Full" `
+          --blame-hang `
+          --blame-hang-timeout 5m `
+          --results-directory test-results `
+          --logger "trx;LogFileName=csharp-unit-results.trx"
 
     - name: Run C# Integration Tests
       run: |
-        dotnet test src/Client/DistroNexus.Tests/Integration/ `
+        dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj `
           --configuration Release `
           --no-build `
           --verbosity normal `
-          --logger "trx;LogFileName=../../test-results/csharp-integration-results.trx" `
-          --collect:"XPlat Code Coverage" `
-          /p:CoverletOutput=../../test-results/ `
-          /p:CoverletOutputFormat=cobertura
+          --filter "TestScope=Full&Category!=UIAutomation" `
+          --blame-hang `
+          --blame-hang-timeout 8m `
+          --results-directory test-results `
+          --logger "trx;LogFileName=csharp-integration-results.trx"
 
     - name: Upload C# Test Results
       if: always()
@@ -184,7 +197,8 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '8.0.x'
+        dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
+        dotnet-quality: ${{ env.DOTNET_SDK_QUALITY }}
 
     - name: Install ReportGenerator
       run: |

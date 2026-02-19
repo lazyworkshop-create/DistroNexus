@@ -30,7 +30,7 @@ $ModuleDirectory = Split-Path -Parent $ModulePath
 # Import the module
 Import-Module $ModulePath -Force
 
-Describe "Cache Integration Workflow" {
+Describe "Cache Integration Workflow" -Tag 'Integration', 'Cache' {
     BeforeAll {
         $testCacheDir = "TestDrive:\cache"
         $null = New-Item -ItemType Directory -Path $testCacheDir -Force

@@ -15,6 +15,7 @@ namespace DistroNexus.Tests.Integration;
 /// Integration tests for PowerShell module loading in WPF context.
 /// Verifies that the PowerShell module can be correctly located, loaded, and used from the C# client.
 /// </summary>
+[Trait("TestScope", "Full")]
 public class ModuleLoadingIntegrationTests
 {
     private readonly Mock<ILogger<PowerShellService>> _mockLogger;

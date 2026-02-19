@@ -9,6 +9,7 @@ namespace DistroNexus.Tests.Integration;
 /// <summary>
 /// Integration tests for JSON deserialization from PowerShell module output.
 /// </summary>
+[Trait("TestScope", "Full")]
 public class JsonDeserializationIntegrationTests
 {
     private readonly PowerShellService _powerShellService;

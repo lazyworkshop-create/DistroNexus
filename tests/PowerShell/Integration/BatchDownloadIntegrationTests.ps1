@@ -30,7 +30,7 @@ $ModuleDirectory = Split-Path -Parent $ModulePath
 # Import the module
 Import-Module $ModulePath -Force
 
-Describe "Batch Download Coordination" {
+Describe "Batch Download Coordination" -Tag 'Integration', 'BatchDownload' {
     BeforeAll {
         $testDownloadDir = "TestDrive:\downloads"
         $null = New-Item -ItemType Directory -Path $testDownloadDir -Force

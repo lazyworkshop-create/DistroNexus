@@ -1,0 +1,133 @@
+name: WSL2 Validation
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * 1'
+
+env:
+  DOTNET_SDK_VERSION: '10.0.x'
+  DOTNET_SDK_QUALITY: 'preview'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  wsl2-gated-tests:
+    name: WSL2-Gated PowerShell Tests
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Detect WSL2 availability
+      id: detect_wsl
+      shell: pwsh
+      run: |
+        $hasWslCommand = $null -ne (Get-Command wsl.exe -ErrorAction SilentlyContinue)
+        $isWsl2Capable = $false
+        $reason = 'wsl.exe command not found'
+
+        if ($hasWslCommand) {
+          try {
+            $statusOutput = (wsl.exe --status 2>&1 | Out-String)
+            if ($LASTEXITCODE -eq 0 -and $statusOutput -match 'Default\s+Version\s*:\s*2') {
+              $isWsl2Capable = $true
+              $reason = 'Detected Default Version 2 from wsl --status'
+            }
+            else {
+              $reason = 'wsl --status did not report Default Version 2'
+            }
+          }
+          catch {
+            $reason = "Failed to execute wsl --status: $($_.Exception.Message)"
+          }
+
+          if (-not $isWsl2Capable) {
+            try {
+              $listOutput = (wsl.exe --list --verbose 2>&1 | Out-String)
+              if ($LASTEXITCODE -eq 0 -and $listOutput -match '(?m)^\s*\*?.+\s+\d+\s+2\s*$') {
+                $isWsl2Capable = $true
+                $reason = 'Detected at least one WSL2 distro from wsl --list --verbose'
+              }
+              else {
+                $reason = 'No WSL2 distro detected from wsl --list --verbose'
+              }
+            }
+            catch {
+              $reason = "Failed to execute wsl --list --verbose: $($_.Exception.Message)"
+            }
+          }
+        }
+
+        "run_wsl2_tests=$isWsl2Capable" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        "wsl_reason=$reason" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+        if ($isWsl2Capable) {
+          "### WSL2 Validation" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "- Environment capability: detected" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "- Reason: $reason" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+        }
+        else {
+          "### WSL2 Validation" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "- Environment capability: not detected" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "- Reason: $reason" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+        }
+
+    - name: Install Pester
+      if: steps.detect_wsl.outputs.run_wsl2_tests == 'True'
+      shell: pwsh
+      run: |
+        Install-Module -Name Pester -Repository PSGallery -Force -MinimumVersion 5.0
+
+    - name: Run WSL2-gated tests
+      if: steps.detect_wsl.outputs.run_wsl2_tests == 'True'
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Path tests/test-results -Force | Out-Null
+        $env:DISTRONEXUS_RUN_WSL2_TESTS = '1'
+
+        $config = @{
+          Run = @{
+            Path = @(
+              './tests/PowerShell/Unit/Public/Get-DistroNexusInstance.Tests.ps1',
+              './tests/PowerShell/Unit/Public/Apply-DistroNexusTemplate.Tests.ps1'
+            )
+          }
+          TestResult = @{
+            Enabled = $true
+            OutputPath = './tests/test-results/wsl2-gated-results.xml'
+            OutputFormat = 'NUnitXml'
+          }
+          Output = @{
+            Verbosity = 'Detailed'
+          }
+        }
+
+        $result = Invoke-Pester -Configuration $config
+
+        if ($result.FailedCount -gt 0) {
+          throw "WSL2-gated tests failed: $($result.FailedCount)"
+        }
+
+    - name: Publish WSL2 validation summary artifact
+      if: always()
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Path tests/test-results -Force | Out-Null
+        $summary = @"
+        Workflow: WSL2 Validation
+        Capability detected: ${{ steps.detect_wsl.outputs.run_wsl2_tests }}
+        Detection reason: ${{ steps.detect_wsl.outputs.wsl_reason }}
+        "@
+        Set-Content -Path tests/test-results/wsl2-validation-summary.txt -Value $summary
+
+    - name: Upload WSL2 test artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: wsl2-validation-results
+        path: tests/test-results/wsl2-*
+        retention-days: 14

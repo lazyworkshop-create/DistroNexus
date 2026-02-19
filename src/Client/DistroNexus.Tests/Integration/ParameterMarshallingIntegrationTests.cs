@@ -14,6 +14,7 @@ namespace DistroNexus.Tests.Integration;
 /// Integration tests for parameter marshalling between C# and PowerShell.
 /// Verifies correct conversion of C# objects to PowerShell parameters and back.
 /// </summary>
+[Trait("TestScope", "Full")]
 public class ParameterMarshallingIntegrationTests
 {
     private readonly Mock<ILogger<PowerShellService>> _mockLogger;

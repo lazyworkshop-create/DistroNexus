@@ -16,6 +16,7 @@ namespace DistroNexus.Tests.Integration;
 /// Integration tests for error mapping between PowerShell and C# exception types.
 /// Verifies that PowerShell errors are correctly translated to appropriate C# exceptions.
 /// </summary>
+[Trait("TestScope", "Full")]
 public class ErrorMappingIntegrationTests
 {
     private readonly Mock<ILogger<PowerShellService>> _mockLogger;

@@ -5,6 +5,7 @@ using FlaUI.Core.Tools;
 namespace DistroNexus.Tests.UIAutomation;
 
 [Collection("UIAutomation")]
+[Trait("TestScope", "Full")]
 public class PackageManagerUiAutomationTests
 {
     [Fact]

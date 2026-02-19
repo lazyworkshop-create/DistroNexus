@@ -2,9 +2,13 @@ name: CI Build
 
 on:
   push:
-    branches: [ master, feature/*, develop ]
+    branches: [ main, master, feature/*, develop ]
   pull_request:
-    branches: [ master, develop ]
+    branches: [ main, master, develop ]
+
+env:
+  DOTNET_SDK_VERSION: '10.0.x'
+  DOTNET_SDK_QUALITY: 'preview'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -22,8 +26,8 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '10.0.x'
-        dotnet-quality: 'preview'
+        dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
+        dotnet-quality: ${{ env.DOTNET_SDK_QUALITY }}
 
     - name: Cache NuGet packages
       uses: actions/cache@v4
@@ -40,7 +44,7 @@ jobs:
       run: dotnet build src/Client/DistroNexus.slnx --configuration Release --no-restore
 
     - name: Run C# tests with coverage
-      run: dotnet test src/Client/DistroNexus.slnx --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx" --collect:"XPlat Code Coverage" --results-directory TestResults
+      run: dotnet test src/Client/DistroNexus.slnx --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx" --collect:"XPlat Code Coverage" --results-directory TestResults --blame-hang --blame-hang-timeout 5m
 
     - name: Generate coverage report
       run: |
@@ -152,7 +156,7 @@ jobs:
     name: Build Portable Package
     runs-on: windows-latest
     needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     
     steps:
     - name: Checkout code
@@ -161,8 +165,8 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '10.0.x'
-        dotnet-quality: 'preview'
+        dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
+        dotnet-quality: ${{ env.DOTNET_SDK_QUALITY }}
 
     - name: Build portable package
       run: |
@@ -180,7 +184,7 @@ jobs:
     name: Build Store Package
     runs-on: windows-latest
     needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
 
     steps:
     - name: Checkout code
@@ -189,8 +193,8 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '10.0.x'
-        dotnet-quality: 'preview'
+        dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
+        dotnet-quality: ${{ env.DOTNET_SDK_QUALITY }}
 
     - name: Build Store package
       run: |

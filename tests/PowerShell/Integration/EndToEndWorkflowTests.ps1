@@ -29,7 +29,7 @@ $ModulePath = Resolve-Path "$PSScriptRoot/../../../src/PowerShell/DistroNexus.ps
 # Import the module
 Import-Module $ModulePath -Force
 
-Describe "Module Dependencies and Integration" {
+Describe "Module Dependencies and Integration" -Tag 'Integration', 'EndToEnd' {
     BeforeAll {
         $module = Get-Module DistroNexus
     }

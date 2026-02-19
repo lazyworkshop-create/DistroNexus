@@ -14,6 +14,7 @@ namespace DistroNexus.Tests.Integration;
 /// Integration tests for WslManagerService with PowerShell module integration.
 /// Verifies end-to-end workflows through the service layer.
 /// </summary>
+[Trait("TestScope", "Full")]
 public class WslManagerServiceIntegrationTests
 {
     private readonly Mock<IPowerShellService> _mockPowerShellService;

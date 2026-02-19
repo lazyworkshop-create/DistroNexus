@@ -8,6 +8,7 @@ using Moq;
 namespace DistroNexus.Tests.Integration;
 
 [Collection("TemplateServiceSerial")]
+[Trait("TestScope", "Full")]
 public class TemplateServiceIntegrationTests : IDisposable
 {
     private readonly Mock<ILogger<TemplateService>> _mockLogger;

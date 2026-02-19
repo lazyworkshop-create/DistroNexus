@@ -17,6 +17,7 @@ namespace DistroNexus.Tests.Integration;
 /// Integration tests for operation timeout handling in WPF-PowerShell integration.
 /// Verifies that operations respect timeout settings and handle cancellation correctly.
 /// </summary>
+[Trait("TestScope", "Full")]
 public class TimeoutHandlingIntegrationTests
 {
     private readonly Mock<ILogger<PowerShellService>> _mockLogger;

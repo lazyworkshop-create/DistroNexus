@@ -2,11 +2,15 @@ name: Quick Tests (PR Validation)
 
 on:
   pull_request:
-    branches: [ master, develop ]
+    branches: [ main, master, develop ]
     paths:
       - 'src/**'
       - 'tests/**'
       - '.github/workflows/quick-test.yml'
+
+env:
+  DOTNET_SDK_VERSION: '10.0.x'
+  DOTNET_SDK_QUALITY: 'preview'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -35,11 +39,14 @@ jobs:
       shell: pwsh
       working-directory: ./tests/PowerShell
       run: |
-        # Run a quick subset of tests (not full integration suite)
+        # Run quick metadata-selected unit scope
         $quickTestConfig = @{
           Run = @{
             Path = './Unit'
-            ExcludePath = './Unit/**/*Slow*'
+          }
+          Filter = @{
+            Tag = @('Unit')
+            ExcludeTag = @('Integration', 'Slow', 'WSL2')
           }
           TestResult = @{
             Enabled = $true
@@ -57,19 +64,23 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '8.0.x'
+        dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
+        dotnet-quality: ${{ env.DOTNET_SDK_QUALITY }}
 
     - name: Build C# solution
-      run: dotnet build src/Client/ --configuration Debug
+      run: dotnet build src/Client/DistroNexus.slnx --configuration Debug
 
     - name: Run Quick C# Tests
       run: |
-        # Run only unit tests, not full integration suite
-        dotnet test src/Client/DistroNexus.Tests/ `
+        # Run metadata-based quick scope and exclude full lane tests
+        dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj `
           --configuration Debug `
           --no-build `
-          --filter "Category!=Integration" `
-          --logger "trx;LogFileName=../../test-results/quick-csharp-results.trx"
+          --filter "TestScope!=Full" `
+          --blame-hang `
+          --blame-hang-timeout 5m `
+          --results-directory test-results `
+          --logger "trx;LogFileName=quick-csharp-results.trx"
 
     - name: Publish Test Results
       if: always()
