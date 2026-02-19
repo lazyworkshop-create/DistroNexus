@@ -297,10 +297,36 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                                             <Grid Grid.Row="2" Grid.Column="0" 
                                                   Margin="0,5,0,0"
                                                   Visibility="{Binding Status, Converter={StaticResource DownloadingToVisibilityConverter}}">
-                                                <ProgressBar Height="4" 
-                                                           Value="{Binding ProgressPercentage}"
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+
+                                                <ProgressBar Grid.Row="0"
+                                                           Height="4" 
+                                                           Value="{Binding Progress}"
                                                            Maximum="100"
+                                                           VerticalAlignment="Center"
                                                            Background="{DynamicResource ControlFillColorDefaultBrush}"/>
+
+                                                <Grid Grid.Row="1" Margin="0,6,0,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <TextBlock Grid.Column="0"
+                                                               Text="{Binding FormattedProgress}"
+                                                               FontSize="11"
+                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+
+                                                    <TextBlock Grid.Column="1"
+                                                               Text="{Binding FormattedSpeed}"
+                                                               FontSize="11"
+                                                               Foreground="{DynamicResource SystemAccentColorBrush}"
+                                                               HorizontalAlignment="Right"
+                                                               Margin="10,0,0,0"/>
+                                                </Grid>
                                             </Grid>
                                             
                                             <!-- Actions -->

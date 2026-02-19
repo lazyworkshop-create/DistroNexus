@@ -87,6 +87,36 @@ public partial class DistroPackage : ObservableObject
     private bool _isDownloading;
 
     /// <summary>
+    /// Gets or sets the download progress (0-100).
+    /// </summary>
+    [ObservableProperty]
+    private double _downloadProgress;
+
+    /// <summary>
+    /// Gets or sets the formatted download speed string (e.g., "1.5 MB/s").
+    /// </summary>
+    [ObservableProperty]
+    private string _downloadSpeed = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the formatted download status text (e.g., "150 MB / 1.2 GB").
+    /// </summary>
+    [ObservableProperty]
+    private string _downloadStatusText = string.Empty;
+
+    /// <summary>
+    /// Gets or sets whether this package represents a merged same-file variant group.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isSameFileMerged;
+
+    /// <summary>
+    /// Gets or sets the label displayed for merged same-file variant groups.
+    /// </summary>
+    [ObservableProperty]
+    private string _sameFileTagText = string.Empty;
+
+    /// <summary>
     /// Gets or sets additional metadata as key-value pairs.
     /// </summary>
     public Dictionary<string, string> Metadata { get; set; } = new();

@@ -41,6 +41,7 @@ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                       Icon="{ui:SymbolIcon Symbol=ArrowDownload20}"
                       Command="{Binding DownloadAllCommand}"
                       ToolTip="{lex:Loc DownloadAllTooltip}"
+                      AutomationProperties.AutomationId="PackageManagerDownloadAllButton"
                       Margin="0,0,10,0"/>
             <ui:TextBox PlaceholderText="{lex:Loc SearchPlaceholder}" 
                        Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
@@ -90,11 +91,13 @@ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                                         <ui:Card Margin="0,0,0,8" Padding="12">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/> <!-- Icon -->
+                                                    <ColumnDefinition Width="3*"/>   <!-- Info -->
+                                                    <ColumnDefinition Width="2*"/>   <!-- Progress -->
+                                                    <ColumnDefinition Width="Auto"/> <!-- Install -->
+                                                    <ColumnDefinition Width="Auto"/> <!-- Menu -->
+                                                    <ColumnDefinition Width="12"/>   <!-- Spacer -->
+                                                    <ColumnDefinition Width="Auto"/> <!-- Cancel (Rightmost) -->
                                                 </Grid.ColumnDefinitions>
 
                                                 <!-- Icon -->
@@ -109,6 +112,11 @@ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                                                         <TextBlock Text="{Binding Name}" 
                                                                   FontSize="15" 
                                                                   FontWeight="SemiBold"/>
+                                                        <TextBlock Text="{Binding SameFileTagText, StringFormat=' ({0})'}"
+                                                                  FontSize="11"
+                                                                  Margin="6,2,0,0"
+                                                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                                  Visibility="{Binding IsSameFileMerged, Converter={StaticResource BoolToVisibilityConverter}}"/>
                                                         <ui:Badge Content="{lex:Loc BadgeCached}" 
                                                                  Appearance="Success" 
                                                                  Margin="8,0,0,0"
@@ -142,13 +150,55 @@ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                                                 </StackPanel>
 
                                                 <!-- Download/Cancel/Install Actions -->
+                                                <!-- Download Progress (visible when downloading) --><!-- Download/Cancel/Install Actions -->
+                                                <Grid Grid.Column="2" Grid.ColumnSpan="3"
+                                                      Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                    Margin="0,0,0,0"
+                                                    VerticalAlignment="Center">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                    </Grid.RowDefinitions>
+                                                    
+                                                    <!-- Progress Bar -->
+                                                    <ProgressBar Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
+                                                               Value="{Binding DownloadProgress, Mode=OneWay}"
+                                                               Maximum="100"
+                                                               AutomationProperties.AutomationId="PackageItemProgressBar"
+                                                               Height="4"
+                                                               VerticalAlignment="Center"
+                                                               Margin="0,0,0,5"/>
+                                                        
+                                                    <!-- Progress Text -->
+                                                    <TextBlock Grid.Row="1" Grid.Column="0"
+                                                             Text="{Binding DownloadStatusText}"
+                                                             FontSize="11"
+                                                             AutomationProperties.AutomationId="PackageItemStatusText"
+                                                             Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                                             
+                                                    <!-- Speed Text -->
+                                                    <TextBlock Grid.Row="1" Grid.Column="1"
+                                                             Text="{Binding DownloadSpeed}"
+                                                             FontSize="11"
+                                                             AutomationProperties.AutomationId="PackageItemSpeedText"
+                                                             Foreground="{DynamicResource SystemAccentColorBrush}"
+                                                             HorizontalAlignment="Right"
+                                                             Margin="10,0,0,0"/>
+                                                </Grid>
+
                                                 <!-- Download Button (visible when not cached and not downloading) -->
                                                 <ui:Button Grid.Column="2" 
                                                           Content="{lex:Loc ActionDownload}" 
                                                           Icon="{ui:SymbolIcon Symbol=ArrowDownload20}"
                                                           Command="{Binding DataContext.DownloadPackageCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                                           CommandParameter="{Binding}"
+                                                          AutomationProperties.AutomationId="PackageItemDownloadButton"
                                                           Appearance="Primary"
+                                                          HorizontalAlignment="Right"
                                                           Margin="0,0,5,0">
                                                     <ui:Button.Visibility>
                                                         <MultiBinding Converter="{StaticResource MultiConditionVisibilityConverter}">
@@ -159,11 +209,12 @@ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                                                 </ui:Button>
                                                 
                                                 <!-- Cancel Button (visible when downloading) -->
-                                                <ui:Button Grid.Column="2" 
+                                                <ui:Button Grid.Column="6" 
                                                           Content="{lex:Loc ButtonCancel}" 
                                                           Icon="{ui:SymbolIcon Symbol=Dismiss20}"
                                                           Command="{Binding DataContext.CancelDownloadCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                                           CommandParameter="{Binding}"
+                                                          AutomationProperties.AutomationId="PackageItemCancelButton"
                                                           Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVisibilityConverter}}"
                                                           Appearance="Caution"
                                                           Margin="0,0,5,0"/>
@@ -174,6 +225,7 @@ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                                                           Icon="{ui:SymbolIcon Symbol=Add20}"
                                                           Command="{Binding DataContext.InstallCachedPackageCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                                           CommandParameter="{Binding}"
+                                                          AutomationProperties.AutomationId="PackageItemInstallButton"
                                                           Appearance="Success"
                                                           Margin="0,0,5,0">
                                                     <ui:Button.Visibility>

@@ -93,6 +93,12 @@ public partial class PackageManagerViewModel : ObservableObject
             
             foreach (var package in packages)
             {
+                if (IsUiAutomationFakeDownloadEnabled())
+                {
+                    package.IsCached = false;
+                    package.LocalPath = string.Empty;
+                }
+
                 Packages.Add(package);
                 FilteredPackages.Add(package);
             }
@@ -194,6 +200,12 @@ public partial class PackageManagerViewModel : ObservableObject
 
         try
         {
+            if (IsUiAutomationFakeDownloadEnabled())
+            {
+                await SimulateUiAutomationDownloadAsync(package);
+                return;
+            }
+
             _logger.LogInformation("Queuing download for package {PackageName}", package.Name);
 
             // Set downloading state
@@ -230,6 +242,47 @@ public partial class PackageManagerViewModel : ObservableObject
             StatusMessage = Properties.Resources.StatusQueueFailed;
             await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorQueueDownload, ex.Message));
         }
+    }
+
+    private bool IsUiAutomationFakeDownloadEnabled()
+    {
+        var runUiAutomation = Environment.GetEnvironmentVariable("DISTRONEXUS_RUN_UI_AUTOMATION");
+        var fakeDownload = Environment.GetEnvironmentVariable("DISTRONEXUS_UI_AUTOMATION_FAKE_DOWNLOAD");
+
+        return string.Equals(runUiAutomation, "1", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(fakeDownload, "1", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task SimulateUiAutomationDownloadAsync(DistroPackage package)
+    {
+        _logger.LogInformation("Running simulated UI automation download for package {PackageName}", package.Name);
+
+        package.IsDownloading = true;
+        package.DownloadProgress = 5;
+        package.DownloadStatusText = "5 MB / 100 MB";
+        package.DownloadSpeed = "10 MB/s";
+
+        UpdateGroupedPackages();
+
+        await Task.Delay(600);
+        package.DownloadProgress = 35;
+        package.DownloadStatusText = "35 MB / 100 MB";
+        package.DownloadSpeed = "12 MB/s";
+
+        await Task.Delay(600);
+        package.DownloadProgress = 80;
+        package.DownloadStatusText = "80 MB / 100 MB";
+        package.DownloadSpeed = "9 MB/s";
+
+        await Task.Delay(600);
+        package.DownloadProgress = 100;
+        package.DownloadStatusText = "Completed";
+        package.DownloadSpeed = "Completed";
+        package.IsDownloading = false;
+        package.IsCached = true;
+
+        StatusMessage = $"Download completed: {package.Name}";
+        UpdateGroupedPackages();
     }
 
     /// <summary>
@@ -269,11 +322,40 @@ public partial class PackageManagerViewModel : ObservableObject
     {
         try
         {
+            // Subscribe to task property changes
+            void OnTaskPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+            {
+                if (e.PropertyName == nameof(DownloadTask.Progress))
+                {
+                    package.DownloadProgress = downloadTask.Progress;
+                }
+                else if (e.PropertyName == nameof(DownloadTask.FormattedSpeed))
+                {
+                    package.DownloadSpeed = downloadTask.FormattedSpeed;
+                }
+                else if (e.PropertyName == nameof(DownloadTask.FormattedProgress))
+                {
+                    package.DownloadStatusText = downloadTask.FormattedProgress;
+                }
+            }
+
+            downloadTask.PropertyChanged += OnTaskPropertyChanged;
+
+            // Update initial state
+            package.DownloadProgress = downloadTask.Progress;
+            package.DownloadSpeed = downloadTask.FormattedSpeed;
+            package.DownloadStatusText = downloadTask.FormattedProgress;
+
             // Poll the task status
             while (downloadTask.Status == DownloadStatus.Pending || downloadTask.Status == DownloadStatus.Downloading)
             {
+                // Force UI update for these properties just in case the event didn't fire on UI thread
+                // though ObservableObject should handle it
                 await Task.Delay(500);
             }
+
+            // Cleanup subscription
+            downloadTask.PropertyChanged -= OnTaskPropertyChanged;
 
             // Task completed or failed
             switch (downloadTask.Status)
@@ -282,6 +364,8 @@ public partial class PackageManagerViewModel : ObservableObject
                     package.IsDownloading = false;
                     package.IsCached = true;
                     package.LocalPath = downloadTask.DestinationPath;
+                    package.DownloadProgress = 100;
+                    package.DownloadStatusText = "Completed";
                     _logger.LogInformation("Download completed for {PackageName} to {Path}", package.Name, downloadTask.DestinationPath);
                     
                     // Refresh catalog to update cache status for all packages
@@ -399,12 +483,112 @@ public partial class PackageManagerViewModel : ObservableObject
 
         foreach (var group in groups)
         {
+            var mergedPackages = MergeSameFilePackages(group);
+
             GroupedPackages.Add(new PackageGroup
             {
                 Category = group.Key,
-                Packages = new ObservableCollection<DistroPackage>(group.ToList())
+                Packages = new ObservableCollection<DistroPackage>(mergedPackages)
             });
         }
+    }
+
+    private List<DistroPackage> MergeSameFilePackages(IEnumerable<DistroPackage> packages)
+    {
+        return packages
+            .GroupBy(GetSameFileKey)
+            .Select(packageGroup =>
+            {
+                var candidates = packageGroup.ToList();
+                var representative = candidates.FirstOrDefault(p => p.IsDownloading)
+                    ?? candidates.FirstOrDefault(p => p.IsCached)
+                    ?? candidates[0];
+
+                if (candidates.Count > 1)
+                {
+                    representative.IsSameFileMerged = true;
+                    representative.SameFileTagText = BuildSameFileTagText(candidates, representative);
+                }
+                else
+                {
+                    representative.IsSameFileMerged = false;
+                    representative.SameFileTagText = string.Empty;
+                }
+
+                return representative;
+            })
+            .OrderBy(p => p.Name)
+            .ThenBy(p => p.Version)
+            .ToList();
+    }
+
+    private static string BuildSameFileTagText(IReadOnlyCollection<DistroPackage> candidates, DistroPackage representative)
+    {
+        var otherDistroNames = candidates
+            .Where(p => !string.Equals(p.Id, representative.Id, StringComparison.OrdinalIgnoreCase))
+            .Select(GetPackageDisplayName)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (otherDistroNames.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        return string.Join(", ", otherDistroNames);
+    }
+
+    private static string GetPackageDisplayName(DistroPackage package)
+    {
+        if (!string.IsNullOrWhiteSpace(package.Version)
+            && !package.Name.Contains(package.Version, StringComparison.OrdinalIgnoreCase))
+        {
+            return $"{package.Name} {package.Version}";
+        }
+
+        return package.Name;
+    }
+
+    private static string GetSameFileKey(DistroPackage package)
+    {
+        if (!string.IsNullOrWhiteSpace(package.Sha256))
+        {
+            return $"sha256:{package.Sha256.Trim().ToLowerInvariant()}";
+        }
+
+        var fileName = GetFileNameFromPackage(package);
+        if (!string.IsNullOrWhiteSpace(fileName))
+        {
+            return $"file:{fileName.Trim().ToLowerInvariant()}|size:{package.FileSize}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(package.DownloadUrl))
+        {
+            return $"url:{package.DownloadUrl.Trim().ToLowerInvariant()}";
+        }
+
+        return $"id:{package.Id}";
+    }
+
+    private static string GetFileNameFromPackage(DistroPackage package)
+    {
+        if (!string.IsNullOrWhiteSpace(package.LocalPath))
+        {
+            return Path.GetFileName(package.LocalPath);
+        }
+
+        if (!string.IsNullOrWhiteSpace(package.DownloadUrl)
+            && Uri.TryCreate(package.DownloadUrl, UriKind.Absolute, out var uri))
+        {
+            var localFileName = Path.GetFileName(uri.LocalPath);
+            if (!string.IsNullOrWhiteSpace(localFileName))
+            {
+                return localFileName;
+            }
+        }
+
+        return string.Empty;
     }
 
     [RelayCommand]
@@ -426,7 +610,10 @@ public partial class PackageManagerViewModel : ObservableObject
             _logger.LogInformation("Deleting cached package {PackageName}", package.Name);
             
             await _catalogService.DeleteCachedPackageAsync(package.Id);
-            
+
+            // Refresh all package cache states so same-file merged variants stay consistent.
+            await RefreshCatalogCacheStatusAsync();
+
             package.IsCached = false;
             StatusMessage = $"Deleted cached package: {package.Name}";
             
