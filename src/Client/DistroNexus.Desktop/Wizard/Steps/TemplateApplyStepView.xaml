@@ -76,6 +76,9 @@
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
                                         <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsWarning}" Value="True">
+                                                <Setter Property="Foreground" Value="{StaticResource WarningBrush}"/>
+                                            </DataTrigger>
                                             <DataTrigger Binding="{Binding IsError}" Value="True">
                                                 <Setter Property="Foreground" Value="{StaticResource DangerBrush}"/>
                                             </DataTrigger>
@@ -96,8 +99,25 @@
                     <ToggleButton Width="24"
                                   Height="22"
                                   Padding="0"
+                                  Background="Transparent"
+                                  BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                   ToolTip="{lex:Loc TooltipOnlyErrors}"
                                   IsChecked="{Binding ShowOnlyErrors, Mode=TwoWay}">
+                        <ToggleButton.Style>
+                            <Style TargetType="ToggleButton">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsChecked" Value="True">
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}"/>
+                                        <Setter Property="Foreground" Value="{StaticResource WarningBrush}"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ToggleButton.Style>
                         <ui:SymbolIcon Symbol="Warning24"/>
                     </ToggleButton>
                 </Border>

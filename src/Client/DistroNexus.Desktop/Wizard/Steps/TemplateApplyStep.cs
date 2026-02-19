@@ -14,6 +14,26 @@ namespace DistroNexus.Desktop.Wizard.Steps;
 /// </summary>
 public partial class TemplateApplyStep : WizardStepBase
 {
+    private static readonly string[] ErrorKeywords =
+    [
+        "error",
+        "failed",
+        "fatal",
+        "exception",
+        "no such file or directory",
+        "command not found",
+        "permission denied",
+        "traceback"
+    ];
+
+    private static readonly string[] WarningKeywords =
+    [
+        "warning",
+        "warn",
+        "falling back",
+        "deprecated"
+    ];
+
     private readonly ITemplateService _templateService;
     private readonly ILogger _logger;
     private CancellationTokenSource? _applyCts;
@@ -126,7 +146,7 @@ public partial class TemplateApplyStep : WizardStepBase
             var templateResult = await _templateService.ApplyTemplateAsync(
                 Context.SelectedTemplate!.Id,
                 Context.InstanceName,
-                null,
+                Context.TemplateVariableSelections.Count > 0 ? Context.TemplateVariableSelections : null,
                 tplProgress,
                 _applyCts.Token);
 
@@ -172,13 +192,72 @@ public partial class TemplateApplyStep : WizardStepBase
             return;
         }
 
-        var isError = text.StartsWith("[ERR]", StringComparison.OrdinalIgnoreCase);
-        var message = isError ? text[5..].TrimStart() : text;
+        var fromStandardError = false;
+        if (text.StartsWith("[STDERR]", StringComparison.OrdinalIgnoreCase))
+        {
+            fromStandardError = true;
+            text = text[8..].TrimStart();
+        }
+
+        var severity = ClassifyOutputSeverity(text, fromStandardError);
+        var message = TrimSeverityPrefix(text);
         var header = string.IsNullOrWhiteSpace(scriptName) ? "Script" : scriptName;
 
-        TemplateOutputLines.Add(new TemplateOutputLine($"[{header}] {message}", isError));
+        TemplateOutputLines.Add(new TemplateOutputLine($"[{header}] {message}", severity));
         HasTemplateOutput = true;
         RebuildFilteredOutput();
+    }
+
+    private static TemplateOutputSeverity ClassifyOutputSeverity(string message, bool fromStandardError)
+    {
+        if (message.StartsWith("[ERR]", StringComparison.OrdinalIgnoreCase) ||
+            message.StartsWith("[ERROR]", StringComparison.OrdinalIgnoreCase))
+        {
+            return TemplateOutputSeverity.Error;
+        }
+
+        if (message.StartsWith("[WARN]", StringComparison.OrdinalIgnoreCase) ||
+            message.StartsWith("[WARNING]", StringComparison.OrdinalIgnoreCase))
+        {
+            return TemplateOutputSeverity.Warning;
+        }
+
+        if (ErrorKeywords.Any(keyword => message.Contains(keyword, StringComparison.OrdinalIgnoreCase)))
+        {
+            return TemplateOutputSeverity.Error;
+        }
+
+        if (WarningKeywords.Any(keyword => message.Contains(keyword, StringComparison.OrdinalIgnoreCase)))
+        {
+            return TemplateOutputSeverity.Warning;
+        }
+
+        return TemplateOutputSeverity.Info;
+    }
+
+    private static string TrimSeverityPrefix(string message)
+    {
+        if (message.StartsWith("[ERR]", StringComparison.OrdinalIgnoreCase))
+        {
+            return message[5..].TrimStart();
+        }
+
+        if (message.StartsWith("[ERROR]", StringComparison.OrdinalIgnoreCase))
+        {
+            return message[7..].TrimStart();
+        }
+
+        if (message.StartsWith("[WARN]", StringComparison.OrdinalIgnoreCase))
+        {
+            return message[6..].TrimStart();
+        }
+
+        if (message.StartsWith("[WARNING]", StringComparison.OrdinalIgnoreCase))
+        {
+            return message[9..].TrimStart();
+        }
+
+        return message;
     }
 
     private void RebuildFilteredOutput()
@@ -219,4 +298,16 @@ public partial class TemplateApplyStep : WizardStepBase
     }
 }
 
-public sealed record TemplateOutputLine(string Text, bool IsError);
+public enum TemplateOutputSeverity
+{
+    Info,
+    Warning,
+    Error
+}
+
+public sealed record TemplateOutputLine(string Text, TemplateOutputSeverity Severity)
+{
+    public bool IsWarning => Severity == TemplateOutputSeverity.Warning;
+
+    public bool IsError => Severity == TemplateOutputSeverity.Error;
+}
