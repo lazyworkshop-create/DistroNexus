@@ -903,7 +903,10 @@ public partial class PackageManagerViewModel : ObservableObject
             // Pre-select the distribution in the workflow context
             if (wizardWindow.DataContext is InstallWizardWorkflowViewModel wizardVm)
             {
-                wizardVm.Workflow.Context.SelectedDistribution = package;
+                wizardVm.SetStartupRequest(new InstallWizardStartupRequest
+                {
+                    SelectedDistributionId = package.Id
+                });
             }
             
             _logger.LogInformation("Opening install wizard for package: {PackageId}", package.Id);

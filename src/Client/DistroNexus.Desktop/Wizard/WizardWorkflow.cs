@@ -24,7 +24,7 @@ public partial class WizardWorkflow : ObservableObject
     /// Gets the steps that should be shown in the step indicator.
     /// </summary>
     public IReadOnlyList<IWizardStep> IndicatorSteps => 
-        _steps.Where(s => s.ShowInStepIndicator).ToList();
+        _steps.Where(s => s.ShowInStepIndicator && !ShouldSkipStep(s)).ToList();
 
     /// <summary>
     /// Gets the total number of indicator steps.
@@ -63,15 +63,9 @@ public partial class WizardWorkflow : ObservableObject
     {
         step.Context = Context;
         step.Workflow = this;
-        
-        // Calculate step number for indicator steps
-        int indicatorIndex = _steps.Count(s => s.ShowInStepIndicator);
-        if (step.ShowInStepIndicator)
-        {
-            step.StepNumber = indicatorIndex + 1;
-        }
-        
+
         _steps.Add(step);
+        RefreshStepNumbers();
         OnPropertyChanged(nameof(Steps));
         OnPropertyChanged(nameof(IndicatorSteps));
         OnPropertyChanged(nameof(TotalIndicatorSteps));
@@ -89,6 +83,17 @@ public partial class WizardWorkflow : ObservableObject
             startIndex = 0;
 
         _currentIndex = startIndex;
+
+        while (_currentIndex < _steps.Count && ShouldSkipStep(_steps[_currentIndex]))
+        {
+            _currentIndex++;
+        }
+
+        if (_currentIndex >= _steps.Count)
+        {
+            return;
+        }
+
         await NavigateToCurrentStepAsync();
     }
 
@@ -106,6 +111,17 @@ public partial class WizardWorkflow : ObservableObject
         }
 
         _currentIndex--;
+
+        while (_currentIndex >= 0 && (ShouldSkipStep(_steps[_currentIndex]) || ShouldSkipForQuickInstall(_steps[_currentIndex])))
+        {
+            _currentIndex--;
+        }
+
+        if (_currentIndex < 0)
+        {
+            _currentIndex = 0;
+        }
+
         await NavigateToCurrentStepAsync();
     }
 
@@ -131,34 +147,36 @@ public partial class WizardWorkflow : ObservableObject
         await CurrentStep.OnExitAsync();
 
         _currentIndex++;
-        
-        // Skip certain steps in quick install mode
-        if (Context.UseQuickInstall)
+
+        while (_currentIndex < _steps.Count)
         {
-            while (_currentIndex < _steps.Count)
+            var step = _steps[_currentIndex];
+
+            if (Context.UseQuickInstall && ShouldSkipForQuickInstall(step))
             {
-                var step = _steps[_currentIndex];
-                
-                // Skip InstallPath, UserConfiguration, and Review steps in quick mode
-                // But always show SelectDistribution, Progress, and Result steps
-                if (step.StepId == "install-path" || 
-                    step.StepId == "user-configuration" || 
-                    step.StepId == "review")
+                if (step is WizardStepBase wizardStep)
                 {
-                    // Apply defaults for skipped steps
-                    if (step is WizardStepBase wizardStep)
-                    {
-                        await wizardStep.ApplyQuickInstallDefaultsAsync();
-                    }
-                    _currentIndex++;
+                    await wizardStep.ApplyQuickInstallDefaultsAsync();
                 }
-                else
-                {
-                    break;
-                }
+
+                _currentIndex++;
+                continue;
             }
+
+            if (ShouldSkipStep(step))
+            {
+                _currentIndex++;
+                continue;
+            }
+
+            break;
         }
-        
+
+        if (_currentIndex >= _steps.Count)
+        {
+            return;
+        }
+
         await NavigateToCurrentStepAsync();
     }
 
@@ -209,15 +227,22 @@ public partial class WizardWorkflow : ObservableObject
         if (_currentIndex < 0 || _currentIndex >= _steps.Count)
             return;
 
+        RefreshStepNumbers();
+
         CurrentStep = _steps[_currentIndex];
-        CurrentStepNumber = CurrentStep.StepNumber;
+        CurrentStepNumber = CurrentStep.ShowInStepIndicator ? CurrentStep.StepNumber : 0;
         CurrentStepTitle = CurrentStep.Title;
 
         UpdateNavigationState();
 
         await CurrentStep.OnEnterAsync();
 
+        RefreshStepNumbers();
+
         OnPropertyChanged(nameof(CurrentStep));
+        OnPropertyChanged(nameof(IndicatorSteps));
+        OnPropertyChanged(nameof(TotalIndicatorSteps));
+        OnPropertyChanged(nameof(CurrentStepNumber));
     }
 
     private void UpdateNavigationState()
@@ -238,6 +263,34 @@ public partial class WizardWorkflow : ObservableObject
         {
             // Trigger property change for buttons
             OnPropertyChanged(nameof(CurrentStep));
+        }
+    }
+
+    private bool ShouldSkipForQuickInstall(IWizardStep step)
+    {
+        return step.StepId == "install-path" ||
+               step.StepId == "user-configuration" ||
+               step.StepId == "review";
+    }
+
+    private bool ShouldSkipStep(IWizardStep step)
+    {
+        return step is WizardStepBase wizardStep && wizardStep.ShouldSkip(Context);
+    }
+
+    private void RefreshStepNumbers()
+    {
+        var index = 1;
+        foreach (var step in _steps)
+        {
+            if (step.ShowInStepIndicator && !ShouldSkipStep(step))
+            {
+                step.StepNumber = index++;
+            }
+            else
+            {
+                step.StepNumber = 0;
+            }
         }
     }
 }

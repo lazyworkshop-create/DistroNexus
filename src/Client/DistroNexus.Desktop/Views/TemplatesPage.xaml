@@ -124,6 +124,7 @@
                                                Icon="{ui:SymbolIcon Symbol=Add20}"
                                                Command="{Binding DataContext.InstallNewInstanceCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                                CommandParameter="{Binding}"
+                                               AutomationProperties.AutomationId="TemplateInstallButton"
                                                Appearance="Success"
                                                Margin="0,0,5,0"/>
 

@@ -18,8 +18,8 @@ public partial class SelectTemplateStep : WizardStepBase
     private List<Template> _allTemplates = [];
 
     public override string StepId => "select-template";
-    public override string Title => "Select Template"; 
-    public override string Description => "Choose a development environment template (Optional)";
+    public override string Title => Properties.Resources.WizardStepSelectTemplate;
+    public override string Description => Properties.Resources.WizardStepSelectTemplateDescription;
 
     [ObservableProperty]
     private ObservableCollection<Template> _templates = new();
@@ -43,10 +43,7 @@ public partial class SelectTemplateStep : WizardStepBase
     private ObservableCollection<string> _scenarioTagOptions = new(["All"]);
 
     [ObservableProperty]
-    private bool _showAdvancedOptions;
-
-    [ObservableProperty]
-    private bool _skipTemplate;
+    private bool _useTemplate;
 
     public Template? SelectedTemplate
     {
@@ -58,7 +55,7 @@ public partial class SelectTemplateStep : WizardStepBase
                 Context.SelectedTemplate = value;
                 if (value != null)
                 {
-                    SkipTemplate = false;
+                    UseTemplate = true;
                     Context.ApplyTemplateAfterInstall = true;
                 }
 
@@ -82,18 +79,19 @@ public partial class SelectTemplateStep : WizardStepBase
         ApplyFilters();
     }
 
-    partial void OnSkipTemplateChanged(bool value)
+    partial void OnUseTemplateChanged(bool value)
     {
         if (Context == null)
         {
             return;
         }
 
-        Context.ApplyTemplateAfterInstall = !value;
+        Context.ApplyTemplateAfterInstall = value;
 
-        if (value)
+        if (!value)
         {
             Context.SelectedTemplate = null;
+            Context.TemplateVariableSelections = new Dictionary<string, string>();
             OnPropertyChanged(nameof(SelectedTemplate));
         }
     }
@@ -113,7 +111,18 @@ public partial class SelectTemplateStep : WizardStepBase
     {
         if (Context != null)
         {
-            SkipTemplate = !Context.ApplyTemplateAfterInstall;
+            UseTemplate = Context.ApplyTemplateAfterInstall;
+            if (Context.SelectedTemplate != null && !IsTemplateCompatible(Context.SelectedTemplate))
+            {
+                ErrorMessage = string.Format(
+                    Properties.Resources.WizardTemplateCompatibilityWarningFormat,
+                    Context.SelectedTemplate.Name,
+                    Context.SelectedDistribution?.Name ?? Properties.Resources.LabelDistributionUnknownValue);
+            }
+            else
+            {
+                ErrorMessage = string.Empty;
+            }
         }
 
         if (Templates.Count == 0)
@@ -133,23 +142,27 @@ public partial class SelectTemplateStep : WizardStepBase
             return false;
         }
 
-        if (SkipTemplate)
+        if (!UseTemplate)
         {
             ErrorMessage = string.Empty;
             Context.ApplyTemplateAfterInstall = false;
             Context.SelectedTemplate = null;
+            Context.TemplateVariableSelections = new Dictionary<string, string>();
             return true;
         }
 
         if (SelectedTemplate == null)
         {
-            ErrorMessage = "Select a template or enable skip template.";
+            ErrorMessage = Properties.Resources.ErrorTemplateSelectionRequired;
             return false;
         }
 
         if (!IsTemplateCompatible(SelectedTemplate))
         {
-            ErrorMessage = "Selected template is not compatible with the selected distribution.";
+            ErrorMessage = string.Format(
+                Properties.Resources.WizardTemplateCompatibilityWarningFormat,
+                SelectedTemplate.Name,
+                Context.SelectedDistribution?.Name ?? Properties.Resources.LabelDistributionUnknownValue);
             return false;
         }
 
@@ -162,10 +175,11 @@ public partial class SelectTemplateStep : WizardStepBase
     {
         if (Context != null)
         {
-            Context.ApplyTemplateAfterInstall = !SkipTemplate;
-            if (SkipTemplate)
+            Context.ApplyTemplateAfterInstall = UseTemplate;
+            if (!UseTemplate)
             {
                 Context.SelectedTemplate = null;
+                Context.TemplateVariableSelections = new Dictionary<string, string>();
             }
         }
 
@@ -201,17 +215,12 @@ public partial class SelectTemplateStep : WizardStepBase
         catch(Exception ex) 
         {
             _logger.LogError(ex, "Failed to load templates");
+            ErrorMessage = Properties.Resources.ErrorTemplateLoadFailed;
         }
         finally
         {
             IsLoading = false;
         }
-    }
-
-    [RelayCommand]
-    private void SkipTemplateSelection()
-    {
-        SkipTemplate = true;
     }
 
     private void ApplyFilters()
@@ -260,5 +269,27 @@ public partial class SelectTemplateStep : WizardStepBase
 
         return template.CompatibleDistros.Any(compat =>
             candidates.Any(c => c.Contains(compat, StringComparison.OrdinalIgnoreCase) || compat.Contains(c, StringComparison.OrdinalIgnoreCase)));
+    }
+}
+
+public partial class TemplateVersionSelectionItem : ObservableObject
+{
+    public string Key { get; }
+    public string Label { get; }
+    public string Description { get; }
+    public bool IsRequired { get; }
+    public ObservableCollection<TemplateOptionValue> Options { get; }
+
+    [ObservableProperty]
+    private string? _selectedValue;
+
+    public TemplateVersionSelectionItem(TemplateVersionOption option, string? selectedValue)
+    {
+        Key = option.Key;
+        Label = option.Label;
+        Description = option.Description;
+        IsRequired = option.Required;
+        Options = new ObservableCollection<TemplateOptionValue>(option.Options);
+        SelectedValue = selectedValue;
     }
 }

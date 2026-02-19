@@ -32,6 +32,37 @@ public partial class ReviewStep : WizardStepBase
         ? string.Format(Properties.Resources.WslVersionFormat, Context.WslVersion)
         : string.Empty;
 
+    public bool IsTemplateEnabled => Context?.ApplyTemplateAfterInstall == true && Context.SelectedTemplate != null;
+
+    public string TemplateNameDisplay =>
+        IsTemplateEnabled
+            ? Context!.SelectedTemplate!.Name
+            : Properties.Resources.LabelNoTemplateSelected;
+
+    public string TemplateCategoryDisplay =>
+        IsTemplateEnabled
+            ? string.IsNullOrWhiteSpace(Context!.SelectedTemplate!.Category)
+                ? Properties.Resources.LabelUnknownValue
+                : Context.SelectedTemplate.Category
+            : Properties.Resources.LabelNoTemplateSelected;
+
+    public string TemplateDescriptorDisplay
+    {
+        get
+        {
+            if (!IsTemplateEnabled)
+            {
+                return Properties.Resources.LabelNoTemplateSelected;
+            }
+
+            var template = Context!.SelectedTemplate!;
+            var packageCount = template.Packages?.Count ?? 0;
+            var scriptCount = template.Scripts?.Count ?? 0;
+
+            return string.Format(Properties.Resources.TemplateSummaryDescriptorFormat, packageCount, scriptCount);
+        }
+    }
+
     public ReviewStep()
     {
     }
@@ -65,9 +96,20 @@ public partial class ReviewStep : WizardStepBase
 
     public override Task OnEnterAsync()
     {
+        if (Context != null)
+        {
+            Context.SetAsDefault = false;
+            Context.LaunchAfterInstall = false;
+        }
+
         // Refresh computed properties
         OnPropertyChanged(nameof(FullInstallPath));
         OnPropertyChanged(nameof(DisplayUsername));
+        OnPropertyChanged(nameof(WslVersionDisplayText));
+        OnPropertyChanged(nameof(IsTemplateEnabled));
+        OnPropertyChanged(nameof(TemplateNameDisplay));
+        OnPropertyChanged(nameof(TemplateCategoryDisplay));
+        OnPropertyChanged(nameof(TemplateDescriptorDisplay));
         return Task.CompletedTask;
     }
 
@@ -80,9 +122,9 @@ public partial class ReviewStep : WizardStepBase
         if (Context == null)
             return Task.CompletedTask;
 
-        // Set default options for quick install
+        // Keep post-install options disabled
         Context.SetAsDefault = false;
-        Context.LaunchAfterInstall = true;
+        Context.LaunchAfterInstall = false;
         
         return Task.CompletedTask;
     }

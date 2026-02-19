@@ -116,6 +116,24 @@ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                 </Style>
             </ContentControl.Style>
         </ContentControl>
+
+        <!-- Non-blocking Warning Message -->
+        <Border Grid.Row="1"
+                VerticalAlignment="Top"
+                Margin="0,0,0,10"
+                Padding="10"
+                CornerRadius="4"
+                Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                Visibility="{Binding Workflow.Context.StartupWarningMessage, Converter={StaticResource StringToVisibilityConverter}}">
+            <StackPanel Orientation="Horizontal">
+                <ui:SymbolIcon Symbol="Warning20"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                               Margin="0,0,8,0"/>
+                <TextBlock Text="{Binding Workflow.Context.StartupWarningMessage}"
+                          Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                          TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
         
         <!-- Error Message -->
         <Border Grid.Row="1" 

@@ -12,16 +12,15 @@ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              d:DesignHeight="400" d:DesignWidth="600"
              d:DataContext="{d:DesignInstance Type=local:ReviewStep}">
     
-    <StackPanel>
-        <!-- Installation Summary Card -->
-        <ui:Card Padding="20" Margin="0,0,0,20">
+    <Grid>
+        <ui:Card Padding="16">
             <StackPanel>
                 <TextBlock Text="{lex:Loc InstallationSummaryTitle}"
                           FontSize="16"
                           FontWeight="SemiBold"
-                          Margin="0,0,0,15"/>
-                
-                <Grid>
+                          Margin="0,0,0,12"/>
+
+                <Grid Margin="0,0,0,12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="140"/>
                         <ColumnDefinition Width="*"/>
@@ -32,66 +31,83 @@ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-                    
-                    <!-- Distribution -->
-                    <TextBlock Grid.Row="0" Grid.Column="0" 
-                              Text="{lex:Loc LabelDistribution}"
-                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                              Margin="0,0,0,8"/>
-                    <TextBlock Grid.Row="0" Grid.Column="1" 
-                              Text="{Binding Context.SelectedDistribution.Name}"
-                              FontWeight="SemiBold"
-                              Margin="0,0,0,8"/>
-                    
-                    <!-- Instance Name -->
-                    <TextBlock Grid.Row="1" Grid.Column="0" 
-                              Text="{lex:Loc LabelInstanceName}"
-                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                              Margin="0,0,0,8"/>
-                    <TextBlock Grid.Row="1" Grid.Column="1" 
-                              Text="{Binding Context.InstanceName}"
-                              FontWeight="SemiBold"
-                              Margin="0,0,0,8"/>
-                    
-                    <!-- Install Path -->
-                    <TextBlock Grid.Row="2" Grid.Column="0" 
-                              Text="{lex:Loc LabelInstallPath}"
-                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                              Margin="0,0,0,8"/>
-                    <TextBlock Grid.Row="2" Grid.Column="1" 
-                              Text="{Binding FullInstallPath}"
-                              FontWeight="SemiBold"
-                              TextTrimming="CharacterEllipsis"
-                              Margin="0,0,0,8"/>
-                    
-                    <!-- Username -->
-                    <TextBlock Grid.Row="3" Grid.Column="0" 
-                              Text="{lex:Loc LabelUsername}"
-                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                              Margin="0,0,0,8"/>
-                    <TextBlock Grid.Row="3" Grid.Column="1" 
-                              Text="{Binding DisplayUsername}"
-                              FontWeight="SemiBold"
-                              Margin="0,0,0,8"/>
-                    
-                    <!-- WSL Version -->
-                    <TextBlock Grid.Row="4" Grid.Column="0" 
-                              Text="{lex:Loc LabelWslVersion}"
-                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                    <TextBlock Grid.Row="4" Grid.Column="1" 
+
+                    <TextBlock Grid.Row="0" Grid.Column="0"
+                               Text="{lex:Loc LabelDistribution}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Margin="0,0,0,6"/>
+                    <TextBlock Grid.Row="0" Grid.Column="1"
+                               Text="{Binding Context.SelectedDistribution.Name}"
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,6"/>
+
+                    <TextBlock Grid.Row="1" Grid.Column="0"
+                               Text="{lex:Loc LabelInstanceName}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Margin="0,0,0,6"/>
+                    <TextBlock Grid.Row="1" Grid.Column="1"
+                               Text="{Binding Context.InstanceName}"
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,6"/>
+
+                    <TextBlock Grid.Row="2" Grid.Column="0"
+                               Text="{lex:Loc LabelInstallPath}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Margin="0,0,0,6"/>
+                    <TextBlock Grid.Row="2" Grid.Column="1"
+                               Text="{Binding FullInstallPath}"
+                               FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis"
+                               Margin="0,0,0,6"/>
+
+                    <TextBlock Grid.Row="3" Grid.Column="0"
+                               Text="{lex:Loc LabelUsername}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Margin="0,0,0,6"/>
+                    <TextBlock Grid.Row="3" Grid.Column="1"
+                               Text="{Binding DisplayUsername}"
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,6"/>
+
+                    <TextBlock Grid.Row="4" Grid.Column="0"
+                               Text="{lex:Loc LabelWslVersion}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Margin="0,0,0,6"/>
+                    <TextBlock Grid.Row="4" Grid.Column="1"
                                Text="{Binding WslVersionDisplayText}"
-                              FontWeight="SemiBold"/>
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,6"/>
+
+                    <TextBlock Grid.Row="5" Grid.Column="0"
+                               Text="{lex:Loc LabelTemplateName}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Margin="0,0,0,6"/>
+                    <TextBlock Grid.Row="5" Grid.Column="1"
+                               Text="{Binding TemplateNameDisplay}"
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,6"/>
+
+                    <TextBlock Grid.Row="6" Grid.Column="0"
+                               Text="{lex:Loc LabelTemplateCategory}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Margin="0,0,0,6"/>
+                    <TextBlock Grid.Row="6" Grid.Column="1"
+                               Text="{Binding TemplateCategoryDisplay}"
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,6"/>
+
+                    <TextBlock Grid.Row="7" Grid.Column="0"
+                               Text="{lex:Loc LabelTemplateDescriptor}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                    <TextBlock Grid.Row="7" Grid.Column="1"
+                               Text="{Binding TemplateDescriptorDisplay}"
+                               FontWeight="SemiBold"/>
                 </Grid>
             </StackPanel>
         </ui:Card>
-        
-        <!-- Options -->
-        <ui:ToggleSwitch Content="{lex:Loc OptionSetDefault}"
-                        IsChecked="{Binding Context.SetAsDefault, Mode=TwoWay}"
-                        Margin="0,0,0,10"/>
-        
-        <ui:ToggleSwitch Content="{lex:Loc OptionLaunchAfter}"
-                        IsChecked="{Binding Context.LaunchAfterInstall, Mode=TwoWay}"/>
-    </StackPanel>
+    </Grid>
 </UserControl>

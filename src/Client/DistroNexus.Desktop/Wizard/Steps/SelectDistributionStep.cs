@@ -13,6 +13,7 @@ namespace DistroNexus.Desktop.Wizard.Steps;
 public partial class SelectDistributionStep : WizardStepBase
 {
     private readonly ICatalogService _catalogService;
+    private readonly ITemplateService _templateService;
     private readonly ILogger _logger;
 
     public override string StepId => "select-distribution";
@@ -25,9 +26,10 @@ public partial class SelectDistributionStep : WizardStepBase
     [ObservableProperty]
     private bool _isLoading;
 
-    public SelectDistributionStep(ICatalogService catalogService, ILogger logger)
+    public SelectDistributionStep(ICatalogService catalogService, ITemplateService templateService, ILogger logger)
     {
         _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
+        _templateService = templateService ?? throw new ArgumentNullException(nameof(templateService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -99,14 +101,38 @@ public partial class SelectDistributionStep : WizardStepBase
         return true;
     }
 
-    public override Task OnExitAsync()
+    public override async Task OnExitAsync()
     {
         // Auto-generate instance name if not set
         if (Context != null && string.IsNullOrEmpty(Context.InstanceName) && Context.SelectedDistribution != null)
         {
             Context.InstanceName = Context.SelectedDistribution.Id;
         }
+
+        if (Context?.SelectedTemplate != null && Context.SelectedDistribution != null)
+        {
+            var distributionName = Context.SelectedDistribution.Name;
+
+            try
+            {
+                var isCompatible = await _templateService.IsTemplateCompatibleAsync(Context.SelectedTemplate.Id, distributionName);
+                if (!isCompatible)
+                {
+                    Context.StartupWarningMessage = string.Format(
+                        Properties.Resources.WizardTemplateCompatibilityWarningFormat,
+                        Context.SelectedTemplate.Name,
+                        Context.SelectedDistribution.Name);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Failed to check template compatibility for template {TemplateId} and distribution {DistributionName}",
+                    Context.SelectedTemplate.Id,
+                    distributionName);
+            }
+        }
         
-        return Task.CompletedTask;
+        return;
     }
 }

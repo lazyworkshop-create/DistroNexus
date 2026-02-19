@@ -40,7 +40,7 @@ public partial class WizardContext : ObservableObject
     private string _confirmPassword = string.Empty;
 
     [ObservableProperty]
-    private bool _createUser = true;
+    private bool _createUser;
 
     [ObservableProperty]
     private int _wslVersion = 2;
@@ -50,14 +50,14 @@ public partial class WizardContext : ObservableObject
     private Template? _selectedTemplate;
 
     [ObservableProperty]
-    private bool _applyTemplateAfterInstall = true;
+    private bool _applyTemplateAfterInstall;
 
     // Step 4: Review Options
     [ObservableProperty]
     private bool _setAsDefault;
 
     [ObservableProperty]
-    private bool _launchAfterInstall = true;
+    private bool _launchAfterInstall;
 
     // Installation Progress
     [ObservableProperty]
@@ -84,6 +84,12 @@ public partial class WizardContext : ObservableObject
 
     [ObservableProperty]
     private string _logFilePath = string.Empty;
+
+    [ObservableProperty]
+    private string _startupWarningMessage = string.Empty;
+
+    [ObservableProperty]
+    private Dictionary<string, string> _templateVariableSelections = new();
 
     /// <summary>
     /// Creates InstallOptions from the current context.
@@ -117,12 +123,12 @@ public partial class WizardContext : ObservableObject
         Username = string.Empty;
         Password = string.Empty;
         ConfirmPassword = string.Empty;
-        CreateUser = true;
+        CreateUser = false;
         WslVersion = 2;
         SelectedTemplate = null;
-        ApplyTemplateAfterInstall = true;
+        ApplyTemplateAfterInstall = false;
         SetAsDefault = false;
-        LaunchAfterInstall = true;
+        LaunchAfterInstall = false;
         InstallProgress = 0;
         InstallStatusMessage = string.Empty;
         IsInstalling = false;
@@ -131,5 +137,7 @@ public partial class WizardContext : ObservableObject
         ErrorMessage = string.Empty;
         ResultMessage = string.Empty;
         LogFilePath = string.Empty;
+        StartupWarningMessage = string.Empty;
+        TemplateVariableSelections = new Dictionary<string, string>();
     }
 }

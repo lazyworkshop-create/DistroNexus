@@ -88,7 +88,7 @@ public class SelectTemplateStepTests
     }
 
     [Fact]
-    public void Validate_RequiresSelectionOrSkip()
+    public void Validate_RequiresSelectionWhenUseTemplateEnabled()
     {
         var step = new SelectTemplateStep(_mockTemplateService.Object, _mockLogger.Object);
         step.Context = new WizardContext
@@ -96,6 +96,8 @@ public class SelectTemplateStepTests
             ApplyTemplateAfterInstall = true,
             SelectedDistribution = new DistroPackage { Name = "Ubuntu" }
         };
+
+        step.UseTemplate = true;
 
         var isValid = step.Validate();
 
@@ -104,7 +106,7 @@ public class SelectTemplateStepTests
     }
 
     [Fact]
-    public void Validate_SucceedsWhenSkipEnabled()
+    public void Validate_SucceedsWhenUseTemplateDisabled()
     {
         var step = new SelectTemplateStep(_mockTemplateService.Object, _mockLogger.Object);
         step.Context = new WizardContext
@@ -113,13 +115,40 @@ public class SelectTemplateStepTests
             SelectedDistribution = new DistroPackage { Name = "Ubuntu" }
         };
 
-        step.SkipTemplate = true;
+        step.UseTemplate = false;
 
         var isValid = step.Validate();
 
         Assert.True(isValid);
         Assert.False(step.Context.ApplyTemplateAfterInstall);
         Assert.Null(step.Context.SelectedTemplate);
+    }
+
+    [Fact]
+    public void Validate_DoesNotAssignTemplateVariablesInSelectionStep()
+    {
+        var step = new SelectTemplateStep(_mockTemplateService.Object, _mockLogger.Object);
+        step.Context = new WizardContext
+        {
+            ApplyTemplateAfterInstall = true,
+            SelectedDistribution = new DistroPackage { Name = "Ubuntu" },
+            TemplateVariableSelections = new Dictionary<string, string>
+            {
+                ["node_version"] = "20"
+            }
+        };
+
+        step.SelectedTemplate = new Template
+        {
+            Id = "tmpl",
+            Name = "Template"
+        };
+
+        var isValid = step.Validate();
+
+        Assert.True(isValid);
+        Assert.True(step.Context.TemplateVariableSelections.ContainsKey("node_version"));
+        Assert.Equal("20", step.Context.TemplateVariableSelections["node_version"]);
     }
 
     [Fact]

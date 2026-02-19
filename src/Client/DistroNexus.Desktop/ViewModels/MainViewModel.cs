@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
+using DistroNexus.Desktop.Wizard;
 using DistroNexus.Desktop.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -316,7 +317,7 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ShowInstallWizard()
+    private void ShowInstallWizard(InstallWizardStartupRequest? startupRequest)
     {
         StatusMessage = Properties.Resources.StatusOpeningWizard;
         _logger.LogInformation("Opening install wizard");
@@ -324,6 +325,11 @@ public partial class MainViewModel : ObservableObject
         // Use the new workflow-based wizard dialog
         var dialog = _serviceProvider.GetRequiredService<InstallWizardDialogNew>();
         dialog.Owner = Application.Current.MainWindow;
+
+        if (dialog.DataContext is InstallWizardWorkflowViewModel wizardVm)
+        {
+            wizardVm.SetStartupRequest(startupRequest);
+        }
         
         var result = dialog.ShowDialog();
         

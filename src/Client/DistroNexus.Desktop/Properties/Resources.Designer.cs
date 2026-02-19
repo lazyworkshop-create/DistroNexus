@@ -2044,10 +2044,17 @@ namespace DistroNexus.Desktop.Properties {
         public static string WizardStepSelectDistribution { get { return ResourceManager.GetString("WizardStepSelectDistribution", resourceCulture); } }
         public static string WizardStepChooseInstallPath { get { return ResourceManager.GetString("WizardStepChooseInstallPath", resourceCulture); } }
         public static string WizardStepConfigureUser { get { return ResourceManager.GetString("WizardStepConfigureUser", resourceCulture); } }
+        public static string WizardStepSelectTemplate { get { return ResourceManager.GetString("WizardStepSelectTemplate", resourceCulture); } }
+        public static string WizardStepSelectTemplateDescription { get { return ResourceManager.GetString("WizardStepSelectTemplateDescription", resourceCulture); } }
         public static string WizardStepInstalling { get { return ResourceManager.GetString("WizardStepInstalling", resourceCulture); } }
         public static string ErrorSelectDistribution { get { return ResourceManager.GetString("ErrorSelectDistribution", resourceCulture); } }
         public static string ErrorInvalidDownloadUrl { get { return ResourceManager.GetString("ErrorInvalidDownloadUrl", resourceCulture); } }
         public static string ErrorInvalidUrlFormat { get { return ResourceManager.GetString("ErrorInvalidUrlFormat", resourceCulture); } }
+        public static string ErrorTemplateSelectionRequired { get { return ResourceManager.GetString("ErrorTemplateSelectionRequired", resourceCulture); } }
+        public static string ErrorTemplateLoadFailed { get { return ResourceManager.GetString("ErrorTemplateLoadFailed", resourceCulture); } }
+        public static string WizardTemplateCompatibilityWarningFormat { get { return ResourceManager.GetString("WizardTemplateCompatibilityWarningFormat", resourceCulture); } }
+        public static string WizardStartupTemplateNotFoundWarningFormat { get { return ResourceManager.GetString("WizardStartupTemplateNotFoundWarningFormat", resourceCulture); } }
+        public static string WizardStartupTemplateLoadFailedWarningFormat { get { return ResourceManager.GetString("WizardStartupTemplateLoadFailedWarningFormat", resourceCulture); } }
         public static string ErrorInstanceNameRequired { get { return ResourceManager.GetString("ErrorInstanceNameRequired", resourceCulture); } }
         public static string ErrorInvalidInstanceName { get { return ResourceManager.GetString("ErrorInvalidInstanceName", resourceCulture); } }
         public static string ErrorInstanceAlreadyExists { get { return ResourceManager.GetString("ErrorInstanceAlreadyExists", resourceCulture); } }
@@ -2064,6 +2071,23 @@ namespace DistroNexus.Desktop.Properties {
         public static string ErrorVerificationFailed { get { return ResourceManager.GetString("ErrorVerificationFailed", resourceCulture); } }
         public static string ErrorInstanceExistsFormat { get { return ResourceManager.GetString("ErrorInstanceExistsFormat", resourceCulture); } }
         public static string ErrorInvalidPathOrName { get { return ResourceManager.GetString("ErrorInvalidPathOrName", resourceCulture); } }
+        public static string LabelTemplateName { get { return ResourceManager.GetString("LabelTemplateName", resourceCulture); } }
+        public static string LabelTemplateCategory { get { return ResourceManager.GetString("LabelTemplateCategory", resourceCulture); } }
+        public static string LabelTemplateDescriptor { get { return ResourceManager.GetString("LabelTemplateDescriptor", resourceCulture); } }
+        public static string LabelNoTemplateSelected { get { return ResourceManager.GetString("LabelNoTemplateSelected", resourceCulture); } }
+        public static string LabelUnknownValue { get { return ResourceManager.GetString("LabelUnknownValue", resourceCulture); } }
+        public static string LabelDistributionUnknownValue { get { return ResourceManager.GetString("LabelDistributionUnknownValue", resourceCulture); } }
+        public static string TemplateSummaryDescriptorFormat { get { return ResourceManager.GetString("TemplateSummaryDescriptorFormat", resourceCulture); } }
+        public static string PlaceholderSearchTemplates { get { return ResourceManager.GetString("PlaceholderSearchTemplates", resourceCulture); } }
+        public static string SkipTemplateSetup { get { return ResourceManager.GetString("SkipTemplateSetup", resourceCulture); } }
+        public static string SelectTemplateEmptyState { get { return ResourceManager.GetString("SelectTemplateEmptyState", resourceCulture); } }
+        public static string LabelDescription { get { return ResourceManager.GetString("LabelDescription", resourceCulture); } }
+        public static string TemplateIncludedSoftware { get { return ResourceManager.GetString("TemplateIncludedSoftware", resourceCulture); } }
+        public static string TemplateAdvancedOptions { get { return ResourceManager.GetString("TemplateAdvancedOptions", resourceCulture); } }
+        public static string TemplateVersionOptions { get { return ResourceManager.GetString("TemplateVersionOptions", resourceCulture); } }
+        public static string TemplatePreflightChecks { get { return ResourceManager.GetString("TemplatePreflightChecks", resourceCulture); } }
+        public static string TemplateDoNotUse { get { return ResourceManager.GetString("TemplateDoNotUse", resourceCulture); } }
+        public static string ErrorTemplateRequiredOptionMissingFormat { get { return ResourceManager.GetString("ErrorTemplateRequiredOptionMissingFormat", resourceCulture); } }
         public static string ErrorValidationFormat { get { return ResourceManager.GetString("ErrorValidationFormat", resourceCulture); } }
         public static string ErrorStartupTitle { get { return ResourceManager.GetString("ErrorStartupTitle", resourceCulture); } }
         public static string ErrorApplicationTitle { get { return ResourceManager.GetString("ErrorApplicationTitle", resourceCulture); } }

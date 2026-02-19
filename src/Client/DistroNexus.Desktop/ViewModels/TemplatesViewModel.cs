@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
+using DistroNexus.Desktop.Wizard;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
@@ -288,7 +289,10 @@ public partial class TemplatesViewModel : ObservableObject
 
         if (Application.Current.MainWindow?.DataContext is MainViewModel mainVm)
         {
-             mainVm.ShowInstallWizardCommand.Execute(null);
+            mainVm.ShowInstallWizardCommand.Execute(new InstallWizardStartupRequest
+            {
+                TemplateId = template.Id
+            });
         }
     }
 

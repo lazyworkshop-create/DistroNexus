@@ -124,4 +124,12 @@ public abstract partial class WizardStepBase : ObservableObject, IWizardStep
     {
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// Determines whether this step should be skipped for the current context.
+    /// </summary>
+    public virtual bool ShouldSkip(WizardContext context)
+    {
+        return false;
+    }
 }

@@ -1023,6 +1023,12 @@ This may take a while depending on the instance size.</value>
   <data name="WizardStepConfigureUser" xml:space="preserve">
     <value>Configure User Account</value>
   </data>
+  <data name="WizardStepSelectTemplate" xml:space="preserve">
+    <value>Select Template</value>
+  </data>
+  <data name="WizardStepSelectTemplateDescription" xml:space="preserve">
+    <value>Choose a development environment template (optional)</value>
+  </data>
   <data name="WizardStepInstalling" xml:space="preserve">
     <value>Installing...</value>
   </data>
@@ -1034,6 +1040,21 @@ This may take a while depending on the instance size.</value>
   </data>
   <data name="ErrorInvalidUrlFormat" xml:space="preserve">
     <value>The distribution download URL is not valid.</value>
+  </data>
+  <data name="ErrorTemplateSelectionRequired" xml:space="preserve">
+    <value>Select a template or enable skip template.</value>
+  </data>
+  <data name="ErrorTemplateLoadFailed" xml:space="preserve">
+    <value>Failed to load templates. You can continue by skipping template setup.</value>
+  </data>
+  <data name="WizardTemplateCompatibilityWarningFormat" xml:space="preserve">
+    <value>Template '{0}' is not compatible with distribution '{1}'. Select another template or skip template setup.</value>
+  </data>
+  <data name="WizardStartupTemplateNotFoundWarningFormat" xml:space="preserve">
+    <value>The startup template '{0}' is unavailable. Continuing with generic wizard flow.</value>
+  </data>
+  <data name="WizardStartupTemplateLoadFailedWarningFormat" xml:space="preserve">
+    <value>Failed to load startup template '{0}'. Continuing with generic wizard flow.</value>
   </data>
   <data name="ErrorInstanceNameRequired" xml:space="preserve">
     <value>Please enter an instance name.</value>
@@ -1082,6 +1103,60 @@ This may take a while depending on the instance size.</value>
   </data>
   <data name="ErrorInvalidPathOrName" xml:space="preserve">
     <value>Invalid path or instance name.</value>
+  </data>
+  <data name="LabelTemplateName" xml:space="preserve">
+    <value>Template:</value>
+  </data>
+  <data name="LabelTemplateCategory" xml:space="preserve">
+    <value>Template Category:</value>
+  </data>
+  <data name="LabelTemplateDescriptor" xml:space="preserve">
+    <value>Template Details:</value>
+  </data>
+  <data name="LabelNoTemplateSelected" xml:space="preserve">
+    <value>No template</value>
+  </data>
+  <data name="LabelUnknownValue" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
+  <data name="LabelDistributionUnknownValue" xml:space="preserve">
+    <value>Unknown distribution</value>
+  </data>
+  <data name="TemplateSummaryDescriptorFormat" xml:space="preserve">
+    <value>{0} package(s), {1} script(s)</value>
+  </data>
+  <data name="PlaceholderSearchTemplates" xml:space="preserve">
+    <value>Search templates...</value>
+  </data>
+  <data name="SkipTemplateSetup" xml:space="preserve">
+    <value>Skip template setup</value>
+  </data>
+  <data name="UseTemplateSetup" xml:space="preserve">
+    <value>Use template</value>
+  </data>
+  <data name="SelectTemplateEmptyState" xml:space="preserve">
+    <value>Select a template on the left to view details</value>
+  </data>
+  <data name="LabelDescription" xml:space="preserve">
+    <value>Description</value>
+  </data>
+  <data name="TemplateIncludedSoftware" xml:space="preserve">
+    <value>Included Software</value>
+  </data>
+  <data name="TemplateAdvancedOptions" xml:space="preserve">
+    <value>Advanced Options</value>
+  </data>
+  <data name="TemplateVersionOptions" xml:space="preserve">
+    <value>Version Options</value>
+  </data>
+  <data name="TemplatePreflightChecks" xml:space="preserve">
+    <value>Preflight Checks</value>
+  </data>
+  <data name="TemplateDoNotUse" xml:space="preserve">
+    <value>Do not use a template</value>
+  </data>
+  <data name="ErrorTemplateRequiredOptionMissingFormat" xml:space="preserve">
+    <value>Template option '{0}' is required.</value>
   </data>
   <data name="ErrorValidationFormat" xml:space="preserve">
     <value>Validation error: {0}</value>

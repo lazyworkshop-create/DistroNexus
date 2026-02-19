@@ -1023,6 +1023,12 @@
   <data name="WizardStepConfigureUser" xml:space="preserve">
     <value>配置用户账户</value>
   </data>
+  <data name="WizardStepSelectTemplate" xml:space="preserve">
+    <value>选择模板</value>
+  </data>
+  <data name="WizardStepSelectTemplateDescription" xml:space="preserve">
+    <value>选择一个开发环境模板（可选）</value>
+  </data>
   <data name="WizardStepInstalling" xml:space="preserve">
     <value>正在安装...</value>
   </data>
@@ -1034,6 +1040,21 @@
   </data>
   <data name="ErrorInvalidUrlFormat" xml:space="preserve">
     <value>发行版下载地址无效。</value>
+  </data>
+  <data name="ErrorTemplateSelectionRequired" xml:space="preserve">
+    <value>请选择模板，或启用跳过模板。</value>
+  </data>
+  <data name="ErrorTemplateLoadFailed" xml:space="preserve">
+    <value>加载模板失败。您可以选择跳过模板继续。</value>
+  </data>
+  <data name="WizardTemplateCompatibilityWarningFormat" xml:space="preserve">
+    <value>模板“{0}”与发行版“{1}”不兼容。请选择其他模板或跳过模板配置。</value>
+  </data>
+  <data name="WizardStartupTemplateNotFoundWarningFormat" xml:space="preserve">
+    <value>启动模板“{0}”不可用。将继续使用通用向导流程。</value>
+  </data>
+  <data name="WizardStartupTemplateLoadFailedWarningFormat" xml:space="preserve">
+    <value>加载启动模板“{0}”失败。将继续使用通用向导流程。</value>
   </data>
   <data name="ErrorInstanceNameRequired" xml:space="preserve">
     <value>请输入实例名称。</value>
@@ -1082,6 +1103,60 @@
   </data>
   <data name="ErrorInvalidPathOrName" xml:space="preserve">
     <value>路径或实例名称无效。</value>
+  </data>
+  <data name="LabelTemplateName" xml:space="preserve">
+    <value>模板:</value>
+  </data>
+  <data name="LabelTemplateCategory" xml:space="preserve">
+    <value>模板分类:</value>
+  </data>
+  <data name="LabelTemplateDescriptor" xml:space="preserve">
+    <value>模板详情:</value>
+  </data>
+  <data name="LabelNoTemplateSelected" xml:space="preserve">
+    <value>无模板</value>
+  </data>
+  <data name="LabelUnknownValue" xml:space="preserve">
+    <value>未知</value>
+  </data>
+  <data name="LabelDistributionUnknownValue" xml:space="preserve">
+    <value>未知发行版</value>
+  </data>
+  <data name="TemplateSummaryDescriptorFormat" xml:space="preserve">
+    <value>{0} 个软件包，{1} 个脚本</value>
+  </data>
+  <data name="PlaceholderSearchTemplates" xml:space="preserve">
+    <value>搜索模板...</value>
+  </data>
+  <data name="SkipTemplateSetup" xml:space="preserve">
+    <value>跳过模板配置</value>
+  </data>
+  <data name="UseTemplateSetup" xml:space="preserve">
+    <value>使用模板</value>
+  </data>
+  <data name="SelectTemplateEmptyState" xml:space="preserve">
+    <value>在左侧选择模板以查看详情</value>
+  </data>
+  <data name="LabelDescription" xml:space="preserve">
+    <value>描述</value>
+  </data>
+  <data name="TemplateIncludedSoftware" xml:space="preserve">
+    <value>包含的软件</value>
+  </data>
+  <data name="TemplateAdvancedOptions" xml:space="preserve">
+    <value>高级选项</value>
+  </data>
+  <data name="TemplateVersionOptions" xml:space="preserve">
+    <value>版本选项</value>
+  </data>
+  <data name="TemplatePreflightChecks" xml:space="preserve">
+    <value>预检查项</value>
+  </data>
+  <data name="TemplateDoNotUse" xml:space="preserve">
+    <value>不使用模板</value>
+  </data>
+  <data name="ErrorTemplateRequiredOptionMissingFormat" xml:space="preserve">
+    <value>模板选项“{0}”为必填项。</value>
   </data>
   <data name="ErrorValidationFormat" xml:space="preserve">
     <value>验证错误: {0}</value>
