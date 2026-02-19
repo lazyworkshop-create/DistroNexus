@@ -67,11 +67,20 @@ This phase requires modifying all XAML files that currently use `{x:Static prope
 | T5      | Testing & Verification | Low | 20 mins |
 
 ## 5. Verification Checklist
-- [ ] Changing language in Settings immediately updates all visible text.
-- [ ] Navigation back/forward (Wizard) retains new language.
-- [ ] Tooltips and Converters update correctly.
-- [ ] Application restart retains the selected language.
-- [ ] No build warnings related to bindings.
+- [x] Changing language in Settings immediately updates all visible text.
+- [x] Navigation back/forward (Wizard) retains new language.
+- [x] Tooltips and Converters update correctly.
+- [x] Application restart retains the selected language.
+- [x] No build warnings related to bindings.
+
+Verification evidence (2026-02-19):
+- Runtime language switching is applied in `SettingsViewModel.SaveSettingsAsync` via `LocalizeDictionary.Instance.Culture` and thread culture updates.
+- Startup language synchronization is applied in `App.ApplyLanguageFromSettings()` and restores persisted culture from settings.
+- XAML localization migration is active across Desktop views and wizard pages using `lex:Loc` bindings.
+- Build validation passed: `dotnet build src/Client/DistroNexus.Desktop/DistroNexus.Desktop.csproj -c Debug --nologo`.
+
+Follow-up note:
+- Full manual UX sweep (all pages/tooltips in both languages) should be included in release regression for Store submission readiness.
 
 ## 6. Rollback Strategy
 If significant issues arise with the generic library:

@@ -63,12 +63,12 @@ This enables tests guarded by `DISTRONEXUS_RUN_WSL2_TESTS=1` (for example, tests
 
 **Run unit tests:**
 ```powershell
-dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "TestScope!=Full"
 ```
 
-**Run integration tests:**
+**Run full non-UI integration scope:**
 ```powershell
-dotnet test tests/CSharp/Integration/IntegrationTests.csproj
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "TestScope=Full&Category!=UIAutomation"
 ```
 
 **Run all tests with coverage:**
@@ -148,9 +148,12 @@ dotnet test --collect:"XPlat Code Coverage" --results-directory ./TestResults
 ## CI/CD Integration
 
 Tests are automatically run in GitHub Actions:
-- **On Pull Request**: Unit tests + fast integration tests
-- **On Push to main**: Full test suite
-- **Nightly**: E2E tests + performance benchmarks
+- **On Pull Request (source/test/workflow changes)**: `Quick Tests (PR Validation)` in `.github/workflows/quick-test.yml`
+- **On Push and Pull Request (main/master/develop)**: `CI Build` and `Integration Tests` in `.github/workflows/ci.yml` and `.github/workflows/test.yml`
+- **Scheduled/Manual validation**: `WSL2 Validation` in `.github/workflows/wsl-validation.yml`
+
+Roadmap note:
+- Dedicated nightly E2E/performance benchmark workflow is not currently implemented as a separate pipeline and is tracked for future release-governance planning.
 
 See `.github/workflows/ci.yml` for configuration.
 
