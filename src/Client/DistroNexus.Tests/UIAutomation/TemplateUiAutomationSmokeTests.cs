@@ -34,6 +34,40 @@ public class TemplateUiAutomationSmokeTests
         Assert.True(navigated, "Templates navigation button was not found in the current UI session.");
     }
 
+    [Fact]
+    [Trait("Category", "UIAutomation")]
+    public void Open_Install_Wizard_From_Template_Install_Button()
+    {
+        if (!ShouldRunUiAutomation())
+        {
+            return;
+        }
+
+        using var session = UiAutomationSession.LaunchFromEnvironment();
+        var opened = session.TryOpenInstallWizardFromTemplateCard();
+
+        Assert.True(opened, "Template install action did not open install wizard.");
+    }
+
+    [Fact]
+    [Trait("Category", "UIAutomation")]
+    public void Screenshot_Regression_Main_And_Templates_Page()
+    {
+        if (!ShouldRunUiAutomation())
+        {
+            return;
+        }
+
+        using var session = UiAutomationSession.LaunchFromEnvironment();
+
+        ScreenshotVerifier.VerifyWindow(session.MainWindow, "main-window");
+
+        var navigated = session.TryOpenTemplatesPage();
+        Assert.True(navigated, "Templates navigation button was not found in the current UI session.");
+
+        ScreenshotVerifier.VerifyWindow(session.MainWindow, "templates-page");
+    }
+
     private static bool ShouldRunUiAutomation()
     {
         return string.Equals(Environment.GetEnvironmentVariable("DISTRONEXUS_RUN_UI_AUTOMATION"), "1", StringComparison.OrdinalIgnoreCase);

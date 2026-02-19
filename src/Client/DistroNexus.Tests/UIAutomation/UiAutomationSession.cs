@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Linq;
 using FlaUI.Core;
 using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Definitions;
@@ -80,6 +81,55 @@ public sealed class UiAutomationSession : IDisposable
         }
 
         return false;
+    }
+
+    public bool TryOpenInstallWizardFromTemplateCard()
+    {
+        if (!TryOpenTemplatesPage())
+        {
+            return false;
+        }
+
+        var installButton = Retry.WhileNull(
+            () => MainWindow.FindFirstDescendant(cf =>
+                    cf.ByAutomationId("TemplateInstallButton")
+                      .And(cf.ByControlType(ControlType.Button)))?.AsButton(),
+            timeout: TimeSpan.FromSeconds(10),
+            ignoreException: true,
+            throwOnTimeout: false).Result;
+
+        if (installButton == null)
+        {
+            return false;
+        }
+
+        installButton.Invoke();
+
+        var wizardWindow = Retry.WhileNull(
+            () => Application.GetAllTopLevelWindows(Automation)
+                .FirstOrDefault(window =>
+                    !window.Equals(MainWindow) &&
+                    (window.Title.Contains("Install Wizard", StringComparison.OrdinalIgnoreCase) ||
+                     window.Title.Contains("安装向导", StringComparison.OrdinalIgnoreCase))),
+            timeout: TimeSpan.FromSeconds(10),
+            ignoreException: true,
+            throwOnTimeout: false).Result;
+
+        if (wizardWindow == null)
+        {
+            return false;
+        }
+
+        try
+        {
+            wizardWindow.Close();
+        }
+        catch
+        {
+            // Ignore cleanup errors for smoke verification.
+        }
+
+        return true;
     }
 
     public void Dispose()
