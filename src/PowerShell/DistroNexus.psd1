@@ -3,7 +3,7 @@
     RootModule = 'DistroNexus.psm1'
 
     # Version number of this module.
-    ModuleVersion = '2.0.3'
+    ModuleVersion = '2.1.0'
 
     # ID used to uniquely identify this module
     GUID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
@@ -64,7 +64,7 @@
             ProjectUri = 'https://github.com/LazyWorkshop-Create/DistroNexus'
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Version 2.0.1 - Maintenance and consistency updates'
+            ReleaseNotes = 'Version 2.1.0 - Template workflow hardening, CI reliability improvements, and release-governance alignment'
         }
     }
 }

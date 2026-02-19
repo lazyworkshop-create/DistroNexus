@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Build script for DistroNexus v2.0.3
+    Build script for DistroNexus v2.1.0
 .DESCRIPTION
     Builds the .NET application and packages it with the PowerShell module.
     Supports Debug/Release configurations, self-contained publishing, portable ZIP creation,
@@ -17,7 +17,7 @@
 .PARAMETER CreateZip
     Create portable ZIP package after publishing
 .PARAMETER Version
-    Version string for the build. Default is 2.0.3
+    Version string for the build. Default is 2.1.0
 .PARAMETER StoreBuild
     Build Microsoft Store package artifacts (.msixbundle and .msixupload)
 .EXAMPLE
@@ -39,7 +39,7 @@ param(
 
     [switch]$StoreBuild,
     
-    [string]$Version = '2.0.3'
+    [string]$Version = '2.1.0'
 )
 
 $ErrorActionPreference = 'Stop'
