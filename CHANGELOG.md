@@ -5,6 +5,26 @@ All notable changes to DistroNexus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-02-19
+
+### Added
+
+- Added template-first install-wizard startup flow with advanced template options step.
+- Added WSL2 validation workflow lane with environment capability gating.
+- Added UI automation coverage for package download flow and screenshot regression baseline support.
+
+### Changed
+
+- Improved package download UX with byte-level progress/speed metrics and same-file package grouping.
+- Updated CI test split strategy to explicit quick/full metadata scopes and aligned workflow execution behavior.
+- Synchronized remediation governance documentation, acceptance tracking, and localization verification evidence.
+
+### Fixed
+
+- Hardened template execution and package install flows across C# and PowerShell integration paths.
+- Fixed package cache path and filename resolution behavior in PowerShell module flows.
+- Corrected template apply UI log-level and toggle visual consistency issues.
+
 ## [2.0.3] - 2026-02-18
 
 ### Fixed
