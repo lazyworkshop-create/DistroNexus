@@ -10,10 +10,10 @@ public interface IDownloadService
     /// </summary>
     /// <param name="url">The URL to download from.</param>
     /// <param name="destination">The destination file path.</param>
-    /// <param name="progress">Progress reporter for the download.</param>
+    /// <param name="progress">Progress reporter for the download (bytes read, total bytes).</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>True if the download was successful, otherwise false.</returns>
-    Task<bool> DownloadFileAsync(string url, string destination, IProgress<double>? progress = null, CancellationToken cancellationToken = default);
+    Task<bool> DownloadFileAsync(string url, string destination, IProgress<(long BytesRead, long TotalBytes)>? progress = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Verifies the SHA256 checksum of a downloaded file.

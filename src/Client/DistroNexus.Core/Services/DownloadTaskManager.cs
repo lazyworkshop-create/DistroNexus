@@ -113,11 +113,47 @@ public class DownloadTaskManager : IDownloadTaskManager
             
             _logger.LogInformation("Starting download: {PackageName}", task.PackageName);
             
+            // Speed calculation variables
+            var lastUpdate = DateTime.Now;
+            var lastBytes = 0L;
+            // Throttle speed updates to every 500ms
+            var speedUpdateInterval = TimeSpan.FromMilliseconds(500); 
+            
             // Create progress reporter
-            var progress = new Progress<double>(percent =>
+            var progress = new Progress<(long BytesRead, long TotalBytes)>(report =>
             {
-                task.Progress = percent;
-                task.DownloadedBytes = (long)(task.TotalBytes * percent / 100.0);
+                var now = DateTime.Now;
+                var currentBytes = report.BytesRead;
+                
+                // Calculate percentage
+                if (report.TotalBytes > 0)
+                {
+                    task.TotalBytes = report.TotalBytes;
+                    task.Progress = (double)currentBytes / report.TotalBytes * 100.0;
+                }
+                
+                task.DownloadedBytes = currentBytes;
+                
+                // Calculate speed and throttle heavy updates using local variable closure
+                if (now - lastUpdate >= speedUpdateInterval)
+                {
+                    var deltaBytes = currentBytes - lastBytes;
+                    var deltaSeconds = (now - lastUpdate).TotalSeconds;
+                    
+                    if (deltaSeconds > 0)
+                    {
+                        var bytesPerSecond = (long)(deltaBytes / deltaSeconds);
+                        // Prevent unrealistic spikes
+                        if (bytesPerSecond < 0) bytesPerSecond = 0;
+                        
+                        task.BytesPerSecond = bytesPerSecond;
+                        task.FormattedSpeed = FormatSpeed(bytesPerSecond);
+                        task.FormattedProgress = FormatProgress(currentBytes, task.TotalBytes);
+                    }
+                    
+                    lastBytes = currentBytes;
+                    lastUpdate = now;
+                }
             });
             
             var settings = _settingsService.LoadSettings();
@@ -169,6 +205,7 @@ public class DownloadTaskManager : IDownloadTaskManager
                 task.Progress = 100;
                 task.CompletedTime = DateTime.Now;
                 task.DownloadedBytes = task.TotalBytes;
+                task.FormattedSpeed = "Completed";
                 
                 _logger.LogInformation("Download completed: {PackageName}", task.PackageName);
                 
@@ -309,6 +346,51 @@ public class DownloadTaskManager : IDownloadTaskManager
         await Task.CompletedTask;
     }
     
+    private string FormatSpeed(long bytesPerSecond)
+    {
+        string[] units = { "B/s", "KB/s", "MB/s", "GB/s" };
+        int unitIndex = 0;
+        double speed = bytesPerSecond;
+
+        // Start from KB
+        if (speed >= 1024)
+        {
+            speed /= 1024;
+            unitIndex = 1;
+        }
+
+        while (speed >= 1024 && unitIndex < units.Length - 1)
+        {
+            speed /= 1024;
+            unitIndex++;
+        }
+
+        return $"{speed:0.#} {units[unitIndex]}";
+    }
+
+    private string FormatProgress(long currentBytes, long totalBytes)
+    {
+        return $"{FormatBytes(currentBytes)} / {FormatBytes(totalBytes)}";
+    }
+
+    private string FormatBytes(long bytes)
+    {
+        if (bytes < 0) return "Unknown";
+        if (bytes == 0) return "0 B";
+        
+        string[] units = { "B", "KB", "MB", "GB", "TB" };
+        int unitIndex = 0;
+        double size = bytes;
+
+        while (size >= 1024 && unitIndex < units.Length - 1)
+        {
+            size /= 1024;
+            unitIndex++;
+        }
+
+        return $"{size:0.#} {units[unitIndex]}";
+    }
+
     /// <inheritdoc/>
     public void ClearCompletedTasks()
     {

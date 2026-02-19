@@ -112,6 +112,24 @@ public partial class DownloadTask : ObservableObject
     /// Gets or sets the number of retry attempts.
     /// </summary>
     public int RetryCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the current download speed in bytes per second.
+    /// </summary>
+    [ObservableProperty]
+    private long _bytesPerSecond;
+
+    /// <summary>
+    /// Gets or sets the formatted download speed string (e.g., "1.5 MB/s").
+    /// </summary>
+    [ObservableProperty]
+    private string _formattedSpeed = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the formatted progress string (e.g., "150 MB / 1.2 GB").
+    /// </summary>
+    [ObservableProperty]
+    private string _formattedProgress = string.Empty;
     
     /// <summary>
     /// Gets or sets the cancellation token source for this task.

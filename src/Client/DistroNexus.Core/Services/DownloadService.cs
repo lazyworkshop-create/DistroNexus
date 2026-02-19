@@ -19,7 +19,7 @@ public class DownloadService : IDownloadService
     }
 
     /// <inheritdoc/>
-    public async Task<bool> DownloadFileAsync(string url, string destination, IProgress<double>? progress = null, CancellationToken cancellationToken = default)
+    public async Task<bool> DownloadFileAsync(string url, string destination, IProgress<(long BytesRead, long TotalBytes)>? progress = null, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(url))
             throw new ArgumentNullException(nameof(url));
@@ -42,7 +42,7 @@ public class DownloadService : IDownloadService
             response.EnsureSuccessStatusCode();
 
             var totalBytes = response.Content.Headers.ContentLength ?? -1;
-            var canReportProgress = totalBytes != -1 && progress != null;
+            var canReportProgress = progress != null; // Always report even if totalBytes is unknown (-1)
 
             await using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
             await using var fileStream = new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None, 8192, true);
@@ -58,8 +58,7 @@ public class DownloadService : IDownloadService
 
                 if (canReportProgress)
                 {
-                    var progressPercentage = (double)totalBytesRead / totalBytes * 100;
-                    progress!.Report(progressPercentage);
+                    progress!.Report((totalBytesRead, totalBytes));
                 }
             }
 
