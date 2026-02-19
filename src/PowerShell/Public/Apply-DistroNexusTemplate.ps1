@@ -161,11 +161,94 @@ function Apply-DistroNexusTemplate {
             return $Content
         }
 
+        function Normalize-BashScriptContent {
+            param(
+                [string]$Content
+            )
+
+            if ($null -eq $Content) {
+                return $Content
+            }
+
+            $normalized = $Content -replace "`r`n", "`n" -replace "`r", "`n"
+            if ($normalized.Length -gt 0 -and [int][char]$normalized[0] -eq 0xFEFF) {
+                $normalized = $normalized.Substring(1)
+            }
+
+            return $normalized
+        }
+
+        function Write-Utf8NoBomFile {
+            param(
+                [Parameter(Mandatory = $true)]
+                [string]$Path,
+                [Parameter(Mandatory = $true)]
+                [string]$Content
+            )
+
+            [System.IO.File]::WriteAllText($Path, $Content, [System.Text.UTF8Encoding]::new($false))
+        }
+
+        function Copy-NormalizedDirectoryFiles {
+            param(
+                [Parameter(Mandatory = $true)]
+                [string]$SourceDirectory,
+                [Parameter(Mandatory = $true)]
+                [string]$TargetDirectory
+            )
+
+            $files = Get-ChildItem -Path $SourceDirectory -File -ErrorAction SilentlyContinue
+            foreach ($file in $files) {
+                $targetPath = Join-Path $TargetDirectory $file.Name
+                $fileContent = Get-Content -Path $file.FullName -Raw
+                $fileContent = Normalize-BashScriptContent -Content $fileContent
+                Write-Utf8NoBomFile -Path $targetPath -Content $fileContent
+            }
+        }
+
+        function Stage-BashScriptForExecution {
+            param(
+                [Parameter(Mandatory = $true)]
+                [string]$Content,
+                [string]$ScriptFilePath,
+                [string]$ScriptName
+            )
+
+            $stagingRoot = Join-Path ([System.IO.Path]::GetTempPath()) (Join-Path 'DistroNexus' (Join-Path 'template-stage' ([Guid]::NewGuid().ToString('N'))))
+            $stagingScriptDirectory = Join-Path $stagingRoot 'script'
+            [void](New-Item -Path $stagingScriptDirectory -ItemType Directory -Force)
+
+            if (-not [string]::IsNullOrWhiteSpace($ScriptFilePath)) {
+                $scriptDirectory = [System.IO.Path]::GetDirectoryName($ScriptFilePath)
+                if (-not [string]::IsNullOrWhiteSpace($scriptDirectory) -and (Test-Path $scriptDirectory)) {
+                    Copy-NormalizedDirectoryFiles -SourceDirectory $scriptDirectory -TargetDirectory $stagingScriptDirectory
+
+                    $siblingCommonDirectory = [System.IO.Path]::GetFullPath((Join-Path $scriptDirectory '..\common'))
+                    if (Test-Path $siblingCommonDirectory) {
+                        $stagingCommonDirectory = Join-Path $stagingRoot 'common'
+                        [void](New-Item -Path $stagingCommonDirectory -ItemType Directory -Force)
+                        Copy-NormalizedDirectoryFiles -SourceDirectory $siblingCommonDirectory -TargetDirectory $stagingCommonDirectory
+                    }
+                }
+            }
+
+            $targetScriptName = if ([string]::IsNullOrWhiteSpace($ScriptName)) { 'script.sh' } else { $ScriptName }
+            $stagedScriptPath = Join-Path $stagingScriptDirectory $targetScriptName
+            $normalizedContent = Normalize-BashScriptContent -Content $Content
+            Write-Utf8NoBomFile -Path $stagedScriptPath -Content $normalizedContent
+
+            [PSCustomObject]@{
+                StagingRoot = $stagingRoot
+                StagedScriptWslPath = (Convert-WindowsPathToWslPath -WindowsPath $stagedScriptPath)
+            }
+        }
+
         foreach ($script in $scripts) {
              $count++
              $percent = ($count / $total) * 100
              Write-Progress -Activity "Applying Template $($Template.Name)" -Status "Executing $($script.Name)" -PercentComplete $percent
              
+             $stagedBashContext = $null
              try {
                 $scriptFilePath = Resolve-ScriptFilePath -Script $script
                 $content = Get-ScriptContent -Script $script
@@ -188,9 +271,12 @@ function Apply-DistroNexusTemplate {
                          continue
                      }
 
+                     $content = Normalize-BashScriptContent -Content $content
+
                      if ($scriptFilePath -and -not $hasVariableInjection) {
-                         $wslScriptPath = Convert-WindowsPathToWslPath -WindowsPath $scriptFilePath
-                         & wsl.exe -d $InstanceName -u root -- bash $wslScriptPath
+                         $scriptName = [System.IO.Path]::GetFileName($scriptFilePath)
+                         $stagedBashContext = Stage-BashScriptForExecution -Content $content -ScriptFilePath $scriptFilePath -ScriptName $scriptName
+                         & wsl.exe -d $InstanceName -u root -- bash $stagedBashContext.StagedScriptWslPath
                      }
                      else {
                          # Execute via stdin for inline script content
@@ -217,6 +303,11 @@ function Apply-DistroNexusTemplate {
                  } else {
                      Write-Error $msg
                      return
+                 }
+             }
+             finally {
+                 if ($stagedBashContext -and (Test-Path $stagedBashContext.StagingRoot)) {
+                     Remove-Item -LiteralPath $stagedBashContext.StagingRoot -Recurse -Force -ErrorAction SilentlyContinue
                  }
              }
         }

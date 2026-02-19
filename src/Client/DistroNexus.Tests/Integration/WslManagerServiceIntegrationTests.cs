@@ -321,6 +321,141 @@ public class WslManagerServiceIntegrationTests
     }
 
     [Fact]
+    public async Task InstallInstanceAsync_WhenModuleReturnsFalseOutput_ShouldThrow()
+    {
+        var options = new InstallOptions
+        {
+            InstanceName = "FalseOutputInstance",
+            InstallPath = "C:\\WSL\\FalseOutputInstance",
+            Package = new DistroPackage
+            {
+                Name = "Ubuntu-22.04",
+                DownloadUrl = "https://example.com/ubuntu-22.04.tar.gz"
+            }
+        };
+
+        var listResult = new PowerShellScriptResult
+        {
+            ExitCode = 0,
+            UsedModule = true,
+            ParsedObjects = new List<System.Text.Json.JsonElement>()
+        };
+
+        var installResult = new PowerShellScriptResult
+        {
+            ExitCode = 0,
+            UsedModule = true,
+            Output = "False"
+        };
+
+        _mockPowerShellService
+            .Setup(x => x.ExecuteScriptAsync(It.IsAny<string>(), It.IsAny<System.Threading.CancellationToken>()))
+            .ReturnsAsync("success");
+
+        _mockPowerShellService
+            .SetupSequence(x => x.ExecuteModuleCmdletAsync(
+                It.IsAny<string>(),
+                It.IsAny<Dictionary<string, object>>(),
+                It.IsAny<ModuleCallOptions>(),
+                It.IsAny<System.Threading.CancellationToken>()))
+            .ReturnsAsync(listResult)
+            .ReturnsAsync(installResult);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _service.InstallInstanceAsync(options));
+    }
+
+    [Fact]
+    public async Task InstallInstanceAsync_WhenCatalogPackageNotFound_ShouldMapToRefreshSourcesMessage()
+    {
+        var options = new InstallOptions
+        {
+            InstanceName = "CatalogMissInstance",
+            InstallPath = "C:\\WSL\\CatalogMissInstance",
+            Package = new DistroPackage
+            {
+                Name = "Ubuntu 24.04 LTS",
+                DownloadUrl = "https://example.com/ubuntu-24.04-lts.tar.gz"
+            }
+        };
+
+        var listResult = new PowerShellScriptResult
+        {
+            ExitCode = 0,
+            UsedModule = true,
+            ParsedObjects = new List<System.Text.Json.JsonElement>()
+        };
+
+        var installResult = new PowerShellScriptResult
+        {
+            ExitCode = 1,
+            UsedModule = true,
+            Error = "Package not found in catalog: Ubuntu 24.04 LTS"
+        };
+
+        _mockPowerShellService
+            .Setup(x => x.ExecuteScriptAsync(It.IsAny<string>(), It.IsAny<System.Threading.CancellationToken>()))
+            .ReturnsAsync("success");
+
+        _mockPowerShellService
+            .SetupSequence(x => x.ExecuteModuleCmdletAsync(
+                It.IsAny<string>(),
+                It.IsAny<Dictionary<string, object>>(),
+                It.IsAny<ModuleCallOptions>(),
+                It.IsAny<System.Threading.CancellationToken>()))
+            .ReturnsAsync(listResult)
+            .ReturnsAsync(installResult);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.InstallInstanceAsync(options));
+        Assert.Equal("The selected distribution package was not found in the current catalog. Please refresh sources and try again.", exception.Message);
+    }
+
+    [Fact]
+    public async Task InstallInstanceAsync_WhenDownloadedFileMissing_ShouldNotMapToNetworkMessage()
+    {
+        var options = new InstallOptions
+        {
+            InstanceName = "MissingFileInstance",
+            InstallPath = "C:\\WSL\\MissingFileInstance",
+            Package = new DistroPackage
+            {
+                Name = "Ubuntu 24.04 LTS",
+                DownloadUrl = "https://example.com/ubuntu-24.04-lts.tar.gz"
+            }
+        };
+
+        var listResult = new PowerShellScriptResult
+        {
+            ExitCode = 0,
+            UsedModule = true,
+            ParsedObjects = new List<System.Text.Json.JsonElement>()
+        };
+
+        var installResult = new PowerShellScriptResult
+        {
+            ExitCode = 1,
+            UsedModule = true,
+            Error = "Installation failed: Package download succeeded but file not found"
+        };
+
+        _mockPowerShellService
+            .Setup(x => x.ExecuteScriptAsync(It.IsAny<string>(), It.IsAny<System.Threading.CancellationToken>()))
+            .ReturnsAsync("success");
+
+        _mockPowerShellService
+            .SetupSequence(x => x.ExecuteModuleCmdletAsync(
+                It.IsAny<string>(),
+                It.IsAny<Dictionary<string, object>>(),
+                It.IsAny<ModuleCallOptions>(),
+                It.IsAny<System.Threading.CancellationToken>()))
+            .ReturnsAsync(listResult)
+            .ReturnsAsync(installResult);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.InstallInstanceAsync(options));
+        Assert.Equal("The package download metadata did not produce a usable local file. Please refresh sources and retry the installation.", exception.Message);
+        Assert.DoesNotContain("internet connection", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task Service_Should_Handle_Module_Failure_With_Fallback()
     {
         // Arrange - Module call fails, fallback should be used

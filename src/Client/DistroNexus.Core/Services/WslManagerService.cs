@@ -470,6 +470,23 @@ public partial class WslManagerService : IWslManagerService
 
             if (moduleResult.Success)
             {
+                var moduleInstallSucceeded = TryReadBooleanModuleResult(moduleResult.Output);
+                if (moduleInstallSucceeded == false)
+                {
+                    _logger.LogError("Install-DistroNexusInstance returned False output despite exit code 0. Output: {Output}", moduleResult.Output ?? "<empty>");
+
+                    var installFailureMessage = !string.IsNullOrWhiteSpace(moduleResult.Error)
+                        ? moduleResult.Error
+                        : "PowerShell module reported installation failure.";
+
+                    throw new InvalidOperationException(installFailureMessage, moduleResult.Exception);
+                }
+
+                if (moduleInstallSucceeded == null)
+                {
+                    _logger.LogWarning("Install-DistroNexusInstance output was not a parseable boolean. Output: {Output}", moduleResult.Output ?? "<empty>");
+                }
+
                 _logger.LogInformation("===== INSTALLATION SUCCESSFUL =====");
                 _logger.LogInformation("WSL instance '{InstanceName}' installed successfully using module", options.InstanceName);
                 progress?.Report((100, "Installation complete"));
@@ -537,6 +554,18 @@ public partial class WslManagerService : IWslManagerService
             return "Access denied. Please ensure you have administrator privileges and the installation path is writable.";
         }
 
+        if (errorMessage.Contains("Package not found in catalog", StringComparison.OrdinalIgnoreCase) ||
+            errorMessage.Contains("distribution", StringComparison.OrdinalIgnoreCase) &&
+            errorMessage.Contains("not found in catalog", StringComparison.OrdinalIgnoreCase))
+        {
+            return "The selected distribution package was not found in the current catalog. Please refresh sources and try again.";
+        }
+
+        if (errorMessage.Contains("Package download succeeded but file not found", StringComparison.OrdinalIgnoreCase))
+        {
+            return "The package download metadata did not produce a usable local file. Please refresh sources and retry the installation.";
+        }
+
         if (errorMessage.Contains("network", StringComparison.OrdinalIgnoreCase) ||
             errorMessage.Contains("download", StringComparison.OrdinalIgnoreCase) ||
             errorMessage.Contains("404", StringComparison.OrdinalIgnoreCase))
@@ -566,6 +595,39 @@ public partial class WslManagerService : IWslManagerService
         return cleaned.Length > 200 
             ? cleaned[..200].Trim() + "..." 
             : cleaned.Trim();
+    }
+
+    private static bool? TryReadBooleanModuleResult(string? output)
+    {
+        if (string.IsNullOrWhiteSpace(output))
+        {
+            return null;
+        }
+
+        var normalized = output.Replace("\0", string.Empty, StringComparison.Ordinal);
+        var lines = normalized
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => line.Trim())
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .ToList();
+
+        if (lines.Count == 0)
+        {
+            return null;
+        }
+
+        var lastLine = lines[^1];
+        if (lastLine.Equals("True", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (lastLine.Equals("False", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return null;
     }
 
     /// <inheritdoc/>

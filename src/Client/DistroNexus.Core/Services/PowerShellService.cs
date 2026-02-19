@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -275,10 +276,15 @@ public class PowerShellService : IPowerShellService, IDisposable
                 error = errorBuilder.ToString().TrimEnd();
             }
 
-            if (process.ExitCode != 0 && !string.IsNullOrEmpty(error))
+            if (process.ExitCode != 0)
             {
-                _logger.LogError("PowerShell script failed with exit code {ExitCode}: {Error}", process.ExitCode, error);
-                throw new InvalidOperationException($"PowerShell script failed: {error}");
+                var friendlyError = SanitizeScriptError(error, output);
+                _logger.LogError(
+                    "PowerShell script failed with exit code {ExitCode}. Error: {Error}. Sanitized: {SanitizedError}",
+                    process.ExitCode,
+                    error,
+                    friendlyError);
+                throw new InvalidOperationException($"PowerShell script failed: {friendlyError}");
             }
 
             return output;
@@ -293,6 +299,43 @@ public class PowerShellService : IPowerShellService, IDisposable
             _logger.LogError(ex, "Error executing PowerShell script");
             throw;
         }
+    }
+
+    private static string SanitizeScriptError(string rawError, string output)
+    {
+        var cleaned = rawError;
+
+        cleaned = Regex.Replace(cleaned, @"#< CLIXML.*?<Objs.*?</Objs>", string.Empty, RegexOptions.Singleline);
+        cleaned = Regex.Replace(cleaned, @"\x1b\[[0-9;]*m", string.Empty);
+        cleaned = Regex.Replace(cleaned, @"^\s*WARNING:.*unapproved verbs.*$", string.Empty, RegexOptions.Multiline | RegexOptions.IgnoreCase);
+        cleaned = Regex.Replace(cleaned, @"^\s*To find the commands with unapproved verbs.*$", string.Empty, RegexOptions.Multiline | RegexOptions.IgnoreCase);
+        cleaned = Regex.Replace(cleaned, @"At line:\d+.*?(\r?\n|$)", string.Empty, RegexOptions.Multiline);
+        cleaned = Regex.Replace(cleaned, @"\+\s+(CategoryInfo|FullyQualifiedErrorId).*?(\r?\n|$)", string.Empty, RegexOptions.Multiline);
+
+        var normalizedLines = cleaned
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => line.Trim())
+            .Where(line =>
+                !string.IsNullOrWhiteSpace(line) &&
+                !line.StartsWith("+", StringComparison.Ordinal) &&
+                !line.StartsWith("At ", StringComparison.OrdinalIgnoreCase) &&
+                !line.Contains("CategoryInfo", StringComparison.OrdinalIgnoreCase) &&
+                !line.Contains("FullyQualifiedErrorId", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (normalizedLines.Count > 0)
+        {
+            return normalizedLines[0];
+        }
+
+        var outputLine = output
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => line.Trim())
+            .FirstOrDefault(line => !string.IsNullOrWhiteSpace(line));
+
+        return string.IsNullOrWhiteSpace(outputLine)
+            ? "Script execution failed. Check logs for details."
+            : outputLine;
     }
 
     /// <inheritdoc/>

@@ -110,6 +110,23 @@ public class PowerShellServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteScriptAsync_WithClixmlNoise_ShouldThrowSanitizedError()
+    {
+        // Arrange
+        var script = "[Console]::Error.WriteLine('#< CLIXML version=\"1.0\"?><Objs></Objs>'); " +
+                     "[Console]::Error.WriteLine('WARNING: The names of some imported commands include unapproved verbs.'); " +
+                     "[Console]::Error.WriteLine('Actual failure from script'); exit 1";
+
+        // Act
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _powerShellService.ExecuteScriptAsync(script));
+
+        // Assert
+        Assert.Contains("Actual failure from script", exception.Message);
+        Assert.DoesNotContain("CLIXML", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("unapproved verbs", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task ImportModuleAsync_WithNullPath_ShouldThrowArgumentNullException()
     {
         // Act & Assert

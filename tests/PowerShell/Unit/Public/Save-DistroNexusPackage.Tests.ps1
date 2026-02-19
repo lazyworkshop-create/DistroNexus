@@ -89,4 +89,34 @@ Describe "Save-DistroNexusPackage" -Tag 'Unit', 'Public', 'Download' {
             }
         }
     }
+
+    Context "When package metadata uses DownloadUrl instead of Url" {
+        It "Should download successfully via DownloadUrl fallback in Invoke-PackageDownload" {
+            InModuleScope DistroNexus {
+                # Arrange
+                $destination = Join-Path $TestDrive "fallback"
+                New-Item -Path $destination -ItemType Directory -Force | Out-Null
+
+                Mock Write-DistroNexusLog { } -ModuleName DistroNexus
+                Mock Invoke-WebRequest {
+                    New-Item -ItemType File -Path $OutFile -Force | Out-Null
+                } -ModuleName DistroNexus -ParameterFilter {
+                    $Uri -eq 'https://example.invalid/ubuntu-24.04.wsl'
+                }
+
+                # Act
+                $result = Invoke-PackageDownload -Package ([PSCustomObject]@{
+                    DefaultName = 'Ubuntu-24.04'
+                    DownloadUrl = 'https://example.invalid/ubuntu-24.04.wsl'
+                    Filename = 'ubuntu-24.04.wsl'
+                }) -Destination $destination -RetryCount 0 -ShowProgress:$false
+
+                # Assert
+                $result.Success | Should -BeTrue
+                Should -Invoke Invoke-WebRequest -ModuleName DistroNexus -Times 1 -Exactly -ParameterFilter {
+                    $Uri -eq 'https://example.invalid/ubuntu-24.04.wsl'
+                }
+            }
+        }
+    }
 }

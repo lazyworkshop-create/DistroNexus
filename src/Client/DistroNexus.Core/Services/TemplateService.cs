@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Diagnostics;
+using System.Text;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -12,6 +13,9 @@ namespace DistroNexus.Core.Services;
 /// </summary>
 public class TemplateService : ITemplateService
 {
+    private const int MissingDistributionRetryCount = 4;
+    private const int MissingDistributionRetryDelayMs = 300;
+
     private static readonly JsonSerializerOptions TemplateJsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -515,10 +519,11 @@ public class TemplateService : ITemplateService
         CancellationToken cancellationToken,
         Action<string>? onOutputLine = null)
     {
+        string? resolvedScriptPath = null;
         string scriptContent = script.Content;
         if (string.IsNullOrWhiteSpace(scriptContent) && !string.IsNullOrWhiteSpace(script.ScriptPath))
         {
-            var resolvedScriptPath = ResolveAndValidateScriptPath(script.ScriptPath);
+            resolvedScriptPath = ResolveAndValidateScriptPath(script.ScriptPath);
             if (resolvedScriptPath == null)
             {
                 throw new FileNotFoundException($"Script file not found for path: {script.ScriptPath}");
@@ -534,10 +539,20 @@ public class TemplateService : ITemplateService
         
         if (script.Type == TemplateScriptType.Bash)
         {
-            // Escape single quotes for bash -c '...' encapsulation
-            var escapedContent = scriptContent.Replace("'", "'\\''");
-            var command = $"wsl -d {instanceName} -- bash -c '{escapedContent}'";
-              var output = await ExecuteWithTimeoutAsync(command, script.TimeoutSeconds, cancellationToken, onOutputLine);
+            scriptContent = NormalizeBashScriptContent(scriptContent);
+            var scriptDirectoryPath = string.IsNullOrWhiteSpace(resolvedScriptPath)
+                ? null
+                : Path.GetDirectoryName(resolvedScriptPath);
+            var scriptFileName = string.IsNullOrWhiteSpace(resolvedScriptPath)
+                ? null
+                : Path.GetFileName(resolvedScriptPath);
+            var command = BuildBashExecutionCommand(scriptContent, instanceName, scriptDirectoryPath, scriptFileName);
+                        var output = await ExecuteWithDistributionRetryAsync(
+                                command,
+                                script.TimeoutSeconds,
+                                instanceName,
+                                cancellationToken,
+                                onOutputLine);
             return new ScriptExecutionResult(string.IsNullOrWhiteSpace(script.ScriptPath) ? "Content" : "ScriptPath", output);
         }
         else if (script.Type == TemplateScriptType.PowerShell) 
@@ -634,7 +649,49 @@ public class TemplateService : ITemplateService
             return await _powerShellService.ExecuteScriptAsync(command, cancellationToken);
         }
 
-        return await _powerShellService.ExecuteScriptStreamingAsync(command, onOutputLine, line => onOutputLine($"[ERR] {line}"), cancellationToken);
+        return await _powerShellService.ExecuteScriptStreamingAsync(command, onOutputLine, line => onOutputLine($"[STDERR] {line}"), cancellationToken);
+    }
+
+    private async Task<string> ExecuteWithDistributionRetryAsync(
+        string command,
+        int timeoutSeconds,
+        string instanceName,
+        CancellationToken cancellationToken,
+        Action<string>? onOutputLine = null)
+    {
+        for (var attempt = 1; attempt <= MissingDistributionRetryCount; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            try
+            {
+                return await ExecuteWithTimeoutAsync(command, timeoutSeconds, cancellationToken, onOutputLine);
+            }
+            catch (InvalidOperationException ex) when (IsDistributionNotFoundError(ex.Message) && attempt < MissingDistributionRetryCount)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Template script target distribution not ready yet. Instance={InstanceName}; Attempt={Attempt}/{MaxAttempts}. Retrying...",
+                    instanceName,
+                    attempt,
+                    MissingDistributionRetryCount);
+
+                await Task.Delay(MissingDistributionRetryDelayMs, cancellationToken);
+            }
+        }
+
+        throw new InvalidOperationException($"PowerShell script failed: There is no distribution with the supplied name: {instanceName}");
+    }
+
+    private static bool IsDistributionNotFoundError(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return false;
+        }
+
+        var normalizedMessage = message.Replace("\0", string.Empty, StringComparison.Ordinal);
+        return normalizedMessage.Contains("There is no distribution with the supplied name", StringComparison.OrdinalIgnoreCase);
     }
 
     private Dictionary<string, string> CreateEffectiveVariables(Template template, Dictionary<string, string> runtimeVariables)
@@ -739,12 +796,123 @@ public class TemplateService : ITemplateService
     {
         if (check.Type == TemplateScriptType.Bash)
         {
-            var escaped = check.Command.Replace("'", "'\\''");
-            return $"wsl -d {instanceName} -- bash -c '{escaped}'";
+            return BuildBashExecutionCommand(NormalizeBashScriptContent(check.Command), instanceName);
         }
 
         return check.Command;
     }
+
+    private static string BuildBashExecutionCommand(
+        string scriptContent,
+        string instanceName,
+        string? scriptDirectoryPath = null,
+        string? scriptFileName = null)
+    {
+        var stagedPaths = StageBashScriptForExecution(scriptContent, scriptDirectoryPath, scriptFileName);
+        var escapedInstanceName = EscapeForPowerShellSingleQuotedString(instanceName);
+        var escapedStagedScriptWslPath = EscapeForPowerShellSingleQuotedString(stagedPaths.StagedScriptWslPath);
+        var escapedStagingRootWindowsPath = EscapeForPowerShellSingleQuotedString(stagedPaths.StagingRootWindowsPath);
+        return $"wsl -d '{escapedInstanceName}' -- bash '{escapedStagedScriptWslPath}'; $exitCode = $LASTEXITCODE; Remove-Item -LiteralPath '{escapedStagingRootWindowsPath}' -Recurse -Force -ErrorAction SilentlyContinue; if ($exitCode -ne 0) {{ exit $exitCode }}";
+    }
+
+    private static StagedBashScriptPaths StageBashScriptForExecution(string scriptContent, string? scriptDirectoryPath, string? scriptFileName)
+    {
+        var stagingRoot = Path.Combine(Path.GetTempPath(), "DistroNexus", "template-stage", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(stagingRoot);
+
+        string stagedScriptWindowsPath;
+        if (!string.IsNullOrWhiteSpace(scriptDirectoryPath) && Directory.Exists(scriptDirectoryPath) && !string.IsNullOrWhiteSpace(scriptFileName))
+        {
+            var templateRootDirectory = Directory.GetParent(scriptDirectoryPath)?.FullName;
+            if (!string.IsNullOrWhiteSpace(templateRootDirectory) && Directory.Exists(templateRootDirectory))
+            {
+                CopyDirectoryTreeWithNormalizedLineEndings(templateRootDirectory, stagingRoot);
+
+                var relativeScriptPath = Path.GetRelativePath(templateRootDirectory, Path.Combine(scriptDirectoryPath, scriptFileName));
+                stagedScriptWindowsPath = Path.Combine(stagingRoot, relativeScriptPath);
+            }
+            else
+            {
+                var fallbackScriptDirectory = Path.Combine(stagingRoot, "script");
+                Directory.CreateDirectory(fallbackScriptDirectory);
+                stagedScriptWindowsPath = Path.Combine(fallbackScriptDirectory, scriptFileName);
+            }
+        }
+        else
+        {
+            var fallbackScriptDirectory = Path.Combine(stagingRoot, "script");
+            Directory.CreateDirectory(fallbackScriptDirectory);
+            var targetScriptFileName = string.IsNullOrWhiteSpace(scriptFileName) ? "script.sh" : scriptFileName;
+            stagedScriptWindowsPath = Path.Combine(fallbackScriptDirectory, targetScriptFileName);
+        }
+
+        var stagedScriptDirectory = Path.GetDirectoryName(stagedScriptWindowsPath);
+        if (!string.IsNullOrWhiteSpace(stagedScriptDirectory))
+        {
+            Directory.CreateDirectory(stagedScriptDirectory);
+        }
+
+        File.WriteAllText(stagedScriptWindowsPath, scriptContent, new UTF8Encoding(false));
+
+        return new StagedBashScriptPaths(
+            stagingRoot,
+            stagedScriptWindowsPath,
+            ConvertWindowsPathToWslPath(stagedScriptWindowsPath));
+    }
+
+    private static void CopyDirectoryTreeWithNormalizedLineEndings(string sourceDirectory, string targetDirectory)
+    {
+        Directory.CreateDirectory(targetDirectory);
+
+        foreach (var sourceFile in Directory.GetFiles(sourceDirectory))
+        {
+            var fileName = Path.GetFileName(sourceFile);
+            var targetFile = Path.Combine(targetDirectory, fileName);
+            var content = NormalizeBashScriptContent(File.ReadAllText(sourceFile));
+            File.WriteAllText(targetFile, content, new UTF8Encoding(false));
+        }
+
+        foreach (var sourceSubDirectory in Directory.GetDirectories(sourceDirectory))
+        {
+            var directoryName = Path.GetFileName(sourceSubDirectory);
+            var targetSubDirectory = Path.Combine(targetDirectory, directoryName);
+            CopyDirectoryTreeWithNormalizedLineEndings(sourceSubDirectory, targetSubDirectory);
+        }
+    }
+
+    private static string NormalizeBashScriptContent(string scriptContent)
+    {
+        var normalized = scriptContent.Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace("\r", "\n", StringComparison.Ordinal);
+
+        if (normalized.Length > 0 && normalized[0] == '\uFEFF')
+        {
+            normalized = normalized[1..];
+        }
+
+        return normalized;
+    }
+
+    private static string EscapeForPowerShellSingleQuotedString(string value)
+    {
+        return value.Replace("'", "''");
+    }
+
+    private static string ConvertWindowsPathToWslPath(string windowsPath)
+    {
+        var fullPath = Path.GetFullPath(windowsPath);
+        var root = Path.GetPathRoot(fullPath);
+        if (string.IsNullOrWhiteSpace(root) || root.Length < 2 || root[1] != ':')
+        {
+            throw new InvalidOperationException($"Unsupported Windows path for WSL conversion: {windowsPath}");
+        }
+
+        var drive = char.ToLowerInvariant(root[0]);
+        var relativePath = fullPath[root.Length..].Replace('\\', '/');
+        return $"/mnt/{drive}/{relativePath}";
+    }
+
+    private sealed record StagedBashScriptPaths(string StagingRootWindowsPath, string StagedScriptWindowsPath, string StagedScriptWslPath);
 
     private sealed record ScriptExecutionResult(string Source, string Output);
 

@@ -146,7 +146,25 @@ function Save-DistroNexusPackage {
         $skippedCount = 0
         
         foreach ($pkg in $packagesToDownload) {
-            $outputFile = Join-Path $Destination $pkg.Filename
+            $pkgFilename = $pkg.Filename
+            if (-not $pkgFilename) {
+                $pkgUrl = if ($pkg.PSObject.Properties['Url'] -and $pkg.Url) { $pkg.Url } else { $pkg.DownloadUrl }
+                if ($pkgUrl) {
+                    try {
+                        if ($pkgUrl -match "^http") {
+                            $uri = [System.Uri]$pkgUrl
+                            $pkgFilename = [System.IO.Path]::GetFileName($uri.LocalPath)
+                        }
+                    }
+                    catch {}
+
+                    if (-not $pkgFilename) {
+                        $pkgFilename = Split-Path $pkgUrl -Leaf
+                    }
+                }
+            }
+
+            $outputFile = if ($pkgFilename) { Join-Path $Destination $pkgFilename } else { $null }
             if ((Test-Path $outputFile) -and $SkipExisting) {
                 Write-DistroNexusLog "Skipping existing package: $($pkg.DefaultName)" -FileOnly
                 $skippedCount++
@@ -236,7 +254,27 @@ function Save-DistroNexusPackage {
                     while ($attempt -le $Retry -and -not $success) {
                         try {
                             $attempt++
-                            $outputFile = Join-Path $Dest $Pkg.Filename
+                            $packageUrl = if ($Pkg.PSObject.Properties['Url'] -and $Pkg.Url) { $Pkg.Url } else { $Pkg.DownloadUrl }
+                            $packageFilename = $Pkg.Filename
+                            if (-not $packageFilename -and $packageUrl) {
+                                try {
+                                    if ($packageUrl -match "^http") {
+                                        $uri = [System.Uri]$packageUrl
+                                        $packageFilename = [System.IO.Path]::GetFileName($uri.LocalPath)
+                                    }
+                                }
+                                catch {}
+
+                                if (-not $packageFilename) {
+                                    $packageFilename = Split-Path $packageUrl -Leaf
+                                }
+                            }
+
+                            if (-not $packageUrl -or -not $packageFilename) {
+                                throw "Package metadata is missing download URL or filename."
+                            }
+
+                            $outputFile = Join-Path $Dest $packageFilename
                             
                             # Use exponential backoff for retries
                             if ($attempt -gt 1) {
@@ -245,7 +283,7 @@ function Save-DistroNexusPackage {
                             }
                             
                             $ProgressPreference = 'SilentlyContinue'
-                            Invoke-WebRequest -Uri $Pkg.Url -OutFile $outputFile -UseBasicParsing -TimeoutSec 1800
+                            Invoke-WebRequest -Uri $packageUrl -OutFile $outputFile -UseBasicParsing -TimeoutSec 1800
                             
                             if (Test-Path $outputFile) {
                                 $success = $true
@@ -345,7 +383,33 @@ function Invoke-PackageDownload {
         [bool]$ShowProgress = $true
     )
     
-    $outputFile = Join-Path $Destination $Package.Filename
+    $packageUrl = if ($Package.PSObject.Properties['Url'] -and $Package.Url) { $Package.Url } else { $Package.DownloadUrl }
+    $packageFilename = $Package.Filename
+
+    if (-not $packageFilename -and $packageUrl) {
+        try {
+            if ($packageUrl -match "^http") {
+                $uri = [System.Uri]$packageUrl
+                $packageFilename = [System.IO.Path]::GetFileName($uri.LocalPath)
+            }
+        }
+        catch {}
+
+        if (-not $packageFilename) {
+            $packageFilename = Split-Path $packageUrl -Leaf
+        }
+    }
+
+    if (-not $packageUrl -or -not $packageFilename) {
+        return [PSCustomObject]@{
+            Success = $false
+            PackageName = $Package.DefaultName
+            Error = "Package metadata is missing download URL or filename."
+            Attempts = 0
+        }
+    }
+
+    $outputFile = Join-Path $Destination $packageFilename
     $attempt = 0
     $success = $false
     $lastError = ""
@@ -360,21 +424,21 @@ function Invoke-PackageDownload {
                 Start-Sleep -Seconds $backoffSeconds
             }
             
-            Write-DistroNexusLog "Downloading ($attempt/$($RetryCount + 1)): $($Package.DefaultName) from $($Package.Url)"
+            Write-DistroNexusLog "Downloading ($attempt/$($RetryCount + 1)): $($Package.DefaultName) from $packageUrl"
             
             if ($ShowProgress) {
                 # Enhanced progress with speed calculation
                 $startTime = Get-Date
                 $lastBytesRead = 0
                 
-                $response = Invoke-WebRequest -Uri $Package.Url -OutFile $outputFile -UseBasicParsing `
+                $response = Invoke-WebRequest -Uri $packageUrl -OutFile $outputFile -UseBasicParsing `
                     -TimeoutSec 1800 -PassThru
                 
                 $success = Test-Path $outputFile
             }
             else {
                 $ProgressPreference = 'SilentlyContinue'
-                Invoke-WebRequest -Uri $Package.Url -OutFile $outputFile -UseBasicParsing -TimeoutSec 1800
+                Invoke-WebRequest -Uri $packageUrl -OutFile $outputFile -UseBasicParsing -TimeoutSec 1800
                 $success = Test-Path $outputFile
             }
             

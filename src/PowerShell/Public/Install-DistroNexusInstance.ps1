@@ -191,6 +191,14 @@ function Install-DistroNexusInstance {
             if (-not $distroInfo) {
                 throw "Distribution '$DistroName' not found in catalog"
             }
+
+            $catalogDefaultName = $null
+            if ($distroInfo.PSObject.Properties['DefaultName'] -and -not [string]::IsNullOrWhiteSpace($distroInfo.DefaultName)) {
+                $catalogDefaultName = [string]$distroInfo.DefaultName
+            }
+            elseif (-not [string]::IsNullOrWhiteSpace($DistroName)) {
+                $catalogDefaultName = [string]$DistroName
+            }
             
             # Get package path from distro info
             $packagePath = $distroInfo.LocalPath
@@ -199,7 +207,10 @@ function Install-DistroNexusInstance {
             if (-not $packagePath -or -not (Test-Path $packagePath)) {
                 # Get package info using Get-DistroNexusPackage to check cache status
                 $packageInfo = Get-DistroNexusPackage | Where-Object { 
-                    $_.Version -eq $DistroName -or $_.Name -eq $DistroName 
+                    $_.DefaultName -eq $catalogDefaultName -or
+                    $_.Version -eq $DistroName -or
+                    $_.Name -eq $DistroName -or
+                    $_.Name -eq $catalogDefaultName
                 } | Select-Object -First 1
                 
                 if ($packageInfo -and $packageInfo.IsCached -and $packageInfo.LocalPath) {
@@ -213,15 +224,31 @@ function Install-DistroNexusInstance {
                 Write-DistroNexusLog "Package not cached, downloading using Save-DistroNexusPackage..."
                 
                 # Use Save-DistroNexusPackage for consistent download logic
-                $downloadResult = Save-DistroNexusPackage -DefaultName $DistroName -ShowSpeed $true -SkipExisting $false
+                $downloadResult = Save-DistroNexusPackage -DefaultName $catalogDefaultName -ShowSpeed $true -SkipExisting $false
                 
                 if (-not $downloadResult) {
-                    throw "Failed to download package for '$DistroName'"
+                    throw "Failed to download package for '$catalogDefaultName'"
+                }
+
+                if ($downloadResult.PSObject.Properties['Success'] -and -not $downloadResult.Success) {
+                    $failedPackagesMessage = $null
+                    if ($downloadResult.PSObject.Properties['FailedPackages'] -and $downloadResult.FailedPackages) {
+                        $failedPackagesMessage = ($downloadResult.FailedPackages -join ', ')
+                    }
+
+                    if ($failedPackagesMessage) {
+                        throw "Failed to download package for '$catalogDefaultName'. Failed packages: $failedPackagesMessage"
+                    }
+
+                    throw "Failed to download package for '$catalogDefaultName'."
                 }
                 
                 # Get the package path after download
                 $packageInfo = Get-DistroNexusPackage | Where-Object { 
-                    $_.Version -eq $DistroName -or $_.Name -eq $DistroName 
+                    $_.DefaultName -eq $catalogDefaultName -or
+                    $_.Version -eq $DistroName -or
+                    $_.Name -eq $DistroName -or
+                    $_.Name -eq $catalogDefaultName
                 } | Select-Object -First 1
                 
                 if ($packageInfo -and $packageInfo.LocalPath) {

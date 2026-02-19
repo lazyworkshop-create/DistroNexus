@@ -99,11 +99,11 @@ public class TemplateServiceIntegrationTests : IDisposable
             .ReturnsAsync("ok");
 
         _mockPowerShellService
-            .Setup(x => x.ExecuteScriptAsync(It.Is<string>(s => s.Contains("fail-script")), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ExecuteScriptAsync(It.Is<string>(s => CommandContainsDecodedText(s, "fail-script")), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("fail-script"));
 
         _mockPowerShellService
-            .Setup(x => x.ExecuteScriptAsync(It.Is<string>(s => s.Contains("fail-continue")), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ExecuteScriptAsync(It.Is<string>(s => CommandContainsDecodedText(s, "fail-continue")), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("fail-continue"));
     }
 
@@ -141,7 +141,7 @@ public class TemplateServiceIntegrationTests : IDisposable
 
         Assert.False(result.Success);
         Assert.NotEmpty(result.Errors);
-        _mockPowerShellService.Verify(x => x.ExecuteScriptAsync(It.Is<string>(s => s.Contains("after-stop")), It.IsAny<CancellationToken>()), Times.Never);
+        _mockPowerShellService.Verify(x => x.ExecuteScriptAsync(It.Is<string>(s => CommandContainsDecodedText(s, "after-stop")), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -190,5 +190,59 @@ public class TemplateServiceIntegrationTests : IDisposable
             _mockSettingsService.Object,
             _mockPowerShellService.Object,
             _httpClient);
+    }
+
+    private static bool CommandContainsDecodedText(string command, string expected)
+    {
+        if (command.Contains(expected, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        const string prefix = " -- bash '";
+        const string suffix = "'; $exitCode = $LASTEXITCODE";
+        var start = command.IndexOf(prefix, StringComparison.Ordinal);
+        if (start < 0)
+        {
+            return false;
+        }
+
+        start += prefix.Length;
+        var end = command.IndexOf(suffix, start, StringComparison.Ordinal);
+        if (end <= start)
+        {
+            return false;
+        }
+
+        try
+        {
+            var escapedWslPath = command[start..end];
+            var wslPath = escapedWslPath.Replace("''", "'", StringComparison.Ordinal);
+            const string mntPrefix = "/mnt/";
+            if (!wslPath.StartsWith(mntPrefix, StringComparison.OrdinalIgnoreCase) || wslPath.Length <= mntPrefix.Length + 2)
+            {
+                return false;
+            }
+
+            var drive = char.ToUpperInvariant(wslPath[mntPrefix.Length]);
+            var relativePath = wslPath[(mntPrefix.Length + 2)..].Replace('/', '\\');
+            if (relativePath.StartsWith("\\", StringComparison.Ordinal))
+            {
+                relativePath = relativePath[1..];
+            }
+
+            var windowsPath = $"{drive}:\\{relativePath}";
+            if (!File.Exists(windowsPath))
+            {
+                return false;
+            }
+
+            var scriptContent = File.ReadAllText(windowsPath);
+            return scriptContent.Contains(expected, StringComparison.Ordinal);
+        }
+        catch
+        {
+            return false;
+        }
     }
 }
