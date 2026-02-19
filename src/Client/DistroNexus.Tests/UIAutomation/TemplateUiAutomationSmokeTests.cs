@@ -2,6 +2,7 @@ using FlaUI.Core.AutomationElements;
 
 namespace DistroNexus.Tests.UIAutomation;
 
+[Collection("UIAutomation")]
 public class TemplateUiAutomationSmokeTests
 {
     [Fact]

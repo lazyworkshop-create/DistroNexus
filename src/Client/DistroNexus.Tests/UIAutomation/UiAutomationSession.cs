@@ -29,6 +29,7 @@ public sealed class UiAutomationSession : IDisposable
         Retry.WhileNull(
             () => app.GetMainWindow(automation),
             timeout: TimeSpan.FromSeconds(30),
+            ignoreException: true,
             throwOnTimeout: true,
             timeoutMessage: "Failed to locate DistroNexus main window in UI automation session.");
 
@@ -60,26 +61,63 @@ public sealed class UiAutomationSession : IDisposable
         return false;
     }
 
+    public bool TryOpenPackageManagerPage()
+    {
+        // Uses localized/English fallback for common dashboard navigation labels.
+        var navTargetNames = new[] { "Package Manager", "Package", "软件包管理", "包管理" };
+
+        foreach (var target in navTargetNames)
+        {
+            var candidate = MainWindow.FindFirstDescendant(cf =>
+                cf.ByControlType(ControlType.Button)
+                  .And(cf.ByName(target)))?.AsButton();
+
+            if (candidate != null)
+            {
+                candidate.Invoke();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public void Dispose()
     {
         try
         {
-            if (!Application.HasExited)
+            if (!IsProcessExited())
             {
                 Application.Close();
+                Application.WaitWhileMainHandleIsMissing(TimeSpan.FromSeconds(2));
             }
         }
         catch
         {
-            if (!Application.HasExited)
-            {
-                try { Application.Kill(); } catch { }
-            }
+            // ignored, force kill in finally
         }
         finally
         {
+            if (!IsProcessExited())
+            {
+                try { Application.Kill(); } catch { }
+            }
+
             Automation.Dispose();
             Application.Dispose();
+        }
+    }
+
+    private bool IsProcessExited()
+    {
+        try
+        {
+            return Application.HasExited;
+        }
+        catch
+        {
+            // Can happen when process is already detached from handle.
+            return true;
         }
     }
 
