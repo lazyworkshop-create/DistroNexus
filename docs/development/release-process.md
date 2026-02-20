@@ -42,3 +42,23 @@ Before creating a release tag, ensure the following files are updated with the n
 ## 4. Verification
 
 The release workflow includes a step to verify that the version in the tag matches the version in `src/Client/Directory.Build.props`. If they do not match, the release will fail.
+
+## 5. Release Evidence Bundle (v2.1.1+)
+
+Before final sign-off, generate a deterministic evidence bundle for checklist consumption:
+
+```powershell
+Import-Module .\src\PowerShell\DistroNexus.psd1 -Force
+
+New-DistroNexusReleaseEvidenceBundle \
+    -ReleaseVersion v2.1.1 \
+    -WorkflowRuns @('https://github.com/<owner>/<repo>/actions/runs/<id>') \
+    -TestArtifacts @('https://github.com/<owner>/<repo>/actions/runs/<id>/artifacts/<id>') \
+    -ReleaseLinks @('https://github.com/<owner>/<repo>/releases/tag/v2.1.1')
+```
+
+Default output path:
+
+- `docs/development/release-evidence/vX.Y.Z-evidence.json`
+
+If unresolved evidence links remain, the bundle marks them under `UnresolvedItems` for actionable follow-up.
