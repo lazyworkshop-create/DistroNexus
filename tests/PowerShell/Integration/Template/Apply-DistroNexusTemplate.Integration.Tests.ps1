@@ -21,8 +21,14 @@ Describe "Apply-DistroNexusTemplate Integration" -Tag 'Integration', 'Template' 
                 )
             }
 
-            Mock wsl.exe { return "Ubuntu-22.04" } -ParameterFilter { $Args -contains "--list" }
-            Mock wsl.exe { }
+            Mock wsl.exe {
+                $global:LASTEXITCODE = 0
+                return "Ubuntu-22.04"
+            } -ParameterFilter { $Args -contains "--list" }
+            Mock wsl.exe {
+                $global:LASTEXITCODE = 0
+                return "ok"
+            }
             Mock Test-Path { return $true } -ParameterFilter { $Path -match "templates[\\/]int[\\/]install.sh" }
             Mock Get-Content { return "echo integration" } -ParameterFilter { $Path -match "templates[\\/]int[\\/]install.sh" }
 
