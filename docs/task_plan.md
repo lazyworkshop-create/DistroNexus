@@ -1,5 +1,29 @@
 # Task Log
 
+Date: 2026-02-20
+
+## Active Milestone
+- GitHub Actions pipeline stabilization and release-lane verification
+
+## Plan
+1. Use authenticated GitHub CLI diagnostics to identify exact failing jobs/steps for latest CI and Integration runs.
+2. Apply minimal workflow and test-code fixes aligned to observed root causes (CI policy mismatch, environment-sensitive assertions, timing flakiness).
+3. Re-run targeted local verification for touched PowerShell/C# tests.
+4. Push fixes and monitor new `CI Build` and `Integration Tests` runs until completion.
+5. Trigger manual `Release Build` (`workflow_dispatch`) and verify release lane completion.
+
+## Status
+- Completed
+
+## Completion Notes
+- Diagnosed failures through `gh run view --json jobs` and `gh run view --log-failed` with authenticated access.
+- Implemented focused fixes in workflow/test files only; no unrelated product-scope changes were introduced.
+- Targeted local validations passed for patched tests before remote execution.
+- Latest runs reached green state:
+	- `CI Build`: success (`22213808133`)
+	- `Integration Tests`: success (`22213808121`)
+	- `Release Build` (manual): success (`22214193152`)
+
 Date: 2026-02-19
 
 ## Active Milestone

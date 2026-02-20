@@ -1,5 +1,22 @@
 # Findings Log
 
+Date: 2026-02-20
+
+## Active Milestone
+- GitHub Actions pipeline stabilization and release-lane verification
+
+## Findings
+- Anonymous GitHub REST polling is insufficient for sustained diagnostics in this environment due rate limits; authenticated GitHub CLI (`gh`) gives reliable run/job/failed-step visibility.
+- The dominant failures were test-environment mismatches and timing sensitivity, not core product runtime regressions:
+	- PowerShell unit assertions conflicted with explicit CI policy behavior (`SkippedByPolicy` when `$env:CI=true` without override).
+	- Instance-list non-empty assertion depended on host/runtime state not guaranteed on CI runners.
+	- Download speed exact-zero assertion was brittle under asynchronous progress update timing.
+	- Integration mock path required explicit `LASTEXITCODE=0` to emulate successful script execution semantics.
+- Workflow hardening remains necessary even when test code is corrected:
+	- Explicitly excluding `UIAutomation` from headless lanes prevents false negatives.
+	- Result publication steps should be resilient to missing/non-matching files and must not become primary failure sources.
+- End-to-end confidence requires validating all three channels after remediation (`CI Build`, `Integration Tests`, `Release Build`), not only one workflow family.
+
 Date: 2026-02-19
 
 ## Active Milestone

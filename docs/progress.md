@@ -1,5 +1,26 @@
 # Progress Log
 
+Date: 2026-02-20
+
+## Active Milestone
+- GitHub Actions pipeline stabilization and release-lane verification
+
+## Progress
+- Enabled authenticated GitHub CLI diagnostics and switched failure analysis from anonymous API polling to `gh run view` step/log inspection.
+- Stabilized workflow execution paths in `.github/workflows/ci.yml`, `.github/workflows/test.yml`, and `.github/workflows/release.yml`:
+	- Excluded `UIAutomation` lane from headless CI test runs.
+	- Added robust Pester unit filter fallback behavior and result-publish guards.
+	- Reduced non-critical publish/package noise impact in CI summary.
+- Fixed CI-sensitive PowerShell tests:
+	- Updated `Invoke-DistroNexusTemplateAutomation.Tests.ps1` to clear and restore `$env:CI` for execution-path assertions that must not be policy-skipped.
+	- Updated `Get-DistroNexusInstance.Tests.ps1` to remove environment-dependent non-empty-instance assertion.
+- Fixed flaky timing assertion in `DownloadTaskManagerProgressTests` to avoid CI scheduler variance failures.
+- Fixed PowerShell integration mock behavior in `Apply-DistroNexusTemplate.Integration.Tests.ps1` by setting deterministic `wsl.exe` mock output and `LASTEXITCODE`.
+- Validation results:
+	- Latest `CI Build` run: `success` (run `22213808133`).
+	- Latest `Integration Tests` run: `success` (run `22213808121`).
+	- Manual `Release Build` workflow_dispatch (`version=2.1.0`): `success` (run `22214193152`).
+
 Date: 2026-02-19
 
 ## Active Milestone
