@@ -174,5 +174,79 @@ Describe "Invoke-DistroNexusTemplateAutomation" -Tag 'Unit', 'Public' {
                 }
             }
         }
+
+        It "Should generate regression diff using latest successful baseline" {
+            InModuleScope DistroNexus {
+                $previousCi = $env:CI
+                $env:CI = $null
+                try {
+                    Mock Get-Command { return [pscustomobject]@{ Name = 'wsl.exe' } } -ModuleName DistroNexus -ParameterFilter { $Name -eq 'wsl.exe' }
+                    Mock Get-DistroNexusTemplate {
+                        return @(
+                            [pscustomobject]@{ Id = 'dotnet-dev'; Name = '.NET Development'; ScenarioTags = @('api') },
+                            [pscustomobject]@{ Id = 'ai-ml-gpu-dev'; Name = 'AI/ML GPU Development'; ScenarioTags = @('ai', 'gpu') }
+                        )
+                    } -ModuleName DistroNexus
+                    Mock wsl.exe {
+                        $global:LASTEXITCODE = 0
+                        return 'ok'
+                    } -ModuleName DistroNexus
+                    Mock Test-DistroNexusTemplateEnvironment {
+                        return @(
+                            [pscustomobject]@{ Capability = 'Gpu'; Status = 'Pass'; Reason = 'ok'; Details = @{} }
+                        )
+                    } -ModuleName DistroNexus
+
+                    $outputRoot = Join-Path $TestDrive 'results-diff'
+                    $baselineRun = Invoke-DistroNexusTemplateAutomation -Mode SelectedTemplates -TemplateIds 'dotnet-dev,ai-ml-gpu-dev' -Distro 'Ubuntu-22.04' -DryRun -CapabilityProfile CpuOnly -OutputRoot $outputRoot
+
+                    $currentRun = Invoke-DistroNexusTemplateAutomation -Mode SelectedTemplates -TemplateIds 'dotnet-dev,ai-ml-gpu-dev' -Distro 'Ubuntu-22.04' -DryRun -CapabilityProfile GpuCapable -OutputRoot $outputRoot -EnableRegressionDiff
+
+                    Test-Path $currentRun.RegressionDiffPath | Should -BeTrue
+                    $diff = Get-Content -Path $currentRun.RegressionDiffPath -Raw | ConvertFrom-Json
+                    $diff.HasBaseline | Should -BeTrue
+                    $diff.BaselineRunId | Should -Be $baselineRun.RunId
+                    $diff.Delta.Pass | Should -Be 1
+                    $diff.Delta.Blocked | Should -Be -1
+                    @($diff.ChangedItems).Count | Should -BeGreaterThan 0
+                    @($diff.ChangedItems | Where-Object { $_.TemplateId -eq 'ai-ml-gpu-dev' }).Count | Should -Be 1
+                }
+                finally {
+                    $env:CI = $previousCi
+                }
+            }
+        }
+
+        It "Should not fail when explicit baseline run id is missing" {
+            InModuleScope DistroNexus {
+                $previousCi = $env:CI
+                $env:CI = $null
+                try {
+                    Mock Get-Command { return [pscustomobject]@{ Name = 'wsl.exe' } } -ModuleName DistroNexus -ParameterFilter { $Name -eq 'wsl.exe' }
+                    Mock Get-DistroNexusTemplate {
+                        return @(
+                            [pscustomobject]@{ Id = 'dotnet-dev'; Name = '.NET Development'; ScenarioTags = @('api') }
+                        )
+                    } -ModuleName DistroNexus
+                    Mock wsl.exe {
+                        $global:LASTEXITCODE = 0
+                        return 'ok'
+                    } -ModuleName DistroNexus
+
+                    $outputRoot = Join-Path $TestDrive 'results-missing-baseline'
+                    $run = Invoke-DistroNexusTemplateAutomation -Mode SelectedTemplates -TemplateIds 'dotnet-dev' -Distro 'Ubuntu-22.04' -DryRun -OutputRoot $outputRoot -EnableRegressionDiff -BaselineRunId 'missing-run-id'
+
+                    $run.Status | Should -Be 'Passed'
+                    Test-Path $run.RegressionDiffPath | Should -BeTrue
+                    $diff = Get-Content -Path $run.RegressionDiffPath -Raw | ConvertFrom-Json
+                    $diff.HasBaseline | Should -BeFalse
+                    $diff.BaselinePolicy | Should -Be 'ExplicitRunId'
+                    $diff.Message | Should -Match 'not found'
+                }
+                finally {
+                    $env:CI = $previousCi
+                }
+            }
+        }
     }
 }
