@@ -25,6 +25,9 @@ Describe "Invoke-DistroNexusTemplateAutomation" -Tag 'Unit', 'Public' {
 
         It "Should fail fast for unknown selected template IDs" {
             InModuleScope DistroNexus {
+                $previousCi = $env:CI
+                $env:CI = $null
+                try {
                 Mock Get-Command { return [pscustomobject]@{ Name = 'wsl.exe' } } -ModuleName DistroNexus -ParameterFilter { $Name -eq 'wsl.exe' }
                 Mock Get-DistroNexusTemplate {
                     return @(
@@ -34,6 +37,10 @@ Describe "Invoke-DistroNexusTemplateAutomation" -Tag 'Unit', 'Public' {
                 } -ModuleName DistroNexus
 
                 { Invoke-DistroNexusTemplateAutomation -Mode SelectedTemplates -TemplateIds 'unknown-template' -Distro 'Ubuntu-22.04' } | Should -Throw
+                }
+                finally {
+                    $env:CI = $previousCi
+                }
             }
         }
     }
@@ -41,6 +48,9 @@ Describe "Invoke-DistroNexusTemplateAutomation" -Tag 'Unit', 'Public' {
     Context "Execution and artifacts" {
         It "Should generate manifest, summary and xml in dry-run mode" {
             InModuleScope DistroNexus {
+                $previousCi = $env:CI
+                $env:CI = $null
+                try {
                 Mock Get-Command { return [pscustomobject]@{ Name = 'wsl.exe' } } -ModuleName DistroNexus -ParameterFilter { $Name -eq 'wsl.exe' }
                 Mock Get-DistroNexusTemplate {
                     return @(
@@ -62,11 +72,18 @@ Describe "Invoke-DistroNexusTemplateAutomation" -Tag 'Unit', 'Public' {
                 Test-Path $result.SummaryPath | Should -BeTrue
                 Test-Path $result.TestResultPath | Should -BeTrue
                 Assert-MockCalled Apply-DistroNexusTemplate -Times 0 -ModuleName DistroNexus
+                }
+                finally {
+                    $env:CI = $previousCi
+                }
             }
         }
 
         It "Should execute apply and runtime probes in non-dry-run mode" {
             InModuleScope DistroNexus {
+                $previousCi = $env:CI
+                $env:CI = $null
+                try {
                 Mock Get-Command { return [pscustomobject]@{ Name = 'wsl.exe' } } -ModuleName DistroNexus -ParameterFilter { $Name -eq 'wsl.exe' }
                 Mock Get-DistroNexusTemplate {
                     return @(
@@ -85,6 +102,10 @@ Describe "Invoke-DistroNexusTemplateAutomation" -Tag 'Unit', 'Public' {
                 $result.Total | Should -Be 1
                 $result.Pass | Should -Be 1
                 Assert-MockCalled Apply-DistroNexusTemplate -Times 1 -ModuleName DistroNexus
+                }
+                finally {
+                    $env:CI = $previousCi
+                }
             }
         }
     }
