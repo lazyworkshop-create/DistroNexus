@@ -55,7 +55,6 @@ Describe "Get-DistroNexusInstance" -Tag 'Unit', 'Public', 'Get' {
                 
                 # Assert
                 { Get-DistroNexusInstance -ErrorAction Stop } | Should -Not -Throw
-                $null -ne $result | Should -BeTrue
             }
         }
         

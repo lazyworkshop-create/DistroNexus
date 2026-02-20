@@ -116,9 +116,25 @@ public class DownloadTaskManagerProgressTests
 
         var task = manager.AddTask(package, Path.Combine(Path.GetTempPath(), "pkg-stall.wsl"));
         await WaitForCompletionAsync(task);
+        await WaitForExpectedSpeedAsync(task, expectedBytesPerSecond: 0);
 
         Assert.Equal(DownloadStatus.Completed, task.Status);
         Assert.Equal(0, task.BytesPerSecond);
+    }
+
+    private static async Task WaitForExpectedSpeedAsync(DownloadTask task, long expectedBytesPerSecond)
+    {
+        var timeout = DateTime.UtcNow.AddSeconds(3);
+
+        while (DateTime.UtcNow < timeout)
+        {
+            if (task.BytesPerSecond == expectedBytesPerSecond)
+            {
+                return;
+            }
+
+            await Task.Delay(50);
+        }
     }
 
     private static async Task WaitForCompletionAsync(DownloadTask task)
