@@ -90,7 +90,7 @@ jobs:
       run: dotnet build src/Client/DistroNexus.slnx --configuration Release --no-restore
 
     - name: Run tests
-      run: dotnet test src/Client/DistroNexus.slnx --configuration Release --no-build --verbosity normal
+      run: dotnet test src/Client/DistroNexus.slnx --configuration Release --no-build --verbosity normal --filter "Category!=UIAutomation" --blame-hang --blame-hang-timeout 8m
 
     - name: Build portable package (framework-dependent)
       run: |

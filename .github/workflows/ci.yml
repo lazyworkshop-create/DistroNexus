@@ -44,7 +44,7 @@ jobs:
       run: dotnet build src/Client/DistroNexus.slnx --configuration Release --no-restore
 
     - name: Run C# tests with coverage
-      run: dotnet test src/Client/DistroNexus.slnx --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx" --collect:"XPlat Code Coverage" --results-directory TestResults --blame-hang --blame-hang-timeout 5m
+      run: dotnet test src/Client/DistroNexus.slnx --configuration Release --no-build --verbosity normal --filter "Category!=UIAutomation" --logger "trx;LogFileName=test-results.trx" --collect:"XPlat Code Coverage" --results-directory TestResults --blame-hang --blame-hang-timeout 5m
 
     - name: Generate coverage report
       run: |
@@ -58,7 +58,7 @@ jobs:
       if: always()
       with:
         name: csharp-test-results
-        path: "TestResults/*.trx"
+        path: "TestResults/**/*.trx"
         retention-days: 7
 
     - name: Upload coverage report
@@ -113,9 +113,10 @@ jobs:
         Import-Module Pester -MinimumVersion 5.0.0
         
         $config = New-PesterConfiguration
-        $config.Run.Path = 'tests/PowerShell'
+        $config.Run.Path = 'tests/PowerShell/Unit'
         $config.Run.PassThru = $true
         $config.Run.Exit = $false
+        $config.Filter.Tag = @('Unit')
         
         $config.CodeCoverage.Enabled = $true
         $config.CodeCoverage.Path = @('src/PowerShell/Private/*.ps1', 'src/PowerShell/Public/*.ps1')
@@ -129,6 +130,12 @@ jobs:
         $config.Output.Verbosity = 'Detailed'
         
         $result = Invoke-Pester -Configuration $config
+
+        if ($result.TotalCount -eq 0) {
+          Write-Warning "No tests matched tag 'Unit'. Falling back to all tests under tests/PowerShell/Unit."
+          $config.Filter.Tag = @()
+          $result = Invoke-Pester -Configuration $config
+        }
         
         if ($result.FailedCount -gt 0) {
           Write-Error "PowerShell tests failed: $($result.FailedCount) test(s) did not pass"

@@ -62,6 +62,12 @@ jobs:
         }
         
         $result = Invoke-Pester -Configuration $unitTestConfig
+
+        if ($result.TotalCount -eq 0) {
+          Write-Warning "No tests matched tag 'Unit'. Falling back to all tests under ./Unit."
+          $unitTestConfig.Filter = @{}
+          $result = Invoke-Pester -Configuration $unitTestConfig
+        }
         
         if ($result.FailedCount -gt 0) {
           exit 1
@@ -106,10 +112,10 @@ jobs:
         path: tests/test-results/
 
     - name: Publish PowerShell Test Results
-      if: always()
+      if: always() && hashFiles('tests/test-results/**/*.xml') != ''
       uses: EnricoMi/publish-unit-test-result-action/windows@v2
       with:
-        files: tests/test-results/pester-*.xml
+        files: tests/test-results/**/*.xml
         check_name: 'PowerShell Tests (${{ matrix.powershell-version }})'
 
   test-csharp:
@@ -164,10 +170,10 @@ jobs:
         path: test-results/
 
     - name: Publish C# Test Results
-      if: always()
+      if: always() && hashFiles('test-results/**/*.trx') != ''
       uses: EnricoMi/publish-unit-test-result-action/windows@v2
       with:
-        files: test-results/*.trx
+        files: test-results/**/*.trx
         check_name: 'C# Tests'
 
     - name: Upload Coverage to Codecov
