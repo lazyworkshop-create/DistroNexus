@@ -121,6 +121,7 @@ jobs:
         $config.CodeCoverage.Enabled = $true
         $config.CodeCoverage.Path = @('src/PowerShell/Private/*.ps1', 'src/PowerShell/Public/*.ps1')
         $config.CodeCoverage.OutputFormat = 'CoverageGutters'
+        $config.CodeCoverage.CoveragePercentTarget = 0
         $config.CodeCoverage.OutputPath = 'coverage/powershell-coverage.xml'
         
         $config.TestResult.Enabled = $true

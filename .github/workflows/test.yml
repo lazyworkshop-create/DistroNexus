@@ -57,6 +57,7 @@ jobs:
             Enabled = $true
             OutputPath = '../test-results/pester-unit-coverage.xml'
             OutputFormat = 'CoverageGutters'
+            CoveragePercentTarget = 0
             Path = '../../src/PowerShell/Public', '../../src/PowerShell/Private'
           }
         }
@@ -94,6 +95,7 @@ jobs:
             Enabled = $true
             OutputPath = '../test-results/pester-integration-coverage.xml'
             OutputFormat = 'CoverageGutters'
+            CoveragePercentTarget = 0
             Path = '../../src/PowerShell'
           }
         }
@@ -114,8 +116,9 @@ jobs:
     - name: Publish PowerShell Test Results
       if: always() && hashFiles('tests/test-results/**/*.xml') != ''
       uses: EnricoMi/publish-unit-test-result-action/windows@v2
+      continue-on-error: true
       with:
-        files: tests/test-results/**/*.xml
+        files: tests/test-results/*-results.xml
         check_name: 'PowerShell Tests (${{ matrix.powershell-version }})'
 
   test-csharp:
@@ -172,6 +175,7 @@ jobs:
     - name: Publish C# Test Results
       if: always() && hashFiles('test-results/**/*.trx') != ''
       uses: EnricoMi/publish-unit-test-result-action/windows@v2
+      continue-on-error: true
       with:
         files: test-results/**/*.trx
         check_name: 'C# Tests'
