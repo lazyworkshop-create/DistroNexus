@@ -496,5 +496,29 @@
         "TimeoutSeconds": 1500
       }
     ]
+  },
+  {
+    "Id": "infra-cli-toolbox",
+    "Name": "Infrastructure CLI Toolbox",
+    "Category": "DevOps",
+    "Description": "Install essential DevOps CLI tools for infrastructure and cluster operations in WSL.",
+    "Icon": "Toolbox24",
+    "InstallMode": "Scripted",
+    "ScenarioTags": ["devops", "iac", "kubernetes", "automation"],
+    "EstimatedDurationMinutes": 8,
+    "CompatibleDistros": ["Ubuntu", "Debian"],
+    "DefaultSelections": {
+      "INFRA_TOOLSET": "kubectl,helm,terraform,jq,yq"
+    },
+    "Scripts": [
+      {
+        "Name": "Install Infrastructure CLI Toolbox",
+        "ScriptPath": "templates/infra-cli-toolbox/install.sh",
+        "Type": "Bash",
+        "Phase": "PostConfigure",
+        "Order": 1,
+        "TimeoutSeconds": 1200
+      }
+    ]
   }
 ]

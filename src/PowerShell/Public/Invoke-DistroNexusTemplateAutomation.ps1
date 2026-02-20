@@ -28,9 +28,58 @@ function Invoke-DistroNexusTemplateAutomation {
         [switch]$UseSharedDistro,
 
         [Parameter()]
+        [ValidateSet('CpuOnly', 'GpuCapable', 'SystemdCapable')]
+        [string]$CapabilityProfile,
+
+        [Parameter()]
         [ValidateSet('NUnitXml', 'JUnitXml')]
         [string]$TestResultFormat = 'NUnitXml'
     )
+
+    function Resolve-CapabilityPolicy {
+        param(
+            [Parameter()]
+            [string]$Profile,
+            [Parameter(Mandatory = $true)]
+            [bool]$IncludeCapabilityGatedSwitch
+        )
+
+        if ([string]::IsNullOrWhiteSpace($Profile)) {
+            return [PSCustomObject]@{
+                ProfileName = 'Default'
+                AllowCapabilityGated = $IncludeCapabilityGatedSwitch
+                RequireGpu = $false
+                RequireSystemd = $false
+            }
+        }
+
+        switch ($Profile) {
+            'CpuOnly' {
+                return [PSCustomObject]@{
+                    ProfileName = 'CpuOnly'
+                    AllowCapabilityGated = $false
+                    RequireGpu = $false
+                    RequireSystemd = $false
+                }
+            }
+            'GpuCapable' {
+                return [PSCustomObject]@{
+                    ProfileName = 'GpuCapable'
+                    AllowCapabilityGated = $true
+                    RequireGpu = $true
+                    RequireSystemd = $false
+                }
+            }
+            'SystemdCapable' {
+                return [PSCustomObject]@{
+                    ProfileName = 'SystemdCapable'
+                    AllowCapabilityGated = $true
+                    RequireGpu = $false
+                    RequireSystemd = $true
+                }
+            }
+        }
+    }
 
     function Invoke-RunnerCommand {
         param(
@@ -181,6 +230,7 @@ function Invoke-DistroNexusTemplateAutomation {
             'kubernetes-local*' { $commands = @('kubectl version --client') }
             'database-local-stack' { $commands = @('bash -lc "if command -v psql >/dev/null || command -v mysql >/dev/null || command -v redis-cli >/dev/null || command -v mongosh >/dev/null || command -v sqlite3 >/dev/null; then exit 0; else exit 127; fi"') }
             'ai-ml-gpu-dev' { $commands = @('bash -lc ''if command -v python >/dev/null; then python --version; elif command -v python3 >/dev/null; then python3 --version; else exit 127; fi''') }
+            'infra-cli-toolbox' { $commands = @('bash -lc ''if command -v jq >/dev/null && command -v yq >/dev/null; then exit 0; else exit 127; fi''') }
             default { $commands = @('bash -lc "echo ok"') }
         }
 
@@ -203,7 +253,7 @@ function Invoke-DistroNexusTemplateAutomation {
             [Parameter(Mandatory = $true)]
             [string]$TargetDistro,
             [Parameter(Mandatory = $true)]
-            [bool]$AllowCapabilityGated
+            [PSCustomObject]$CapabilityPolicy
         )
 
         $tags = @()
@@ -211,26 +261,67 @@ function Invoke-DistroNexusTemplateAutomation {
             $tags = @($Template.ScenarioTags | ForEach-Object { $_.ToString().ToLowerInvariant() })
         }
 
-        $isCapabilityGated = ($tags -contains 'gpu') -or ($tags -contains 'microk8s')
-        if ($isCapabilityGated -and -not $AllowCapabilityGated) {
-            return [PSCustomObject]@{ Blocked = $true; Reason = 'Capability-gated template excluded. Use -IncludeCapabilityGated to enable.' }
-        }
+        $requiresGpu = ($tags -contains 'gpu')
+        $requiresSystemd = ($tags -contains 'microk8s') -or ($Template.Id -eq 'kubernetes-local-dev')
+        $isCapabilityGated = $requiresGpu -or $requiresSystemd
 
-        if ($tags -contains 'gpu') {
-            $gpuCheck = Invoke-RunnerCommand -Name 'gpu-check' -Script { wsl.exe -d $TargetDistro -- bash -lc 'if [ -e /dev/dxg ] || command -v nvidia-smi >/dev/null; then exit 0; else exit 1; fi' }
-            if (-not $gpuCheck.Success) {
-                return [PSCustomObject]@{ Blocked = $true; Reason = 'GPU capability is not available on current host/WSL environment.' }
+        if ($isCapabilityGated -and -not $CapabilityPolicy.AllowCapabilityGated) {
+            $blockReason = if ($CapabilityPolicy.ProfileName -ne 'Default') {
+                "Capability-gated template excluded by capability profile '$($CapabilityPolicy.ProfileName)'."
+            }
+            else {
+                'Capability-gated template excluded. Use -IncludeCapabilityGated to enable.'
+            }
+
+            return [PSCustomObject]@{
+                Blocked = $true
+                Reason = $blockReason
+                Diagnostics = @()
             }
         }
 
-        if ($Template.Id -eq 'kubernetes-local-dev') {
-            $systemdCheck = Invoke-RunnerCommand -Name 'systemd-check' -Script { wsl.exe -d $TargetDistro -- bash -lc 'command -v systemctl >/dev/null && systemctl status >/dev/null' }
-            if (-not $systemdCheck.Success) {
-                return [PSCustomObject]@{ Blocked = $true; Reason = 'systemd is required for kubernetes-local-dev checks and is not available.' }
+        $requestedCapabilities = @()
+        if ($requiresGpu -or $CapabilityPolicy.RequireGpu) {
+            $requestedCapabilities += 'Gpu'
+        }
+
+        if ($requiresSystemd -or $CapabilityPolicy.RequireSystemd) {
+            $requestedCapabilities += 'Systemd'
+        }
+
+        if ($requestedCapabilities.Count -gt 0) {
+            $diagnostics = @(Test-DistroNexusTemplateEnvironment -Distro $TargetDistro -Capability $requestedCapabilities)
+
+            if ($requiresGpu) {
+                $gpuResult = @($diagnostics | Where-Object { $_.Capability -eq 'Gpu' } | Select-Object -First 1)
+                if ($gpuResult.Count -eq 0 -or $gpuResult[0].Status -ne 'Pass') {
+                    return [PSCustomObject]@{
+                        Blocked = $true
+                        Reason = 'GPU capability is not available on current host/WSL environment.'
+                        Diagnostics = $diagnostics
+                    }
+                }
+            }
+
+            if ($requiresSystemd) {
+                $systemdResult = @($diagnostics | Where-Object { $_.Capability -eq 'Systemd' } | Select-Object -First 1)
+                if ($systemdResult.Count -eq 0 -or $systemdResult[0].Status -ne 'Pass') {
+                    return [PSCustomObject]@{
+                        Blocked = $true
+                        Reason = 'systemd is required for kubernetes-local-dev checks and is not available.'
+                        Diagnostics = $diagnostics
+                    }
+                }
+            }
+
+            return [PSCustomObject]@{
+                Blocked = $false
+                Reason = $null
+                Diagnostics = $diagnostics
             }
         }
 
-        [PSCustomObject]@{ Blocked = $false; Reason = $null }
+        [PSCustomObject]@{ Blocked = $false; Reason = $null; Diagnostics = @() }
     }
 
     function New-TestResultXml {
@@ -320,6 +411,8 @@ function Invoke-DistroNexusTemplateAutomation {
         throw 'wsl.exe is not available. This suite requires Windows + WSL2.'
     }
 
+    $capabilityPolicy = Resolve-CapabilityPolicy -Profile $CapabilityProfile -IncludeCapabilityGatedSwitch:$IncludeCapabilityGated.IsPresent
+
     $allTemplates = @(Get-DistroNexusTemplate)
     if (-not $allTemplates -or $allTemplates.Count -eq 0) {
         throw 'No templates were discovered from config/templates.json.'
@@ -389,6 +482,8 @@ function Invoke-DistroNexusTemplateAutomation {
             Reason = ''
             DurationSeconds = 0
             ProbeResults = @()
+            CapabilityDiagnostics = @()
+            CapabilityProfile = $capabilityPolicy.ProfileName
         }
 
         try {
@@ -398,7 +493,8 @@ function Invoke-DistroNexusTemplateAutomation {
                 $item.IsolatedInstance = $executionDistro
             }
 
-            $gate = Test-CapabilityGate -Template $template -TargetDistro $executionDistro -AllowCapabilityGated:$IncludeCapabilityGated.IsPresent
+            $gate = Test-CapabilityGate -Template $template -TargetDistro $executionDistro -CapabilityPolicy $capabilityPolicy
+            $item.CapabilityDiagnostics = @($gate.Diagnostics)
             if ($gate.Blocked) {
                 $item.Status = 'Blocked'
                 $item.Reason = $gate.Reason
@@ -454,6 +550,8 @@ function Invoke-DistroNexusTemplateAutomation {
         IsolationMode = if ($UseSharedDistro) { 'SharedDistro' } else { 'PerTemplateIsolatedImport' }
         DryRun = [bool]$DryRun
         IncludeCapabilityGated = [bool]$IncludeCapabilityGated
+        CapabilityProfile = if ([string]::IsNullOrWhiteSpace($CapabilityProfile)) { $null } else { $CapabilityProfile }
+        CapabilityPolicy = $capabilityPolicy
         Summary = [ordered]@{
             Total = $results.Count
             Pass = $passCount
@@ -485,6 +583,7 @@ function Invoke-DistroNexusTemplateAutomation {
         "- Fail: $failCount",
         "- Blocked: $blockedCount",
         "- DryRun: $DryRun",
+        "- CapabilityProfile: $($capabilityPolicy.ProfileName)",
         '',
         '## Failed/Blocked Items',
         ''

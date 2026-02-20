@@ -79,6 +79,72 @@ Describe "Invoke-DistroNexusTemplateAutomation" -Tag 'Unit', 'Public' {
             }
         }
 
+        It "Should block capability-gated templates when CpuOnly profile is used" {
+            InModuleScope DistroNexus {
+                $previousCi = $env:CI
+                $env:CI = $null
+                try {
+                    Mock Get-Command { return [pscustomobject]@{ Name = 'wsl.exe' } } -ModuleName DistroNexus -ParameterFilter { $Name -eq 'wsl.exe' }
+                    Mock Get-DistroNexusTemplate {
+                        return @(
+                            [pscustomobject]@{ Id = 'ai-ml-gpu-dev'; Name = 'AI/ML GPU Development'; ScenarioTags = @('ai', 'gpu') }
+                        )
+                    } -ModuleName DistroNexus
+                    Mock wsl.exe {
+                        $global:LASTEXITCODE = 0
+                        return 'ok'
+                    } -ModuleName DistroNexus
+                    Mock Apply-DistroNexusTemplate { } -ModuleName DistroNexus
+
+                    $outputRoot = Join-Path $TestDrive 'results3'
+                    $result = Invoke-DistroNexusTemplateAutomation -Mode SelectedTemplates -TemplateIds 'ai-ml-gpu-dev' -Distro 'Ubuntu-22.04' -DryRun -CapabilityProfile CpuOnly -OutputRoot $outputRoot
+
+                    $result.Blocked | Should -Be 1
+                    $result.Results[0].Reason | Should -Match 'Capability profile'
+                    Assert-MockCalled Apply-DistroNexusTemplate -Times 0 -ModuleName DistroNexus
+                }
+                finally {
+                    $env:CI = $previousCi
+                }
+            }
+        }
+
+        It "Should invoke diagnostic cmdlet for GpuCapable profile" {
+            InModuleScope DistroNexus {
+                $previousCi = $env:CI
+                $env:CI = $null
+                try {
+                    Mock Get-Command { return [pscustomobject]@{ Name = 'wsl.exe' } } -ModuleName DistroNexus -ParameterFilter { $Name -eq 'wsl.exe' }
+                    Mock Get-DistroNexusTemplate {
+                        return @(
+                            [pscustomobject]@{ Id = 'ai-ml-gpu-dev'; Name = 'AI/ML GPU Development'; ScenarioTags = @('ai', 'gpu') }
+                        )
+                    } -ModuleName DistroNexus
+                    Mock wsl.exe {
+                        $global:LASTEXITCODE = 0
+                        return 'ok'
+                    } -ModuleName DistroNexus
+                    Mock Test-DistroNexusTemplateEnvironment {
+                        return @(
+                            [pscustomobject]@{ Capability = 'Gpu'; Status = 'Pass'; Reason = 'ok'; Details = @{} }
+                        )
+                    } -ModuleName DistroNexus
+                    Mock Apply-DistroNexusTemplate { } -ModuleName DistroNexus
+
+                    $outputRoot = Join-Path $TestDrive 'results4'
+                    $result = Invoke-DistroNexusTemplateAutomation -Mode SelectedTemplates -TemplateIds 'ai-ml-gpu-dev' -Distro 'Ubuntu-22.04' -DryRun -CapabilityProfile GpuCapable -OutputRoot $outputRoot
+
+                    $result.Pass | Should -Be 1
+                    $result.Results[0].CapabilityProfile | Should -Be 'GpuCapable'
+                    $result.Results[0].CapabilityDiagnostics.Count | Should -BeGreaterThan 0
+                    Assert-MockCalled Test-DistroNexusTemplateEnvironment -Times 1 -ModuleName DistroNexus
+                }
+                finally {
+                    $env:CI = $previousCi
+                }
+            }
+        }
+
         It "Should execute apply and runtime probes in non-dry-run mode" {
             InModuleScope DistroNexus {
                 $previousCi = $env:CI
