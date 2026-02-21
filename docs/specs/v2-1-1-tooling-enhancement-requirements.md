@@ -175,3 +175,4 @@ When a clean refresh is required:
 - Implementation checklist (P3): `docs/development/v2-1-1-p3-implementation-checklist.md`
 - Test checklist (P3): `docs/development/v2-1-1-p3-test-checklist.md`
 - Acceptance checklist (P3): `docs/development/v2-1-1-p3-acceptance-checklist.md`
+- Release readiness checklist: `docs/development/v2-1-1-release-readiness-checklist.md`
