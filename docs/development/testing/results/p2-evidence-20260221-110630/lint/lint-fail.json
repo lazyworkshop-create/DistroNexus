@@ -1,5 +1,6 @@
 {
   "Status": "Fail",
+  "SchemaVersion": "1.0",
   "ConfigPath": "docs/development/testing/results/p2-evidence-20260221-110630/lint/invalid-templates.json",
   "StrictMode": true,
   "GeneratedAt": "2026-02-21T11:06:30.9483460+08:00",

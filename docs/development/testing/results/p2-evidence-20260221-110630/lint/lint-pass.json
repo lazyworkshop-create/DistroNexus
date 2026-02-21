@@ -1,5 +1,6 @@
 {
   "Status": "Pass",
+  "SchemaVersion": "1.0",
   "ConfigPath": "config/templates.json",
   "StrictMode": false,
   "GeneratedAt": "2026-02-21T11:06:30.9368477+08:00",

@@ -5,7 +5,7 @@
 - Strict fail sample command: `Test-DistroNexusTemplateMetadata -ConfigPath docs/development/testing/results/p2-evidence-20260221-110630/lint/invalid-templates.json -Strict -ReportPath docs/development/testing/results/p2-evidence-20260221-110630/lint/lint-fail.json`
 
 ## Output Contract Check
-- Both outputs contain: `Status`, `ConfigPath`, `StrictMode`, `GeneratedAt`, `Summary`, `Violations`.
+- Both outputs contain: `SchemaVersion`, `Status`, `ConfigPath`, `StrictMode`, `GeneratedAt`, `Summary`, `Violations`.
 - Fail sample exits via strict-mode exception and still produces deterministic JSON report.
 
 ## Conclusion

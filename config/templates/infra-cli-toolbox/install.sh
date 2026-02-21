@@ -23,6 +23,9 @@ install_yq() {
 
   local yq_version="v4.44.3"
   retry 3 3 curl -L "https://github.com/mikefarah/yq/releases/download/${yq_version}/yq_linux_amd64" -o /tmp/yq
+  retry 3 3 curl -L "https://github.com/mikefarah/yq/releases/download/${yq_version}/checksums" -o /tmp/yq_checksums
+  grep 'yq_linux_amd64$' /tmp/yq_checksums | awk '{print $1 "  /tmp/yq"}' | sha256sum --check || { echo "ERROR: yq checksum verification failed"; rm -f /tmp/yq /tmp/yq_checksums; exit 1; }
+  rm -f /tmp/yq_checksums
   chmod +x /tmp/yq
   run_with_privilege mv /tmp/yq /usr/local/bin/yq
 }
@@ -36,6 +39,9 @@ install_kubectl() {
   local kubectl_version
   kubectl_version="$(curl -L -s https://dl.k8s.io/release/stable.txt)"
   retry 3 3 curl -LO "https://dl.k8s.io/release/${kubectl_version}/bin/linux/amd64/kubectl"
+  retry 3 3 curl -sSLO "https://dl.k8s.io/release/${kubectl_version}/bin/linux/amd64/kubectl.sha256"
+  echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check || { echo "ERROR: kubectl checksum verification failed"; rm -f kubectl kubectl.sha256; exit 1; }
+  rm -f kubectl.sha256
   chmod +x kubectl
   run_with_privilege mv kubectl /usr/local/bin/kubectl
 }

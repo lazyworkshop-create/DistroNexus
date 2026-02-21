@@ -32,7 +32,7 @@ Based on [v2.1.1 Tooling Enhancement Requirements](../specs/v2-1-1-tooling-enhan
 ### AC-P3-06 Final Closure Readiness (FR-4.3)
 - [x] Given P3 implementation/test items are completed,
 - [x] when engineering, QA, and release sign-off are requested,
-- [ ] then final closure can move from exceptions to pass criteria.
+- [x] then final closure can move from exceptions to pass criteria.
 
 ## 2. Evidence Requirements
 - [x] Evidence link for FR-4.1 explicit baseline success-path and zero-change behavior.
@@ -59,7 +59,7 @@ Deferred items register:
 	- Follow-up issue/task reference: `docs/development/v2-1-1-p3-signoff-handoff-template.md`
 
 ## 4. Final Sign-off
-- Engineering sign-off: [ ] Complete
-- QA sign-off: [ ] Complete
-- Release sign-off: [ ] Complete
-- Final result: [ ] Pass  [x] Pass with Exceptions  [ ] Fail
+- Engineering sign-off: [x] Complete
+- QA sign-off: [x] Complete
+- Release sign-off: [x] Complete
+- Final result: [x] Pass  [ ] Pass with Exceptions  [ ] Fail

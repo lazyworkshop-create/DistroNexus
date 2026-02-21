@@ -42,7 +42,10 @@ function New-DistroNexusReleaseEvidenceBundle {
             return $builder.Uri.AbsoluteUri.TrimEnd('/')
         }
         catch {
-            return $Link.Trim()
+            $raw = $Link.Trim()
+            $cleaned = ($raw -replace '\?.*', '' -replace '#.*', '').TrimEnd('/')
+            if ([string]::IsNullOrWhiteSpace($cleaned)) { return $null }
+            return $cleaned
         }
     }
 
