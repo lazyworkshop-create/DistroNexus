@@ -417,14 +417,32 @@ function Invoke-DistroNexusTemplateAutomation {
             return $null
         }
 
-        $candidate = Get-ChildItem -Path $ResultsRoot -Filter 'run-manifest.json' -Recurse -File -ErrorAction SilentlyContinue |
-            Where-Object { $_.FullName -match [regex]::Escape($RunIdToFind) }
-
-        if (-not $candidate) {
+        $manifestFiles = @(Get-ChildItem -Path $ResultsRoot -Filter 'run-manifest.json' -Recurse -File -ErrorAction SilentlyContinue)
+        if ($manifestFiles.Count -eq 0) {
             return $null
         }
 
-        return ($candidate | Select-Object -First 1).FullName
+        $matches = @()
+        foreach ($file in $manifestFiles) {
+            try {
+                $manifestObject = Get-Content -Path $file.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
+                if ($manifestObject.RunId -eq $RunIdToFind) {
+                    $matches += [PSCustomObject]@{
+                        Path = $file.FullName
+                        Timestamp = [datetime]$manifestObject.Timestamp
+                    }
+                }
+            }
+            catch {
+                Write-Verbose "Skipping invalid manifest while searching explicit baseline '$RunIdToFind': $($file.FullName)"
+            }
+        }
+
+        if ($matches.Count -eq 0) {
+            return $null
+        }
+
+        return (($matches | Sort-Object -Property Timestamp -Descending | Select-Object -First 1).Path)
     }
 
     function Resolve-BaselineManifest {
@@ -440,11 +458,38 @@ function Invoke-DistroNexusTemplateAutomation {
         if (-not [string]::IsNullOrWhiteSpace($ExplicitRunId)) {
             $explicitPath = Get-RunManifestPathById -ResultsRoot $ResultsRoot -RunIdToFind $ExplicitRunId
             if (-not $explicitPath) {
+                $candidateIds = @()
+                try {
+                    $candidateIds = @(
+                        Get-ChildItem -Path $ResultsRoot -Filter 'run-manifest.json' -Recurse -File -ErrorAction SilentlyContinue |
+                            ForEach-Object {
+                                try {
+                                    (Get-Content -Path $_.FullName -Raw -Encoding UTF8 | ConvertFrom-Json).RunId
+                                }
+                                catch {
+                                    $null
+                                }
+                            } |
+                            Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+                            Select-Object -First 5
+                    )
+                }
+                catch {
+                    $candidateIds = @()
+                }
+
+                $hint = if ($candidateIds.Count -gt 0) {
+                    " Known runs: $($candidateIds -join ', ')."
+                }
+                else {
+                    ' No known runs were discovered under output root.'
+                }
+
                 return [PSCustomObject]@{
                     Policy = 'ExplicitRunId'
                     BaselineRunId = $ExplicitRunId
                     Manifest = $null
-                    Message = "Explicit baseline run '$ExplicitRunId' was not found under output root."
+                    Message = "Explicit baseline run '$ExplicitRunId' was not found under output root.$hint"
                 }
             }
 
@@ -614,6 +659,9 @@ function Invoke-DistroNexusTemplateAutomation {
         $baselineFail = (@($baselineResults | Where-Object { $_.Status -eq 'Fail' })).Count
         $baselineBlocked = (@($baselineResults | Where-Object { $_.Status -eq 'Blocked' })).Count
 
+        $sortedChangedItems = @($changedItems | Sort-Object -Property TemplateId, ChangeType)
+        $isZeroChange = ($sortedChangedItems.Count -eq 0) -and ($currentPass -eq $baselinePass) -and ($currentFail -eq $baselineFail) -and ($currentBlocked -eq $baselineBlocked)
+
         [PSCustomObject]@{
             GeneratedAt = (Get-Date).ToString('o')
             CurrentRunId = $CurrentRunId
@@ -630,9 +678,10 @@ function Invoke-DistroNexusTemplateAutomation {
                 Fail = $currentFail - $baselineFail
                 Blocked = $currentBlocked - $baselineBlocked
             }
+            IsZeroChange = $isZeroChange
             AddedTemplates = $addedTemplates
             RemovedTemplates = $removedTemplates
-            ChangedItems = $changedItems
+            ChangedItems = $sortedChangedItems
         }
     }
 
@@ -873,6 +922,7 @@ function Invoke-DistroNexusTemplateAutomation {
             "- DeltaFail: $($regressionDiff.Delta.Fail)",
             "- DeltaBlocked: $($regressionDiff.Delta.Blocked)",
             "- ChangedItems: $($regressionDiff.ChangedItems.Count)",
+            "- IsZeroChange: $($regressionDiff.IsZeroChange)",
             "- Message: $($regressionDiff.Message)",
             '',
             '### Changed Templates',
@@ -880,7 +930,7 @@ function Invoke-DistroNexusTemplateAutomation {
         )
 
         if (@($regressionDiff.ChangedItems).Count -eq 0) {
-            $summaryLines += '- None'
+            $summaryLines += '- No changes detected relative to baseline.'
         }
         else {
             foreach ($change in @($regressionDiff.ChangedItems)) {

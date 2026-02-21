@@ -217,6 +217,109 @@ Describe "Invoke-DistroNexusTemplateAutomation" -Tag 'Unit', 'Public' {
             }
         }
 
+        It "Should resolve explicit baseline run id deterministically" {
+            InModuleScope DistroNexus {
+                $previousCi = $env:CI
+                $env:CI = $null
+                try {
+                    Mock Get-Command { return [pscustomobject]@{ Name = 'wsl.exe' } } -ModuleName DistroNexus -ParameterFilter { $Name -eq 'wsl.exe' }
+                    Mock Get-DistroNexusTemplate {
+                        return @(
+                            [pscustomobject]@{ Id = 'dotnet-dev'; Name = '.NET Development'; ScenarioTags = @('api') },
+                            [pscustomobject]@{ Id = 'nodejs-dev'; Name = 'Node.js Development'; ScenarioTags = @('frontend') }
+                        )
+                    } -ModuleName DistroNexus
+                    Mock wsl.exe {
+                        $global:LASTEXITCODE = 0
+                        return 'ok'
+                    } -ModuleName DistroNexus
+
+                    $outputRoot = Join-Path $TestDrive 'results-explicit-baseline'
+                    $baselineRun = Invoke-DistroNexusTemplateAutomation -Mode SelectedTemplates -TemplateIds 'dotnet-dev,nodejs-dev' -Distro 'Ubuntu-22.04' -DryRun -OutputRoot $outputRoot
+                    $currentRun = Invoke-DistroNexusTemplateAutomation -Mode SelectedTemplates -TemplateIds 'dotnet-dev,nodejs-dev' -Distro 'Ubuntu-22.04' -DryRun -OutputRoot $outputRoot -EnableRegressionDiff -BaselineRunId $baselineRun.RunId
+
+                    $diff = Get-Content -Path $currentRun.RegressionDiffPath -Raw | ConvertFrom-Json
+                    $diff.BaselinePolicy | Should -Be 'ExplicitRunId'
+                    $diff.BaselineRunId | Should -Be $baselineRun.RunId
+                    $diff.Message | Should -Match 'explicit run ID'
+                }
+                finally {
+                    $env:CI = $previousCi
+                }
+            }
+        }
+
+        It "Should produce zero-change regression diff for identical runs" {
+            InModuleScope DistroNexus {
+                $previousCi = $env:CI
+                $env:CI = $null
+                try {
+                    Mock Get-Command { return [pscustomobject]@{ Name = 'wsl.exe' } } -ModuleName DistroNexus -ParameterFilter { $Name -eq 'wsl.exe' }
+                    Mock Get-DistroNexusTemplate {
+                        return @(
+                            [pscustomobject]@{ Id = 'dotnet-dev'; Name = '.NET Development'; ScenarioTags = @('api') }
+                        )
+                    } -ModuleName DistroNexus
+                    Mock wsl.exe {
+                        $global:LASTEXITCODE = 0
+                        return 'ok'
+                    } -ModuleName DistroNexus
+
+                    $outputRoot = Join-Path $TestDrive 'results-zero-change'
+                    $baselineRun = Invoke-DistroNexusTemplateAutomation -Mode SelectedTemplates -TemplateIds 'dotnet-dev' -Distro 'Ubuntu-22.04' -DryRun -OutputRoot $outputRoot
+                    $currentRun = Invoke-DistroNexusTemplateAutomation -Mode SelectedTemplates -TemplateIds 'dotnet-dev' -Distro 'Ubuntu-22.04' -DryRun -OutputRoot $outputRoot -EnableRegressionDiff -BaselineRunId $baselineRun.RunId
+
+                    $diff = Get-Content -Path $currentRun.RegressionDiffPath -Raw | ConvertFrom-Json
+                    $summary = Get-Content -Path $currentRun.SummaryPath -Raw
+
+                    $diff.IsZeroChange | Should -BeTrue
+                    @($diff.ChangedItems).Count | Should -Be 0
+                    $diff.Delta.Pass | Should -Be 0
+                    $diff.Delta.Fail | Should -Be 0
+                    $diff.Delta.Blocked | Should -Be 0
+                    $summary | Should -Match 'No changes detected relative to baseline'
+                }
+                finally {
+                    $env:CI = $previousCi
+                }
+            }
+        }
+
+        It "Should represent added and removed templates in regression diff" {
+            InModuleScope DistroNexus {
+                $previousCi = $env:CI
+                $env:CI = $null
+                try {
+                    Mock Get-Command { return [pscustomobject]@{ Name = 'wsl.exe' } } -ModuleName DistroNexus -ParameterFilter { $Name -eq 'wsl.exe' }
+                    Mock Get-DistroNexusTemplate {
+                        return @(
+                            [pscustomobject]@{ Id = 'dotnet-dev'; Name = '.NET Development'; ScenarioTags = @('api') },
+                            [pscustomobject]@{ Id = 'nodejs-dev'; Name = 'Node.js Development'; ScenarioTags = @('frontend') }
+                        )
+                    } -ModuleName DistroNexus
+                    Mock wsl.exe {
+                        $global:LASTEXITCODE = 0
+                        return 'ok'
+                    } -ModuleName DistroNexus
+
+                    $outputRoot = Join-Path $TestDrive 'results-added-removed'
+
+                    $baselineAdded = Invoke-DistroNexusTemplateAutomation -Mode SelectedTemplates -TemplateIds 'dotnet-dev' -Distro 'Ubuntu-22.04' -DryRun -OutputRoot $outputRoot
+                    $currentAdded = Invoke-DistroNexusTemplateAutomation -Mode SelectedTemplates -TemplateIds 'dotnet-dev,nodejs-dev' -Distro 'Ubuntu-22.04' -DryRun -OutputRoot $outputRoot -EnableRegressionDiff -BaselineRunId $baselineAdded.RunId
+                    $addedDiff = Get-Content -Path $currentAdded.RegressionDiffPath -Raw | ConvertFrom-Json
+                    @($addedDiff.ChangedItems | Where-Object { $_.TemplateId -eq 'nodejs-dev' -and $_.ChangeType -eq 'Added' }).Count | Should -Be 1
+
+                    $baselineRemoved = Invoke-DistroNexusTemplateAutomation -Mode SelectedTemplates -TemplateIds 'dotnet-dev,nodejs-dev' -Distro 'Ubuntu-22.04' -DryRun -OutputRoot $outputRoot
+                    $currentRemoved = Invoke-DistroNexusTemplateAutomation -Mode SelectedTemplates -TemplateIds 'dotnet-dev' -Distro 'Ubuntu-22.04' -DryRun -OutputRoot $outputRoot -EnableRegressionDiff -BaselineRunId $baselineRemoved.RunId
+                    $removedDiff = Get-Content -Path $currentRemoved.RegressionDiffPath -Raw | ConvertFrom-Json
+                    @($removedDiff.ChangedItems | Where-Object { $_.TemplateId -eq 'nodejs-dev' -and $_.ChangeType -eq 'Removed' }).Count | Should -Be 1
+                }
+                finally {
+                    $env:CI = $previousCi
+                }
+            }
+        }
+
         It "Should not fail when explicit baseline run id is missing" {
             InModuleScope DistroNexus {
                 $previousCi = $env:CI
