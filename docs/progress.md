@@ -16,6 +16,32 @@ Date: 2026-02-20
 Date: 2026-02-21
 
 ## Active Milestone
+- Backfill progress records for v2.1.1 P1/P2 (chronological)
+
+## Progress
+### P1 (Chronological)
+- [x] 2026-02-20: P1 checklist documents created and linked from requirements (`8670bc5`).
+- [x] 2026-02-21: P1 implementation completed (`ec53000`).
+  - [x] Added DevOps template baseline (`infra-cli-toolbox`).
+  - [x] Added environment diagnostic cmdlet (`Test-DistroNexusTemplateEnvironment`).
+  - [x] Added capability profile presets in template automation.
+  - [x] Updated related docs and P1 checklist statuses.
+
+### P2 (Chronological)
+- [x] 2026-02-21: P2 checklist documents created and linked from requirements (`b8aba7f`).
+- [x] 2026-02-21: FR-3.1 historical regression diff implemented (`3967f10`).
+- [x] 2026-02-21: FR-3.2 template metadata lint implemented (`d398928`).
+- [x] 2026-02-21: FR-3.3 release evidence collector implemented (`6d39969`).
+- [x] 2026-02-21: P2 acceptance evidence package generated and checklist statuses backfilled (`894f389`).
+
+### Tracking Backfill
+- [x] P1/P2 tracking gaps resolved by appending these historical records to tracking files.
+
+---
+
+Date: 2026-02-21
+
+## Active Milestone
 - v2.1.1 P3 implementation and acceptance closure
 
 ## Progress

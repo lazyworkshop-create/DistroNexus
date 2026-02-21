@@ -19,6 +19,30 @@ Date: 2026-02-20
 Date: 2026-02-21
 
 ## Active Milestone
+- Backfill findings for v2.1.1 P1/P2 (chronological)
+
+## Findings
+### P1 (Chronological)
+- 2026-02-20: P1 checklist definition committed (`8670bc5`).
+- 2026-02-21: P1 implementation closure committed (`ec53000`).
+- P1 closed the DevOps category gap by adding `infra-cli-toolbox` metadata and script assets in `config/templates.json` and `config/templates/infra-cli-toolbox/install.sh`.
+- P1 introduced reusable environment diagnostics (`Test-DistroNexusTemplateEnvironment`) and integrated capability profile gating into `Invoke-DistroNexusTemplateAutomation`.
+
+### P2 (Chronological)
+- 2026-02-21: P2 checklist definition committed (`b8aba7f`).
+- 2026-02-21: FR-3.1 regression diff committed (`3967f10`).
+- 2026-02-21: FR-3.2 metadata lint committed (`d398928`).
+- 2026-02-21: FR-3.3 release evidence collector committed (`6d39969`).
+- 2026-02-21: P2 evidence package and checklist closure committed (`894f389`).
+
+### Cross-Phase Verification
+- P1/P2 implementation commits include corresponding PowerShell unit test additions and updates, with regression verification executed during implementation cycles.
+
+---
+
+Date: 2026-02-21
+
+## Active Milestone
 - v2.1.1 P3 implementation and acceptance closure
 
 ## Findings
