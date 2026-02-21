@@ -45,20 +45,33 @@ The release workflow includes a step to verify that the version in the tag match
 
 ## 5. Release Evidence Bundle (v2.1.1+)
 
-Before final sign-off, generate a deterministic evidence bundle for checklist consumption:
+Before final sign-off, generate deterministic checklist evidence using the reusable script entry:
 
 ```powershell
-Import-Module .\src\PowerShell\DistroNexus.psd1 -Force
-
-New-DistroNexusReleaseEvidenceBundle \
-    -ReleaseVersion v2.1.1 \
-    -WorkflowRuns @('https://github.com/<owner>/<repo>/actions/runs/<id>') \
-    -TestArtifacts @('https://github.com/<owner>/<repo>/actions/runs/<id>/artifacts/<id>') \
-    -ReleaseLinks @('https://github.com/<owner>/<repo>/releases/tag/v2.1.1')
+.\tools\collect-p2-test-evidence.ps1 -Phase P3 -DeterministicPathMode -EvidenceId p3-evidence-deterministic -UpdateChecklist:$false
 ```
 
-Default output path:
+Expected outputs (relative paths):
 
-- `docs/development/release-evidence/vX.Y.Z-evidence.json`
+- `docs/development/testing/results/p3-evidence-deterministic/acceptance-evidence-index.md`
+- `docs/development/testing/results/p3-evidence-deterministic/p3-test-evidence-proof.md`
+- `docs/development/testing/results/p3-evidence-deterministic/p3-evidence-bundle.json`
 
 If unresolved evidence links remain, the bundle marks them under `UnresolvedItems` for actionable follow-up.
+
+## 6. Sign-off Closure Workflow (P3)
+
+### 6.1 Owner Mapping
+- Engineering sign-off owner: Engineering Lead
+- QA sign-off owner: QA Lead
+- Release sign-off owner: Release Manager
+
+### 6.2 Sign-off Eligibility Triggers
+- P3 implementation and test checklists are updated and evidence-linked.
+- Acceptance checklist exception-handling fields include owner/milestone/follow-up references.
+- No unresolved blocker without explicit release-manager decision.
+
+### 6.3 Handoff and Escalation
+1. Start sign-off request with template: `docs/development/v2-1-1-p3-signoff-handoff-template.md`.
+2. Attach checklist and evidence references from: `docs/development/v2-1-1-p3-signoff-reference-index.md`.
+3. If unresolved deferred items remain, escalate through release manager with go/no-go decision logged.
