@@ -63,32 +63,6 @@ public class CatalogService : ICatalogService
 
         try
         {
-            // 1. Try loading from custom URL first if configured
-            var settings = _settingsService.LoadSettings();
-            if (!string.IsNullOrWhiteSpace(settings.CatalogUrl))
-            {
-                try 
-                {
-                    _logger.LogInformation("Attempting to load catalog from custom URL: {Url}", settings.CatalogUrl);
-                    var json = await _httpClient.GetStringAsync(settings.CatalogUrl, cancellationToken);
-                    var customPackages = ParseCatalogJson(json);
-                    
-                    if (customPackages != null && customPackages.Count > 0)
-                    {
-                        _cachedCatalog = customPackages;
-                        _logger.LogInformation("Successfully loaded {Count} distributions from custom URL", _cachedCatalog.Count);
-                        
-                        // Cache the result
-                        await CacheCatalogAsync(_cachedCatalog, cancellationToken);
-                        return _cachedCatalog;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to load catalog from custom URL. Falling back to PowerShell module.");
-                }
-            }
-
             _logger.LogInformation("Loading catalog via PowerShell Get-DistroNexusPackage");
             
             // Call PowerShell module to get packages
@@ -167,75 +141,6 @@ public class CatalogService : ICatalogService
         {
             _logger.LogWarning(ex, "Failed to cache catalog");
         }
-    }
-
-    /// <summary>
-    /// Parses the nested catalog JSON format and converts to a flat list of DistroPackage.
-    /// This method is now deprecated as PowerShell module handles catalog loading.
-    /// </summary>
-    private List<DistroPackage> ParseCatalogJson(string json)
-    {
-        var packages = new List<DistroPackage>();
-
-        try
-        {
-            using var document = JsonDocument.Parse(json);
-            var root = document.RootElement;
-
-            // Check if it's already in flat format (array)
-            if (root.ValueKind == JsonValueKind.Array)
-            {
-                return JsonSerializer.Deserialize<List<DistroPackage>>(json) ?? [];
-            }
-
-            // Parse nested format: { "1": { "Name": "Ubuntu", "Versions": { ... } }, ... }
-            foreach (var familyProperty in root.EnumerateObject())
-            {
-                var familyObj = familyProperty.Value;
-                
-                if (!familyObj.TryGetProperty("Name", out var familyNameElement))
-                    continue;
-                    
-                var familyName = familyNameElement.GetString() ?? "Unknown";
-                
-                if (!familyObj.TryGetProperty("Versions", out var versionsElement))
-                    continue;
-
-                foreach (var versionProperty in versionsElement.EnumerateObject())
-                {
-                    var versionObj = versionProperty.Value;
-                    
-                    var name = versionObj.TryGetProperty("Name", out var n) ? n.GetString() ?? "" : "";
-                    var url = versionObj.TryGetProperty("Url", out var u) ? u.GetString() ?? "" : "";
-                    var defaultName = versionObj.TryGetProperty("DefaultName", out var dn) ? dn.GetString() ?? "" : "";
-                    var filename = versionObj.TryGetProperty("Filename", out var fn) ? fn.GetString() ?? "" : "";
-                    var source = versionObj.TryGetProperty("Source", out var s) ? s.GetString() ?? "" : "";
-                    var localPath = versionObj.TryGetProperty("LocalPath", out var lp) ? lp.GetString() ?? "" : "";
-
-                    var package = new DistroPackage
-                    {
-                        Id = $"{familyProperty.Name}-{versionProperty.Name}",
-                        Name = name,
-                        Category = familyName,
-                        DownloadUrl = url,
-                        Description = $"{name} - {source}",
-                        IsOfficial = source.Equals("Official", StringComparison.OrdinalIgnoreCase),
-                        Version = defaultName,
-                        LocalPath = localPath
-                    };
-
-                    packages.Add(package);
-                }
-            }
-
-            _logger.LogInformation("Parsed {Count} distributions from nested catalog format", packages.Count);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to parse catalog JSON");
-        }
-
-        return packages;
     }
 
     /// <inheritdoc/>
@@ -402,6 +307,9 @@ public class CatalogService : ICatalogService
             await File.WriteAllTextAsync(_catalogCachePath, cacheJson, cancellationToken);
 
             _logger.LogInformation("Added {Count} packages from custom source", customPackages.Count);
+            
+            // Reload catalog via PowerShell to get correct cache status
+            await LoadCatalogAsync(true, cancellationToken);
         }
         catch (Exception ex)
         {

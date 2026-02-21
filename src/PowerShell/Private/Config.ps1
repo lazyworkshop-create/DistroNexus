@@ -35,6 +35,22 @@ function Get-DistroNexusConfig {
     # Load catalog.json
     $catalogPath = Join-Path $ConfigRoot "catalog.json"
     
+    # Fallback to config/catalog.json if it exists (e.g. from installer)
+    if (-not (Test-Path $catalogPath)) {
+        $fallbackPath = Join-Path $ConfigRoot "config\catalog.json"
+        if (Test-Path $fallbackPath) {
+            $catalogPath = $fallbackPath
+        }
+    }
+    
+    # Fallback to dev environment path
+    if (-not (Test-Path $catalogPath)) {
+        $devPath = Join-Path $PSScriptRoot "..\..\..\config\catalog.json"
+        if (Test-Path $devPath) {
+            $catalogPath = $devPath
+        }
+    }
+    
     if (Test-Path $catalogPath) {
         try {
             $distrosContent = Get-Content -Raw -Path $catalogPath | ConvertFrom-Json

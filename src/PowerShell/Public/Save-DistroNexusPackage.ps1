@@ -88,7 +88,8 @@ function Save-DistroNexusPackage {
             $config = Get-DistroNexusConfig
             $Destination = $config.Settings.PackageCachePath
             if (-not $Destination) {
-                $Destination = Join-Path $env:LOCALAPPDATA "DistroNexus\packages"
+                $appDataPath = [System.Environment]::GetFolderPath([System.Environment+SpecialFolder]::ApplicationData)
+                $Destination = Join-Path $appDataPath "DistroNexus\packages"
             }
         }
         
