@@ -78,6 +78,23 @@ When a clean refresh is required:
 - Unknown distro name fails fast with clear remediation message.
 - Validation behavior is deterministic across repeated runs.
 
+#### FR-1.4 Advanced Template Options UI
+**Requirement**
+- The client UI shall support advanced template options beyond single-select dropdowns, specifically `MultiSelect` (checkboxes) and `Text` (free-form input).
+
+**Acceptance Criteria**
+- `TemplateOptionType` is introduced to the core model.
+- The UI dynamically renders CheckBoxes for `MultiSelect` and TextBoxes for `Text` types.
+- Built-in templates (e.g., `database-local-stack`, `infra-cli-toolbox`) utilize these new types for complex configurations.
+
+#### FR-1.5 Package Cache Path Synchronization
+**Requirement**
+- The C# client and PowerShell backend must use a unified, synchronized path for package caching to prevent state mismatch.
+
+**Acceptance Criteria**
+- Both layers default to `%APPDATA%\DistroNexus\packages`.
+- The C# client relies on the PowerShell module as the single source of truth for catalog state (`IsCached`, `LocalPath`).
+
 ---
 
 ### Phase 2: Coverage and Diagnostics (P1)
