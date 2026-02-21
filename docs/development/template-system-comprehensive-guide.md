@@ -67,9 +67,9 @@ The template system must provide:
 
 ## 2.5 Current Alignment Notes
 
-- Implemented categories include: `Development`, `Platform`, `CloudNative`, `Database`, `DataAndAI`.
-- The expansion spec also mentions `DevOps` as a category target; a dedicated built-in `DevOps` category template is not currently present.
-- Mandatory Phase-1 breadth is achieved with 15 built-in templates in the current catalog.
+- Implemented categories include: `Development`, `Platform`, `CloudNative`, `Database`, `DataAndAI`, `DevOps`.
+- `DevOps` category parity is covered by built-in template `infra-cli-toolbox`.
+- Current built-in catalog breadth is 16 templates.
 
 ## 3. Implementation Overview
 

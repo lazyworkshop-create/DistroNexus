@@ -1,0 +1,19 @@
+[
+  {
+    "Id": "invalid-template",
+    "Name": "Invalid Template",
+    "Category": "Development",
+    "Description": "Missing script file",
+    "InstallMode": "Scripted",
+    "Scripts": [
+      {
+        "Name": "Install",
+        "ScriptPath": "templates/invalid-template/missing.sh",
+        "Type": "Bash",
+        "Phase": "PostConfigure",
+        "Order": 1,
+        "TimeoutSeconds": 30
+      }
+    ]
+  }
+]

@@ -40,9 +40,17 @@ public class TemplateVersionOption
     public string Key { get; set; } = string.Empty;
     public string Label { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
+    public TemplateOptionType Type { get; set; } = TemplateOptionType.Select;
     public bool Required { get; set; }
     public string DefaultValue { get; set; } = string.Empty;
     public List<TemplateOptionValue> Options { get; set; } = new();
+}
+
+public enum TemplateOptionType
+{
+    Select,
+    MultiSelect,
+    Text
 }
 
 public class TemplateOptionValue

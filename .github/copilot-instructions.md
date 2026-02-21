@@ -1,10 +1,10 @@
 # DistroNexus Copilot Instructions
 
 ## Project Overview
-DistroNexus is a Windows Subsystem for Linux (WSL) manager (v2.0).
-- **Stack**: .NET 6/7/8, WPF (WPF UI / HandyControl), PowerShell Backend.
-- **Architecture**: MVVM with Dependency Injection.
-- **Platform**: Windows 10/11 only.
+DistroNexus is a Windows Subsystem for Linux (WSL) manager.
+- **Stack**: .NET 10, WPF, PowerShell.
+- **Architecture**: MVVM with DI.
+- **Platform**: Windows 10/11.
 
 ## Key Rules
 1. **Language**: **English ONLY** for all code, comments, and internal docs.

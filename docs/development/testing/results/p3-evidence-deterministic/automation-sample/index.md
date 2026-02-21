@@ -1,0 +1,1 @@
+# Built-in Template Automation Results Index  - 2026-02-21 11:21:57 | SelectedTemplates | docs/development/testing/results/p3-evidence-deterministic/automation-sample | diff=docs/development/testing/results/p3-evidence-deterministic/automation-sample/regression-diff.json | baseline=sample-baseline-run

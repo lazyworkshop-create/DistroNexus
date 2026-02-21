@@ -1,0 +1,141 @@
+{
+  "SchemaVersion": "1.0",
+  "ReleaseVersion": "v2.1.1",
+  "GeneratedAt": "2026-02-21T11:06:30.9537258+08:00",
+  "Summary": {
+    "TotalItems": 4,
+    "Resolved": 3,
+    "Unresolved": 1,
+    "Sections": 4
+  },
+  "Sources": {
+    "WorkflowRunCount": 1,
+    "TestArtifactCount": 1,
+    "ReleaseLinkCount": 1,
+    "ManualOverrideCount": 1
+  },
+  "ChecklistMapping": [
+    {
+      "Section": "AutomatedTests",
+      "ResolvedCount": 1,
+      "UnresolvedCount": 0,
+      "Items": [
+        {
+          "Id": "ev-93764a9f5974",
+          "SourceType": "TestArtifact",
+          "Section": "AutomatedTests",
+          "Title": "Test artifact",
+          "Link": "https://github.com/LazyWorkshop-Create/DistroNexus/actions/runs/100001/artifacts/200001",
+          "Status": "Resolved",
+          "PendingReason": null,
+          "IsManualOverride": false
+        }
+      ]
+    },
+    {
+      "Section": "BuildAndPackaging",
+      "ResolvedCount": 1,
+      "UnresolvedCount": 0,
+      "Items": [
+        {
+          "Id": "ev-c1b51f661267",
+          "SourceType": "WorkflowRun",
+          "Section": "BuildAndPackaging",
+          "Title": "Workflow run",
+          "Link": "https://github.com/LazyWorkshop-Create/DistroNexus/actions/runs/100001",
+          "Status": "Resolved",
+          "PendingReason": null,
+          "IsManualOverride": false
+        }
+      ]
+    },
+    {
+      "Section": "ReleaseChecklist",
+      "ResolvedCount": 0,
+      "UnresolvedCount": 1,
+      "Items": [
+        {
+          "Id": "ev-96bca71433c2",
+          "SourceType": "ManualOverride",
+          "Section": "ReleaseChecklist",
+          "Title": "P2 Test Evidence Pack",
+          "Link": null,
+          "Status": "Unresolved",
+          "PendingReason": "Local artifacts collected and attached in markdown proof.",
+          "IsManualOverride": true
+        }
+      ]
+    },
+    {
+      "Section": "ReleaseNotesAndDistribution",
+      "ResolvedCount": 1,
+      "UnresolvedCount": 0,
+      "Items": [
+        {
+          "Id": "ev-c2bb22860eb3",
+          "SourceType": "ReleaseLink",
+          "Section": "ReleaseNotesAndDistribution",
+          "Title": "Release link",
+          "Link": "https://github.com/LazyWorkshop-Create/DistroNexus/releases/tag/v2.1.1",
+          "Status": "Resolved",
+          "PendingReason": null,
+          "IsManualOverride": false
+        }
+      ]
+    }
+  ],
+  "UnresolvedItems": [
+    {
+      "Id": "ev-96bca71433c2",
+      "SourceType": "ManualOverride",
+      "Section": "ReleaseChecklist",
+      "Title": "P2 Test Evidence Pack",
+      "Link": null,
+      "Status": "Unresolved",
+      "PendingReason": "Local artifacts collected and attached in markdown proof.",
+      "IsManualOverride": true
+    }
+  ],
+  "Items": [
+    {
+      "Id": "ev-93764a9f5974",
+      "SourceType": "TestArtifact",
+      "Section": "AutomatedTests",
+      "Title": "Test artifact",
+      "Link": "https://github.com/LazyWorkshop-Create/DistroNexus/actions/runs/100001/artifacts/200001",
+      "Status": "Resolved",
+      "PendingReason": null,
+      "IsManualOverride": false
+    },
+    {
+      "Id": "ev-c1b51f661267",
+      "SourceType": "WorkflowRun",
+      "Section": "BuildAndPackaging",
+      "Title": "Workflow run",
+      "Link": "https://github.com/LazyWorkshop-Create/DistroNexus/actions/runs/100001",
+      "Status": "Resolved",
+      "PendingReason": null,
+      "IsManualOverride": false
+    },
+    {
+      "Id": "ev-96bca71433c2",
+      "SourceType": "ManualOverride",
+      "Section": "ReleaseChecklist",
+      "Title": "P2 Test Evidence Pack",
+      "Link": null,
+      "Status": "Unresolved",
+      "PendingReason": "Local artifacts collected and attached in markdown proof.",
+      "IsManualOverride": true
+    },
+    {
+      "Id": "ev-c2bb22860eb3",
+      "SourceType": "ReleaseLink",
+      "Section": "ReleaseNotesAndDistribution",
+      "Title": "Release link",
+      "Link": "https://github.com/LazyWorkshop-Create/DistroNexus/releases/tag/v2.1.1",
+      "Status": "Resolved",
+      "PendingReason": null,
+      "IsManualOverride": false
+    }
+  ]
+}

@@ -278,7 +278,8 @@ public partial class TemplateVersionSelectionItem : ObservableObject
     public string Label { get; }
     public string Description { get; }
     public bool IsRequired { get; }
-    public ObservableCollection<TemplateOptionValue> Options { get; }
+    public TemplateOptionType Type { get; }
+    public ObservableCollection<TemplateOptionValueItem> Options { get; }
 
     [ObservableProperty]
     private string? _selectedValue;
@@ -289,7 +290,48 @@ public partial class TemplateVersionSelectionItem : ObservableObject
         Label = option.Label;
         Description = option.Description;
         IsRequired = option.Required;
-        Options = new ObservableCollection<TemplateOptionValue>(option.Options);
+        Type = option.Type;
+        
+        var selectedValues = selectedValue?.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(v => v.Trim()).ToList() ?? new List<string>();
+        
+        Options = new ObservableCollection<TemplateOptionValueItem>(
+            option.Options.Select(o => new TemplateOptionValueItem(o, selectedValues.Contains(o.Value), this))
+        );
+        
         SelectedValue = selectedValue;
+    }
+
+    public void UpdateSelectedValueFromOptions()
+    {
+        if (Type == TemplateOptionType.MultiSelect)
+        {
+            SelectedValue = string.Join(",", Options.Where(o => o.IsSelected).Select(o => o.Value));
+        }
+    }
+}
+
+public partial class TemplateOptionValueItem : ObservableObject
+{
+    public string Value { get; }
+    public string Label { get; }
+    public string Description { get; }
+    
+    private readonly TemplateVersionSelectionItem _parent;
+
+    [ObservableProperty]
+    private bool _isSelected;
+
+    public TemplateOptionValueItem(TemplateOptionValue option, bool isSelected, TemplateVersionSelectionItem parent)
+    {
+        Value = option.Value;
+        Label = option.Label;
+        Description = option.Description;
+        _isSelected = isSelected;
+        _parent = parent;
+    }
+
+    partial void OnIsSelectedChanged(bool value)
+    {
+        _parent.UpdateSelectedValueFromOptions();
     }
 }

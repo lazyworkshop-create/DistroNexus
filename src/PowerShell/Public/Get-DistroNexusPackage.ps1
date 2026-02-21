@@ -46,7 +46,7 @@ function Get-DistroNexusPackage {
             # Use default cache path if not configured
             if (-not $cachePath) {
                 $appDataPath = [System.Environment]::GetFolderPath([System.Environment+SpecialFolder]::ApplicationData)
-                $cachePath = Join-Path $appDataPath "DistroNexus\Cache"
+                $cachePath = Join-Path $appDataPath "DistroNexus\packages"
             }
             
             # Assume flat array format

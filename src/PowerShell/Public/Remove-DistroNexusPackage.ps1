@@ -52,6 +52,10 @@ function Remove-DistroNexusPackage {
                 # Load catalog to find the package
                 $config = Get-DistroNexusConfig
                 $cachePath = $config.Settings.PackageCachePath
+                if (-not $cachePath) {
+                    $appDataPath = [System.Environment]::GetFolderPath([System.Environment+SpecialFolder]::ApplicationData)
+                    $cachePath = Join-Path $appDataPath "DistroNexus\packages"
+                }
                 
                 if (-not $config.Distros) {
                     Write-DistroNexusLog "Distro catalog not found" -Level ERROR
@@ -74,8 +78,20 @@ function Remove-DistroNexusPackage {
                                 if ($version.LocalPath -and (Test-Path $version.LocalPath)) {
                                     $filePath = $version.LocalPath
                                 }
-                                elseif ($cachePath -and $version.Filename) {
-                                    $cachedFile = Join-Path $cachePath $version.Filename
+                                elseif ($cachePath -and $version.DownloadUrl) {
+                                    $filename = $null
+                                    try {
+                                         if ($version.DownloadUrl -match "^http") {
+                                             $uri = [System.Uri]$version.DownloadUrl
+                                             $filename = [System.IO.Path]::GetFileName($uri.LocalPath)
+                                         }
+                                    } catch {}
+                                    
+                                    if (-not $filename) {
+                                        $filename = Split-Path $version.DownloadUrl -Leaf
+                                    }
+                                    
+                                    $cachedFile = Join-Path $cachePath $filename
                                     if (Test-Path $cachedFile) {
                                         $filePath = $cachedFile
                                     }
@@ -97,8 +113,20 @@ function Remove-DistroNexusPackage {
                             if ($distro.LocalPath -and (Test-Path $distro.LocalPath)) {
                                 $filePath = $distro.LocalPath
                             }
-                            elseif ($cachePath -and $distro.Filename) {
-                                $cachedFile = Join-Path $cachePath $distro.Filename
+                            elseif ($cachePath -and $distro.DownloadUrl) {
+                                $filename = $null
+                                try {
+                                     if ($distro.DownloadUrl -match "^http") {
+                                         $uri = [System.Uri]$distro.DownloadUrl
+                                         $filename = [System.IO.Path]::GetFileName($uri.LocalPath)
+                                     }
+                                } catch {}
+                                
+                                if (-not $filename) {
+                                    $filename = Split-Path $distro.DownloadUrl -Leaf
+                                }
+                                
+                                $cachedFile = Join-Path $cachePath $filename
                                 if (Test-Path $cachedFile) {
                                     $filePath = $cachedFile
                                 }

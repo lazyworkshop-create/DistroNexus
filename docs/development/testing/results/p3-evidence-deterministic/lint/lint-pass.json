@@ -1,0 +1,15 @@
+{
+  "SchemaVersion": "1.0",
+  "Status": "Pass",
+  "ConfigPath": "config/templates.json",
+  "StrictMode": false,
+  "GeneratedAt": "2026-02-21T11:21:57.5913211+08:00",
+  "Summary": {
+    "Templates": 16,
+    "Errors": 0,
+    "Warnings": 0,
+    "Violations": 0
+  },
+  "SummaryText": "templates=16, errors=0, warnings=0, violations=0",
+  "Violations": []
+}

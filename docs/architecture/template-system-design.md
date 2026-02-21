@@ -197,10 +197,7 @@ Current category distribution:
 - `CloudNative`: 2
 - `Database`: 1
 - `DataAndAI`: 1
-
-Gap note:
-
-- `DevOps` category is not currently represented as a dedicated built-in category.
+- `DevOps`: 1
 
 ## 12. Design Trade-offs and Constraints
 
@@ -216,7 +213,6 @@ Gap note:
 ## 13. Known Limitations
 
 - Capability-gated templates may classify as `Blocked` depending on host features.
-- `DevOps` built-in category is pending if strict category parity is required.
 
 ## 14. Related Documents
 

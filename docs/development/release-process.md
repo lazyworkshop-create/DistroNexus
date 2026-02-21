@@ -42,3 +42,36 @@ Before creating a release tag, ensure the following files are updated with the n
 ## 4. Verification
 
 The release workflow includes a step to verify that the version in the tag matches the version in `src/Client/Directory.Build.props`. If they do not match, the release will fail.
+
+## 5. Release Evidence Bundle (v2.1.1+)
+
+Before final sign-off, generate deterministic checklist evidence using the reusable script entry:
+
+```powershell
+.\tools\collect-p2-test-evidence.ps1 -Phase P3 -DeterministicPathMode -EvidenceId p3-evidence-deterministic -UpdateChecklist:$false
+```
+
+Expected outputs (relative paths):
+
+- `docs/development/testing/results/p3-evidence-deterministic/acceptance-evidence-index.md`
+- `docs/development/testing/results/p3-evidence-deterministic/p3-test-evidence-proof.md`
+- `docs/development/testing/results/p3-evidence-deterministic/p3-evidence-bundle.json`
+
+If unresolved evidence links remain, the bundle marks them under `UnresolvedItems` for actionable follow-up.
+
+## 6. Sign-off Closure Workflow (P3)
+
+### 6.1 Owner Mapping
+- Engineering sign-off owner: Engineering Lead
+- QA sign-off owner: QA Lead
+- Release sign-off owner: Release Manager
+
+### 6.2 Sign-off Eligibility Triggers
+- P3 implementation and test checklists are updated and evidence-linked.
+- Acceptance checklist exception-handling fields include owner/milestone/follow-up references.
+- No unresolved blocker without explicit release-manager decision.
+
+### 6.3 Handoff and Escalation
+1. Start sign-off request with template: `docs/development/v2-1-1-p3-signoff-handoff-template.md`.
+2. Attach checklist and evidence references from: `docs/development/v2-1-1-p3-signoff-reference-index.md`.
+3. If unresolved deferred items remain, escalate through release manager with go/no-go decision logged.

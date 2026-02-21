@@ -126,9 +126,9 @@ In short: lifecycle management creates instances; templates create usable enviro
 
 ## 8. Current State Summary
 
-- Built-in catalog currently contains 15 templates.
-- Implemented categories: `Development`, `Platform`, `CloudNative`, `Database`, `DataAndAI`.
-- `DevOps` is a target category in expansion requirements but is not currently represented as a dedicated built-in category.
+- Built-in catalog currently contains 16 templates.
+- Implemented categories: `Development`, `Platform`, `CloudNative`, `Database`, `DataAndAI`, `DevOps`.
+- `DevOps` category parity is now covered by built-in template `infra-cli-toolbox`.
 
 ## 9. Success Criteria
 

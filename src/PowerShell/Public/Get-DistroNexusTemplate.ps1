@@ -11,7 +11,9 @@ function Get-DistroNexusTemplate {
 
     process {
         # Determine config path. Try multiple locations relative to module.
+        $appDataRoot = [System.Environment]::GetFolderPath([System.Environment+SpecialFolder]::ApplicationData)
         $possiblePaths = @(
+            (Join-Path $appDataRoot "DistroNexus\config\templates.json"), # Installed structure
             (Join-Path $PSScriptRoot "..\..\..\config\templates.json"), # Dev source
             (Join-Path $PSScriptRoot "..\config\templates.json")        # Released structure
         )

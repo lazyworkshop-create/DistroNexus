@@ -1,0 +1,47 @@
+{
+  "GeneratedAt": "2026-02-21T11:06:30.9225726+08:00",
+  "CurrentRunId": "sample-current-run",
+  "BaselinePolicy": "SampleFallback",
+  "BaselineRunId": "sample-baseline-run",
+  "HasBaseline": true,
+  "Message": "Sample evidence generated because no local WSL distro is available.",
+  "Counts": {
+    "Current": {
+      "Pass": 2,
+      "Fail": 0,
+      "Blocked": 0
+    },
+    "Baseline": {
+      "Pass": 1,
+      "Fail": 0,
+      "Blocked": 1
+    }
+  },
+  "Delta": {
+    "Pass": 1,
+    "Fail": 0,
+    "Blocked": -1
+  },
+  "AddedTemplates": [
+    "infra-cli-toolbox"
+  ],
+  "RemovedTemplates": [],
+  "ChangedItems": [
+    {
+      "TemplateId": "ai-ml-gpu-dev",
+      "BaselineStatus": "Blocked",
+      "CurrentStatus": "Pass",
+      "ChangeType": "StatusOrReasonChanged",
+      "BaselineReason": "GPU unavailable in baseline sample.",
+      "CurrentReason": "Dry run"
+    },
+    {
+      "TemplateId": "infra-cli-toolbox",
+      "BaselineStatus": null,
+      "CurrentStatus": "Pass",
+      "ChangeType": "Added",
+      "BaselineReason": null,
+      "CurrentReason": "Dry run"
+    }
+  ]
+}

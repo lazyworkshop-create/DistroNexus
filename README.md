@@ -130,11 +130,17 @@ Get-DistroNexusTemplate
 # Filter by category
 Get-DistroNexusTemplate -Category "Development"
 
+# Discover DevOps template
+Get-DistroNexusTemplate -Category "DevOps"
+
 # Apply one template to an existing WSL instance
 Apply-DistroNexusTemplate -InstanceName "Ubuntu-22.04" -TemplateId "python-dev" -Verbose
 
 # Apply with runtime variables
 Apply-DistroNexusTemplate -InstanceName "Ubuntu-22.04" -TemplateId "nodejs-dev" -Variables @{ NodeVersion = "20" }
+
+# Apply infrastructure CLI toolbox template
+Apply-DistroNexusTemplate -InstanceName "Ubuntu-22.04" -TemplateId "infra-cli-toolbox"
 ```
 
 ### Template Automation Validation

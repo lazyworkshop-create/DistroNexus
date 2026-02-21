@@ -28,9 +28,64 @@ function Invoke-DistroNexusTemplateAutomation {
         [switch]$UseSharedDistro,
 
         [Parameter()]
+        [ValidateSet('CpuOnly', 'GpuCapable', 'SystemdCapable')]
+        [string]$CapabilityProfile,
+
+        [Parameter()]
+        [switch]$EnableRegressionDiff,
+
+        [Parameter()]
+        [string]$BaselineRunId,
+
+        [Parameter()]
         [ValidateSet('NUnitXml', 'JUnitXml')]
         [string]$TestResultFormat = 'NUnitXml'
     )
+
+    function Resolve-CapabilityPolicy {
+        param(
+            [Parameter()]
+            [string]$Profile,
+            [Parameter(Mandatory = $true)]
+            [bool]$IncludeCapabilityGatedSwitch
+        )
+
+        if ([string]::IsNullOrWhiteSpace($Profile)) {
+            return [PSCustomObject]@{
+                ProfileName = 'Default'
+                AllowCapabilityGated = $IncludeCapabilityGatedSwitch
+                RequireGpu = $false
+                RequireSystemd = $false
+            }
+        }
+
+        switch ($Profile) {
+            'CpuOnly' {
+                return [PSCustomObject]@{
+                    ProfileName = 'CpuOnly'
+                    AllowCapabilityGated = $false
+                    RequireGpu = $false
+                    RequireSystemd = $false
+                }
+            }
+            'GpuCapable' {
+                return [PSCustomObject]@{
+                    ProfileName = 'GpuCapable'
+                    AllowCapabilityGated = $true
+                    RequireGpu = $true
+                    RequireSystemd = $false
+                }
+            }
+            'SystemdCapable' {
+                return [PSCustomObject]@{
+                    ProfileName = 'SystemdCapable'
+                    AllowCapabilityGated = $true
+                    RequireGpu = $false
+                    RequireSystemd = $true
+                }
+            }
+        }
+    }
 
     function Invoke-RunnerCommand {
         param(
@@ -181,6 +236,7 @@ function Invoke-DistroNexusTemplateAutomation {
             'kubernetes-local*' { $commands = @('kubectl version --client') }
             'database-local-stack' { $commands = @('bash -lc "if command -v psql >/dev/null || command -v mysql >/dev/null || command -v redis-cli >/dev/null || command -v mongosh >/dev/null || command -v sqlite3 >/dev/null; then exit 0; else exit 127; fi"') }
             'ai-ml-gpu-dev' { $commands = @('bash -lc ''if command -v python >/dev/null; then python --version; elif command -v python3 >/dev/null; then python3 --version; else exit 127; fi''') }
+            'infra-cli-toolbox' { $commands = @('bash -lc ''if command -v jq >/dev/null && command -v yq >/dev/null; then exit 0; else exit 127; fi''') }
             default { $commands = @('bash -lc "echo ok"') }
         }
 
@@ -203,7 +259,7 @@ function Invoke-DistroNexusTemplateAutomation {
             [Parameter(Mandatory = $true)]
             [string]$TargetDistro,
             [Parameter(Mandatory = $true)]
-            [bool]$AllowCapabilityGated
+            [PSCustomObject]$CapabilityPolicy
         )
 
         $tags = @()
@@ -211,26 +267,67 @@ function Invoke-DistroNexusTemplateAutomation {
             $tags = @($Template.ScenarioTags | ForEach-Object { $_.ToString().ToLowerInvariant() })
         }
 
-        $isCapabilityGated = ($tags -contains 'gpu') -or ($tags -contains 'microk8s')
-        if ($isCapabilityGated -and -not $AllowCapabilityGated) {
-            return [PSCustomObject]@{ Blocked = $true; Reason = 'Capability-gated template excluded. Use -IncludeCapabilityGated to enable.' }
-        }
+        $requiresGpu = ($tags -contains 'gpu')
+        $requiresSystemd = ($tags -contains 'microk8s') -or ($Template.Id -eq 'kubernetes-local-dev')
+        $isCapabilityGated = $requiresGpu -or $requiresSystemd
 
-        if ($tags -contains 'gpu') {
-            $gpuCheck = Invoke-RunnerCommand -Name 'gpu-check' -Script { wsl.exe -d $TargetDistro -- bash -lc 'if [ -e /dev/dxg ] || command -v nvidia-smi >/dev/null; then exit 0; else exit 1; fi' }
-            if (-not $gpuCheck.Success) {
-                return [PSCustomObject]@{ Blocked = $true; Reason = 'GPU capability is not available on current host/WSL environment.' }
+        if ($isCapabilityGated -and -not $CapabilityPolicy.AllowCapabilityGated) {
+            $blockReason = if ($CapabilityPolicy.ProfileName -ne 'Default') {
+                "Capability-gated template excluded by capability profile '$($CapabilityPolicy.ProfileName)'."
+            }
+            else {
+                'Capability-gated template excluded. Use -IncludeCapabilityGated to enable.'
+            }
+
+            return [PSCustomObject]@{
+                Blocked = $true
+                Reason = $blockReason
+                Diagnostics = @()
             }
         }
 
-        if ($Template.Id -eq 'kubernetes-local-dev') {
-            $systemdCheck = Invoke-RunnerCommand -Name 'systemd-check' -Script { wsl.exe -d $TargetDistro -- bash -lc 'command -v systemctl >/dev/null && systemctl status >/dev/null' }
-            if (-not $systemdCheck.Success) {
-                return [PSCustomObject]@{ Blocked = $true; Reason = 'systemd is required for kubernetes-local-dev checks and is not available.' }
+        $requestedCapabilities = @()
+        if ($requiresGpu -or $CapabilityPolicy.RequireGpu) {
+            $requestedCapabilities += 'Gpu'
+        }
+
+        if ($requiresSystemd -or $CapabilityPolicy.RequireSystemd) {
+            $requestedCapabilities += 'Systemd'
+        }
+
+        if ($requestedCapabilities.Count -gt 0) {
+            $diagnostics = @(Test-DistroNexusTemplateEnvironment -Distro $TargetDistro -Capability $requestedCapabilities)
+
+            if ($requiresGpu) {
+                $gpuResult = @($diagnostics | Where-Object { $_.Capability -eq 'Gpu' } | Select-Object -First 1)
+                if ($gpuResult.Count -eq 0 -or $gpuResult[0].Status -ne 'Pass') {
+                    return [PSCustomObject]@{
+                        Blocked = $true
+                        Reason = 'GPU capability is not available on current host/WSL environment.'
+                        Diagnostics = $diagnostics
+                    }
+                }
+            }
+
+            if ($requiresSystemd) {
+                $systemdResult = @($diagnostics | Where-Object { $_.Capability -eq 'Systemd' } | Select-Object -First 1)
+                if ($systemdResult.Count -eq 0 -or $systemdResult[0].Status -ne 'Pass') {
+                    return [PSCustomObject]@{
+                        Blocked = $true
+                        Reason = 'systemd is required for kubernetes-local-dev checks and is not available.'
+                        Diagnostics = $diagnostics
+                    }
+                }
+            }
+
+            return [PSCustomObject]@{
+                Blocked = $false
+                Reason = $null
+                Diagnostics = $diagnostics
             }
         }
 
-        [PSCustomObject]@{ Blocked = $false; Reason = $null }
+        [PSCustomObject]@{ Blocked = $false; Reason = $null; Diagnostics = @() }
     }
 
     function New-TestResultXml {
@@ -308,6 +405,286 @@ function Invoke-DistroNexusTemplateAutomation {
         return $nunitDoc.OuterXml
     }
 
+    function Get-RunManifestPathById {
+        param(
+            [Parameter(Mandatory = $true)]
+            [string]$ResultsRoot,
+            [Parameter(Mandatory = $true)]
+            [string]$RunIdToFind
+        )
+
+        if (-not (Test-Path $ResultsRoot)) {
+            return $null
+        }
+
+        $manifestFiles = @(Get-ChildItem -Path $ResultsRoot -Filter 'run-manifest.json' -Recurse -File -ErrorAction SilentlyContinue)
+        if ($manifestFiles.Count -eq 0) {
+            return $null
+        }
+
+        $matches = @()
+        foreach ($file in $manifestFiles) {
+            try {
+                $manifestObject = Get-Content -Path $file.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
+                if ($manifestObject.RunId -eq $RunIdToFind) {
+                    $matches += [PSCustomObject]@{
+                        Path = $file.FullName
+                        Timestamp = [datetime]$manifestObject.Timestamp
+                    }
+                }
+            }
+            catch {
+                Write-Verbose "Skipping invalid manifest while searching explicit baseline '$RunIdToFind': $($file.FullName)"
+            }
+        }
+
+        if ($matches.Count -eq 0) {
+            return $null
+        }
+
+        return (($matches | Sort-Object -Property Timestamp -Descending | Select-Object -First 1).Path)
+    }
+
+    function Resolve-BaselineManifest {
+        param(
+            [Parameter(Mandatory = $true)]
+            [string]$ResultsRoot,
+            [Parameter(Mandatory = $true)]
+            [string]$CurrentRunId,
+            [Parameter()]
+            [string]$ExplicitRunId
+        )
+
+        if (-not [string]::IsNullOrWhiteSpace($ExplicitRunId)) {
+            $explicitPath = Get-RunManifestPathById -ResultsRoot $ResultsRoot -RunIdToFind $ExplicitRunId
+            if (-not $explicitPath) {
+                $candidateIds = @()
+                try {
+                    $candidateIds = @(
+                        Get-ChildItem -Path $ResultsRoot -Filter 'run-manifest.json' -Recurse -File -ErrorAction SilentlyContinue |
+                            ForEach-Object {
+                                try {
+                                    (Get-Content -Path $_.FullName -Raw -Encoding UTF8 | ConvertFrom-Json).RunId
+                                }
+                                catch {
+                                    $null
+                                }
+                            } |
+                            Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+                            Select-Object -First 5
+                    )
+                }
+                catch {
+                    $candidateIds = @()
+                }
+
+                $hint = if ($candidateIds.Count -gt 0) {
+                    " Known runs: $($candidateIds -join ', ')."
+                }
+                else {
+                    ' No known runs were discovered under output root.'
+                }
+
+                return [PSCustomObject]@{
+                    Policy = 'ExplicitRunId'
+                    BaselineRunId = $ExplicitRunId
+                    Manifest = $null
+                    Message = "Explicit baseline run '$ExplicitRunId' was not found under output root.$hint"
+                }
+            }
+
+            try {
+                $explicitManifest = Get-Content -Path $explicitPath -Raw -Encoding UTF8 | ConvertFrom-Json
+                return [PSCustomObject]@{
+                    Policy = 'ExplicitRunId'
+                    BaselineRunId = $explicitManifest.RunId
+                    Manifest = $explicitManifest
+                    Message = 'Baseline resolved from explicit run ID.'
+                }
+            }
+            catch {
+                return [PSCustomObject]@{
+                    Policy = 'ExplicitRunId'
+                    BaselineRunId = $ExplicitRunId
+                    Manifest = $null
+                    Message = "Failed to parse explicit baseline run manifest: $($_.Exception.Message)"
+                }
+            }
+        }
+
+        if (-not (Test-Path $ResultsRoot)) {
+            return [PSCustomObject]@{
+                Policy = 'LatestSuccessful'
+                BaselineRunId = $null
+                Manifest = $null
+                Message = 'No previous runs found: output root does not exist yet.'
+            }
+        }
+
+        $manifestFiles = @(Get-ChildItem -Path $ResultsRoot -Filter 'run-manifest.json' -Recurse -File -ErrorAction SilentlyContinue)
+        if ($manifestFiles.Count -eq 0) {
+            return [PSCustomObject]@{
+                Policy = 'LatestSuccessful'
+                BaselineRunId = $null
+                Manifest = $null
+                Message = 'No previous run manifests were discovered.'
+            }
+        }
+
+        $parsed = @()
+        foreach ($file in $manifestFiles) {
+            try {
+                $manifestObject = Get-Content -Path $file.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
+                if (-not $manifestObject.RunId -or $manifestObject.RunId -eq $CurrentRunId) {
+                    continue
+                }
+
+                $failCount = 0
+                if ($manifestObject.Summary -and $manifestObject.Summary.Fail -ne $null) {
+                    $failCount = [int]$manifestObject.Summary.Fail
+                }
+
+                if ($failCount -eq 0) {
+                    $parsed += [PSCustomObject]@{
+                        Timestamp = [datetime]$manifestObject.Timestamp
+                        Manifest = $manifestObject
+                    }
+                }
+            }
+            catch {
+                Write-Verbose "Skipping invalid manifest '$($file.FullName)': $($_.Exception.Message)"
+            }
+        }
+
+        if ($parsed.Count -eq 0) {
+            return [PSCustomObject]@{
+                Policy = 'LatestSuccessful'
+                BaselineRunId = $null
+                Manifest = $null
+                Message = 'No successful baseline run was found (Fail count must be 0).'
+            }
+        }
+
+        $selected = $parsed | Sort-Object -Property Timestamp -Descending | Select-Object -First 1
+        return [PSCustomObject]@{
+            Policy = 'LatestSuccessful'
+            BaselineRunId = $selected.Manifest.RunId
+            Manifest = $selected.Manifest
+            Message = 'Baseline resolved from latest successful run.'
+        }
+    }
+
+    function New-RegressionDiff {
+        param(
+            [Parameter(Mandatory = $true)]
+            [PSCustomObject[]]$CurrentResults,
+            [Parameter()]
+            [PSCustomObject]$BaselineManifest,
+            [Parameter(Mandatory = $true)]
+            [string]$CurrentRunId,
+            [Parameter(Mandatory = $true)]
+            [string]$BaselinePolicy,
+            [Parameter()]
+            [string]$BaselineRunId,
+            [Parameter()]
+            [string]$Message
+        )
+
+        $currentByTemplate = @{}
+        foreach ($item in $CurrentResults) {
+            $currentByTemplate[$item.TemplateId] = $item
+        }
+
+        $baselineResults = @()
+        $baselineByTemplate = @{}
+        if ($BaselineManifest -and $BaselineManifest.Results) {
+            $baselineResults = @($BaselineManifest.Results)
+            foreach ($item in $baselineResults) {
+                $baselineByTemplate[$item.TemplateId] = $item
+            }
+        }
+
+        $changedItems = @()
+        $addedTemplates = @()
+        $removedTemplates = @()
+
+        $allTemplateIds = @($currentByTemplate.Keys + $baselineByTemplate.Keys | Sort-Object -Unique)
+        foreach ($templateId in $allTemplateIds) {
+            $current = if ($currentByTemplate.ContainsKey($templateId)) { $currentByTemplate[$templateId] } else { $null }
+            $baseline = if ($baselineByTemplate.ContainsKey($templateId)) { $baselineByTemplate[$templateId] } else { $null }
+
+            if ($null -eq $baseline -and $null -ne $current) {
+                $addedTemplates += $templateId
+                $changedItems += [PSCustomObject]@{
+                    TemplateId = $templateId
+                    BaselineStatus = $null
+                    CurrentStatus = $current.Status
+                    ChangeType = 'Added'
+                    BaselineReason = $null
+                    CurrentReason = $current.Reason
+                }
+                continue
+            }
+
+            if ($null -eq $current -and $null -ne $baseline) {
+                $removedTemplates += $templateId
+                $changedItems += [PSCustomObject]@{
+                    TemplateId = $templateId
+                    BaselineStatus = $baseline.Status
+                    CurrentStatus = $null
+                    ChangeType = 'Removed'
+                    BaselineReason = $baseline.Reason
+                    CurrentReason = $null
+                }
+                continue
+            }
+
+            if ($baseline.Status -ne $current.Status -or $baseline.Reason -ne $current.Reason) {
+                $changedItems += [PSCustomObject]@{
+                    TemplateId = $templateId
+                    BaselineStatus = $baseline.Status
+                    CurrentStatus = $current.Status
+                    ChangeType = 'StatusOrReasonChanged'
+                    BaselineReason = $baseline.Reason
+                    CurrentReason = $current.Reason
+                }
+            }
+        }
+
+        $currentPass = (@($CurrentResults | Where-Object { $_.Status -eq 'Pass' })).Count
+        $currentFail = (@($CurrentResults | Where-Object { $_.Status -eq 'Fail' })).Count
+        $currentBlocked = (@($CurrentResults | Where-Object { $_.Status -eq 'Blocked' })).Count
+
+        $baselinePass = (@($baselineResults | Where-Object { $_.Status -eq 'Pass' })).Count
+        $baselineFail = (@($baselineResults | Where-Object { $_.Status -eq 'Fail' })).Count
+        $baselineBlocked = (@($baselineResults | Where-Object { $_.Status -eq 'Blocked' })).Count
+
+        $sortedChangedItems = @($changedItems | Sort-Object -Property TemplateId, ChangeType)
+        $isZeroChange = ($sortedChangedItems.Count -eq 0) -and ($currentPass -eq $baselinePass) -and ($currentFail -eq $baselineFail) -and ($currentBlocked -eq $baselineBlocked)
+
+        [PSCustomObject]@{
+            GeneratedAt = (Get-Date).ToString('o')
+            CurrentRunId = $CurrentRunId
+            BaselinePolicy = $BaselinePolicy
+            BaselineRunId = $BaselineRunId
+            HasBaseline = [bool]($BaselineManifest -ne $null)
+            Message = $Message
+            Counts = [ordered]@{
+                Current = [ordered]@{ Pass = $currentPass; Fail = $currentFail; Blocked = $currentBlocked }
+                Baseline = [ordered]@{ Pass = $baselinePass; Fail = $baselineFail; Blocked = $baselineBlocked }
+            }
+            Delta = [ordered]@{
+                Pass = $currentPass - $baselinePass
+                Fail = $currentFail - $baselineFail
+                Blocked = $currentBlocked - $baselineBlocked
+            }
+            IsZeroChange = $isZeroChange
+            AddedTemplates = $addedTemplates
+            RemovedTemplates = $removedTemplates
+            ChangedItems = $sortedChangedItems
+        }
+    }
+
     if ($env:CI -and -not $AllowCiOverride) {
         Write-Warning 'CI environment detected. Skipping template automation by default. Use -AllowCiOverride to force execution.'
         return [PSCustomObject]@{
@@ -319,6 +696,8 @@ function Invoke-DistroNexusTemplateAutomation {
     if (-not (Get-Command wsl.exe -ErrorAction SilentlyContinue)) {
         throw 'wsl.exe is not available. This suite requires Windows + WSL2.'
     }
+
+    $capabilityPolicy = Resolve-CapabilityPolicy -Profile $CapabilityProfile -IncludeCapabilityGatedSwitch:$IncludeCapabilityGated.IsPresent
 
     $allTemplates = @(Get-DistroNexusTemplate)
     if (-not $allTemplates -or $allTemplates.Count -eq 0) {
@@ -389,6 +768,8 @@ function Invoke-DistroNexusTemplateAutomation {
             Reason = ''
             DurationSeconds = 0
             ProbeResults = @()
+            CapabilityDiagnostics = @()
+            CapabilityProfile = $capabilityPolicy.ProfileName
         }
 
         try {
@@ -398,7 +779,8 @@ function Invoke-DistroNexusTemplateAutomation {
                 $item.IsolatedInstance = $executionDistro
             }
 
-            $gate = Test-CapabilityGate -Template $template -TargetDistro $executionDistro -AllowCapabilityGated:$IncludeCapabilityGated.IsPresent
+            $gate = Test-CapabilityGate -Template $template -TargetDistro $executionDistro -CapabilityPolicy $capabilityPolicy
+            $item.CapabilityDiagnostics = @($gate.Diagnostics)
             if ($gate.Blocked) {
                 $item.Status = 'Blocked'
                 $item.Reason = $gate.Reason
@@ -454,6 +836,8 @@ function Invoke-DistroNexusTemplateAutomation {
         IsolationMode = if ($UseSharedDistro) { 'SharedDistro' } else { 'PerTemplateIsolatedImport' }
         DryRun = [bool]$DryRun
         IncludeCapabilityGated = [bool]$IncludeCapabilityGated
+        CapabilityProfile = if ([string]::IsNullOrWhiteSpace($CapabilityProfile)) { $null } else { $CapabilityProfile }
+        CapabilityPolicy = $capabilityPolicy
         Summary = [ordered]@{
             Total = $results.Count
             Pass = $passCount
@@ -462,6 +846,23 @@ function Invoke-DistroNexusTemplateAutomation {
         }
         Environment = $environmentSnapshot
         Results = $results
+    }
+
+    $regressionDiff = $null
+    $regressionDiffPath = $null
+    if ($EnableRegressionDiff) {
+        $baseline = Resolve-BaselineManifest -ResultsRoot $OutputRoot -CurrentRunId $runId -ExplicitRunId $BaselineRunId
+        $regressionDiff = New-RegressionDiff -CurrentResults $results -BaselineManifest $baseline.Manifest -CurrentRunId $runId -BaselinePolicy $baseline.Policy -BaselineRunId $baseline.BaselineRunId -Message $baseline.Message
+        $regressionDiffPath = Join-Path $runDirectory 'regression-diff.json'
+        $regressionDiff | ConvertTo-Json -Depth 12 | Set-Content -Path $regressionDiffPath -Encoding UTF8
+        $manifest.RegressionDiff = [ordered]@{
+            Enabled = $true
+            BaselinePolicy = $baseline.Policy
+            BaselineRunId = $baseline.BaselineRunId
+            HasBaseline = $regressionDiff.HasBaseline
+            Message = $baseline.Message
+            Artifact = 'regression-diff.json'
+        }
     }
 
     $manifestPath = Join-Path $runDirectory 'run-manifest.json'
@@ -485,6 +886,7 @@ function Invoke-DistroNexusTemplateAutomation {
         "- Fail: $failCount",
         "- Blocked: $blockedCount",
         "- DryRun: $DryRun",
+        "- CapabilityProfile: $($capabilityPolicy.ProfileName)",
         '',
         '## Failed/Blocked Items',
         ''
@@ -508,6 +910,40 @@ function Invoke-DistroNexusTemplateAutomation {
         "- logs/*.json"
     )
 
+    if ($EnableRegressionDiff -and $regressionDiff) {
+        $summaryLines += @(
+            '',
+            '## Regression Diff',
+            '',
+            "- BaselinePolicy: $($regressionDiff.BaselinePolicy)",
+            "- BaselineRunId: $($regressionDiff.BaselineRunId)",
+            "- HasBaseline: $($regressionDiff.HasBaseline)",
+            "- DeltaPass: $($regressionDiff.Delta.Pass)",
+            "- DeltaFail: $($regressionDiff.Delta.Fail)",
+            "- DeltaBlocked: $($regressionDiff.Delta.Blocked)",
+            "- ChangedItems: $($regressionDiff.ChangedItems.Count)",
+            "- IsZeroChange: $($regressionDiff.IsZeroChange)",
+            "- Message: $($regressionDiff.Message)",
+            '',
+            '### Changed Templates',
+            ''
+        )
+
+        if (@($regressionDiff.ChangedItems).Count -eq 0) {
+            $summaryLines += '- No changes detected relative to baseline.'
+        }
+        else {
+            foreach ($change in @($regressionDiff.ChangedItems)) {
+                $summaryLines += "- $($change.TemplateId): $($change.BaselineStatus) -> $($change.CurrentStatus) [$($change.ChangeType)]"
+            }
+        }
+
+        $summaryLines += @(
+            '',
+            '- regression-diff.json'
+        )
+    }
+
     $summaryPath = Join-Path $runDirectory 'summary.md'
     Set-Content -Path $summaryPath -Value ($summaryLines -join [Environment]::NewLine) -Encoding UTF8
 
@@ -517,7 +953,12 @@ function Invoke-DistroNexusTemplateAutomation {
     }
 
     $relativeRunPath = "{0}/{1}" -f $dateFolder, $runId
-    Add-Content -Path $indexPath -Value ("- {0} | {1} | {2} | pass={3}, fail={4}, blocked={5}" -f $now.ToString('yyyy-MM-dd HH:mm:ss'), $Mode, $relativeRunPath, $passCount, $failCount, $blockedCount)
+    $indexLine = "- {0} | {1} | {2} | pass={3}, fail={4}, blocked={5}" -f $now.ToString('yyyy-MM-dd HH:mm:ss'), $Mode, $relativeRunPath, $passCount, $failCount, $blockedCount
+    if ($EnableRegressionDiff -and $regressionDiff) {
+        $indexLine = "{0} | diff={1}/regression-diff.json | baseline={2}" -f $indexLine, $relativeRunPath, $regressionDiff.BaselineRunId
+    }
+
+    Add-Content -Path $indexPath -Value $indexLine
 
     if ($isolationContext -and (Test-Path $isolationContext.Root)) {
         try {
@@ -535,6 +976,7 @@ function Invoke-DistroNexusTemplateAutomation {
         SummaryPath = $summaryPath
         ManifestPath = $manifestPath
         TestResultPath = $xmlPath
+        RegressionDiffPath = $regressionDiffPath
         Total = $results.Count
         Pass = $passCount
         Fail = $failCount

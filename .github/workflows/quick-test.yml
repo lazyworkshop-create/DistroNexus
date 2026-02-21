@@ -12,6 +12,12 @@ env:
   DOTNET_SDK_VERSION: '10.0.x'
   DOTNET_SDK_QUALITY: 'preview'
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  checks: write
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -55,7 +61,7 @@ jobs:
           }
         }
         
-        $result = Invoke-Pester -Configuration $quickTestConfig -SkipSummary
+        $result = Invoke-Pester -Configuration $quickTestConfig
         
         if ($result.FailedCount -gt 0) {
           exit 1
