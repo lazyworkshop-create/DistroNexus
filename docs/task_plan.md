@@ -74,3 +74,25 @@ Date: 2026-02-21
 
 ## Status
 - Completed
+
+---
+
+Date: 2026-02-21
+
+## Active Milestone
+- Enhance Template Options UI to support MultiSelect and Text inputs
+
+## Tasks
+- [x] Update Template.cs to add TemplateOptionType enum (Select, MultiSelect, Text).
+- [x] Update TemplateOptionsStep.cs and SelectTemplateStep.cs ViewModels to handle new option types.
+- [x] Update TemplateOptionsStepView.xaml to render ComboBox, ItemsControl (CheckBoxes), or TextBox based on Type.
+- [x] Update config/templates.json to use MultiSelect and Text for various templates (e.g., database-local-stack, infra-cli-toolbox, 
+odejs-dev, dotnet-dev).
+
+## Plan
+1. Modify core models to support option types.
+2. Update UI layer to render appropriate controls.
+3. Update built-in templates to utilize the new UI capabilities.
+
+## Status
+- Completed

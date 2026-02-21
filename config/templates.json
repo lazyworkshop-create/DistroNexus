@@ -13,6 +13,16 @@
       { "Name": ".NET SDK", "Version": "8.0" },
       { "Name": "ASP.NET Core Runtime", "Version": "8.0" }
     ],
+    "VersionOptions": [
+      {
+        "Key": "SDK_DOTNET_VERSION",
+        "Label": ".NET SDK Version",
+        "Description": "Specify the .NET SDK version to install",
+        "Type": "Text",
+        "Required": true,
+        "DefaultValue": "8.0"
+      }
+    ],
     "DefaultSelections": {
       "SDK_DOTNET_VERSION": "8.0"
     },
@@ -40,6 +50,21 @@
     "Packages": [
       { "Name": "Node.js", "Version": "lts" },
       { "Name": "npm", "Version": "latest" }
+    ],
+    "VersionOptions": [
+      {
+        "Key": "NODE_PACKAGE_MANAGERS",
+        "Label": "Package Managers",
+        "Description": "Select the package managers to install",
+        "Type": "MultiSelect",
+        "Required": true,
+        "DefaultValue": "npm,pnpm,yarn",
+        "Options": [
+          { "Value": "npm", "Label": "npm" },
+          { "Value": "pnpm", "Label": "pnpm" },
+          { "Value": "yarn", "Label": "yarn" }
+        ]
+      }
     ],
     "DefaultSelections": {
       "SDK_NODE_CHANNEL": "lts/*",
@@ -70,6 +95,29 @@
       { "Name": "Python", "Version": "3.12" },
       { "Name": "Poetry", "Version": "latest" }
     ],
+    "VersionOptions": [
+      {
+        "Key": "SDK_PYTHON_CHANNEL",
+        "Label": "Python Version",
+        "Description": "Specify the Python version to install",
+        "Type": "Text",
+        "Required": true,
+        "DefaultValue": "3.12"
+      },
+      {
+        "Key": "PYTHON_ENV_TOOL",
+        "Label": "Environment Tool",
+        "Description": "Select the Python environment management tool",
+        "Type": "Select",
+        "Required": true,
+        "DefaultValue": "poetry",
+        "Options": [
+          { "Value": "poetry", "Label": "Poetry" },
+          { "Value": "venv", "Label": "venv (built-in)" },
+          { "Value": "pipenv", "Label": "Pipenv" }
+        ]
+      }
+    ],
     "DefaultSelections": {
       "SDK_PYTHON_CHANNEL": "3.12",
       "PYTHON_ENV_TOOL": "poetry"
@@ -98,6 +146,20 @@
     "Packages": [
       { "Name": "Docker Engine", "Version": "latest" },
       { "Name": "Docker Compose", "Version": "latest" }
+    ],
+    "VersionOptions": [
+      {
+        "Key": "CONTAINER_RUNTIME_MODE",
+        "Label": "Container Runtime Mode",
+        "Description": "Select the container runtime mode",
+        "Type": "Select",
+        "Required": true,
+        "DefaultValue": "docker-engine",
+        "Options": [
+          { "Value": "docker-engine", "Label": "Docker Engine" },
+          { "Value": "podman", "Label": "Podman" }
+        ]
+      }
     ],
     "DefaultSelections": {
       "CONTAINER_RUNTIME_MODE": "docker-engine"
@@ -162,6 +224,14 @@
           { "Value": "STS", "Label": "STS/Current" },
           { "Value": "SpecificVersion", "Label": "Specific Version" }
         ]
+      },
+      {
+        "Key": "SDK_DOTNET_VERSION",
+        "Label": "Specific SDK Version",
+        "Description": "Specify the .NET SDK version (if Specific Version is selected)",
+        "Type": "Text",
+        "Required": false,
+        "DefaultValue": "8.0"
       }
     ],
     "DefaultSelections": {
@@ -203,6 +273,19 @@
           { "Value": "lts/*", "Label": "LTS" },
           { "Value": "current", "Label": "Current" },
           { "Value": "specific", "Label": "Specific" }
+        ]
+      },
+      {
+        "Key": "NODE_PACKAGE_MANAGERS",
+        "Label": "Package Managers",
+        "Description": "Select the package managers to install",
+        "Type": "MultiSelect",
+        "Required": true,
+        "DefaultValue": "npm,pnpm,yarn",
+        "Options": [
+          { "Value": "npm", "Label": "npm" },
+          { "Value": "pnpm", "Label": "pnpm" },
+          { "Value": "yarn", "Label": "yarn" }
         ]
       }
     ],
@@ -246,6 +329,19 @@
           { "Value": "3.11", "Label": "3.11" },
           { "Value": "3.10", "Label": "3.10" }
         ]
+      },
+      {
+        "Key": "PYTHON_ENV_TOOL",
+        "Label": "Environment Tool",
+        "Description": "Select the Python environment management tool",
+        "Type": "Select",
+        "Required": true,
+        "DefaultValue": "poetry",
+        "Options": [
+          { "Value": "poetry", "Label": "Poetry" },
+          { "Value": "venv", "Label": "venv (built-in)" },
+          { "Value": "pipenv", "Label": "Pipenv" }
+        ]
       }
     ],
     "DefaultSelections": {
@@ -277,6 +373,16 @@
     "ScenarioTags": ["java", "kotlin", "jvm"],
     "EstimatedDurationMinutes": 8,
     "CompatibleDistros": ["Ubuntu", "Debian"],
+    "VersionOptions": [
+      {
+        "Key": "JAVA_SDKMAN_VERSION",
+        "Label": "Java Version (SDKMAN)",
+        "Description": "Specify the Java version to install via SDKMAN",
+        "Type": "Text",
+        "Required": true,
+        "DefaultValue": "21.0.5-tem"
+      }
+    ],
     "DefaultSelections": {
       "JAVA_SDKMAN_VERSION": "21.0.5-tem",
       "GENERATE_SDKMANRC": "true"
@@ -342,6 +448,16 @@
     "ScenarioTags": ["go", "backend", "cli"],
     "EstimatedDurationMinutes": 6,
     "CompatibleDistros": ["Ubuntu", "Debian"],
+    "VersionOptions": [
+      {
+        "Key": "GO_VERSION",
+        "Label": "Go Version",
+        "Description": "Specify the Go version to install",
+        "Type": "Text",
+        "Required": true,
+        "DefaultValue": "1.23.6"
+      }
+    ],
     "DefaultSelections": {
       "GO_VERSION": "1.23.6"
     },
@@ -366,6 +482,20 @@
     "ScenarioTags": ["containers", "docker", "podman"],
     "EstimatedDurationMinutes": 8,
     "CompatibleDistros": ["Ubuntu", "Debian"],
+    "VersionOptions": [
+      {
+        "Key": "CONTAINER_RUNTIME_MODE",
+        "Label": "Container Runtime Mode",
+        "Description": "Select the container runtime mode",
+        "Type": "Select",
+        "Required": true,
+        "DefaultValue": "docker-engine",
+        "Options": [
+          { "Value": "docker-engine", "Label": "Docker Engine" },
+          { "Value": "podman", "Label": "Podman" }
+        ]
+      }
+    ],
     "DefaultSelections": {
       "CONTAINER_RUNTIME_MODE": "docker-engine"
     },
@@ -400,6 +530,21 @@
     "ScenarioTags": ["kubernetes", "kind", "k3d", "microk8s"],
     "EstimatedDurationMinutes": 10,
     "CompatibleDistros": ["Ubuntu", "Debian"],
+    "VersionOptions": [
+      {
+        "Key": "K8S_CLUSTER_MODE",
+        "Label": "Kubernetes Cluster Mode",
+        "Description": "Select the local Kubernetes cluster tool",
+        "Type": "Select",
+        "Required": true,
+        "DefaultValue": "kind",
+        "Options": [
+          { "Value": "kind", "Label": "kind (Kubernetes IN Docker)" },
+          { "Value": "k3d", "Label": "k3d" },
+          { "Value": "microk8s", "Label": "MicroK8s" }
+        ]
+      }
+    ],
     "DefaultSelections": {
       "K8S_CLUSTER_MODE": "kind"
     },
@@ -436,6 +581,23 @@
     "ScenarioTags": ["postgresql", "mysql", "redis", "sqlite", "mongodb"],
     "EstimatedDurationMinutes": 10,
     "CompatibleDistros": ["Ubuntu", "Debian"],
+    "VersionOptions": [
+      {
+        "Key": "DB_COMPONENTS",
+        "Label": "Database Components",
+        "Description": "Select the database services to install",
+        "Type": "MultiSelect",
+        "Required": true,
+        "DefaultValue": "postgresql,redis,sqlite",
+        "Options": [
+          { "Value": "postgresql", "Label": "PostgreSQL" },
+          { "Value": "mysql", "Label": "MySQL" },
+          { "Value": "redis", "Label": "Redis" },
+          { "Value": "sqlite", "Label": "SQLite" },
+          { "Value": "mongodb", "Label": "MongoDB" }
+        ]
+      }
+    ],
     "DefaultSelections": {
       "DB_COMPONENTS": "postgresql,redis,sqlite"
     },
@@ -507,6 +669,25 @@
     "ScenarioTags": ["devops", "iac", "kubernetes", "automation"],
     "EstimatedDurationMinutes": 8,
     "CompatibleDistros": ["Ubuntu", "Debian"],
+    "VersionOptions": [
+      {
+        "Key": "INFRA_TOOLSET",
+        "Label": "Infrastructure Tools",
+        "Description": "Select the CLI tools to install",
+        "Type": "MultiSelect",
+        "Required": true,
+        "DefaultValue": "kubectl,helm,terraform,jq,yq",
+        "Options": [
+          { "Value": "kubectl", "Label": "kubectl" },
+          { "Value": "helm", "Label": "Helm" },
+          { "Value": "terraform", "Label": "Terraform" },
+          { "Value": "jq", "Label": "jq" },
+          { "Value": "yq", "Label": "yq" },
+          { "Value": "awscli", "Label": "AWS CLI" },
+          { "Value": "azurecli", "Label": "Azure CLI" }
+        ]
+      }
+    ],
     "DefaultSelections": {
       "INFRA_TOOLSET": "kubectl,helm,terraform,jq,yq"
     },

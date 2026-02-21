@@ -52,3 +52,21 @@ Date: 2026-02-21
 - Lint output contract lacked schema metadata; `SchemaVersion` was added to support contract versioning.
 - Evidence references are now consistently repository-relative and URL query/fragment data remains redacted in evidence bundle outputs.
 - Final pass criteria remain blocked only by human sign-off gates; implementation, test, and acceptance evidence are otherwise complete.
+
+---
+
+Date: 2026-02-21
+
+## Active Milestone
+- Enhance Template Options UI to support MultiSelect and Text inputs
+
+## Findings
+- The database-local-stack template uses a comma-separated list for DB_COMPONENTS (e.g., postgresql,redis,sqlite).
+- The client UI previously only supported single-select dropdowns (ComboBoxes) for template options, causing the advanced options step to be skipped for templates that required multi-select or text inputs.
+- Added TemplateOptionType enum (Select, MultiSelect, Text) to Template.cs.
+- Updated TemplateOptionsStepView.xaml to render ComboBox, ItemsControl (CheckBoxes), or TextBox based on the Type property using DataTriggers.
+- Updated config/templates.json to use MultiSelect for database-local-stack, infra-cli-toolbox, 
+odejs-dev, and 
+odejs-multi-version-dev.
+- Updated config/templates.json to use Text for dotnet-dev, dotnet-multi-sdk-dev, go-dev, and java-jvm-dev.
+- The UI now correctly displays CheckBoxes for multi-select options and TextBoxes for free-form text options, allowing users to customize these templates during installation.
