@@ -1,0 +1,22 @@
+{
+  "Status": "Fail",
+  "ConfigPath": "docs/development/testing/results/p2-evidence-20260221-110630/lint/invalid-templates.json",
+  "StrictMode": true,
+  "GeneratedAt": "2026-02-21T11:06:30.9483460+08:00",
+  "Summary": {
+    "Templates": 1,
+    "Errors": 1,
+    "Warnings": 0,
+    "Violations": 1
+  },
+  "SummaryText": "templates=1, errors=1, warnings=0, violations=1",
+  "Violations": [
+    {
+      "RuleId": "metadata.script.pathExists",
+      "Severity": "error",
+      "Path": "templates[0].Scripts[0].ScriptPath",
+      "Message": "Script asset not found: templates/invalid-template/missing.sh",
+      "Hint": "Ensure referenced install script exists in config/templates/."
+    }
+  ]
+}
