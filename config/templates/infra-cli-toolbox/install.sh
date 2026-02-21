@@ -38,12 +38,12 @@ install_kubectl() {
 
   local kubectl_version
   kubectl_version="$(curl -L -s https://dl.k8s.io/release/stable.txt)"
-  retry 3 3 curl -LO "https://dl.k8s.io/release/${kubectl_version}/bin/linux/amd64/kubectl"
-  retry 3 3 curl -sSLO "https://dl.k8s.io/release/${kubectl_version}/bin/linux/amd64/kubectl.sha256"
-  echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check || { echo "ERROR: kubectl checksum verification failed"; rm -f kubectl kubectl.sha256; exit 1; }
-  rm -f kubectl.sha256
-  chmod +x kubectl
-  run_with_privilege mv kubectl /usr/local/bin/kubectl
+  retry 3 3 curl -L "https://dl.k8s.io/release/${kubectl_version}/bin/linux/amd64/kubectl" -o /tmp/kubectl
+  retry 3 3 curl -sSL "https://dl.k8s.io/release/${kubectl_version}/bin/linux/amd64/kubectl.sha256" -o /tmp/kubectl.sha256
+  echo "$(cat /tmp/kubectl.sha256)  /tmp/kubectl" | sha256sum --check || { echo "ERROR: kubectl checksum verification failed"; rm -f /tmp/kubectl /tmp/kubectl.sha256; exit 1; }
+  rm -f /tmp/kubectl.sha256
+  chmod +x /tmp/kubectl
+  run_with_privilege mv /tmp/kubectl /usr/local/bin/kubectl
 }
 
 install_helm() {
