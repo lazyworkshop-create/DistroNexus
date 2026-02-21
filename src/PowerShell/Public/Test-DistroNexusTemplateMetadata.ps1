@@ -151,6 +151,7 @@ function Test-DistroNexusTemplateMetadata {
     $warningCount = (@($violations | Where-Object { $_.Severity -eq 'warning' })).Count
 
     $result = [PSCustomObject]@{
+        SchemaVersion = '1.0'
         Status = if ($errorCount -gt 0) { 'Fail' } else { 'Pass' }
         ConfigPath = $ConfigPath
         StrictMode = [bool]$Strict

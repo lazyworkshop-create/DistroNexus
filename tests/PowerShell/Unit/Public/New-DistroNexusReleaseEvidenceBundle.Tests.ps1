@@ -15,25 +15,30 @@ Describe "New-DistroNexusReleaseEvidenceBundle" -Tag 'Unit', 'Public' {
             $params = @{
                 ReleaseVersion = 'v2.1.1'
                 WorkflowRuns = @('https://github.com/org/repo/actions/runs/100?token=secret')
-                TestArtifacts = @('invalid-link')
-                ReleaseLinks = @('https://github.com/org/repo/releases/tag/v2.1.1')
+                TestArtifacts = @('https://github.com/org/repo/actions/runs/100/artifacts/1?signature=abc')
+                ReleaseLinks = @('https://github.com/org/repo/releases/tag/v2.1.1?draft=true')
                 OutputPath = $outputPath
             }
 
             $result = New-DistroNexusReleaseEvidenceBundle @params
 
-            $result.Status | Should -Be 'CompletedWithUnresolved'
+            $result.Status | Should -Be 'Completed'
             Test-Path $result.OutputPath | Should -BeTrue
 
             $bundle = Get-Content -Path $result.OutputPath -Raw | ConvertFrom-Json
+            $bundle.SchemaVersion | Should -Be '1.0'
             $bundle.ReleaseVersion | Should -Be 'v2.1.1'
             $bundle.Summary.TotalItems | Should -Be 3
-            $bundle.Summary.Unresolved | Should -Be 1
+            $bundle.Summary.Unresolved | Should -Be 0
             @($bundle.ChecklistMapping | Where-Object { $_.Section -eq 'BuildAndPackaging' }).Count | Should -Be 1
-            @($bundle.UnresolvedItems).Count | Should -Be 1
+            @($bundle.UnresolvedItems).Count | Should -Be 0
 
             $workflowItem = @($bundle.Items | Where-Object { $_.SourceType -eq 'WorkflowRun' })[0]
             $workflowItem.Link | Should -Be 'https://github.com/org/repo/actions/runs/100'
+            $artifactItem = @($bundle.Items | Where-Object { $_.SourceType -eq 'TestArtifact' })[0]
+            $artifactItem.Link | Should -Be 'https://github.com/org/repo/actions/runs/100/artifacts/1'
+            $releaseItem = @($bundle.Items | Where-Object { $_.SourceType -eq 'ReleaseLink' })[0]
+            $releaseItem.Link | Should -Be 'https://github.com/org/repo/releases/tag/v2.1.1'
         }
     }
 

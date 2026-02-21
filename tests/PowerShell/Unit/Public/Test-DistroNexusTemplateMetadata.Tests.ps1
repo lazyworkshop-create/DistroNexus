@@ -12,6 +12,7 @@ Describe "Test-DistroNexusTemplateMetadata" -Tag 'Unit', 'Public' {
         InModuleScope DistroNexus {
             $result = Test-DistroNexusTemplateMetadata
 
+            $result.SchemaVersion | Should -Be '1.0'
             $result.Status | Should -Be 'Pass'
             $result.Summary.Errors | Should -Be 0
             $result.Violations.Count | Should -Be 0
@@ -109,6 +110,7 @@ Describe "Test-DistroNexusTemplateMetadata" -Tag 'Unit', 'Public' {
             Test-Path $reportPath | Should -BeTrue
 
             $report = Get-Content -Path $reportPath -Raw | ConvertFrom-Json
+            $report.SchemaVersion | Should -Be '1.0'
             $report.Status | Should -Be 'Fail'
             $report.Violations.Count | Should -BeGreaterThan 0
             $report.Violations[0].PSObject.Properties.Name -contains 'RuleId' | Should -BeTrue
