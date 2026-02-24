@@ -27,8 +27,8 @@ Source Spec: `docs/specs/store-submission-compliance-requirements-v2.1.1.md`
 - [ ] UI test: non-Store mode UI remains unchanged.
 
 ## E. FR-04 Packaging Compliance Tests
-- [ ] Build test: Store build produces `.msixbundle`.
-- [ ] Build test: Store build produces `.msixupload`.
+- [x] Build test: Store build produces `.msixbundle`.
+- [x] Build test: Store build produces `.msixupload`.
 - [ ] Package inspection: no updater executable/script/hook included in Store artifact.
 - [ ] Regression test: standalone packaging outputs are unchanged.
 
@@ -54,10 +54,12 @@ Source Spec: `docs/specs/store-submission-compliance-requirements-v2.1.1.md`
 - Result: Passed
 - Summary: `total: 237, failed: 0, succeeded: 237, skipped: 0`
 
-### Store Packaging Blocker Evidence (2026-02-24)
+### Store Packaging Evidence (2026-02-24)
 - Command: `pwsh -File ./tools/build.ps1 -Configuration Release -StoreBuild -Version 2.1.1`
-- Result: Failed before artifact generation due to missing Desktop Bridge targets.
-- Blocking error: `Desktop Bridge targets not found...`
+- Result: Passed
+- Artifacts generated:
+  - `release/store/DistroNexus.Package_2.1.1.0_Test/DistroNexus.Package_2.1.1.0_x64_ARM64.msixbundle`
+  - `release/store/DistroNexus.Package_2.1.1.0_x64_ARM64_bundle.msixupload`
 
 ### Interim Static Packaging Evidence (2026-02-24)
 - `src/DistroNexus.Package/DistroNexus.Package.wapproj` content includes only app assets and PowerShell module payload.
