@@ -22,6 +22,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly ISettingsService _settingsService;
     private readonly ICatalogService _catalogService;
     private readonly ITerminalService _terminalService;
+    private readonly IStoreComplianceModeService _storeComplianceModeService;
     private readonly ILogger<SettingsViewModel> _logger;
     private System.Timers.Timer? _autoSaveTimer;
 
@@ -57,6 +58,9 @@ public partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _checkUpdatesOnStartup = true;
+
+    [ObservableProperty]
+    private bool _isUpdateCheckOnStartupAvailable = true;
 
     [ObservableProperty]
     private string _catalogUrl = string.Empty;
@@ -117,11 +121,13 @@ public partial class SettingsViewModel : ObservableObject
         ISettingsService settingsService, 
         ICatalogService catalogService,
         ITerminalService terminalService,
+        IStoreComplianceModeService storeComplianceModeService,
         ILogger<SettingsViewModel> logger)
     {
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
         _terminalService = terminalService ?? throw new ArgumentNullException(nameof(terminalService));
+        _storeComplianceModeService = storeComplianceModeService ?? throw new ArgumentNullException(nameof(storeComplianceModeService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         
         // Initialize auto-save timer
@@ -149,6 +155,7 @@ public partial class SettingsViewModel : ObservableObject
             _logger.LogInformation("Loading settings");
 
             var settings = _settingsService.LoadSettings();
+            var isStoreComplianceMode = _storeComplianceModeService.IsStoreComplianceModeEnabled();
 
             DefaultInstallPath = settings.DefaultInstallPath;
             PackageCachePath = settings.PackageCachePath;
@@ -158,6 +165,12 @@ public partial class SettingsViewModel : ObservableObject
             EnableLogging = settings.EnableLogging;
             LogPath = settings.LogPath;
             CheckUpdatesOnStartup = settings.CheckUpdatesOnStartup;
+            IsUpdateCheckOnStartupAvailable = !isStoreComplianceMode;
+
+            if (isStoreComplianceMode)
+            {
+                CheckUpdatesOnStartup = false;
+            }
             CatalogUrl = settings.CatalogUrl;
             Theme = settings.Theme;
             Language = settings.Language;
@@ -219,7 +232,7 @@ public partial class SettingsViewModel : ObservableObject
                 DefaultDistributionId = DefaultDistribution?.Id ?? string.Empty,
                 EnableLogging = EnableLogging,
                 LogPath = LogPath,
-                CheckUpdatesOnStartup = CheckUpdatesOnStartup,
+                CheckUpdatesOnStartup = IsUpdateCheckOnStartupAvailable && CheckUpdatesOnStartup,
                 CatalogUrl = CatalogUrl,
                 Theme = Theme,
                 Language = Language,
@@ -633,7 +646,7 @@ public partial class SettingsViewModel : ObservableObject
                     DefaultDistributionId = DefaultDistribution?.Id ?? string.Empty,
                     EnableLogging = EnableLogging,
                     LogPath = LogPath,
-                    CheckUpdatesOnStartup = CheckUpdatesOnStartup,
+                    CheckUpdatesOnStartup = IsUpdateCheckOnStartupAvailable && CheckUpdatesOnStartup,
                     CatalogUrl = CatalogUrl,
                     Theme = Theme,
                     Language = Language,

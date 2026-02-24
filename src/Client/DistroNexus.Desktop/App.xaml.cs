@@ -99,6 +99,7 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<ICatalogService, CatalogService>();
                     services.AddSingleton<ICatalogSourceManager, CatalogSourceManager>();
                     services.AddSingleton<ITemplateService, TemplateService>();
+                    services.AddSingleton<IStoreComplianceModeService, StoreComplianceModeService>();
                     services.AddSingleton<INavigationService, NavigationService>();
                     services.AddSingleton<IUpdateService, UpdateService>();
                     services.AddSingleton<ITerminalService, TerminalService>();
@@ -259,6 +260,13 @@ public partial class App : System.Windows.Application
         {
             if (_host == null)
                 return;
+
+            var storeComplianceModeService = _host.Services.GetRequiredService<IStoreComplianceModeService>();
+            if (storeComplianceModeService.IsStoreComplianceModeEnabled())
+            {
+                _logger?.LogInformation("Skipping update check on startup because Store compliance mode is enabled");
+                return;
+            }
 
             var settingsService = _host.Services.GetRequiredService<ISettingsService>();
             var settings = settingsService.LoadSettings();

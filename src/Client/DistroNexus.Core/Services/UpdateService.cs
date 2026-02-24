@@ -14,13 +14,15 @@ public class UpdateService : IUpdateService
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<UpdateService> _logger;
+    private readonly IStoreComplianceModeService _storeComplianceModeService;
     private const string GitHubReleasesApiUrl = "https://api.github.com/repos/lazyworkshop-create/DistroNexus/releases/latest";
     private const string GitHubReleasesPageUrl = "https://github.com/lazyworkshop-create/DistroNexus/releases";
 
-    public UpdateService(HttpClient httpClient, ILogger<UpdateService> logger)
+    public UpdateService(HttpClient httpClient, ILogger<UpdateService> logger, IStoreComplianceModeService storeComplianceModeService)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _storeComplianceModeService = storeComplianceModeService ?? throw new ArgumentNullException(nameof(storeComplianceModeService));
 
         // Set User-Agent header required by GitHub API
         if (!_httpClient.DefaultRequestHeaders.Contains("User-Agent"))
@@ -34,6 +36,12 @@ public class UpdateService : IUpdateService
     {
         try
         {
+            if (_storeComplianceModeService.IsStoreComplianceModeEnabled())
+            {
+                _logger.LogInformation("Skipped update check because Store compliance mode is enabled");
+                return null;
+            }
+
             _logger.LogInformation("Checking for updates from GitHub");
 
             var response = await _httpClient.GetAsync(GitHubReleasesApiUrl, cancellationToken);
@@ -106,6 +114,12 @@ public class UpdateService : IUpdateService
     {
         try
         {
+            if (_storeComplianceModeService.IsStoreComplianceModeEnabled())
+            {
+                _logger.LogInformation("Blocked opening download page because Store compliance mode is enabled");
+                return;
+            }
+
             var url = string.IsNullOrEmpty(releaseUrl) ? GitHubReleasesPageUrl : releaseUrl;
             
             Process.Start(new ProcessStartInfo
