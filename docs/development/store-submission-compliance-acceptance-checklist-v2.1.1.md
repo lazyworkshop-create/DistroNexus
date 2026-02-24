@@ -43,6 +43,11 @@ Source Spec: `docs/specs/store-submission-compliance-requirements-v2.1.1.md`
 - [ ] All test checklist items are complete.
 - [ ] No open blocker remains for Store submission.
 
+## Current Blocker (2026-02-24)
+- AC-5 is blocked by local build environment capability.
+- Store packaging cannot complete because Desktop Bridge targets are missing on this machine.
+- Acceptance for artifact-level checks remains pending until Desktop Bridge workload is installed and Store build reruns successfully.
+
 ## Sign-off
 - Implementation Owner: Pending
 - QA Owner: Pending

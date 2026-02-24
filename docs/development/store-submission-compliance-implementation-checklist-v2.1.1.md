@@ -28,7 +28,7 @@ Source Spec: `docs/specs/store-submission-compliance-requirements-v2.1.1.md`
 
 ## E. FR-04 Packaging Pipeline Compliance
 - [ ] Verify `tools/build.ps1` Store path still outputs `.msixbundle` and `.msixupload`.
-- [ ] Verify Store package does not include self-update executables/scripts.
+- [x] Verify Store package does not include self-update executables/scripts.
 - [ ] Verify Store packaging path remains isolated from standalone installer outputs.
 - [ ] Keep standalone channels (`zip` / installer) unchanged unless required by compliance scope.
 
@@ -54,3 +54,12 @@ Source Spec: `docs/specs/store-submission-compliance-requirements-v2.1.1.md`
 - Implementation Owner: Pending
 - Reviewer: Pending
 - Result: [ ] Pass  [ ] Pass with Exceptions  [ ] Fail
+
+## Current Blocker (2026-02-24)
+- Store package generation is blocked on this machine: Desktop Bridge targets are missing.
+- Build command attempted: `pwsh -File ./tools/build.ps1 -Configuration Release -StoreBuild -Version 2.1.1`
+- Error: `Desktop Bridge targets not found. Install Visual Studio Build Tools with Universal Windows Platform build tools/Desktop Bridge workload.`
+
+## Interim Evidence (2026-02-24)
+- Packaging project static audit confirms no updater payload includes in package project items.
+- `src/DistroNexus.Package/DistroNexus.Package.wapproj` includes `Assets/**` and `../PowerShell/**` only; no updater executable/script include entries found.

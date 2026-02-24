@@ -18,4 +18,5 @@
 - [x] Implement Store-mode update check disablement in runtime.
 - [ ] Verify Store package content excludes non-Store update hooks.
 - [x] Run automated tests for Store compliance changes (`237/237` passed).
+- [ ] Install Desktop Bridge workload and rerun Store package build (`tools/build.ps1 -StoreBuild -Version 2.1.1`).
 - [ ] Finalize Partner Center listing/declarations and submit.

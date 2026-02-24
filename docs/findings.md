@@ -18,3 +18,5 @@
 - Runtime implementation now uses a centralized Store compliance mode service and applies guards at startup update check and update service entry points.
 - Settings UI now disables the "Check updates on startup" toggle in Store compliance mode and persists `CheckUpdatesOnStartup=false` for Store channel.
 - Automated validation result for this phase: `dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --no-restore` passed (`237/237`).
+- Store packaging attempt was blocked on current machine due to missing Desktop Bridge targets/workload.
+- Interim static package audit confirms no updater payload include rules in `src/DistroNexus.Package/DistroNexus.Package.wapproj`.

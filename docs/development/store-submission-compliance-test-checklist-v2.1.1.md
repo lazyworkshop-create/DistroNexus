@@ -54,6 +54,15 @@ Source Spec: `docs/specs/store-submission-compliance-requirements-v2.1.1.md`
 - Result: Passed
 - Summary: `total: 237, failed: 0, succeeded: 237, skipped: 0`
 
+### Store Packaging Blocker Evidence (2026-02-24)
+- Command: `pwsh -File ./tools/build.ps1 -Configuration Release -StoreBuild -Version 2.1.1`
+- Result: Failed before artifact generation due to missing Desktop Bridge targets.
+- Blocking error: `Desktop Bridge targets not found...`
+
+### Interim Static Packaging Evidence (2026-02-24)
+- `src/DistroNexus.Package/DistroNexus.Package.wapproj` content includes only app assets and PowerShell module payload.
+- No updater/self-update executable or script include rule found in package project.
+
 ## Sign-off
 - Test Owner: Pending
 - Reviewer: Pending

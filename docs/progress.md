@@ -5,8 +5,8 @@
 ## Current Milestone: v2.1.1 (Store Compliance Resubmission)
 
 ### Status
-- **Phase**: Runtime compliance implementation and automated tests completed
-- **Blockers**: None
+- **Phase**: Runtime compliance done; Store packaging evidence blocked by environment prerequisite
+- **Blockers**: Desktop Bridge workload/targets not installed on current machine
 
 ### Recent Updates
 - Initialized tracking files for the new milestone.
@@ -17,3 +17,5 @@
 - Implemented centralized Store compliance mode service and applied update-check guards in startup and update service paths.
 - Updated settings UI behavior to disable update-check startup toggle in Store mode.
 - Added Store compliance unit tests and executed full client test suite successfully (`237/237` passed).
+- Attempted Store build command with `-StoreBuild -Version 2.1.1`; blocked by missing Desktop Bridge targets on current machine.
+- Added blocker/evidence notes to implementation/test/acceptance checklists and queued environment remediation step.
