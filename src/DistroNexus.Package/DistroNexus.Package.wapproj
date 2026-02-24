@@ -12,6 +12,7 @@
     <UapAppxPackageBuildMode>StoreUpload</UapAppxPackageBuildMode>
     <AppxPackageSigningEnabled>false</AppxPackageSigningEnabled>
     <AppxSymbolPackageEnabled>false</AppxSymbolPackageEnabled>
+    <NoWarn>$(NoWarn);NU1701;NU1702</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup>
