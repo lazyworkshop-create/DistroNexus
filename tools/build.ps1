@@ -420,9 +420,9 @@ if ($StoreBuild) {
         throw "Desktop Bridge targets not found. Install Visual Studio Build Tools with Universal Windows Platform build tools/Desktop Bridge workload."
     }
 
-    $vsMsBuildPath = Get-VisualStudioMsBuildPathForDesktopBridge -DesktopBridgePath $desktopBridgePath
+    $vsMsBuildPath = Get-VisualStudioMsBuildPath
     if ([string]::IsNullOrWhiteSpace($vsMsBuildPath)) {
-        $vsMsBuildPath = Get-VisualStudioMsBuildPath
+        $vsMsBuildPath = Get-VisualStudioMsBuildPathForDesktopBridge -DesktopBridgePath $desktopBridgePath
     }
 
     if ([string]::IsNullOrWhiteSpace($vsMsBuildPath)) {

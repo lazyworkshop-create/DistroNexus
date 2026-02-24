@@ -9,7 +9,7 @@
   <Identity
     Name="LazyWorkshopCreate.DistroNexus"
     Publisher="CN=C4B6BD9D-352C-4CE3-82BD-5A54506C898B"
-    Version="2.0.1.0" />
+    Version="2.1.1.0" />
 
   <Properties>
     <DisplayName>DistroNexus</DisplayName>
