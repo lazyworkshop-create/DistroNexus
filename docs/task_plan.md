@@ -16,7 +16,7 @@
 - [x] Create `docs/development/store-submission-compliance-test-checklist-v2.1.1.md`.
 - [x] Create `docs/development/store-submission-compliance-acceptance-checklist-v2.1.1.md`.
 - [x] Implement Store-mode update check disablement in runtime.
-- [ ] Verify Store package content excludes non-Store update hooks.
+- [x] Verify Store package content excludes non-Store update hooks.
 - [x] Run automated tests for Store compliance changes (`237/237` passed).
-- [ ] Install Desktop Bridge workload and rerun Store package build (`tools/build.ps1 -StoreBuild -Version 2.1.1`).
+- [x] Run Store package build (`tools/build.ps1 -StoreBuild -Version 2.1.1`) — artifacts generated at `release/store/`.
 - [ ] Finalize Partner Center listing/declarations and submit.
