@@ -32,10 +32,10 @@ HTTPS_PROXY=http://127.0.0.1:7897
 
 ```powershell
 .\.venv\Scripts\python.exe tools/generate_openrouter_nano_banana_images.py \
-  --source "20260224-AI-Agent-ERP影响研究/20260224-AI-Agent-ERP-Article-1-Image-Prompts.md" \
+  --source "docs/promotion/windows-store-publish-success-process-image-prompts.md" \
   --limit 3 \
-  --out "20260224-AI-Agent-ERP影响研究" \
-  --prefix "20260224-AI-Agent-ERP-Article-1" \
+  --out "docs/promotion/image" \
+  --prefix "windows-store-publish-success-process-ai" \
   --model "google/gemini-3-pro-image-preview"
 ```
 
@@ -45,7 +45,7 @@ HTTPS_PROXY=http://127.0.0.1:7897
 
 ```powershell
 .\.venv\Scripts\python.exe tools/generate_openrouter_nano_banana_images.py \
-  --source "20260224-AI-Agent-ERP影响研究/20260224-AI-Agent-ERP-Article-1-Image-Prompts.md" \
+  --source "docs/promotion/windows-store-publish-success-process-image-prompts.md" \
   --limit 1 \
   --no-proxy
 ```
@@ -54,7 +54,7 @@ HTTPS_PROXY=http://127.0.0.1:7897
 
 ```powershell
 .\.venv\Scripts\python.exe tools/generate_openrouter_nano_banana_images.py \
-  --source "20260224-AI-Agent-ERP影响研究/20260224-AI-Agent-ERP-Article-1-Image-Prompts.md" \
+  --source "docs/promotion/windows-store-publish-success-process-image-prompts.md" \
   --limit 1 \
   --http-proxy "http://127.0.0.1:7897" \
   --https-proxy "http://127.0.0.1:7897"
