@@ -38,6 +38,14 @@ go.work
 .idea/
 .vs/
 
+# Local Python environment
+.venv/
+
+# Local environment secrets
+.env
+.env.*
+!.env.example
+
 # .NET Build outputs
 **/bin/
 **/obj/
