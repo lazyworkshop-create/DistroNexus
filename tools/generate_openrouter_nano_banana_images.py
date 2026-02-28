@@ -17,7 +17,7 @@ from urllib3.util.retry import Retry
 
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_MODEL = "google/gemini-3-pro-image-preview"
-DEFAULT_SOURCE_PATH = Path("20260224-AI-Agent-ERP影响研究/20260224-AI-Agent-ERP-Article-1-Image-Prompts.md")
+DEFAULT_SOURCE_PATH = Path("docs/promotion/windows-store-publish-success-process-image-prompts.md")
 DEFAULT_OUTPUT_DIR = Path("generated-images")
 LOGGER = logging.getLogger("openrouter-image-generator")
 
@@ -80,11 +80,13 @@ def resolve_proxy_config(http_proxy: str | None, https_proxy: str | None) -> dic
         (http_proxy or "").strip()
         or os.getenv("OPENROUTER_HTTP_PROXY", "").strip()
         or os.getenv("HTTP_PROXY", "").strip()
+        or os.getenv("http_proxy", "").strip()
     )
     resolved_https = (
         (https_proxy or "").strip()
         or os.getenv("OPENROUTER_HTTPS_PROXY", "").strip()
         or os.getenv("HTTPS_PROXY", "").strip()
+        or os.getenv("https_proxy", "").strip()
     )
 
     proxies: dict[str, str] = {}
@@ -368,13 +370,16 @@ def main() -> None:
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logs")
     args = parser.parse_args()
 
+    if args.limit < 1:
+        parser.error("--limit must be at least 1")
+
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(asctime)s %(levelname)s %(message)s",
     )
 
     prompts = load_prompts(source_path=args.source, input_format=args.format, inline_prompts=args.prompt)
-    prompts = prompts[: max(1, args.limit)]
+    prompts = prompts[: args.limit]
 
     if args.dry_run:
         LOGGER.info("Dry-run mode: %s prompt(s) parsed.", len(prompts))
@@ -427,8 +432,8 @@ def main() -> None:
                 "index": index,
                 "prompt": prompt,
                 "model": args.model,
-                "image": str(file_path),
-                "response": str(meta_path),
+                "image": file_path.as_posix(),
+                "response": meta_path.as_posix(),
             }
         )
 
