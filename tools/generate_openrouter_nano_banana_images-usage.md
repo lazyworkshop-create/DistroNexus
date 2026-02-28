@@ -31,11 +31,11 @@ HTTPS_PROXY=http://127.0.0.1:7897
 ### 2.1 从 Markdown 提示词生成 3 张图
 
 ```powershell
-.\.venv\Scripts\python.exe tools/generate_openrouter_nano_banana_images.py \
-  --source "docs/promotion/windows-store-publish-success-process-image-prompts.md" \
-  --limit 3 \
-  --out "docs/promotion/image" \
-  --prefix "windows-store-publish-success-process-ai" \
+.\.venv\Scripts\python.exe tools/generate_openrouter_nano_banana_images.py `
+  --source "docs/promotion/windows-store-publish-success-process-image-prompts.md" `
+  --limit 3 `
+  --out "docs/promotion/image" `
+  --prefix "windows-store-publish-success-process-ai" `
   --model "google/gemini-3-pro-image-preview"
 ```
 
@@ -44,19 +44,19 @@ HTTPS_PROXY=http://127.0.0.1:7897
 即使 `.env` 或系统里有代理变量，也可以强制直连：
 
 ```powershell
-.\.venv\Scripts\python.exe tools/generate_openrouter_nano_banana_images.py \
-  --source "docs/promotion/windows-store-publish-success-process-image-prompts.md" \
-  --limit 1 \
+.\.venv\Scripts\python.exe tools/generate_openrouter_nano_banana_images.py `
+  --source "docs/promotion/windows-store-publish-success-process-image-prompts.md" `
+  --limit 1 `
   --no-proxy
 ```
 
 ### 2.3 命令行显式指定代理
 
 ```powershell
-.\.venv\Scripts\python.exe tools/generate_openrouter_nano_banana_images.py \
-  --source "docs/promotion/windows-store-publish-success-process-image-prompts.md" \
-  --limit 1 \
-  --http-proxy "http://127.0.0.1:7897" \
+.\.venv\Scripts\python.exe tools/generate_openrouter_nano_banana_images.py `
+  --source "docs/promotion/windows-store-publish-success-process-image-prompts.md" `
+  --limit 1 `
+  --http-proxy "http://127.0.0.1:7897" `
   --https-proxy "http://127.0.0.1:7897"
 ```
 

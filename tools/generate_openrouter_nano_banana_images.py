@@ -432,8 +432,8 @@ def main() -> None:
                 "index": index,
                 "prompt": prompt,
                 "model": args.model,
-                "image": str(file_path),
-                "response": str(meta_path),
+                "image": file_path.as_posix(),
+                "response": meta_path.as_posix(),
             }
         )
 
