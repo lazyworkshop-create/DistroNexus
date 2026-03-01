@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `Compress-DistroNexusInstance` cmdlet to compact WSL VHDX disks and reclaim unused space (F-01).
   Supports `-WhatIf` for dry-run estimates; uses `Optimize-VHD` (Hyper-V) with `diskpart` fallback.
 - Added `CompactInstanceAsync` to `IWslManagerService` / `WslManagerService` (F-01).
+- Added Docker Desktop integration management cmdlets: `Get-DistroNexusDockerIntegration`,
+  `Enable-DistroNexusDockerIntegration`, and `Disable-DistroNexusDockerIntegration` (F-02).
+  Reads/writes `integratedWslDistros` in Docker's settings JSON; guards against WSL v1 and reserved distros.
+- Added `IDockerIntegrationService` / `DockerIntegrationService` with `IsDockerDesktopInstalledAsync`,
+  `GetIntegrationStatusAsync`, and `SetIntegrationAsync` (F-02).
 
 ## [2.1.1] - 2026-02-21
 
