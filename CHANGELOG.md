@@ -34,6 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `Get-DistroNexusPortMapping` cmdlet for visualizing listening ports inside WSL instances (E-05).
   Parses `ss` output, cross-references `netsh portproxy` rules, and returns WSL IP address.
 - Added `INetworkService` / `NetworkService` with `GetPortMappingsAsync` and `GetInstanceIpAddressAsync` (E-05).
+- Added `Get-DistroNexusInstanceTag`, `Set-DistroNexusInstanceTag`, `Add-DistroNexusInstanceTag`,
+  and `Remove-DistroNexusInstanceTag` cmdlets for per-instance tagging (E-06). Tags are case-insensitively
+  normalised, max 10 per instance, persisted in `settings.json`.
+- Added `ITagService` / `TagService` with tag CRUD, rename-migration, and delete hooks (E-06).
 
 ## [2.1.1] - 2026-02-21
 
