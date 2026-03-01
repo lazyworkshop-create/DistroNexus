@@ -107,6 +107,7 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<IDockerIntegrationService, DockerIntegrationService>();
                     services.AddSingleton<IWslConfigService, WslConfigService>();
                     services.AddSingleton<IBackupService, BackupService>();
+                    services.AddSingleton<INetworkService, NetworkService>();
 
                     // Register ViewModels
                     services.AddTransient<MainViewModel>();
