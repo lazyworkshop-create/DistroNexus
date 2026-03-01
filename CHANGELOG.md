@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Reads/writes `integratedWslDistros` in Docker's settings JSON; guards against WSL v1 and reserved distros.
 - Added `IDockerIntegrationService` / `DockerIntegrationService` with `IsDockerDesktopInstalledAsync`,
   `GetIntegrationStatusAsync`, and `SetIntegrationAsync` (F-02).
+- Added `Export-DistroNexusInstance` and `Import-DistroNexusInstance` cmdlets for WSL instance
+  backup/restore workflows (E-01). Export supports `-Force` auto-stop; Import validates no name collision.
+- Added `ExportInstanceAsync` and `ImportInstanceAsync` to `IWslManagerService` / `WslManagerService` (E-01).
 
 ## [2.1.1] - 2026-02-21
 
