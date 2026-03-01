@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `Export-DistroNexusInstance` and `Import-DistroNexusInstance` cmdlets for WSL instance
   backup/restore workflows (E-01). Export supports `-Force` auto-stop; Import validates no name collision.
 - Added `ExportInstanceAsync` and `ImportInstanceAsync` to `IWslManagerService` / `WslManagerService` (E-01).
+- Added `Get-DistroNexusWslConfig` and `Set-DistroNexusWslConfig` cmdlets for editing the global
+  `~/.wslconfig` INI file (E-02). Set preserves unknown keys and comments; warns when Memory > 80% of host RAM.
+- Added `IWslConfigService` / `WslConfigService` with `GetWslConfigAsync`, `SetWslConfigAsync`,
+  and `GetHostSpecsAsync` (E-02).
 
 ## [2.1.1] - 2026-02-21
 
