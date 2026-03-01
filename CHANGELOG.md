@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `~/.wslconfig` INI file (E-02). Set preserves unknown keys and comments; warns when Memory > 80% of host RAM.
 - Added `IWslConfigService` / `WslConfigService` with `GetWslConfigAsync`, `SetWslConfigAsync`,
   and `GetHostSpecsAsync` (E-02).
+- Added `Get-DistroNexusInstanceConfig` and `Set-DistroNexusInstanceSparseMode` cmdlets for
+  per-instance sparse VHDX mode configuration (E-03). Guards against WSL v1 instances.
 
 ## [2.1.1] - 2026-02-21
 
