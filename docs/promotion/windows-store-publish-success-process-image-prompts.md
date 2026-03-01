@@ -1,0 +1,41 @@
+# Windows Store Publish Process Image Prompts
+
+## Prompt 1 (Technical Flow Diagram Style)
+**Prompt:**
+> Create a clean, high-resolution process visualization image for a technical article.
+> Theme: implementation workflow for publishing a desktop app to Microsoft Store.
+> Flow steps (as icon-based stages, minimal text):
+> 1) Define release strategy
+> 2) Package engineering (wapproj + manifest)
+> 3) Build pipeline output (msixbundle/msixupload)
+> 4) Listing assets and metadata preparation
+> 5) Validation (sideloading + certification checks)
+> 6) Partner Center submission
+> 7) Certification review
+> 8) Go live and post-release monitoring
+> Layout: horizontal timeline with connected nodes, balanced spacing, clear visual hierarchy.
+> Style: modern engineering dashboard, professional, no people.
+> Colors: dark blue background, cyan/blue connectors, green success highlights.
+> Constraints: no brand logos, no watermark, no readable long text blocks, sharp edges, publication-ready.
+
+## Prompt 2 (Minimal Infographic Style)
+**Prompt:**
+> Generate a minimalist infographic image showing the implementation process of publishing a Windows desktop application to Microsoft Store.
+> Visual language: geometric icons, subtle arrows, modular cards, white or very light gray background.
+> Required stages:
+> planning -> packaging -> manifest alignment -> store metadata prep -> pre-submit testing -> submission -> review feedback loop -> launch.
+> Include one feedback loop arrow from review back to testing to indicate iteration.
+> Style: clean, calm, enterprise technical communication.
+> Composition: 16:9, center-focused, enough empty margins for article annotations.
+> Constraints: no logo, no watermark, no human figures, no clutter, no heavy text.
+
+## Prompt 3 (Blueprint System Style)
+**Prompt:**
+> Create a blueprint-style workflow illustration for "Windows Store publishing implementation process".
+> Show a structured pipeline with technical modules and dependencies:
+> strategy, package project, manifest capabilities, build artifacts, compliance checks, submission, certification, release operations.
+> Emphasize dependency links and quality gates.
+> Style: blueprint + product engineering hybrid, precise, futuristic but readable.
+> Palette: deep navy, electric blue lines, subtle white labels placeholders.
+> Output: high-detail, poster quality, suitable as WeChat article process image.
+> Constraints: no copyrighted logos, no watermark, no real company marks.
