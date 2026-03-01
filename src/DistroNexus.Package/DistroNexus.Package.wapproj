@@ -29,6 +29,9 @@
     <Content Include="..\PowerShell\**\*.*">
       <Link>PowerShell\%(RecursiveDir)%(Filename)%(Extension)</Link>
     </Content>
+    <Content Include="..\..\config\catalog.json">
+      <Link>config\catalog.json</Link>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

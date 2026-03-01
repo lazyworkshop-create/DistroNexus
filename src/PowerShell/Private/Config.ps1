@@ -42,7 +42,15 @@ function Get-DistroNexusConfig {
             $catalogPath = $fallbackPath
         }
     }
-    
+
+    # Fallback to module installation path (MSIX/portable: PowerShell\Private → PowerShell → <install root> → config)
+    if (-not (Test-Path $catalogPath)) {
+        $modulePath = Join-Path $PSScriptRoot "..\..\config\catalog.json"
+        if (Test-Path $modulePath) {
+            $catalogPath = $modulePath
+        }
+    }
+
     # Fallback to dev environment path
     if (-not (Test-Path $catalogPath)) {
         $devPath = Join-Path $PSScriptRoot "..\..\..\config\catalog.json"
