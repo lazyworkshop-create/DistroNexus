@@ -48,7 +48,9 @@
         'Enable-DistroNexusDockerIntegration',
         'Disable-DistroNexusDockerIntegration',
         'Export-DistroNexusInstance',
-        'Import-DistroNexusInstance'
+        'Import-DistroNexusInstance',
+        'Get-DistroNexusWslConfig',
+        'Set-DistroNexusWslConfig'
     )
 
     # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
