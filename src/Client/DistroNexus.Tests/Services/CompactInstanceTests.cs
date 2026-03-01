@@ -1,5 +1,6 @@
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
+using DistroNexus.Core.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 

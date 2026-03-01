@@ -1272,4 +1272,53 @@ public partial class WslManagerService : IWslManagerService
             return null;
         }
     }
+
+    /// <inheritdoc/>
+    public async Task CompactInstanceAsync(
+        string instanceName,
+        IProgress<(double Percentage, string Message)>? progress = null,
+        bool whatIf = false,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(instanceName))
+            throw new ArgumentException("Instance name must not be null or empty.", nameof(instanceName));
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        _logger.LogInformation("Compacting VHDX for instance {InstanceName} (WhatIf={WhatIf})", instanceName, whatIf);
+
+        progress?.Report((5, "Preparing compaction…"));
+
+        var parameters = new Dictionary<string, object>
+        {
+            { "Name",  instanceName },
+            { "Force", true }
+        };
+
+        if (whatIf)
+            parameters["WhatIf"] = true;
+
+        progress?.Report((20, "Running fstrim and compacting VHDX…"));
+
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(
+            "Compress-DistroNexusInstance",
+            parameters: parameters,
+            options: new ModuleCallOptions
+            {
+                TimeoutSeconds  = VeryLongOperationTimeoutSeconds,
+                ParseAsJson     = false,
+                UseModuleFallback = false
+            },
+            cancellationToken: cancellationToken);
+
+        if (result == null || !result.Success)
+        {
+            var error = result?.Error ?? "Unknown error";
+            _logger.LogError("Compaction failed for {InstanceName}: {Error}", instanceName, error);
+            throw new InvalidOperationException($"Compaction failed for '{instanceName}': {error}");
+        }
+
+        progress?.Report((100, "Compaction complete."));
+        _logger.LogInformation("Compaction succeeded for instance {InstanceName}", instanceName);
+    }
 }
