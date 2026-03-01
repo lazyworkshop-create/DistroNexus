@@ -5,6 +5,14 @@ All notable changes to DistroNexus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Added `Compress-DistroNexusInstance` cmdlet to compact WSL VHDX disks and reclaim unused space (F-01).
+  Supports `-WhatIf` for dry-run estimates; uses `Optimize-VHD` (Hyper-V) with `diskpart` fallback.
+- Added `CompactInstanceAsync` to `IWslManagerService` / `WslManagerService` (F-01).
+
 ## [2.1.1] - 2026-02-21
 
 ### Added
