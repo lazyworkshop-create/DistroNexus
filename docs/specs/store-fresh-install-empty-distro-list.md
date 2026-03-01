@@ -2,7 +2,7 @@
 
 **Document Type**: Spec / Bug Analysis
 **Branch**: `hotfix/store-install-empty-distro-list`
-**Status**: Fix in progress
+**Status**: Implemented
 
 ---
 
