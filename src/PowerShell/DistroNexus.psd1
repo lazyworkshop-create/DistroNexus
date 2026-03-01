@@ -52,7 +52,11 @@
         'Get-DistroNexusWslConfig',
         'Set-DistroNexusWslConfig',
         'Get-DistroNexusInstanceConfig',
-        'Set-DistroNexusInstanceSparseMode'
+        'Set-DistroNexusInstanceSparseMode',
+        'New-DistroNexusBackupSchedule',
+        'Remove-DistroNexusBackupSchedule',
+        'Get-DistroNexusBackupSchedule',
+        'Invoke-DistroNexusBackup'
     )
 
     # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
