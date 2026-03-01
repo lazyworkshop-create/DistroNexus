@@ -57,3 +57,10 @@ Thumbs.db
 
 src/main
 release/
+
+# Claude Code session artifacts (auto-generated planning & research docs)
+docs/task_plan.md
+docs/findings.md
+docs/progress.md
+# Claude Code working directory temp files
+tmpclaude-*

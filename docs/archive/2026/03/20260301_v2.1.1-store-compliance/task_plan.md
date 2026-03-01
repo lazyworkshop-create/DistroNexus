@@ -1,8 +1,9 @@
-# Task Plan
+# Task Plan — v2.1.1 Store Compliance Resubmission
 
-> **Note:** Previous tracking files for the v2.1.1 release have been archived to `docs/archive/2026/02/20260221_v2.1.1-release/`.
+> **Archived**: 2026-03-01. These tracking files are no longer in active use.
+> Previous tracking files for the v2.1.1 release have been archived to `docs/archive/2026/02/20260221_v2.1.1-release/`.
 
-## Current Milestone: v2.1.1 (Store Compliance Resubmission)
+## Milestone: v2.1.1 (Store Compliance Resubmission)
 
 ### Objectives
 - [x] Define objectives for the next milestone.

@@ -1,14 +1,15 @@
-# Progress Report
+# Progress Report — v2.1.1 Store Compliance Resubmission
 
-> **Note:** Previous tracking files for the v2.1.1 release have been archived to `docs/archive/2026/02/20260221_v2.1.1-release/`.
+> **Archived**: 2026-03-01. These tracking files are no longer in active use.
+> Previous tracking files for the v2.1.1 release have been archived to `docs/archive/2026/02/20260221_v2.1.1-release/`.
 
-## Current Milestone: v2.1.1 (Store Compliance Resubmission)
+## Milestone: v2.1.1 (Store Compliance Resubmission)
 
-### Status
+### Final Status
 - **Phase**: Runtime compliance done; Store packaging artifacts generated successfully
-- **Blockers**: None
+- **Blockers**: None at code level; Partner Center submission pending.
 
-### Recent Updates
+### Activity Log
 - Initialized tracking files for the new milestone.
 - Completed Store compliance documentation baseline for v2.1.1 submission.
 - Added requirements document for policy 10.2.5 remediation and Store-mode update-check disablement scope.
