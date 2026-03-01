@@ -1321,4 +1321,163 @@ public partial class WslManagerService : IWslManagerService
         progress?.Report((100, "Compaction complete."));
         _logger.LogInformation("Compaction succeeded for instance {InstanceName}", instanceName);
     }
+
+    /// <inheritdoc/>
+    public async Task ExportInstanceAsync(
+        string name,
+        string destination,
+        bool force = false,
+        CancellationToken cancellationToken = default)
+    {
+        if (name is null) throw new ArgumentNullException(nameof(name));
+        if (string.IsNullOrWhiteSpace(destination))
+            throw new ArgumentException("Destination must not be empty.", nameof(destination));
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        _logger.LogInformation("Exporting instance {Name} to {Destination}", name, destination);
+
+        var parameters = new Dictionary<string, object>
+        {
+            { "Name", name },
+            { "Destination", destination }
+        };
+
+        if (force) parameters["Force"] = true;
+
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(
+            "Export-DistroNexusInstance",
+            parameters: parameters,
+            options: new ModuleCallOptions
+            {
+                TimeoutSeconds    = VeryLongOperationTimeoutSeconds,
+                ParseAsJson       = false,
+                UseModuleFallback = false
+            },
+            cancellationToken: cancellationToken);
+
+        if (result == null || !result.Success)
+        {
+            var error = result?.Error ?? "Unknown error";
+            _logger.LogError("Export failed for {Name}: {Error}", name, error);
+            throw new InvalidOperationException($"Export failed for '{name}': {error}");
+        }
+
+        _logger.LogInformation("Export succeeded for instance {Name}", name);
+    }
+
+    /// <inheritdoc/>
+    public async Task ImportInstanceAsync(
+        string name,
+        string source,
+        string installPath,
+        CancellationToken cancellationToken = default)
+    {
+        if (name is null) throw new ArgumentNullException(nameof(name));
+        if (string.IsNullOrWhiteSpace(source))
+            throw new ArgumentException("Source must not be empty.", nameof(source));
+        if (string.IsNullOrWhiteSpace(installPath))
+            throw new ArgumentException("InstallPath must not be empty.", nameof(installPath));
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        _logger.LogInformation("Importing instance {Name} from {Source}", name, source);
+
+        var parameters = new Dictionary<string, object>
+        {
+            { "Name", name },
+            { "Source", source },
+            { "InstallPath", installPath }
+        };
+
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(
+            "Import-DistroNexusInstance",
+            parameters: parameters,
+            options: new ModuleCallOptions
+            {
+                TimeoutSeconds    = VeryLongOperationTimeoutSeconds,
+                ParseAsJson       = false,
+                UseModuleFallback = false
+            },
+            cancellationToken: cancellationToken);
+
+        if (result == null || !result.Success)
+        {
+            var error = result?.Error ?? "Unknown error";
+            _logger.LogError("Import failed for {Name}: {Error}", name, error);
+            throw new InvalidOperationException($"Import failed for '{name}': {error}");
+        }
+
+        _logger.LogInformation("Import succeeded for instance {Name}", name);
+    }
+
+    /// <inheritdoc/>
+    public async Task<object?> GetInstanceConfigAsync(
+        string name,
+        CancellationToken cancellationToken = default)
+    {
+        if (name is null) throw new ArgumentNullException(nameof(name));
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var parameters = new Dictionary<string, object> { { "Name", name } };
+
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(
+            "Get-DistroNexusInstanceConfig",
+            parameters: parameters,
+            options: new ModuleCallOptions
+            {
+                TimeoutSeconds    = QuickOperationTimeoutSeconds,
+                ParseAsJson       = true,
+                UseModuleFallback = false
+            },
+            cancellationToken: cancellationToken);
+
+        if (result == null || !result.Success)
+        {
+            _logger.LogWarning("GetInstanceConfig returned no result for {Name}", name);
+            return null;
+        }
+
+        return result.Output;
+    }
+
+    /// <inheritdoc/>
+    public async Task SetSparseModeAsync(
+        string name,
+        bool enabled,
+        CancellationToken cancellationToken = default)
+    {
+        if (name is null) throw new ArgumentNullException(nameof(name));
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        _logger.LogInformation("Setting sparse mode {Enabled} for {Name}", enabled, name);
+
+        var parameters = new Dictionary<string, object>
+        {
+            { "Name", name },
+            { "Enabled", enabled }
+        };
+
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(
+            "Set-DistroNexusInstanceSparseMode",
+            parameters: parameters,
+            options: new ModuleCallOptions
+            {
+                TimeoutSeconds    = NormalOperationTimeoutSeconds,
+                ParseAsJson       = false,
+                UseModuleFallback = false
+            },
+            cancellationToken: cancellationToken);
+
+        if (result == null || !result.Success)
+        {
+            var error = result?.Error ?? "Unknown error";
+            _logger.LogError("SetSparseMode failed for {Name}: {Error}", name, error);
+            throw new InvalidOperationException($"SetSparseMode failed for '{name}': {error}");
+        }
+
+        _logger.LogInformation("Sparse mode set to {Enabled} for {Name}", enabled, name);
+    }
 }
