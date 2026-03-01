@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/cleanup-session.ps1"
+            "command": "cmd /c \"where pwsh >NUL 2>&1 && pwsh -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/cleanup-session.ps1 || echo [claude-stop] pwsh not found, skipping cleanup-session.ps1\""
           }
         ]
       }
