@@ -31,6 +31,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scheduled instance backups via Windows Task Scheduler (E-04). Supports Daily/Weekly/Monthly
   frequency, configurable retention, and on-demand backup with stop/restart lifecycle.
 - Added `IBackupService` / `BackupService` for managing backup schedules and invoking backups (E-04).
+- Added `Get-DistroNexusPortMapping` cmdlet for visualizing listening ports inside WSL instances (E-05).
+  Parses `ss` output, cross-references `netsh portproxy` rules, and returns WSL IP address.
+- Added `INetworkService` / `NetworkService` with `GetPortMappingsAsync` and `GetInstanceIpAddressAsync` (E-05).
 
 ## [2.1.1] - 2026-02-21
 
