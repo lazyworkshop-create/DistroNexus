@@ -26,6 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and `GetHostSpecsAsync` (E-02).
 - Added `Get-DistroNexusInstanceConfig` and `Set-DistroNexusInstanceSparseMode` cmdlets for
   per-instance sparse VHDX mode configuration (E-03). Guards against WSL v1 instances.
+- Added `New-DistroNexusBackupSchedule`, `Remove-DistroNexusBackupSchedule`,
+  `Get-DistroNexusBackupSchedule`, and `Invoke-DistroNexusBackup` cmdlets for automated
+  scheduled instance backups via Windows Task Scheduler (E-04). Supports Daily/Weekly/Monthly
+  frequency, configurable retention, and on-demand backup with stop/restart lifecycle.
+- Added `IBackupService` / `BackupService` for managing backup schedules and invoking backups (E-04).
 
 ## [2.1.1] - 2026-02-21
 
