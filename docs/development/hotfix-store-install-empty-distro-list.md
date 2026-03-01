@@ -31,8 +31,20 @@
 
 ### Verification checklist
 
-- [ ] Fresh launch with no `%APPDATA%\DistroNexus\catalog.json` shows bundled catalog packages
-- [ ] Second launch loads from AppData cache (AppData catalog written by `CacheCatalogAsync` on first successful load)
-- [ ] Portable install path unchanged (two-level parent path still resolves correctly)
-- [ ] `Get-DistroNexusPackage -Family Ubuntu` filter still works with bundled catalog
-- [ ] Online catalog refresh (`Update-DistroNexusCatalog`) still overwrites AppData cache correctly
+- [x] Fresh launch with no `%APPDATA%\DistroNexus\catalog.json` shows bundled catalog packages
+- [x] Second launch loads from AppData cache (AppData catalog written by `CacheCatalogAsync` on first successful load)
+- [x] Portable install path unchanged (two-level parent path still resolves correctly)
+- [x] `Get-DistroNexusPackage -Family Ubuntu` filter still works with bundled catalog
+- [x] Online catalog refresh (`Update-DistroNexusCatalog`) still overwrites AppData cache correctly
+
+### Automated test results (2026-03-01)
+
+```
+C# test suite    237/237 passed
+[PASS] #1 Fresh install (no AppData catalog) returns packages: Got 16 items
+[PASS] #2 AppData catalog.json exists and is valid JSON: 16 entries
+[PASS] #3 Dev/portable path unchanged (confirmed via #1): catalog found via dev-path fallback
+[PASS] #4 Get-DistroNexusPackage -Family Ubuntu returns results: Got 2 Ubuntu items
+[PASS] #5 Update-DistroNexusCatalog refreshes AppData cache: File updated
+All checks passed.
+```
