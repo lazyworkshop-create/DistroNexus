@@ -17,6 +17,7 @@ public partial class WslManagerService : IWslManagerService
     private readonly ICatalogService _catalogService;
     private readonly ILogger<WslManagerService> _logger;
     private readonly bool _useModuleFallback = true;
+    private readonly IWslCliRunner? _wslCliRunner;
 
     private const string LxssRegistryPath = @"HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss";
 
@@ -36,17 +37,23 @@ public partial class WslManagerService : IWslManagerService
     public WslManagerService(
         IPowerShellService powerShellService,
         ICatalogService catalogService,
-        ILogger<WslManagerService> logger)
+        ILogger<WslManagerService> logger,
+        IWslCliRunner? wslCliRunner = null)
     {
         _powerShellService = powerShellService ?? throw new ArgumentNullException(nameof(powerShellService));
         _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _wslCliRunner = wslCliRunner;
     }
 
     /// <inheritdoc/>
     public async Task<List<WslInstance>> GetInstancesAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+
+        // Phase 1 (E-08): when IWslCliRunner is injected, use native wsl.exe parsing
+        if (_wslCliRunner != null)
+            return await GetInstancesNativeAsync(cancellationToken);
 
         _logger.LogInformation("Retrieving WSL instances using PowerShell module");
 
@@ -117,6 +124,34 @@ public partial class WslManagerService : IWslManagerService
 
         _logger.LogInformation("Parsed {Count} instances from module, returning to caller", instances.Count);
         return instances;
+    }
+
+    /// <summary>
+    /// Native implementation of GetInstancesAsync using direct wsl.exe CLI parsing (E-08 Phase 1).
+    /// Called when IWslCliRunner is injected.
+    /// </summary>
+    private async Task<List<WslInstance>> GetInstancesNativeAsync(CancellationToken ct)
+    {
+        _logger.LogDebug("GetInstancesNativeAsync: using WslCliRunner");
+
+        var result = await _wslCliRunner!.RunAsync("--list --verbose --all", ct);
+
+        if (result.ExitCode != 0)
+        {
+            _logger.LogWarning("wsl --list --verbose returned exit code {Code}: {Error}", result.ExitCode, result.Error);
+            return [];
+        }
+
+        var descriptors = WslCliRunner.ParseWslListVerbose(result.Output);
+        _logger.LogDebug("GetInstancesNativeAsync: parsed {Count} instance(s)", descriptors.Count);
+
+        return descriptors.Select(d => new WslInstance
+        {
+            Name      = d.Name,
+            State     = d.State,
+            Version   = d.Version,
+            IsDefault = d.IsDefault,
+        }).ToList();
     }
 
     private List<WslInstance> ParseInstancesFromModule(List<JsonElement> parsedObjects)

@@ -110,6 +110,7 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<INetworkService, NetworkService>();
                     services.AddSingleton<ITagService, TagService>();
                     services.AddSingleton<IWslEventWatcher, WslEventWatcher>();
+                    services.AddSingleton<IWslCliRunner, WslCliRunner>();
 
                     // Register ViewModels
                     services.AddTransient<MainViewModel>();
