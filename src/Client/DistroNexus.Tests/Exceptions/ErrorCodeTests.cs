@@ -1,5 +1,4 @@
 using DistroNexus.Core.Exceptions;
-using DistroNexus.Core.Models;
 
 namespace DistroNexus.Tests.Exceptions;
 
