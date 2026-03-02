@@ -38,6 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and `Remove-DistroNexusInstanceTag` cmdlets for per-instance tagging (E-06). Tags are case-insensitively
   normalised, max 10 per instance, persisted in `settings.json`.
 - Added `ITagService` / `TagService` with tag CRUD, rename-migration, and delete hooks (E-06).
+- Added `Invalidate-InstanceCache`, `Reset-CacheInvalidationState` to `Cache.ps1` for event-driven
+  cache invalidation (E-07). Added `Get-DistroNexusCache` diagnostic cmdlet.
+- Added `IWslEventWatcher` / `WslEventWatcher` with 2-second debounce timer for coalescing rapid
+  WSL process events into a single cache refresh signal (E-07).
 
 ## [2.1.1] - 2026-02-21
 
