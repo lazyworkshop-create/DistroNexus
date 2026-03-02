@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-03-02
+
 ### Added
 
 - Added `Compress-DistroNexusInstance` cmdlet to compact WSL VHDX disks and reclaim unused space (F-01).
