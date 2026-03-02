@@ -182,3 +182,47 @@ function Clear-InstanceCache {
         Write-Verbose "Instance configuration file does not exist: $cacheFile"
     }
 }
+
+# ── Cache invalidation state (E-07) ──────────────────────────────────────────
+# Module-scoped state used by Invalidate-InstanceCache and Get-DistroNexusCache.
+
+$script:__CacheState = [PSCustomObject]@{
+    IsStale        = $false
+    LastReason     = $null
+    InvalidatedAt  = $null
+}
+
+function Invalidate-InstanceCache {
+    <#
+    .SYNOPSIS
+        Marks the instance cache as stale so the next read triggers a full refresh.
+        Called by the C# WslEventWatcher host via ExecuteModuleCmdletAsync, or internally.
+    #>
+    param(
+        [Parameter(Mandatory = $false)]
+        [string]$Reason = "ExternalEvent"
+    )
+
+    $script:__CacheState.IsStale       = $true
+    $script:__CacheState.LastReason    = $Reason
+    $script:__CacheState.InvalidatedAt = Get-Date
+
+    Write-DistroNexusLog "Cache invalidated. Reason: $Reason" -FileOnly
+}
+
+function Reset-CacheInvalidationState {
+    <#
+    .SYNOPSIS
+        Clears the stale flag after a successful cache refresh.
+    #>
+    $script:__CacheState.IsStale = $false
+}
+
+function Get-CacheInvalidationState {
+    <#
+    .SYNOPSIS
+        Returns the current cache invalidation state object.
+    #>
+    return $script:__CacheState
+}
+

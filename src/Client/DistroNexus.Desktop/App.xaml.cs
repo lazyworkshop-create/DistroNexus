@@ -109,6 +109,7 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<IBackupService, BackupService>();
                     services.AddSingleton<INetworkService, NetworkService>();
                     services.AddSingleton<ITagService, TagService>();
+                    services.AddSingleton<IWslEventWatcher, WslEventWatcher>();
 
                     // Register ViewModels
                     services.AddTransient<MainViewModel>();
