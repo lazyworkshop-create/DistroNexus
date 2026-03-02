@@ -2,7 +2,7 @@
 # Unit tests for E-07 Proactive Cache Invalidation — Invalidate-InstanceCache and Get-DistroNexusCache
 
 BeforeAll {
-    $rootPath = Resolve-Path "$PSScriptRoot/../../.."
+    $rootPath = Resolve-Path "$PSScriptRoot/../../../.."
     $modulePath = Join-Path $rootPath "src\PowerShell"
     Import-Module (Join-Path $modulePath "DistroNexus.psd1") -Force
 

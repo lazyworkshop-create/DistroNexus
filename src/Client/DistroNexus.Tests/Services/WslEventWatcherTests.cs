@@ -37,16 +37,14 @@ public class WslEventWatcherTests
     {
         // Arrange
         var watcher = new WslEventWatcher(_mockLogger.Object, debounceMs: 100);
-        bool eventRaised = false;
-        watcher.CacheInvalidationRequested += (s, e) => eventRaised = true;
+        using var eventSignal = new ManualResetEventSlim(false);
+        watcher.CacheInvalidationRequested += (s, e) => eventSignal.Set();
 
         // Act — simulate an external event trigger via the test helper
         watcher.SimulateProcessEvent("wsl.exe");
 
-        // Give debounce time to fire (debounce is 100ms; wait 500ms for CI headroom)
-        System.Threading.Thread.Sleep(500);
-
-        // Assert
+        // Assert — wait up to 2 seconds for the event (debounce is 100ms)
+        bool eventRaised = eventSignal.Wait(TimeSpan.FromSeconds(2));
         Assert.True(eventRaised);
         watcher.Dispose();
     }
@@ -57,14 +55,22 @@ public class WslEventWatcherTests
         // Arrange
         var watcher = new WslEventWatcher(_mockLogger.Object, debounceMs: 150);
         int invocationCount = 0;
-        watcher.CacheInvalidationRequested += (s, e) => Interlocked.Increment(ref invocationCount);
+        using var eventSignal = new ManualResetEventSlim(false);
+        watcher.CacheInvalidationRequested += (s, e) =>
+        {
+            Interlocked.Increment(ref invocationCount);
+            eventSignal.Set();
+        };
 
         // Act — fire 5 events quickly
         for (int i = 0; i < 5; i++)
             watcher.SimulateProcessEvent("wslhost.exe");
 
-        // Wait for debounce to settle (150ms debounce; wait 600ms for CI headroom)
-        System.Threading.Thread.Sleep(600);
+        // Assert — wait for debounce to settle (150ms debounce; wait up to 2 seconds)
+        eventSignal.Wait(TimeSpan.FromSeconds(2));
+
+        // Give a small grace period for any potential extra events
+        System.Threading.Thread.Sleep(200);
 
         // Assert — coalesced to 1
         Assert.Equal(1, invocationCount);
