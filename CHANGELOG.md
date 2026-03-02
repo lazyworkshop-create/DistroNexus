@@ -42,6 +42,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cache invalidation (E-07). Added `Get-DistroNexusCache` diagnostic cmdlet.
 - Added `IWslEventWatcher` / `WslEventWatcher` with 2-second debounce timer for coalescing rapid
   WSL process events into a single cache refresh signal (E-07).
+- Added `IWslCliRunner` / `WslCliRunner` to wrap direct `wsl.exe` process invocations (E-08).
+  `WslManagerService` now uses native `wsl --list --verbose` parsing (Phase 1) when `IWslCliRunner`
+  is injected, eliminating one PowerShell process spin-up per instance-list operation.
 
 ## [2.1.1] - 2026-02-21
 
