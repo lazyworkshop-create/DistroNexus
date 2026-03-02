@@ -6,7 +6,7 @@ sidebar_position: 5
 
 本页提供 DistroNexus PowerShell 模块的命令参考。
 
-命令来源以 `src/PowerShell/DistroNexus.psd1` 的导出列表为准，共 15 条 cmdlet。
+命令来源以 `src/PowerShell/DistroNexus.psd1` 的导出列表为准，共 36 条 cmdlet。
 
 ## 实例管理
 
@@ -236,3 +236,247 @@ Invoke-DistroNexusTemplateAutomation -Mode AllTemplates -Distro "Ubuntu-24.04" -
 ```
 
 完整参数说明可在导入模块后执行 `Get-Help <CmdletName> -Detailed` 查看。
+
+## 磁盘管理
+
+### `Compress-DistroNexusInstance`
+压缩 WSL 实例的 VHDX 磁盘以回收未使用空间。
+
+**参数**
+- `-Name <string>`：实例名称。
+- `-WhatIf`：演练模式，仅估算空间，不修改磁盘。
+
+**示例**
+```powershell
+Compress-DistroNexusInstance -Name "Ubuntu-24.04"
+Compress-DistroNexusInstance -Name "Ubuntu-24.04" -WhatIf
+```
+
+## Docker Desktop 集成
+
+### `Get-DistroNexusDockerIntegration`
+查看所有实例的 Docker Desktop WSL 后端集成状态。
+
+**示例**
+```powershell
+Get-DistroNexusDockerIntegration
+```
+
+### `Enable-DistroNexusDockerIntegration`
+为指定实例启用 Docker Desktop WSL 后端。
+
+**参数**
+- `-Name <string>`：实例名称。
+
+**示例**
+```powershell
+Enable-DistroNexusDockerIntegration -Name "Ubuntu-24.04"
+```
+
+### `Disable-DistroNexusDockerIntegration`
+为指定实例禁用 Docker Desktop WSL 后端。
+
+**参数**
+- `-Name <string>`：实例名称。
+
+**示例**
+```powershell
+Disable-DistroNexusDockerIntegration -Name "Ubuntu-24.04"
+```
+
+## 备份与归档
+
+### `Export-DistroNexusInstance`
+将 WSL 实例导出为 `.tar` 归档文件。
+
+**参数**
+- `-Name <string>`：实例名称。
+- `-Destination <string>`：目标路径（文件或目录）。
+- `-Force`：自动停止运行中的实例后再导出。
+
+**示例**
+```powershell
+Export-DistroNexusInstance -Name "Ubuntu-24.04" -Destination "D:\Backups"
+Export-DistroNexusInstance -Name "Ubuntu-24.04" -Destination "D:\Backups\ubuntu.tar" -Force
+```
+
+### `Import-DistroNexusInstance`
+将 `.tar` 归档导入为新的 WSL 实例。
+
+**参数**
+- `-Name <string>`：新实例名称。
+- `-Source <string>`：源 `.tar` 文件路径。
+- `-InstallPath <string>`：安装路径。
+
+**示例**
+```powershell
+Import-DistroNexusInstance -Name "Ubuntu-Restored" -Source "D:\Backups\ubuntu.tar" -InstallPath "D:\WSL\Ubuntu-Restored"
+```
+
+### `New-DistroNexusBackupSchedule`
+通过 Windows 任务计划程序创建自动备份计划。
+
+**参数**
+- `-Name <string>`：实例名称。
+- `-Frequency <string>`：`Daily`、`Weekly:<星期名>` 或 `Monthly:<日期数>`。
+- `-Destination <string>`：备份输出路径。
+- `-RetentionCount <int>`：保留的备份数量。
+
+**示例**
+```powershell
+New-DistroNexusBackupSchedule -Name "Ubuntu-24.04" -Frequency "Daily" -Destination "D:\Backups" -RetentionCount 7
+New-DistroNexusBackupSchedule -Name "Ubuntu-24.04" -Frequency "Weekly:Monday" -Destination "D:\Backups" -RetentionCount 4
+```
+
+### `Remove-DistroNexusBackupSchedule`
+删除备份计划。
+
+**参数**
+- `-Name <string>`：实例名称。
+
+**示例**
+```powershell
+Remove-DistroNexusBackupSchedule -Name "Ubuntu-24.04"
+```
+
+### `Get-DistroNexusBackupSchedule`
+列出已配置的备份计划。
+
+**参数**
+- `-Name <string>`：按实例名过滤（可选）。
+
+**示例**
+```powershell
+Get-DistroNexusBackupSchedule
+```
+
+### `Invoke-DistroNexusBackup`
+立即对指定实例执行备份。
+
+**参数**
+- `-Name <string>`：实例名称。
+
+**示例**
+```powershell
+Invoke-DistroNexusBackup -Name "Ubuntu-24.04"
+```
+
+## 配置管理
+
+### `Get-DistroNexusWslConfig`
+读取全局 `~/.wslconfig` 文件。
+
+**示例**
+```powershell
+Get-DistroNexusWslConfig
+```
+
+### `Set-DistroNexusWslConfig`
+更新全局 `~/.wslconfig` 中的键值，保留未知键和注释。
+
+**参数**
+- `-Memory <string>`：最大内存（如 `4GB`）。
+- `-Processors <int>`：最大 CPU 数量。
+- `-Swap <string>`：交换空间大小（如 `2GB`）。
+
+**示例**
+```powershell
+Set-DistroNexusWslConfig -Memory "8GB" -Processors 4
+```
+
+### `Get-DistroNexusInstanceConfig`
+读取实例级资源配置（稀疏 VHDX 模式、全局内存/CPU）。
+
+**参数**
+- `-Name <string>`：实例名称。
+
+**示例**
+```powershell
+Get-DistroNexusInstanceConfig -Name "Ubuntu-24.04"
+```
+
+### `Set-DistroNexusInstanceSparseMode`
+为实例启用或禁用稀疏 VHDX 模式。
+
+**参数**
+- `-Name <string>`：实例名称。
+- `-Enabled <bool>`：`$true` 启用，`$false` 禁用。
+
+**示例**
+```powershell
+Set-DistroNexusInstanceSparseMode -Name "Ubuntu-24.04" -Enabled $true
+```
+
+## 网络
+
+### `Get-DistroNexusPortMapping`
+列出 WSL 实例内的所有监听端口及 Windows 代理映射信息。
+
+**参数**
+- `-Name <string>`：实例名称。
+- `-Protocol <TCP|UDP|All>`：按协议过滤（默认：`All`）。
+
+**示例**
+```powershell
+Get-DistroNexusPortMapping -Name "Ubuntu-24.04"
+Get-DistroNexusPortMapping -Name "Ubuntu-24.04" -Protocol TCP
+```
+
+## 标签管理
+
+### `Get-DistroNexusInstanceTag`
+获取实例的标签。
+
+**参数**
+- `-Name <string>`：实例名称。
+
+**示例**
+```powershell
+Get-DistroNexusInstanceTag -Name "Ubuntu-24.04"
+```
+
+### `Set-DistroNexusInstanceTag`
+替换实例的全部标签（最多 10 个）。
+
+**参数**
+- `-Name <string>`：实例名称。
+- `-Tags <string[]>`：新标签列表。
+
+**示例**
+```powershell
+Set-DistroNexusInstanceTag -Name "Ubuntu-24.04" -Tags "dev", "python"
+```
+
+### `Add-DistroNexusInstanceTag`
+为实例添加一个或多个标签。
+
+**参数**
+- `-Name <string>`：实例名称。
+- `-Tags <string[]>`：要添加的标签。
+
+**示例**
+```powershell
+Add-DistroNexusInstanceTag -Name "Ubuntu-24.04" -Tags "docker"
+```
+
+### `Remove-DistroNexusInstanceTag`
+从实例删除一个或多个标签。
+
+**参数**
+- `-Name <string>`：实例名称。
+- `-Tags <string[]>`：要删除的标签。
+
+**示例**
+```powershell
+Remove-DistroNexusInstanceTag -Name "Ubuntu-24.04" -Tags "docker"
+```
+
+## 诊断
+
+### `Get-DistroNexusCache`
+查看实例缓存诊断信息：缓存年龄、条目数量及失效状态。
+
+**示例**
+```powershell
+Get-DistroNexusCache
+```
