@@ -6,7 +6,7 @@ BeforeAll {
     $modulePath = Join-Path $rootPath "src\PowerShell"
     Import-Module (Join-Path $modulePath "DistroNexus.psd1") -Force
 
-    $helpersPath = Join-Path $PSScriptRoot "..\Helpers"
+    $helpersPath = Join-Path $PSScriptRoot "..\..\Helpers"
     . (Join-Path $helpersPath "MockHelpers.ps1")
     . (Join-Path $helpersPath "TestData.ps1")
 

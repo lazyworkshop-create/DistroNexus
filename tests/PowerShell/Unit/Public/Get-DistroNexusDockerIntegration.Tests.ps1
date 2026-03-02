@@ -137,13 +137,12 @@ Describe "Enable-DistroNexusDockerIntegration" -Tag 'Unit', 'Public', 'Docker' {
                 $settingsFile = Join-Path $settingsDir "settings-store.json"
                 @{ integratedWslDistros = @() } | ConvertTo-Json | Set-Content -Path $settingsFile -Encoding UTF8
 
-                Mock Test-Path {
-                    param($Path)
-                    if ($Path -like "*Docker Desktop.exe*") { return $true }
-                    return Test-Path -LiteralPath $Path
-                } -ModuleName DistroNexus
+                $env:APPDATA      = $TestDrive
+                $env:LOCALAPPDATA = $TestDrive
 
-                $env:APPDATA = $TestDrive
+                # Create a fake Docker Desktop.exe so Test-Path returns true for it
+                $dockerDir = Join-Path $TestDrive "Docker"
+                New-Item -Path (Join-Path $dockerDir "Docker Desktop.exe") -ItemType File -Force | Out-Null
 
                 Enable-DistroNexusDockerIntegration -Name "Ubuntu-22.04" -ErrorAction SilentlyContinue
                 # No error expected (settings file exists in test drive)

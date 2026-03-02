@@ -53,7 +53,7 @@ public class WslEventWatcherTests
     public void WslEventWatcher_CoalescesMultipleEvents()
     {
         // Arrange
-        var watcher = new WslEventWatcher(_mockLogger.Object, debounceMs: 150);
+        var watcher = new WslEventWatcher(_mockLogger.Object, debounceMs: 50);
         int invocationCount = 0;
         using var eventSignal = new ManualResetEventSlim(false);
         watcher.CacheInvalidationRequested += (s, e) =>
@@ -66,11 +66,11 @@ public class WslEventWatcherTests
         for (int i = 0; i < 5; i++)
             watcher.SimulateProcessEvent("wslhost.exe");
 
-        // Assert — wait for debounce to settle (150ms debounce; wait up to 2 seconds)
-        eventSignal.Wait(TimeSpan.FromSeconds(2));
+        // Assert — wait for debounce to settle (50ms debounce; wait up to 5 seconds for CI headroom)
+        eventSignal.Wait(TimeSpan.FromSeconds(5));
 
-        // Give a small grace period for any potential extra events
-        System.Threading.Thread.Sleep(200);
+        // Give a small grace period to catch any unexpected extra events
+        System.Threading.Thread.Sleep(150);
 
         // Assert — coalesced to 1
         Assert.Equal(1, invocationCount);
