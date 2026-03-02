@@ -45,6 +45,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `IWslCliRunner` / `WslCliRunner` to wrap direct `wsl.exe` process invocations (E-08).
   `WslManagerService` now uses native `wsl --list --verbose` parsing (Phase 1) when `IWslCliRunner`
   is injected, eliminating one PowerShell process spin-up per instance-list operation.
+- Added `DistroNexusErrorCode` enum with stable numeric prefixes for all error categories (E-09):
+  1xxx = instance lifecycle, 2xxx = disk/VHDX, 3xxx = Docker, 4xxx = backup/export, 5xxx = config,
+  9xxx = system/unknown. `WslException` and `WslOperationException` now carry a `Code` property;
+  all concrete exception subclasses are pre-wired with their canonical codes.
 
 ## [2.1.1] - 2026-02-21
 
