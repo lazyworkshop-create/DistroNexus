@@ -142,7 +142,7 @@ function ConvertFrom-SsLine {
         $localAddr  = $Matches[1]
         $port       = $Matches[2]
         $procName   = if ($Matches[3]) { $Matches[3] } else { '' }
-        $pid        = if ($Matches[4]) { [int]$Matches[4] } else { 0 }
+        $procId     = if ($Matches[4]) { [int]$Matches[4] } else { 0 }
         $hasProxy   = $ProxyPorts.ContainsKey($port)
 
         return [PSCustomObject]@{
@@ -151,7 +151,7 @@ function ConvertFrom-SsLine {
             LocalAddress    = $localAddr
             Port            = [int]$port
             ProcessName     = $procName
-            Pid             = $pid
+            Pid             = $procId
             HasWindowsProxy = $hasProxy
         }
     }

@@ -36,15 +36,15 @@ public class WslEventWatcherTests
     public void WslEventWatcher_RaisesCacheInvalidationRequested_Event()
     {
         // Arrange
-        var watcher = new WslEventWatcher(_mockLogger.Object);
+        var watcher = new WslEventWatcher(_mockLogger.Object, debounceMs: 100);
         bool eventRaised = false;
         watcher.CacheInvalidationRequested += (s, e) => eventRaised = true;
 
         // Act — simulate an external event trigger via the test helper
         watcher.SimulateProcessEvent("wsl.exe");
 
-        // Give debounce time to fire (debounce is 100ms in test mode)
-        System.Threading.Thread.Sleep(200);
+        // Give debounce time to fire (debounce is 100ms; wait 500ms for CI headroom)
+        System.Threading.Thread.Sleep(500);
 
         // Assert
         Assert.True(eventRaised);
@@ -63,8 +63,8 @@ public class WslEventWatcherTests
         for (int i = 0; i < 5; i++)
             watcher.SimulateProcessEvent("wslhost.exe");
 
-        // Wait for debounce to settle
-        System.Threading.Thread.Sleep(400);
+        // Wait for debounce to settle (150ms debounce; wait 600ms for CI headroom)
+        System.Threading.Thread.Sleep(600);
 
         // Assert — coalesced to 1
         Assert.Equal(1, invocationCount);
