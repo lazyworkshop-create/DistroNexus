@@ -14,7 +14,7 @@ public class WslOperationCanceledException : WslOperationException
     /// <param name="operation">The operation that was canceled.</param>
     /// <param name="instanceName">The name of the WSL instance.</param>
     public WslOperationCanceledException(string operation, string? instanceName = null)
-        : base($"Operation '{operation}' was canceled.", operation: operation, instanceName: instanceName)
+        : base($"Operation '{operation}' was canceled.", DistroNexusErrorCode.UnknownError, operation: operation, instanceName: instanceName)
     {
     }
 
@@ -25,7 +25,7 @@ public class WslOperationCanceledException : WslOperationException
     /// <param name="operation">The operation that was canceled.</param>
     /// <param name="instanceName">The name of the WSL instance.</param>
     public WslOperationCanceledException(string message, string operation, string? instanceName = null)
-        : base(message, operation: operation, instanceName: instanceName)
+        : base(message, DistroNexusErrorCode.UnknownError, operation: operation, instanceName: instanceName)
     {
     }
 
@@ -37,7 +37,7 @@ public class WslOperationCanceledException : WslOperationException
     /// <param name="operation">The operation that was canceled.</param>
     /// <param name="instanceName">The name of the WSL instance.</param>
     public WslOperationCanceledException(string message, Exception? innerException, string operation, string? instanceName = null)
-        : base(message, innerException, operation: operation, instanceName: instanceName)
+        : base(message, innerException, DistroNexusErrorCode.UnknownError, operation: operation, instanceName: instanceName)
     {
     }
 }
