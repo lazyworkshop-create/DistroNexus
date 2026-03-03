@@ -186,6 +186,12 @@ function Get-InstanceVhdxPath {
             }
         }
     }
+
+    $fallback = Get-ItemProperty -Path $lxssRoot -ErrorAction SilentlyContinue
+    if ($fallback -and $fallback.BasePath) {
+        return Join-Path $fallback.BasePath "ext4.vhdx"
+    }
+
     return $null
 }
 

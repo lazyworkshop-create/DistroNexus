@@ -77,18 +77,19 @@ function New-DistroNexusBackupSchedule {
 
         # Build Task Scheduler trigger
         $taskName = "DistroNexus_Backup_$Name"
+        $runAt = [DateTime]::Today.Add($Time)
 
         $trigger = switch -Regex ($Frequency) {
             '^Daily$' {
-                New-ScheduledTaskTrigger -Daily -At $Time
+                New-ScheduledTaskTrigger -Daily -At $runAt
             }
             '^Weekly:(.+)$' {
                 $dayOfWeek = $Matches[1]
-                New-ScheduledTaskTrigger -Weekly -DaysOfWeek $dayOfWeek -At $Time
+                New-ScheduledTaskTrigger -Weekly -DaysOfWeek $dayOfWeek -At $runAt
             }
             '^Monthly:(\d+)$' {
                 $dayOfMonth = [int]$Matches[1]
-                New-ScheduledTaskTrigger -Monthly -DaysOfMonth $dayOfMonth -At $Time
+                New-ScheduledTaskTrigger -Monthly -DaysOfMonth $dayOfMonth -At $runAt
             }
             default {
                 Write-Error "Invalid Frequency format '$Frequency'. Use: Daily | Weekly:<DayOfWeek> | Monthly:<DayNumber>" `

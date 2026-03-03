@@ -40,7 +40,7 @@ Describe "Invoke-DistroNexusBackup" -Tag 'Unit', 'Public', 'Backup' {
     }
 
     Context "Backup filename pattern" {
-        It "Should use <Name>-backup-<yyyyMMdd-HHmmss>.tar pattern" {
+        It "Should use Name-backup-yyyyMMdd-HHmmss.tar pattern" {
             InModuleScope DistroNexus {
                 Mock Get-DistroNexusInstance {
                     return [PSCustomObject]@{ Name = "Ubuntu-22.04"; State = "Stopped"; Version = 2 }
