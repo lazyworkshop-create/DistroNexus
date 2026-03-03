@@ -115,6 +115,12 @@ public class DockerIntegrationService : IDockerIntegrationService
         if (string.IsNullOrWhiteSpace(instanceName))
             throw new ArgumentException("Instance name cannot be empty.", nameof(instanceName));
 
+        // Reserved distros must never be toggled — matches GetIntegrationStatusAsync contract
+        if (ReservedDistros.Contains(instanceName))
+            throw new ArgumentException(
+                $"Cannot modify Docker integration for reserved distro '{instanceName}'.",
+                nameof(instanceName));
+
         var settingsPath = ResolveSettingsPath();
         if (settingsPath is null)
             throw new InvalidOperationException("Docker Desktop settings file not found.");

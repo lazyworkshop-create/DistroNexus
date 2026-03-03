@@ -102,8 +102,11 @@ function New-DistroNexusBackupSchedule {
         $modulePath   = $MyInvocation.MyCommand.Module.ModuleBase
         $runnerScript = Join-Path $modulePath "backup-runner.ps1"
 
+        # Discover PowerShell executable — prefer pwsh (PS 7+), fall back to powershell (Windows PS 5.1)
+        $psExe = if (Get-Command pwsh.exe -ErrorAction SilentlyContinue) { 'pwsh.exe' } else { 'powershell.exe' }
+
         $action = New-ScheduledTaskAction `
-            -Execute "pwsh.exe" `
+            -Execute $psExe `
             -Argument "-NonInteractive -File `"$runnerScript`" -InstanceName `"$Name`" -Destination `"$Destination`" -RetentionCount $RetentionCount"
 
         $settings = New-ScheduledTaskSettingsSet `

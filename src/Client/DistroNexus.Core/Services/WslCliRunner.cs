@@ -81,7 +81,7 @@ public sealed partial class WslCliRunner : IWslCliRunner
             if (trimmed.StartsWith("NAME", StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            bool isDefault = line.StartsWith('*');
+            bool isDefault = trimmed.StartsWith('*');
             var cleaned    = trimmed.TrimStart('*').Trim();
 
             // Split by multiple spaces to parse columns
