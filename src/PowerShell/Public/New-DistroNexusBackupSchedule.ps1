@@ -102,8 +102,22 @@ function New-DistroNexusBackupSchedule {
         $modulePath   = $MyInvocation.MyCommand.Module.ModuleBase
         $runnerScript = Join-Path $modulePath "backup-runner.ps1"
 
-        # Discover PowerShell executable — prefer pwsh (PS 7+), fall back to powershell (Windows PS 5.1)
-        $psExe = if (Get-Command pwsh.exe -ErrorAction SilentlyContinue) { 'pwsh.exe' } else { 'powershell.exe' }
+        # Discover PowerShell executable full path — prefer pwsh (PS 7+), fall back to powershell (Windows PS 5.1).
+        # Using the full path ensures the scheduled task can locate the executable regardless of PATH at run time.
+        $psCommand = Get-Command pwsh.exe -ErrorAction SilentlyContinue
+        if (-not $psCommand) {
+            $psCommand = Get-Command powershell.exe -ErrorAction SilentlyContinue
+        }
+
+        if ($psCommand -and $psCommand.Source) {
+            $psExe = $psCommand.Source
+        }
+        else {
+            # Final fallback: derive path from the current host's PSHOME.
+            # Use PSEdition so the name matches whichever runtime is executing this code.
+            $psExeName = if ($PSVersionTable.PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
+            $psExe = Join-Path $PSHOME $psExeName
+        }
 
         $action = New-ScheduledTaskAction `
             -Execute $psExe `
