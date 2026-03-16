@@ -82,6 +82,15 @@ public class DockerIntegrationServiceTests
         await Assert.ThrowsAsync<ArgumentException>(
             () => _service.SetIntegrationAsync(string.Empty, true));
     }
+
+    [Theory]
+    [InlineData("docker-desktop")]
+    [InlineData("docker-desktop-data")]
+    public async Task SetIntegrationAsync_WithReservedDistro_ThrowsArgumentException(string reservedName)
+    {
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => _service.SetIntegrationAsync(reservedName, true));
+    }
 }
 
 /// <summary>
