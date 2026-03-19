@@ -43,8 +43,8 @@ public class WslEventWatcherTests
         // Act — simulate an external event trigger via the test helper
         watcher.SimulateProcessEvent("wsl.exe");
 
-        // Assert — wait up to 2 seconds for the event (debounce is 100ms)
-        bool eventRaised = eventSignal.Wait(TimeSpan.FromSeconds(2));
+        // Assert — wait up to 5 seconds for the event (debounce is 100ms; extra headroom for CI)
+        bool eventRaised = eventSignal.Wait(TimeSpan.FromSeconds(5));
         Assert.True(eventRaised);
         watcher.Dispose();
     }
