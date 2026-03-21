@@ -37,7 +37,13 @@ function Set-DistroNexusWslConfig {
         [string]$Memory,
 
         [Parameter(Mandatory = $false)]
-        [ValidateRange(1, 1024)]
+        [ValidateScript({
+            $max = [System.Environment]::ProcessorCount
+            if ($_ -lt 1 -or $_ -gt $max) {
+                throw "processors must be between 1 and $max (host logical CPU count)."
+            }
+            $true
+        })]
         [int]$Processors,
 
         [Parameter(Mandatory = $false)]

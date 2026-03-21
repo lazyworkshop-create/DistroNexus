@@ -127,5 +127,18 @@ swap=1GB
         It "Should reject non-numeric Processors value" {
             { Set-DistroNexusWslConfig -Processors -1 } | Should -Throw
         }
+
+        It "rejects processors value of 0" {
+            { Set-DistroNexusWslConfig -Processors 0 } | Should -Throw
+        }
+
+        It "rejects processors value exceeding logical CPU count" {
+            $tooMany = [System.Environment]::ProcessorCount + 1
+            { Set-DistroNexusWslConfig -Processors $tooMany } | Should -Throw
+        }
+
+        It "accepts processors value of 1" {
+            { Set-DistroNexusWslConfig -Processors 1 } | Should -Not -Throw
+        }
     }
 }
