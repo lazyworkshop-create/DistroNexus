@@ -90,13 +90,19 @@ Describe "Export-DistroNexusInstance" -Tag 'Unit', 'Public', 'Export' {
     }
 
     Context "Progress reporting" {
-        It "Should call Write-Progress during export" {
+        It "Should call Write-Progress during export loop and once with -Completed" {
             InModuleScope DistroNexus {
                 Mock Get-DistroNexusInstance {
                     return [PSCustomObject]@{ Name = "Ubuntu"; State = "Stopped"; Version = 2 }
                 } -ModuleName DistroNexus
 
+                Mock Stop-DistroNexusInstance { return $true } -ModuleName DistroNexus
+                Mock Start-DistroNexusInstance { return $true } -ModuleName DistroNexus
+
                 Mock Test-Path {
+                    param($Path, $PathType)
+                    # Destination "C:\test.tar" should NOT be treated as a Container
+                    if ($PathType -eq 'Container') { return $false }
                     return $true
                 } -ModuleName DistroNexus
 
@@ -104,23 +110,46 @@ Describe "Export-DistroNexusInstance" -Tag 'Unit', 'Public', 'Export' {
                     [PSCustomObject]@{ Length = 1048576 }
                 } -ModuleName DistroNexus
 
-                $completedJob = [PSCustomObject]@{ State = "Completed"; Id = 1 }
+                # Start-Job returns a job that initially appears Running
+                $fakeJob = [PSCustomObject]@{ State = "Running"; Id = 123 }
                 Mock Start-Job {
-                    $completedJob
+                    $fakeJob
+                } -ModuleName DistroNexus
+
+                # Get-Job: first call returns Running, second returns Completed
+                $script:getJobCallCount = 0
+                Mock Get-Job {
+                    param($Id)
+                    $script:getJobCallCount++
+                    if ($script:getJobCallCount -le 1) {
+                        [PSCustomObject]@{ State = "Running"; Id = 123 }
+                    }
+                    else {
+                        [PSCustomObject]@{ State = "Completed"; Id = 123 }
+                    }
                 } -ModuleName DistroNexus
 
                 Mock Receive-Job {
-                    param($Id)
-                    $global:LASTEXITCODE = 0
+                    param($Id, $Wait, $AutoRemoveJob)
+                    [PSCustomObject]@{ ExitCode = 0 }
                 } -ModuleName DistroNexus
 
                 Mock Start-Sleep {} -ModuleName DistroNexus
 
                 Mock Write-Progress {} -ModuleName DistroNexus
 
-                Export-DistroNexusInstance -Name "Ubuntu" -Destination "C:\test.tar"
+                Mock Write-DistroNexusLog {} -ModuleName DistroNexus
 
-                Assert-MockCalled Write-Progress -ModuleName DistroNexus
+                # Capture output so it does not flow into the Should -Invoke assertions below
+                $null = @(Export-DistroNexusInstance -Name "Ubuntu" -Destination "C:\test.tar" 2>&1)
+
+                # Should have at least one in-loop progress update (no -Completed)
+                Should -Invoke -CommandName Write-Progress -Times 1 -Exactly -ModuleName DistroNexus `
+                    -ParameterFilter { $Completed -ne $true }
+
+                # Should have exactly one completion call
+                Should -Invoke -CommandName Write-Progress -Times 1 -Exactly -ModuleName DistroNexus `
+                    -ParameterFilter { $Completed -eq $true }
             }
         }
     }
