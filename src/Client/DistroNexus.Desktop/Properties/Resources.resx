@@ -1318,4 +1318,7 @@ This will start the installation process.</value>
   <data name="TitleLoadError" xml:space="preserve">
     <value>Load Error</value>
   </data>
+  <data name="TooltipSparseModeEnabled" xml:space="preserve">
+    <value>Sparse VHDX automatically shrinks the disk file when space is freed. Requires WSL v2 and Windows 11. Enabling or disabling requires the instance to restart.</value>
+  </data>
 </root>

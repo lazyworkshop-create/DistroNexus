@@ -2138,5 +2138,6 @@ namespace DistroNexus.Desktop.Properties {
         public static string ErrorInitializeApplication { get { return ResourceManager.GetString("ErrorInitializeApplication", resourceCulture); } }
         public static string ErrorLoadWslInstances { get { return ResourceManager.GetString("ErrorLoadWslInstances", resourceCulture); } }
         public static string TitleLoadError { get { return ResourceManager.GetString("TitleLoadError", resourceCulture); } }
+        public static string TooltipSparseModeEnabled { get { return ResourceManager.GetString("TooltipSparseModeEnabled", resourceCulture); } }
     }
 }
