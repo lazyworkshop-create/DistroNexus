@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
+using DistroNexus.Core.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 
@@ -126,6 +127,7 @@ public class DockerIntegrationService : IDockerIntegrationService
 
         // Check WSL version — Docker Desktop integration requires WSL v2
         var instance = await GetInstanceAsync(instanceName, ct);
+        // Fail-open: if version cannot be determined, allow the operation to proceed and let file I/O surface the real error.
         if (instance?.Version == 1)
             throw new WslOperationFailedException(
                 $"Docker Desktop integration requires WSL v2. Instance '{instanceName}' is WSL v1.",
@@ -194,7 +196,7 @@ public class DockerIntegrationService : IDockerIntegrationService
     /// <param name="instanceName">The name of the instance to retrieve.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The instance, or null if not found.</returns>
-    private async Task<DistroNexus.Core.Models.WslInstance?> GetInstanceAsync(string instanceName, CancellationToken ct)
+    private async Task<WslInstance?> GetInstanceAsync(string instanceName, CancellationToken ct)
     {
         try
         {

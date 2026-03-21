@@ -97,7 +97,7 @@ public class DockerIntegrationServiceTests
     }
 
     [Fact]
-    public async Task SetIntegrationAsync_WhenWslV1Instance_Throws_WslOperationException()
+    public async Task SetIntegrationAsync_WhenWslV1Instance_Throws_WslOperationFailedException()
     {
         _mockWslManager
             .Setup(m => m.GetInstancesAsync(It.IsAny<CancellationToken>()))

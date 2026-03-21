@@ -62,6 +62,7 @@
         'Set-DistroNexusInstanceTag',
         'Add-DistroNexusInstanceTag',
         'Remove-DistroNexusInstanceTag',
+        'Rename-DistroNexusInstanceTags',
         'Get-DistroNexusCache'
     )
 
