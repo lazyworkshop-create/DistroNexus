@@ -98,7 +98,7 @@ function Remove-DistroNexusInstance {
                         -ErrorId "DistroNexus.RemoveFailed" `
                         -Category OperationStopped `
                         -TargetObject $Name `
-                        -ErrorAction Stop
+                        -ErrorAction Continue
             return $false
         }
     }

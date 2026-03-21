@@ -57,7 +57,7 @@ function Start-DistroNexusInstance {
                         -ErrorId "DistroNexus.StartFailed" `
                         -Category OperationStopped `
                         -TargetObject $Name `
-                        -ErrorAction Stop
+                        -ErrorAction Continue
             return $false
         }
     }

@@ -410,7 +410,7 @@ generateResolvConf=true
                         -ErrorId "DistroNexus.InstallFailed" `
                         -Category OperationStopped `
                         -TargetObject $InstanceName `
-                        -ErrorAction Stop
+                        -ErrorAction Continue
             
             # Cleanup on failure
             $existingAfterError = Get-DistroNexusInstance -Name $InstanceName -ForceUpdate | 

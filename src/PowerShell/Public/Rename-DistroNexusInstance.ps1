@@ -90,7 +90,7 @@ function Rename-DistroNexusInstance {
                         -ErrorId "DistroNexus.RenameFailed" `
                         -Category OperationStopped `
                         -TargetObject $Name `
-                        -ErrorAction Stop
+                        -ErrorAction Continue
             return $false
         }
         finally {

@@ -83,7 +83,7 @@ function Stop-DistroNexusInstance {
                         -ErrorId "DistroNexus.StopFailed" `
                         -Category OperationStopped `
                         -TargetObject $Name `
-                        -ErrorAction Stop
+                        -ErrorAction Continue
             return $false
         }
     }
