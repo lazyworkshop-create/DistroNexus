@@ -169,7 +169,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 foreach (var instance in instances)
                 {
                     var tagService = _serviceProvider.GetRequiredService<ITagService>();
-                    var vm = new WslInstanceViewModel(instance, _wslManager, _terminalService, _settingsService, _logger, tagService);
+                    var backupService = _serviceProvider.GetRequiredService<IBackupService>();
+                    var vm = new WslInstanceViewModel(instance, _wslManager, _terminalService, _settingsService, _logger, tagService, backupService);
                     vm.RefreshRequested += (s, e) => _ = RefreshAsync();
                     Instances.Add(vm);
                 }
@@ -532,6 +533,7 @@ public partial class WslInstanceViewModel : ObservableObject
     private readonly ISettingsService _settingsService;
     private readonly ILogger _logger;
     private readonly ITagService _tagService;
+    private readonly IBackupService _backupService;
 
     /// <summary>
     /// Event raised when the instance requests a refresh of the main list (e.g. after deletion).
@@ -589,7 +591,8 @@ public partial class WslInstanceViewModel : ObservableObject
         ITerminalService terminalService,
         ISettingsService settingsService,
         ILogger logger,
-        ITagService tagService)
+        ITagService tagService,
+        IBackupService backupService)
     {
         _instance = instance;
         _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
@@ -597,6 +600,7 @@ public partial class WslInstanceViewModel : ObservableObject
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _tagService = tagService ?? throw new ArgumentNullException(nameof(tagService));
+        _backupService = backupService ?? throw new ArgumentNullException(nameof(backupService));
     }
 
     private static string FormatFileSize(long bytes)
@@ -845,6 +849,33 @@ public partial class WslInstanceViewModel : ObservableObject
             IsBusy = true;
             var instanceName = Name;
             _logger.LogInformation("Removing instance {Name}", instanceName);
+
+            // Check if a backup schedule exists and warn user (E-04-2)
+            try
+            {
+                var schedules = await _backupService.GetSchedulesAsync();
+                var hasSchedule = schedules.Any(s =>
+                    string.Equals(s.Name, instanceName, StringComparison.OrdinalIgnoreCase));
+                if (hasSchedule)
+                {
+                    var confirm = new Wpf.Ui.Controls.MessageBox
+                    {
+                        Title = Properties.Resources.ConfirmRemoveTitle,
+                        Content = $"Remove '{instanceName}' and delete its backup schedule and backup files?",
+                        PrimaryButtonText = Properties.Resources.ButtonRemove,
+                        CloseButtonText = Properties.Resources.ButtonClose ?? "Cancel"
+                    };
+                    var result = await confirm.ShowDialogAsync();
+                    if (result != Wpf.Ui.Controls.MessageBoxResult.Primary)
+                    {
+                        return;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not check backup schedule for instance {Name}", instanceName);
+            }
 
             await _wslManager.RemoveInstanceAsync(instanceName);
 

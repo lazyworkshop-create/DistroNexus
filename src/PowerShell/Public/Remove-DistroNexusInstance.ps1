@@ -81,6 +81,18 @@ function Remove-DistroNexusInstance {
                 catch {
                     Write-DistroNexusLog "Tag cleanup warning for '$Name': $_" -Level WARN -FileOnly
                 }
+
+                # Clean up backup schedule if one exists (E-04-2)
+                try {
+                    $schedule = Get-DistroNexusBackupSchedule -Name $Name -ErrorAction SilentlyContinue
+                    if ($schedule) {
+                        Remove-DistroNexusBackupSchedule -Name $Name
+                        Write-DistroNexusLog "Backup schedule removed for instance $Name" -FileOnly
+                    }
+                }
+                catch {
+                    Write-DistroNexusLog "Backup schedule cleanup warning for ${Name}: $($_)" -Level WARN -FileOnly
+                }
                 
                 # Optionally delete files
                 if (-not $KeepFiles -and $basePath -and (Test-Path $basePath)) {
