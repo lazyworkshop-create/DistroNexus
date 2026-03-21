@@ -65,6 +65,22 @@ public class DockerIntegrationService : IDockerIntegrationService
     }
 
     /// <inheritdoc/>
+    public virtual Task<string?> GetDockerDesktopVersionAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Try to read version from Docker Desktop exe file info
+            if (!File.Exists(DockerExePath)) return Task.FromResult<string?>(null);
+            var version = System.Diagnostics.FileVersionInfo.GetVersionInfo(DockerExePath);
+            return Task.FromResult<string?>(version.FileVersion);
+        }
+        catch
+        {
+            return Task.FromResult<string?>(null);
+        }
+    }
+
+    /// <inheritdoc/>
     public async Task<DockerIntegrationStatus> GetIntegrationStatusAsync(
         string instanceName,
         CancellationToken ct = default)

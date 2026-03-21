@@ -26,4 +26,10 @@ public interface IDockerIntegrationService
     /// the <c>integratedWslDistros</c> array in Docker's settings JSON.
     /// </summary>
     Task SetIntegrationAsync(string instanceName, bool enabled, CancellationToken ct = default);
+
+    /// <summary>
+    /// Gets the version of Docker Desktop from the installed executable.
+    /// Returns null if Docker Desktop is not installed or version cannot be read.
+    /// </summary>
+    Task<string?> GetDockerDesktopVersionAsync(CancellationToken cancellationToken = default);
 }
