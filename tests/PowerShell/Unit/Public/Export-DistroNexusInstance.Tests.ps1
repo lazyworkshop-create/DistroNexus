@@ -143,13 +143,66 @@ Describe "Export-DistroNexusInstance" -Tag 'Unit', 'Public', 'Export' {
                 # Capture output so it does not flow into the Should -Invoke assertions below
                 $null = @(Export-DistroNexusInstance -Name "Ubuntu" -Destination "C:\test.tar" 2>&1)
 
-                # Should have at least one in-loop progress update (no -Completed)
+                # Should have exactly one in-loop progress update (no -Completed)
                 Should -Invoke -CommandName Write-Progress -Times 1 -Exactly -ModuleName DistroNexus `
-                    -ParameterFilter { $Completed -ne $true }
+                    -ParameterFilter { -not $Completed }
 
                 # Should have exactly one completion call
                 Should -Invoke -CommandName Write-Progress -Times 1 -Exactly -ModuleName DistroNexus `
-                    -ParameterFilter { $Completed -eq $true }
+                    -ParameterFilter { $Completed }
+            }
+        }
+    }
+
+    Context "Restart after export" {
+        It "Should restart instance after successful export when Force stopped it" {
+            InModuleScope DistroNexus {
+                Mock Get-DistroNexusInstance {
+                    return [PSCustomObject]@{ Name = "Ubuntu"; State = "Running"; Version = 2 }
+                } -ModuleName DistroNexus
+
+                Mock Stop-DistroNexusInstance { return $true } -ModuleName DistroNexus
+                Mock Start-DistroNexusInstance { return $true } -ModuleName DistroNexus
+
+                Mock Test-Path {
+                    param($Path, $PathType)
+                    if ($PathType -eq 'Container') { return $false }
+                    return $true
+                } -ModuleName DistroNexus
+
+                Mock Get-Item {
+                    [PSCustomObject]@{ Length = 104857600 }
+                } -ModuleName DistroNexus
+
+                Mock Start-Job {
+                    [PSCustomObject]@{ Id = 456; State = "Completed" }
+                } -ModuleName DistroNexus
+
+                $script:getJobCallForRestart = 0
+                Mock Get-Job {
+                    param($Id)
+                    $script:getJobCallForRestart++
+                    if ($script:getJobCallForRestart -eq 1) {
+                        [PSCustomObject]@{ Id = 456; State = "Running" }
+                    }
+                    else {
+                        [PSCustomObject]@{ Id = 456; State = "Completed" }
+                    }
+                } -ModuleName DistroNexus
+
+                Mock Receive-Job {
+                    [PSCustomObject]@{ ExitCode = 0 }
+                } -ModuleName DistroNexus
+
+                Mock Start-Sleep {} -ModuleName DistroNexus
+
+                Mock Write-Progress {} -ModuleName DistroNexus
+
+                Mock Write-DistroNexusLog {} -ModuleName DistroNexus
+
+                $null = @(Export-DistroNexusInstance -Name "Ubuntu" -Destination "C:\test.tar" -Force 2>&1)
+
+                Should -Invoke Start-DistroNexusInstance -Times 1 -Exactly -ModuleName DistroNexus
             }
         }
     }

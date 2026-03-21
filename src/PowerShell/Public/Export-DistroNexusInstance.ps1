@@ -5,6 +5,7 @@ function Export-DistroNexusInstance {
 
     .DESCRIPTION
         Checks the instance exists and (by default) is not running before exporting.
+        Runs the export as a background job and reports progress via Write-Progress.
         Uses `wsl --export` to create the TAR archive. When Destination is a directory,
         the filename defaults to <Name>-<yyyyMMdd>.tar.
 
@@ -126,7 +127,7 @@ function Export-DistroNexusInstance {
             } | Select-Object -Last 1
             $exitCode = if ($exitCodeResult) { $exitCodeResult.ExitCode } else { $null }
 
-            if ($exitCode -ne 0) {
+            if ($null -ne $exitCode -and $exitCode -ne 0) {
                 Write-Error -Message "Export failed for $Name" `
                     -ErrorId "DistroNexus.ExportFailed" `
                     -Category OperationStopped `
@@ -145,6 +146,11 @@ function Export-DistroNexusInstance {
             }
         }
         finally {
+            # Clean up job if it still exists
+            if ($null -ne $job) {
+                Remove-Job -Id $job.Id -Force -ErrorAction SilentlyContinue
+            }
+
             if ($stoppedForExport) {
                 Write-DistroNexusLog "Restarting instance '$Name' after export" -FileOnly
                 if (-not (Start-DistroNexusInstance -Name $Name)) {
