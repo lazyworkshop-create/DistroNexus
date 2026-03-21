@@ -86,11 +86,15 @@ function Write-DistroNexusLog {
         [string]$Level = 'INFO',
         
         [Parameter(Mandatory = $false)]
-        [switch]$FileOnly
+        [switch]$FileOnly,
+
+        [Parameter(Mandatory = $false)]
+        [string]$ErrorCode
     )
-    
+
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $logLine = "[$timestamp] [$Level] $Message"
+    $errorCodePart = if ($ErrorCode) { " [$ErrorCode]" } else { "" }
+    $logLine = "[$timestamp] [$Level]$errorCodePart $Message"
     
     # Get or initialize log file path
     if (-not $script:LogFile) {
