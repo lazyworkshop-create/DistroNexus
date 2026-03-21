@@ -63,6 +63,14 @@ function Get-InstanceCache {
         }
         
         Write-Verbose "Loaded $($cacheContent.Instances.Count) instance(s) from configuration"
+
+        # Populate in-memory TTL timestamp from file so Test-DistroNexusCacheStale
+        # uses the fast path on subsequent calls within the same session (E07-2).
+        $tsField = if ($cacheContent.LastUpdated) { $cacheContent.LastUpdated } elseif ($cacheContent.CachedAt) { $cacheContent.CachedAt } else { $null }
+        if ($tsField -and -not $script:__CacheState.CacheTimestamp) {
+            try { $script:__CacheState.CacheTimestamp = [datetime]$tsField } catch {}
+        }
+
         return $cacheContent.Instances
     }
     catch {
@@ -246,9 +254,35 @@ function Set-DistroNexusCache {
 function Test-DistroNexusCacheStale {
     <#
     .SYNOPSIS
-        Returns $true when the in-memory TTL timestamp is absent or older than 10 minutes.
+        Returns $true when the TTL timestamp is absent or older than 10 minutes.
+
+    .DESCRIPTION
+        Checks the in-memory timestamp first. If not available (e.g. new session),
+        falls back to the LastUpdated field in the on-disk cache file so that a
+        freshly-written cache is not immediately treated as stale.
     #>
-    if (-not $script:__CacheState.CacheTimestamp) { return $true }
-    return ((Get-Date) - $script:__CacheState.CacheTimestamp).TotalMinutes -ge 10
+    # Fast path: in-memory timestamp is available
+    if ($script:__CacheState.CacheTimestamp) {
+        return ((Get-Date) - $script:__CacheState.CacheTimestamp).TotalMinutes -ge 10
+    }
+
+    # Slow path: new session — read LastUpdated from disk
+    $cachePath = Join-Path $env:APPDATA "DistroNexus"
+    $cacheFile = Join-Path $cachePath "instances.json"
+    if (Test-Path $cacheFile) {
+        try {
+            $data = Get-Content $cacheFile -Raw | ConvertFrom-Json -ErrorAction Stop
+            $tsField = if ($data.LastUpdated) { $data.LastUpdated } elseif ($data.CachedAt) { $data.CachedAt } else { $null }
+            if ($tsField) {
+                $fileTime = [datetime]$tsField
+                return ((Get-Date) - $fileTime).TotalMinutes -ge 10
+            }
+        }
+        catch {
+            # Unreadable file — treat as stale
+        }
+    }
+
+    return $true  # No timestamp found anywhere
 }
 
