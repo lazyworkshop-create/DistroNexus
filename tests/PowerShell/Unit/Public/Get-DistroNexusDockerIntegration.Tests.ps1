@@ -172,6 +172,29 @@ Describe "Enable-DistroNexusDockerIntegration" -Tag 'Unit', 'Public', 'Docker' {
                 $errorRecord | Should -Not -BeNullOrEmpty
             }
         }
+
+        It "outputs a restart warning after enabling" {
+            InModuleScope DistroNexus {
+                Mock Test-Path {
+                    param($Path)
+                    if ($Path -like "*Docker Desktop.exe*") { return $true }
+                    if ($Path -like "*settings*") { return $true }
+                    return $false
+                } -ModuleName DistroNexus
+
+                $fakeSettings = @{ integratedWslDistros = @() } | ConvertTo-Json
+                Mock Get-Content { return $fakeSettings } -ModuleName DistroNexus
+
+                Mock Set-Content {} -ModuleName DistroNexus
+
+                Mock Get-DistroNexusInstance {
+                    return [PSCustomObject]@{ Name = "Ubuntu"; Version = 2 }
+                } -ModuleName DistroNexus
+
+                $warnings = Enable-DistroNexusDockerIntegration -Name "Ubuntu" 3>&1
+                $warnings | Should -Match "restart"
+            }
+        }
     }
 }
 
@@ -224,6 +247,25 @@ Describe "Disable-DistroNexusDockerIntegration" -Tag 'Unit', 'Public', 'Docker' 
                 $parsed = $script:capturedContent | ConvertFrom-Json
                 $parsed.integratedWslDistros | Should -Not -Contain "Ubuntu-22.04"
                 $parsed.integratedWslDistros | Should -Contain "Debian"
+            }
+        }
+
+        It "outputs a restart warning after disabling" {
+            InModuleScope DistroNexus {
+                Mock Test-Path {
+                    param($Path)
+                    if ($Path -like "*Docker Desktop.exe*") { return $true }
+                    if ($Path -like "*settings*") { return $true }
+                    return $false
+                } -ModuleName DistroNexus
+
+                $fakeSettings = @{ integratedWslDistros = @("Ubuntu") } | ConvertTo-Json
+                Mock Get-Content { return $fakeSettings } -ModuleName DistroNexus
+
+                Mock Set-Content {} -ModuleName DistroNexus
+
+                $warnings = Disable-DistroNexusDockerIntegration -Name "Ubuntu" 3>&1
+                $warnings | Should -Match "restart"
             }
         }
     }

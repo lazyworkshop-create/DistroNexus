@@ -58,6 +58,7 @@ function Disable-DistroNexusDockerIntegration {
             $settings | ConvertTo-Json -Depth 10 | Set-Content -Path $settingsPath -Encoding UTF8 -Force
             Write-DistroNexusLog "Docker integration disabled for '$Name'" -FileOnly
             Write-Verbose "Docker Desktop integration disabled for '$Name'."
+            Write-Warning "Docker Desktop must be restarted for this change to take effect."
         }
         catch {
             Write-Error "Failed to update Docker settings: $_" -ErrorId "DistroNexus.DockerConfigWriteConflict"
