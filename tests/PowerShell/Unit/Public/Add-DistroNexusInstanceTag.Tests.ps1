@@ -87,5 +87,10 @@ Describe "Add-DistroNexusInstanceTag" -Tag 'Unit', 'Public', 'Tags' {
                 $errorRecord | Should -Not -BeNullOrEmpty
             }
         }
+
+        It "rejects a tag longer than 32 characters" {
+            $longTag = "a" * 33
+            { Add-DistroNexusInstanceTag -Name "Ubuntu" -Tag $longTag } | Should -Throw
+        }
     }
 }

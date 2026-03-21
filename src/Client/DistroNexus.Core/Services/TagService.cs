@@ -67,6 +67,9 @@ public class TagService : ITagService
         ArgumentNullException.ThrowIfNull(instanceName);
         ArgumentNullException.ThrowIfNull(tag);
 
+        if (tag.Length > 32)
+            throw new ArgumentException($"Tag must not exceed 32 characters. Provided: {tag.Length}.", nameof(tag));
+
         var normalised = tag.ToLowerInvariant().Trim();
         var map        = await ReadTagMapAsync(ct);
 

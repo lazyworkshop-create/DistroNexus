@@ -130,6 +130,21 @@ public class TagServiceTests
             () => _service.AddTagAsync("Ubuntu-22.04", "overflow"));
     }
 
+    [Fact]
+    public async Task AddTagAsync_WhenTagExceeds32Chars_Throws_ArgumentException()
+    {
+        var longTag = new string('a', 33);
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => _service.AddTagAsync("Ubuntu", longTag, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task AddTagAsync_WhenTagIs32Chars_Succeeds()
+    {
+        var maxTag = new string('b', 32);
+        await _service.AddTagAsync("Ubuntu", maxTag, CancellationToken.None);
+    }
+
     // -----------------------------------------------------------------------
     // RemoveTagAsync
     // -----------------------------------------------------------------------

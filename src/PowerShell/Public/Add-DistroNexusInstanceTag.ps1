@@ -19,7 +19,7 @@ function Add-DistroNexusInstanceTag {
         [string]$Name,
 
         [Parameter(Mandatory = $true, Position = 1)]
-        [ValidateNotNullOrEmpty()]
+        [ValidateLength(1, 32)]
         [string]$Tag
     )
 

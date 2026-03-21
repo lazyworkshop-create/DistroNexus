@@ -68,6 +68,7 @@ function Set-DistroNexusInstanceTag {
 
         [Parameter(Mandatory = $true, Position = 1)]
         [AllowEmptyCollection()]
+        [ValidateLength(1, 32)]
         [string[]]$Tags
     )
 
@@ -110,7 +111,7 @@ function Add-DistroNexusInstanceTag {
         [string]$Name,
 
         [Parameter(Mandatory = $true, Position = 1)]
-        [ValidateNotNullOrEmpty()]
+        [ValidateLength(1, 32)]
         [string]$Tag
     )
 
@@ -175,6 +176,54 @@ function Remove-DistroNexusInstanceTag {
         Set-InstanceTagEntry -Name $Name -Tags $updated
 
         Write-DistroNexusLog "Removed tag '$normalised' from '$Name' (if it was present)"
+    }
+}
+
+function Rename-DistroNexusInstanceTags {
+    <#
+    .SYNOPSIS
+        Migrates all tags from one instance name to another.
+
+    .DESCRIPTION
+        Copies the tag list stored under OldName to NewName and removes the
+        OldName entry.  Called automatically by Rename-DistroNexusInstance so
+        tags follow the instance after an export/import rename.
+
+    .PARAMETER OldName
+        The current (pre-rename) instance name.
+
+    .PARAMETER NewName
+        The new instance name.
+
+    .EXAMPLE
+        Rename-DistroNexusInstanceTags -OldName "Ubuntu" -NewName "Ubuntu-Dev"
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [string]$OldName,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [string]$NewName
+    )
+
+    begin {
+        Initialize-DistroNexusLogger
+    }
+
+    process {
+        $tagMap = Get-InstanceTagMap
+        $tags   = if ($tagMap.PSObject.Properties[$OldName]) { @($tagMap.$OldName) } else { @() }
+
+        # Write tags under the new name
+        Set-InstanceTagEntry -Name $NewName -Tags $tags
+
+        # Remove the old entry
+        Set-InstanceTagEntry -Name $OldName -Tags @()
+
+        Write-DistroNexusLog "Tags migrated from '$OldName' to '$NewName'"
     }
 }
 

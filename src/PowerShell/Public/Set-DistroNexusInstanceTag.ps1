@@ -20,6 +20,7 @@ function Set-DistroNexusInstanceTag {
 
         [Parameter(Mandatory = $true, Position = 1)]
         [AllowEmptyCollection()]
+        [ValidateLength(1, 32)]
         [string[]]$Tags
     )
 
