@@ -238,4 +238,44 @@ Describe "Compress-DistroNexusInstance" -Tag 'Unit', 'Public', 'Compact' {
             }
         }
     }
+
+    Context "Pipeline and array support" {
+        It "Should accept an array of names via -Name parameter" {
+            InModuleScope DistroNexus {
+                Mock Get-DistroNexusInstance {
+                    return [PSCustomObject]@{ Name = $Name; State = "Stopped"; Version = 2 }
+                } -ModuleName DistroNexus
+
+                Mock Get-ItemProperty {
+                    return [PSCustomObject]@{ BasePath = $TestDrive }
+                } -ModuleName DistroNexus
+
+                $vhdx1 = Join-Path $TestDrive "ubuntu.vhdx"
+                $vhdx2 = Join-Path $TestDrive "debian.vhdx"
+                New-Item -Path $vhdx1 -ItemType File -Force | Out-Null
+                New-Item -Path $vhdx2 -ItemType File -Force | Out-Null
+
+                { Compress-DistroNexusInstance -Name "Ubuntu", "Debian" -WhatIf } | Should -Not -Throw
+            }
+        }
+
+        It "Should accept names from pipeline" {
+            InModuleScope DistroNexus {
+                Mock Get-DistroNexusInstance {
+                    return [PSCustomObject]@{ Name = $Name; State = "Stopped"; Version = 2 }
+                } -ModuleName DistroNexus
+
+                Mock Get-ItemProperty {
+                    return [PSCustomObject]@{ BasePath = $TestDrive }
+                } -ModuleName DistroNexus
+
+                $vhdx1 = Join-Path $TestDrive "ubuntu.vhdx"
+                $vhdx2 = Join-Path $TestDrive "debian.vhdx"
+                New-Item -Path $vhdx1 -ItemType File -Force | Out-Null
+                New-Item -Path $vhdx2 -ItemType File -Force | Out-Null
+
+                { "Ubuntu", "Debian" | Compress-DistroNexusInstance -WhatIf } | Should -Not -Throw
+            }
+        }
+    }
 }

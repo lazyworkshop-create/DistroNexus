@@ -9,7 +9,7 @@ function Compress-DistroNexusInstance {
         Automatically stops the instance before compaction and restarts it if it was running.
 
     .PARAMETER Name
-        The name of the WSL distribution to compact.
+        The name(s) of the WSL distribution(s) to compact. Accepts an array of names or input from the pipeline.
 
     .PARAMETER WhatIf
         Reports the estimated reclaimable space without performing compaction.
@@ -25,13 +25,19 @@ function Compress-DistroNexusInstance {
 
     .EXAMPLE
         Compress-DistroNexusInstance -Name "Ubuntu-22.04" -WhatIf
+
+    .EXAMPLE
+        Compress-DistroNexusInstance -Name "Ubuntu-22.04", "Debian"
+
+    .EXAMPLE
+        "Ubuntu-22.04", "Debian" | Compress-DistroNexusInstance
     #>
     [CmdletBinding()]
     [OutputType([PSCustomObject])]
     param(
-        [Parameter(Mandatory = $true, Position = 0)]
+        [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
         [ValidateNotNullOrEmpty()]
-        [string]$Name,
+        [string[]]$Name,
 
         [Parameter(Mandatory = $false)]
         [switch]$WhatIf,
@@ -45,120 +51,122 @@ function Compress-DistroNexusInstance {
     }
 
     process {
-        Write-DistroNexusLog "Compress-DistroNexusInstance: starting for '$Name'"
+        foreach ($instanceName in $Name) {
+            Write-DistroNexusLog "Compress-DistroNexusInstance: starting for '$instanceName'"
 
-        # Validate instance exists
-        $instance = Get-DistroNexusInstance -Name $Name | Where-Object { $_.Name -eq $Name }
-        if (-not $instance) {
-            Write-Error "Instance '$Name' not found."
-            Write-DistroNexusLog "Instance not found: $Name" -Level ERROR
-            return
-        }
-
-        # Resolve VHDX path from registry
-        $vhdxPath = Get-InstanceVhdxPath -Name $Name
-        if (-not $vhdxPath) {
-            Write-Error "Could not resolve VHDX path for instance '$Name'."
-            Write-DistroNexusLog "VHDX path not found for: $Name" -Level ERROR
-            return
-        }
-
-        # Measure current size
-        $sizeBefore = 0
-        if (Test-Path $vhdxPath) {
-            $sizeBefore = (Get-Item $vhdxPath).Length
-        }
-
-        if ($WhatIf) {
-            Write-DistroNexusLog "WhatIf: current VHDX size for '$Name' is $sizeBefore bytes"
-            return [PSCustomObject]@{
-                Name       = $Name
-                SizeBefore = $sizeBefore
-                SizeAfter  = $null
-                SpaceSaved = $null
-                WhatIf     = $true
-            }
-        }
-
-        # Confirm if not forced
-        if (-not $Force) {
-            $sizeGB = [math]::Round($sizeBefore / 1GB, 2)
-            $confirm = Read-Host "Compact VHDX for '$Name' (current: ${sizeGB} GB)? [y/N]"
-            if ($confirm -notmatch '^[yY]$') {
-                Write-DistroNexusLog "Compaction cancelled by user for: $Name"
+            # Validate instance exists
+            $instance = Get-DistroNexusInstance -Name $instanceName | Where-Object { $_.Name -eq $instanceName }
+            if (-not $instance) {
+                Write-Error "Instance '$instanceName' not found."
+                Write-DistroNexusLog "Instance not found: $instanceName" -Level ERROR
                 return
             }
-        }
 
-        # Auto-stop if running
-        $wasRunning = $instance.State -eq "Running"
-        if ($wasRunning) {
-            Write-DistroNexusLog "Stopping instance '$Name' before compaction"
-            Write-Progress -Activity "Compacting $Name" -Status "Stopping instance..." -PercentComplete 10
-            Stop-DistroNexusInstance -Name $Name | Out-Null
-        }
-
-        try {
-            # fstrim inside instance to zero freed blocks
-            Write-DistroNexusLog "Running fstrim inside '$Name'"
-            Write-Progress -Activity "Compacting $Name" -Status "Running fstrim..." -PercentComplete 30
-            try {
-                wsl -d $Name -e fstrim -av 2>&1 | Out-Null
-            }
-            catch {
-                Write-DistroNexusLog "fstrim failed (non-fatal): $_" -Level WARN
+            # Resolve VHDX path from registry
+            $vhdxPath = Get-InstanceVhdxPath -Name $instanceName
+            if (-not $vhdxPath) {
+                Write-Error "Could not resolve VHDX path for instance '$instanceName'."
+                Write-DistroNexusLog "VHDX path not found for: $instanceName" -Level ERROR
+                return
             }
 
-            # Choose compaction method
-            Write-Progress -Activity "Compacting $Name" -Status "Compacting VHDX..." -PercentComplete 50
-            $hyperVAvailable = Get-Module -ListAvailable -Name "Hyper-V" -ErrorAction SilentlyContinue
-
-            if ($hyperVAvailable) {
-                Write-DistroNexusLog "Using Optimize-VHD for compaction"
-                Optimize-VHD -Path $vhdxPath -Mode Full
+            # Measure current size
+            $sizeBefore = 0
+            if (Test-Path $vhdxPath) {
+                $sizeBefore = (Get-Item $vhdxPath).Length
             }
-            else {
-                Write-DistroNexusLog "Hyper-V not available — using diskpart fallback"
-                if (-not (Test-AdminPrivilege)) {
-                    Write-Error "diskpart requires administrator privileges. Re-run as administrator."
-                    Write-DistroNexusLog "Compaction aborted: not running as administrator" -Level ERROR
+
+            if ($WhatIf) {
+                Write-DistroNexusLog "WhatIf: current VHDX size for '$instanceName' is $sizeBefore bytes"
+                return [PSCustomObject]@{
+                    Name       = $instanceName
+                    SizeBefore = $sizeBefore
+                    SizeAfter  = $null
+                    SpaceSaved = $null
+                    WhatIf     = $true
+                }
+            }
+
+            # Confirm if not forced
+            if (-not $Force) {
+                $sizeGB = [math]::Round($sizeBefore / 1GB, 2)
+                $confirm = Read-Host "Compact VHDX for '$instanceName' (current: ${sizeGB} GB)? [y/N]"
+                if ($confirm -notmatch '^[yY]$') {
+                    Write-DistroNexusLog "Compaction cancelled by user for: $instanceName"
                     return
                 }
-                $diskpartScript = @"
+            }
+
+            # Auto-stop if running
+            $wasRunning = $instance.State -eq "Running"
+            if ($wasRunning) {
+                Write-DistroNexusLog "Stopping instance '$instanceName' before compaction"
+                Write-Progress -Activity "Compacting $instanceName" -Status "Stopping instance..." -PercentComplete 10
+                Stop-DistroNexusInstance -Name $instanceName | Out-Null
+            }
+
+            try {
+                # fstrim inside instance to zero freed blocks
+                Write-DistroNexusLog "Running fstrim inside '$instanceName'"
+                Write-Progress -Activity "Compacting $instanceName" -Status "Running fstrim..." -PercentComplete 30
+                try {
+                    wsl -d $instanceName -e fstrim -av 2>&1 | Out-Null
+                }
+                catch {
+                    Write-DistroNexusLog "fstrim failed (non-fatal): $_" -Level WARN
+                }
+
+                # Choose compaction method
+                Write-Progress -Activity "Compacting $instanceName" -Status "Compacting VHDX..." -PercentComplete 50
+                $hyperVAvailable = Get-Module -ListAvailable -Name "Hyper-V" -ErrorAction SilentlyContinue
+
+                if ($hyperVAvailable) {
+                    Write-DistroNexusLog "Using Optimize-VHD for compaction"
+                    Optimize-VHD -Path $vhdxPath -Mode Full
+                }
+                else {
+                    Write-DistroNexusLog "Hyper-V not available — using diskpart fallback"
+                    if (-not (Test-AdminPrivilege)) {
+                        Write-Error "diskpart requires administrator privileges. Re-run as administrator."
+                        Write-DistroNexusLog "Compaction aborted: not running as administrator" -Level ERROR
+                        return
+                    }
+                    $diskpartScript = @"
 select vdisk file="$vhdxPath"
 compact vdisk
 exit
 "@
-                $scriptFile = Join-Path $env:TEMP "dn-compact-$Name.txt"
-                $diskpartScript | Set-Content $scriptFile -Encoding ASCII
-                Invoke-Expression "diskpart /s `"$scriptFile`""
-                Remove-Item $scriptFile -Force -ErrorAction SilentlyContinue
+                    $scriptFile = Join-Path $env:TEMP "dn-compact-$instanceName.txt"
+                    $diskpartScript | Set-Content $scriptFile -Encoding ASCII
+                    Invoke-Expression "diskpart /s `"$scriptFile`""
+                    Remove-Item $scriptFile -Force -ErrorAction SilentlyContinue
+                }
+
+                Write-Progress -Activity "Compacting $instanceName" -Status "Measuring result..." -PercentComplete 90
+
+                $sizeAfter  = if (Test-Path $vhdxPath) { (Get-Item $vhdxPath).Length } else { 0 }
+                $spaceSaved = $sizeBefore - $sizeAfter
+
+                Write-DistroNexusLog "Compaction complete for '$instanceName': saved $([math]::Round($spaceSaved / 1MB, 1)) MB"
+                Write-Progress -Activity "Compacting $instanceName" -Status "Done" -PercentComplete 100 -Completed
+
+                return [PSCustomObject]@{
+                    Name       = $instanceName
+                    SizeBefore = $sizeBefore
+                    SizeAfter  = $sizeAfter
+                    SpaceSaved = $spaceSaved
+                }
             }
-
-            Write-Progress -Activity "Compacting $Name" -Status "Measuring result..." -PercentComplete 90
-
-            $sizeAfter  = if (Test-Path $vhdxPath) { (Get-Item $vhdxPath).Length } else { 0 }
-            $spaceSaved = $sizeBefore - $sizeAfter
-
-            Write-DistroNexusLog "Compaction complete for '$Name': saved $([math]::Round($spaceSaved / 1MB, 1)) MB"
-            Write-Progress -Activity "Compacting $Name" -Status "Done" -PercentComplete 100 -Completed
-
-            return [PSCustomObject]@{
-                Name       = $Name
-                SizeBefore = $sizeBefore
-                SizeAfter  = $sizeAfter
-                SpaceSaved = $spaceSaved
+            catch {
+                Write-DistroNexusLog "Compaction failed for '$instanceName': $_" -Level ERROR
+                Write-Error "Compaction failed: $_"
             }
-        }
-        catch {
-            Write-DistroNexusLog "Compaction failed for '$Name': $_" -Level ERROR
-            Write-Error "Compaction failed: $_"
-        }
-        finally {
-            # Restart instance if it was running
-            if ($wasRunning) {
-                Write-DistroNexusLog "Restarting instance '$Name' after compaction"
-                Start-DistroNexusInstance -Name $Name | Out-Null
+            finally {
+                # Restart instance if it was running
+                if ($wasRunning) {
+                    Write-DistroNexusLog "Restarting instance '$instanceName' after compaction"
+                    Start-DistroNexusInstance -Name $instanceName | Out-Null
+                }
             }
         }
     }
