@@ -86,6 +86,9 @@ public sealed class WslEventWatcher : IWslEventWatcher
         CacheInvalidationRequested?.Invoke(this, EventArgs.Empty);
     }
 
+    internal void FireCacheInvalidatedForTest()
+        => CacheInvalidationRequested?.Invoke(this, EventArgs.Empty);
+
     /// <inheritdoc/>
     public void Dispose()
     {

@@ -26,6 +26,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IDownloadTaskManager _downloadTaskManager;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<MainViewModel> _logger;
+    private readonly IWslEventWatcher _wslEventWatcher;
 
     [ObservableProperty]
     private ObservableCollection<WslInstanceViewModel> _instances = new();
@@ -73,7 +74,8 @@ public partial class MainViewModel : ObservableObject
         ITerminalService terminalService,
         IDownloadTaskManager downloadTaskManager,
         IServiceProvider serviceProvider,
-        ILogger<MainViewModel> logger)
+        ILogger<MainViewModel> logger,
+        IWslEventWatcher wslEventWatcher)
     {
         _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
@@ -82,9 +84,13 @@ public partial class MainViewModel : ObservableObject
         _downloadTaskManager = downloadTaskManager ?? throw new ArgumentNullException(nameof(downloadTaskManager));
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _wslEventWatcher = wslEventWatcher ?? throw new ArgumentNullException(nameof(wslEventWatcher));
 
         // Subscribe to download task status changes
         _downloadTaskManager.TaskStatusChanged += OnDownloadTaskStatusChanged;
+
+        // Subscribe to cache invalidation for auto-refresh (E-07-3)
+        _wslEventWatcher.CacheInvalidationRequested += OnCacheInvalidated;
 
         // NOTE: LoadUserPreferencesAsync is now called explicitly from MainWindow.OnLoaded
         // to avoid async operations in constructor which can block DI resolution
@@ -305,6 +311,12 @@ public partial class MainViewModel : ObservableObject
     /// <summary>
     /// Handles download task status changes.
     /// </summary>
+    private void OnCacheInvalidated(object? sender, EventArgs e)
+    {
+        _ = Application.Current.Dispatcher.InvokeAsync(
+            async () => await LoadInstancesAsync(CancellationToken.None));
+    }
+
     private void OnDownloadTaskStatusChanged(object? sender, DownloadTask task)
     {
         Application.Current.Dispatcher.Invoke(() =>
