@@ -162,7 +162,8 @@ public partial class MainViewModel : ObservableObject
                 Instances.Clear();
                 foreach (var instance in instances)
                 {
-                    var vm = new WslInstanceViewModel(instance, _wslManager, _terminalService, _settingsService, _logger);
+                    var tagService = _serviceProvider.GetRequiredService<ITagService>();
+                    var vm = new WslInstanceViewModel(instance, _wslManager, _terminalService, _settingsService, _logger, tagService);
                     vm.RefreshRequested += (s, e) => _ = RefreshAsync();
                     Instances.Add(vm);
                 }
@@ -512,6 +513,7 @@ public partial class WslInstanceViewModel : ObservableObject
     private readonly ITerminalService _terminalService;
     private readonly ISettingsService _settingsService;
     private readonly ILogger _logger;
+    private readonly ITagService _tagService;
 
     /// <summary>
     /// Event raised when the instance requests a refresh of the main list (e.g. after deletion).
@@ -564,17 +566,19 @@ public partial class WslInstanceViewModel : ObservableObject
     }
 
     public WslInstanceViewModel(
-        WslInstance instance, 
+        WslInstance instance,
         IWslManagerService wslManager,
         ITerminalService terminalService,
         ISettingsService settingsService,
-        ILogger logger)
+        ILogger logger,
+        ITagService tagService)
     {
         _instance = instance;
         _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
         _terminalService = terminalService ?? throw new ArgumentNullException(nameof(terminalService));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _tagService = tagService ?? throw new ArgumentNullException(nameof(tagService));
     }
 
     private static string FormatFileSize(long bytes)
@@ -821,11 +825,21 @@ public partial class WslInstanceViewModel : ObservableObject
         try
         {
             IsBusy = true;
-            _logger.LogInformation("Removing instance {Name}", Name);
-            
-            await _wslManager.RemoveInstanceAsync(Name);
-            
-            await ShowAlert(Properties.Resources.SuccessTitle, string.Format(Properties.Resources.SuccessInstanceRemoved, Name));
+            var instanceName = Name;
+            _logger.LogInformation("Removing instance {Name}", instanceName);
+
+            await _wslManager.RemoveInstanceAsync(instanceName);
+
+            try
+            {
+                await _tagService.DeleteInstanceTagsAsync(instanceName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Tag cleanup failed for removed instance {Name}", instanceName);
+            }
+
+            await ShowAlert(Properties.Resources.SuccessTitle, string.Format(Properties.Resources.SuccessInstanceRemoved, instanceName));
 
             RefreshRequested?.Invoke(this, EventArgs.Empty);
         }
@@ -950,14 +964,24 @@ public partial class WslInstanceViewModel : ObservableObject
 
         try
         {
+            var oldName = Name;
             IsBusy = true;
-            _logger.LogInformation("Renaming instance {OldName} to {NewName}", Name, newName);
-            
-            await _wslManager.RenameInstanceAsync(Name, newName);
-            
+            _logger.LogInformation("Renaming instance {OldName} to {NewName}", oldName, newName);
+
+            await _wslManager.RenameInstanceAsync(oldName, newName);
+
             Instance.Name = newName;
             OnPropertyChanged(nameof(Name));
-            
+
+            try
+            {
+                await _tagService.RenameInstanceTagsAsync(oldName, newName);
+            }
+            catch (Exception tagEx)
+            {
+                _logger.LogWarning(tagEx, "Tag migration failed for rename {OldName} -> {NewName}", oldName, newName);
+            }
+
             await ShowAlert(Properties.Resources.SuccessTitle, string.Format(Properties.Resources.SuccessInstanceRenamed, newName));
 
             RefreshRequested?.Invoke(this, EventArgs.Empty);

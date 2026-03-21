@@ -72,6 +72,15 @@ function Remove-DistroNexusInstance {
                 catch {
                     Write-Verbose "Failed to update instance configuration: $_"
                 }
+
+                # Clean up tags for removed instance (E-06-3)
+                try {
+                    Set-DistroNexusInstanceTag -Name $Name -Tags @()
+                    Write-DistroNexusLog "Tags removed for instance '$Name'" -FileOnly
+                }
+                catch {
+                    Write-DistroNexusLog "Tag cleanup warning for '$Name': $_" -Level WARN -FileOnly
+                }
                 
                 # Optionally delete files
                 if (-not $KeepFiles -and $basePath -and (Test-Path $basePath)) {
