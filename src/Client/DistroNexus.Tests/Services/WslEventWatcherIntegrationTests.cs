@@ -1,3 +1,5 @@
+using System.Linq;
+using System.Reflection;
 using DistroNexus.Core.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -22,5 +24,14 @@ public class WslEventWatcherIntegrationTests
             ?.Invoke(watcher, null);
 
         Assert.True(raised, "CacheInvalidationRequested was not fired");
+    }
+
+    [Fact]
+    public void WslEventWatcher_Has_WMI_Field()
+    {
+        var fields = typeof(WslEventWatcher)
+            .GetFields(BindingFlags.NonPublic | BindingFlags.Instance);
+        var hasWmiField = fields.Any(f => f.FieldType.FullName!.Contains("ManagementEventWatcher"));
+        Assert.True(hasWmiField, "WslEventWatcher should use ManagementEventWatcher for WMI events");
     }
 }
