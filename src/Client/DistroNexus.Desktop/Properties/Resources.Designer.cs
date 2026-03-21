@@ -1538,7 +1538,15 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorRemoveInstanceEx", resourceCulture);
             }
-        }        
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ConfirmRemoveWithBackupMessage.
+        /// </summary>
+        public static string ConfirmRemoveWithBackupMessage {
+            get {
+                return ResourceManager.GetString("ConfirmRemoveWithBackupMessage", resourceCulture);
+            }
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorOpenTerminalFailed.
         /// </summary>

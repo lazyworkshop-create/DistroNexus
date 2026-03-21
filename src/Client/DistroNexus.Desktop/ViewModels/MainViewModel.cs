@@ -844,38 +844,39 @@ public partial class WslInstanceViewModel : ObservableObject
                 return;
         }
 
+        var instanceName = Name;
+
+        // Check if a backup schedule exists and warn user (E-04-2)
+        try
+        {
+            var schedules = await _backupService.GetSchedulesAsync();
+            var hasSchedule = schedules.Any(s =>
+                string.Equals(s.Name, instanceName, StringComparison.OrdinalIgnoreCase));
+            if (hasSchedule)
+            {
+                var confirm = new Wpf.Ui.Controls.MessageBox
+                {
+                    Title = Properties.Resources.ConfirmRemoveTitle,
+                    Content = string.Format(Properties.Resources.ConfirmRemoveWithBackupMessage, instanceName),
+                    PrimaryButtonText = Properties.Resources.ButtonRemove,
+                    CloseButtonText = Properties.Resources.ButtonClose
+                };
+                var result = await confirm.ShowDialogAsync();
+                if (result != Wpf.Ui.Controls.MessageBoxResult.Primary)
+                {
+                    return;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not check backup schedule for instance {Name}", instanceName);
+        }
+
         try
         {
             IsBusy = true;
-            var instanceName = Name;
             _logger.LogInformation("Removing instance {Name}", instanceName);
-
-            // Check if a backup schedule exists and warn user (E-04-2)
-            try
-            {
-                var schedules = await _backupService.GetSchedulesAsync();
-                var hasSchedule = schedules.Any(s =>
-                    string.Equals(s.Name, instanceName, StringComparison.OrdinalIgnoreCase));
-                if (hasSchedule)
-                {
-                    var confirm = new Wpf.Ui.Controls.MessageBox
-                    {
-                        Title = Properties.Resources.ConfirmRemoveTitle,
-                        Content = $"Remove '{instanceName}' and delete its backup schedule and backup files?",
-                        PrimaryButtonText = Properties.Resources.ButtonRemove,
-                        CloseButtonText = Properties.Resources.ButtonClose ?? "Cancel"
-                    };
-                    var result = await confirm.ShowDialogAsync();
-                    if (result != Wpf.Ui.Controls.MessageBoxResult.Primary)
-                    {
-                        return;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Could not check backup schedule for instance {Name}", instanceName);
-            }
 
             await _wslManager.RemoveInstanceAsync(instanceName);
 

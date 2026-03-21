@@ -5,21 +5,9 @@ BeforeAll {
     $rootPath = Resolve-Path "$PSScriptRoot/../../../.."
     $modulePath = Join-Path $rootPath "src\PowerShell"
     Import-Module (Join-Path $modulePath "DistroNexus.psd1") -Force
-
-    $script:originalAppData = $env:APPDATA
-}
-
-AfterAll {
-    $env:APPDATA = $script:originalAppData
 }
 
 Describe "Remove-DistroNexusInstance backup schedule cleanup" -Tag 'Unit', 'Public', 'Remove', 'Backup' {
-
-    BeforeEach {
-        $env:APPDATA = $TestDrive
-        $distroNexusPath = Join-Path $env:APPDATA "DistroNexus"
-        New-Item -Path $distroNexusPath -ItemType Directory -Force | Out-Null
-    }
 
     It "calls Remove-DistroNexusBackupSchedule when a schedule exists" {
         InModuleScope DistroNexus {
