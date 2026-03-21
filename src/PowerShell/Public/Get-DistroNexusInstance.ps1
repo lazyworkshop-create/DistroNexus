@@ -82,14 +82,21 @@ function Get-DistroNexusInstance {
 
         # Use cache only if ForceUpdate is not specified and additional data not requested
         if (-not $ForceUpdate -and -not $IncludeRelease -and -not $IncludeUser -and $storedConfig) {
-            Write-DistroNexusLog "Using stored instance configuration" -FileOnly
-            
-            # Apply name filter if specified
-            if ($Name) {
-                $storedConfig = $storedConfig | Where-Object { $_.Name -like $Name }
+            # TTL check: treat cache as stale if older than 10 minutes (E07-2)
+            if (Test-DistroNexusCacheStale) {
+                Write-DistroNexusLog "Instance cache TTL expired — forcing refresh" -FileOnly
+                Invalidate-InstanceCache -Reason "TTLExpired"
             }
-            
-            return $storedConfig
+            else {
+                Write-DistroNexusLog "Using stored instance configuration" -FileOnly
+
+                # Apply name filter if specified
+                if ($Name) {
+                    $storedConfig = $storedConfig | Where-Object { $_.Name -like $Name }
+                }
+
+                return $storedConfig
+            }
         }
 
         Write-DistroNexusLog "Scanning WSL instances..." -FileOnly

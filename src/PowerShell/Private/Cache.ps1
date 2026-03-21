@@ -132,6 +132,8 @@ function Set-InstanceCache {
         $cacheObject | ConvertTo-Json -Depth 5 | Set-Content -Path $cacheFile -Force -Encoding UTF8
         Write-DistroNexusLog "Instance configuration updated: $($Instances.Count) instance(s)" -FileOnly
         Write-Verbose "Instance configuration saved to $cacheFile"
+        # Stamp TTL timestamp so Test-DistroNexusCacheStale can track freshness (E07-2)
+        Set-DistroNexusCache -Timestamp (Get-Date)
     }
     catch {
         Write-DistroNexusLog "Failed to save instance configuration: $_" -Level WARN
@@ -190,6 +192,7 @@ $script:__CacheState = [PSCustomObject]@{
     IsStale        = $false
     LastReason     = $null
     InvalidatedAt  = $null
+    CacheTimestamp = $null
 }
 
 function Invalidate-InstanceCache {
@@ -224,5 +227,28 @@ function Get-CacheInvalidationState {
         Returns the current cache invalidation state object.
     #>
     return $script:__CacheState
+}
+
+function Set-DistroNexusCache {
+    <#
+    .SYNOPSIS
+        Records a cache timestamp for TTL tracking (E07-2).
+    #>
+    param(
+        [Parameter(Mandatory = $false)]
+        [object]$Data,
+        [Parameter(Mandatory = $false)]
+        [datetime]$Timestamp = (Get-Date)
+    )
+    $script:__CacheState.CacheTimestamp = $Timestamp
+}
+
+function Test-DistroNexusCacheStale {
+    <#
+    .SYNOPSIS
+        Returns $true when the in-memory TTL timestamp is absent or older than 10 minutes.
+    #>
+    if (-not $script:__CacheState.CacheTimestamp) { return $true }
+    return ((Get-Date) - $script:__CacheState.CacheTimestamp).TotalMinutes -ge 10
 }
 

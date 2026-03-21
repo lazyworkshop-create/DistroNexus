@@ -339,3 +339,27 @@ Describe "Clear-InstanceCache" -Tag 'Unit', 'Cache' {
         }
     }
 }
+
+Describe "Cache TTL expiry" -Tag 'Unit', 'Cache' {
+    It "returns stale=true when cache is older than 10 minutes" {
+        InModuleScope DistroNexus {
+            Set-DistroNexusCache -Timestamp (Get-Date).AddMinutes(-11)
+            $result = Test-DistroNexusCacheStale
+            $result | Should -Be $true
+        }
+    }
+    It "returns stale=false when cache is under 10 minutes old" {
+        InModuleScope DistroNexus {
+            Set-DistroNexusCache -Timestamp (Get-Date).AddMinutes(-5)
+            $result = Test-DistroNexusCacheStale
+            $result | Should -Be $false
+        }
+    }
+    It "returns stale=true when no timestamp has been set" {
+        InModuleScope DistroNexus {
+            $script:__CacheState.CacheTimestamp = $null
+            $result = Test-DistroNexusCacheStale
+            $result | Should -Be $true
+        }
+    }
+}
