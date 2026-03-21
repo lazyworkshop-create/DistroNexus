@@ -74,8 +74,9 @@ public class DockerIntegrationService : IDockerIntegrationService
             var version = System.Diagnostics.FileVersionInfo.GetVersionInfo(DockerExePath);
             return Task.FromResult<string?>(version.FileVersion);
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogDebug(ex, "Failed to read Docker Desktop version from {Path}", DockerExePath);
             return Task.FromResult<string?>(null);
         }
     }
