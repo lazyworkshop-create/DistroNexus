@@ -1396,7 +1396,7 @@ public partial class WslManagerService : IWslManagerService
         {
             var error = result?.Error ?? "Unknown error";
             _logger.LogError("Export failed for {Name}: {Error}", name, error);
-            throw new WslExportFailedException(name, destination);
+            throw new WslExportFailedException($"Export failed for '{name}': {error}", null, name);
         }
 
         _logger.LogInformation("Export succeeded for instance {Name}", name);
@@ -1441,7 +1441,7 @@ public partial class WslManagerService : IWslManagerService
         {
             var error = result?.Error ?? "Unknown error";
             _logger.LogError("Import failed for {Name}: {Error}", name, error);
-            throw new WslImportFailedException(name, source);
+            throw new WslImportFailedException($"Import failed for '{name}': {error}", null, name);
         }
 
         _logger.LogInformation("Import succeeded for instance {Name}", name);
