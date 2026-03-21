@@ -75,6 +75,25 @@ public class WslManagerServiceNativeTests
     }
 
     [Fact]
+    public async Task GetInstancesNativeAsync_SetsRunningState_FromWslListRunning()
+    {
+        _mockCliRunner
+            .Setup(r => r.RunAsync(
+                It.Is<string>(s => s.Contains("--list") && s.Contains("--verbose")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new WslCliResult { Output = "  NAME     STATE    VERSION\n* Ubuntu   Stopped  2", ExitCode = 0 });
+        _mockCliRunner
+            .Setup(r => r.RunAsync(
+                It.Is<string>(s => s.Contains("--running")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new WslCliResult { Output = "  NAME\n  Ubuntu", ExitCode = 0 });
+
+        var instances = await _service.GetInstancesAsync(CancellationToken.None);
+
+        Assert.Equal("Running", instances.First(i => i.Name == "Ubuntu").State);
+    }
+
+    [Fact]
     public async Task GetInstancesAsync_PopulatesDiskSize_FromFileInfo()
     {
         // Arrange: mock IWslCliRunner to return a known instance

@@ -147,10 +147,13 @@ public partial class WslManagerService : IWslManagerService
         var descriptors = WslCliRunner.ParseWslListVerbose(result.Output);
         _logger.LogDebug("GetInstancesNativeAsync: parsed {Count} instance(s)", descriptors.Count);
 
+        var runningResult = await _wslCliRunner!.RunAsync("--list --running", ct);
+        var runningNames = WslCliRunner.ParseWslListRunning(runningResult?.Output);
+
         return descriptors.Select(d => new WslInstance
         {
             Name      = d.Name,
-            State     = d.State,
+            State     = runningNames.Contains(d.Name, StringComparer.OrdinalIgnoreCase) ? "Running" : d.State,
             Version   = d.Version,
             IsDefault = d.IsDefault,
             Size      = GetVhdxSizeBytes(d.Name),
