@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
+using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
@@ -19,6 +20,7 @@ namespace DistroNexus.Core.Services;
 public class DockerIntegrationService : IDockerIntegrationService
 {
     private readonly ILogger<DockerIntegrationService> _logger;
+    private readonly IWslManagerService _wslManager;
 
     // Reserved distro names that must never be toggled
     private static readonly HashSet<string> ReservedDistros = new(StringComparer.OrdinalIgnoreCase)
@@ -33,9 +35,10 @@ public class DockerIntegrationService : IDockerIntegrationService
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Docker", "Docker Desktop.exe");
 
-    public DockerIntegrationService(ILogger<DockerIntegrationService> logger)
+    public DockerIntegrationService(ILogger<DockerIntegrationService> logger, IWslManagerService wslManager)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
     }
 
     /// <inheritdoc/>
@@ -121,6 +124,15 @@ public class DockerIntegrationService : IDockerIntegrationService
                 $"Cannot modify Docker integration for reserved distro '{instanceName}'.",
                 nameof(instanceName));
 
+        // Check WSL version — Docker Desktop integration requires WSL v2
+        var instance = await GetInstanceAsync(instanceName, ct);
+        if (instance?.Version == 1)
+            throw new WslOperationFailedException(
+                $"Docker Desktop integration requires WSL v2. Instance '{instanceName}' is WSL v1.",
+                DistroNexusErrorCode.WslVersionTooLow,
+                operation: "SetDockerIntegration",
+                instanceName: instanceName);
+
         var settingsPath = ResolveSettingsPath();
         if (settingsPath is null)
             throw new InvalidOperationException("Docker Desktop settings file not found.");
@@ -175,6 +187,26 @@ public class DockerIntegrationService : IDockerIntegrationService
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Gets a single WSL instance by name.
+    /// </summary>
+    /// <param name="instanceName">The name of the instance to retrieve.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The instance, or null if not found.</returns>
+    private async Task<DistroNexus.Core.Models.WslInstance?> GetInstanceAsync(string instanceName, CancellationToken ct)
+    {
+        try
+        {
+            var instances = await _wslManager.GetInstancesAsync(ct);
+            return instances.FirstOrDefault(i => string.Equals(i.Name, instanceName, StringComparison.OrdinalIgnoreCase));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Failed to retrieve WSL instance {InstanceName}", instanceName);
+            return null;
+        }
+    }
 
     private static string? ResolveSettingsPath()
     {

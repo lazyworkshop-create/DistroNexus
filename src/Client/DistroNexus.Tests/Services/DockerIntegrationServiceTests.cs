@@ -1,4 +1,6 @@
+using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
+using DistroNexus.Core.Models;
 using DistroNexus.Core.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -11,12 +13,14 @@ namespace DistroNexus.Tests.Services;
 public class DockerIntegrationServiceTests
 {
     private readonly Mock<ILogger<DockerIntegrationService>> _mockLogger;
+    private readonly Mock<IWslManagerService> _mockWslManager;
     private readonly DockerIntegrationService _service;
 
     public DockerIntegrationServiceTests()
     {
         _mockLogger = new Mock<ILogger<DockerIntegrationService>>();
-        _service = new DockerIntegrationService(_mockLogger.Object);
+        _mockWslManager = new Mock<IWslManagerService>();
+        _service = new DockerIntegrationService(_mockLogger.Object, _mockWslManager.Object);
     }
 
     [Fact]
@@ -47,7 +51,7 @@ public class DockerIntegrationServiceTests
     public async Task GetIntegrationStatusAsync_WhenDockerNotInstalled_ReturnsUnavailable()
     {
         // Arrange — use a service whose install check is overridden
-        var service = new TestableDockerIntegrationService(_mockLogger.Object, dockerInstalled: false);
+        var service = new TestableDockerIntegrationService(_mockLogger.Object, _mockWslManager.Object, dockerInstalled: false);
 
         // Act
         var result = await service.GetIntegrationStatusAsync("Ubuntu-22.04");
@@ -60,7 +64,7 @@ public class DockerIntegrationServiceTests
     public async Task GetIntegrationStatusAsync_ForDockerDesktopDistro_ReturnsUnavailable()
     {
         // docker-desktop is a reserved name — never eligible
-        var service = new TestableDockerIntegrationService(_mockLogger.Object, dockerInstalled: true);
+        var service = new TestableDockerIntegrationService(_mockLogger.Object, _mockWslManager.Object, dockerInstalled: true);
 
         var result1 = await service.GetIntegrationStatusAsync("docker-desktop");
         var result2 = await service.GetIntegrationStatusAsync("docker-desktop-data");
@@ -91,6 +95,22 @@ public class DockerIntegrationServiceTests
         await Assert.ThrowsAsync<ArgumentException>(
             () => _service.SetIntegrationAsync(reservedName, true));
     }
+
+    [Fact]
+    public async Task SetIntegrationAsync_WhenWslV1Instance_Throws_WslOperationException()
+    {
+        _mockWslManager
+            .Setup(m => m.GetInstancesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<WslInstance> { new WslInstance { Name = "Ubuntu", Version = 1 } });
+
+        // Assert that a WslOperationFailedException (concrete subclass of WslOperationException) is thrown
+        var ex = await Assert.ThrowsAsync<WslOperationFailedException>(
+            () => _service.SetIntegrationAsync("Ubuntu", true, CancellationToken.None));
+
+        // Verify correct error details
+        Assert.Equal(DistroNexusErrorCode.WslVersionTooLow, ex.Code);
+        Assert.Equal("Ubuntu", ex.InstanceName);
+    }
 }
 
 /// <summary>
@@ -102,8 +122,9 @@ internal sealed class TestableDockerIntegrationService : DockerIntegrationServic
 
     public TestableDockerIntegrationService(
         ILogger<DockerIntegrationService> logger,
+        IWslManagerService wslManager,
         bool dockerInstalled)
-        : base(logger)
+        : base(logger, wslManager)
     {
         _dockerInstalled = dockerInstalled;
     }
