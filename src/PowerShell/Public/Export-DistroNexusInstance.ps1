@@ -81,10 +81,36 @@ function Export-DistroNexusInstance {
         Write-DistroNexusLog "Exporting '$Name' to '$Destination'..."
         Write-Verbose "Exporting WSL instance '$Name' to '$Destination'..."
 
-        $output = wsl --export $Name $Destination 2>&1
+        # Start export as background job
+        $job = Start-Job -ScriptBlock {
+            param($inst, $dest)
+            wsl --export $inst $dest
+        } -ArgumentList $Name, $Destination
+
+        # Poll output file size while job runs
+        $sw = [System.Diagnostics.Stopwatch]::StartNew()
+        while ($job.State -eq "Running") {
+            Start-Sleep -Milliseconds 500
+            $sizeMB = if (Test-Path $Destination) {
+                [math]::Round((Get-Item $Destination).Length / 1MB, 1)
+            }
+            else { 0 }
+            $elapsed = [math]::Round($sw.Elapsed.TotalSeconds, 0)
+            Write-Progress -Activity "Exporting $Name" `
+                -Status "${sizeMB} MB written, ${elapsed}s elapsed" `
+                -PercentComplete -1
+        }
+        $sw.Stop()
+        Write-Progress -Activity "Exporting $Name" -Completed
+
+        $jobId = $job.Id
+        Receive-Job -Id $jobId -Wait -AutoRemoveJob | Out-Null
         if ($LASTEXITCODE -ne 0) {
-            Write-Error "Export failed for '$Name': $output" -ErrorId "DistroNexus.ExportFailed"
-            return
+            Write-Error -Message "Export failed for $Name" `
+                -ErrorId "DistroNexus.ExportFailed" `
+                -Category OperationStopped `
+                -TargetObject $Name `
+                -ErrorAction Stop
         }
 
         Write-DistroNexusLog "Export complete: '$Name' -> '$Destination'" -FileOnly

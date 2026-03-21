@@ -88,6 +88,42 @@ Describe "Export-DistroNexusInstance" -Tag 'Unit', 'Public', 'Export' {
             }
         }
     }
+
+    Context "Progress reporting" {
+        It "Should call Write-Progress during export" {
+            InModuleScope DistroNexus {
+                Mock Get-DistroNexusInstance {
+                    return [PSCustomObject]@{ Name = "Ubuntu"; State = "Stopped"; Version = 2 }
+                } -ModuleName DistroNexus
+
+                Mock Test-Path {
+                    return $true
+                } -ModuleName DistroNexus
+
+                Mock Get-Item {
+                    [PSCustomObject]@{ Length = 1048576 }
+                } -ModuleName DistroNexus
+
+                $completedJob = [PSCustomObject]@{ State = "Completed"; Id = 1 }
+                Mock Start-Job {
+                    $completedJob
+                } -ModuleName DistroNexus
+
+                Mock Receive-Job {
+                    param($Id)
+                    $global:LASTEXITCODE = 0
+                } -ModuleName DistroNexus
+
+                Mock Start-Sleep {} -ModuleName DistroNexus
+
+                Mock Write-Progress {} -ModuleName DistroNexus
+
+                Export-DistroNexusInstance -Name "Ubuntu" -Destination "C:\test.tar"
+
+                Assert-MockCalled Write-Progress -ModuleName DistroNexus
+            }
+        }
+    }
 }
 
 Describe "Import-DistroNexusInstance" -Tag 'Unit', 'Public', 'Import' {
