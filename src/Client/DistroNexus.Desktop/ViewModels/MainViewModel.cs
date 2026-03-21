@@ -17,7 +17,7 @@ namespace DistroNexus.Desktop.ViewModels;
 /// <summary>
 /// Main view model for the application shell.
 /// </summary>
-public partial class MainViewModel : ObservableObject
+public partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly IWslManagerService _wslManager;
     private readonly ISettingsService _settingsService;
@@ -513,6 +513,12 @@ public partial class MainViewModel : ObservableObject
             await ShowAlert(Properties.Resources.ErrorApplicationTitle, string.Format(Properties.Resources.ErrorGenerateDiagnostics, MainViewModel.FormatAlertMessage(ex)));
             StatusMessage = "Failed to generate diagnostics";
         }
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        _wslEventWatcher.CacheInvalidationRequested -= OnCacheInvalidated;
     }
 }
 
