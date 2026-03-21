@@ -1,3 +1,4 @@
+using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using DistroNexus.Core.Services;
@@ -87,7 +88,7 @@ public class CompactInstanceTests
     }
 
     [Fact]
-    public async Task CompactInstanceAsync_WhenCmdletFails_ThrowsInvalidOperationException()
+    public async Task CompactInstanceAsync_WhenCmdletFails_ThrowsWslOperationException()
     {
         // Arrange
         const string instanceName = "Ubuntu-22.04";
@@ -106,8 +107,23 @@ public class CompactInstanceTests
             });
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
+        await Assert.ThrowsAnyAsync<WslOperationException>(
             () => _service.CompactInstanceAsync(instanceName));
+    }
+
+    [Fact]
+    public async Task CompactInstanceAsync_WhenFails_Throws_WslOperationException()
+    {
+        _mockPowerShellService
+            .Setup(x => x.ExecuteModuleCmdletAsync(
+                "Compress-DistroNexusInstance",
+                It.IsAny<Dictionary<string, object>>(),
+                It.IsAny<ModuleCallOptions>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 1, Error = "vhd locked" });
+
+        await Assert.ThrowsAnyAsync<WslOperationException>(
+            () => _service.CompactInstanceAsync("Ubuntu"));
     }
 
     [Fact]

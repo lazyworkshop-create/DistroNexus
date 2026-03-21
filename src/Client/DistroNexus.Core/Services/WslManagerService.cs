@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -77,25 +78,26 @@ public partial class WslManagerService : IWslManagerService
 
         if (moduleResult == null)
         {
-            throw new InvalidOperationException("PowerShell module execution returned no result.");
+            throw new WslOperationFailedException("PowerShell module execution returned no result.", DistroNexusErrorCode.UnknownError, operation: "GetInstances");
         }
 
         // Check if module call succeeded
         if (!moduleResult.Success)
         {
-            var errorMessage = moduleResult.Exception != null 
-                ? $"PowerShell module error: {moduleResult.Exception.Message}" 
+            var errorMessage = moduleResult.Exception != null
+                ? $"PowerShell module error: {moduleResult.Exception.Message}"
                 : "Failed to retrieve WSL instances using PowerShell module.";
 
             _logger.LogError(moduleResult.Exception, "Module call failed for Get-DistroNexusInstance");
-            throw new InvalidOperationException(errorMessage, moduleResult.Exception);
+            throw new WslOperationFailedException(errorMessage, moduleResult.Exception, DistroNexusErrorCode.UnknownError, operation: "GetInstances");
         }
 
         if (!moduleResult.UsedModule)
         {
             _logger.LogError("PowerShell module was not used for Get-DistroNexusInstance");
-            throw new InvalidOperationException(
-                "DistroNexus PowerShell module is not available. Please ensure the module is properly installed.");
+            throw new WslOperationFailedException(
+                "DistroNexus PowerShell module is not available. Please ensure the module is properly installed.",
+                DistroNexusErrorCode.UnknownError, operation: "GetInstances");
         }
 
         if (moduleResult.ParsedObjects == null || moduleResult.ParsedObjects.Count == 0)
@@ -404,8 +406,7 @@ public partial class WslManagerService : IWslManagerService
             if (instances.Any(i => i.Name == options.InstanceName))
             {
                 _logger.LogError("Installation failed: Instance name '{InstanceName}' already exists", options.InstanceName);
-                throw new InvalidOperationException(
-                    $"An instance with the name \"{options.InstanceName}\" already exists. Please choose a different name.");
+                throw new WslInstanceAlreadyExistsException(options.InstanceName);
             }
             _logger.LogDebug("Instance name '{InstanceName}' is available", options.InstanceName);
 
@@ -1350,7 +1351,7 @@ public partial class WslManagerService : IWslManagerService
         {
             var error = result?.Error ?? "Unknown error";
             _logger.LogError("Compaction failed for {InstanceName}: {Error}", instanceName, error);
-            throw new InvalidOperationException($"Compaction failed for '{instanceName}': {error}");
+            throw new WslOperationFailedException($"Compaction failed for '{instanceName}': {error}", DistroNexusErrorCode.CompactionFailed, operation: "CompactInstance", instanceName: instanceName);
         }
 
         progress?.Report((100, "Compaction complete."));
@@ -1395,7 +1396,7 @@ public partial class WslManagerService : IWslManagerService
         {
             var error = result?.Error ?? "Unknown error";
             _logger.LogError("Export failed for {Name}: {Error}", name, error);
-            throw new InvalidOperationException($"Export failed for '{name}': {error}");
+            throw new WslExportFailedException(name, destination);
         }
 
         _logger.LogInformation("Export succeeded for instance {Name}", name);
@@ -1440,7 +1441,7 @@ public partial class WslManagerService : IWslManagerService
         {
             var error = result?.Error ?? "Unknown error";
             _logger.LogError("Import failed for {Name}: {Error}", name, error);
-            throw new InvalidOperationException($"Import failed for '{name}': {error}");
+            throw new WslImportFailedException(name, source);
         }
 
         _logger.LogInformation("Import succeeded for instance {Name}", name);
@@ -1510,7 +1511,7 @@ public partial class WslManagerService : IWslManagerService
         {
             var error = result?.Error ?? "Unknown error";
             _logger.LogError("SetSparseMode failed for {Name}: {Error}", name, error);
-            throw new InvalidOperationException($"SetSparseMode failed for '{name}': {error}");
+            throw new WslOperationFailedException($"SetSparseMode failed for '{name}': {error}", DistroNexusErrorCode.WslConfigWriteFailed, operation: "SetSparseMode", instanceName: name);
         }
 
         _logger.LogInformation("Sparse mode set to {Enabled} for {Name}", enabled, name);

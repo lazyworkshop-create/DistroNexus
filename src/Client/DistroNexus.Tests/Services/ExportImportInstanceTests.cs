@@ -1,3 +1,4 @@
+using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using DistroNexus.Core.Services;
@@ -109,5 +110,35 @@ public class ExportImportInstanceTests
     {
         await Assert.ThrowsAsync<ArgumentNullException>(
             () => _service.ImportInstanceAsync(null!, @"C:\source.tar", @"C:\WSL\New"));
+    }
+
+    [Fact]
+    public async Task ExportInstanceAsync_WhenFails_Throws_WslExportFailedException()
+    {
+        _mockPowerShellService
+            .Setup(x => x.ExecuteModuleCmdletAsync(
+                "Export-DistroNexusInstance",
+                It.IsAny<Dictionary<string, object>>(),
+                It.IsAny<ModuleCallOptions>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 1, Error = "disk full" });
+
+        await Assert.ThrowsAsync<WslExportFailedException>(
+            () => _service.ExportInstanceAsync("Ubuntu", @"C:\out.tar"));
+    }
+
+    [Fact]
+    public async Task ImportInstanceAsync_WhenFails_Throws_WslImportFailedException()
+    {
+        _mockPowerShellService
+            .Setup(x => x.ExecuteModuleCmdletAsync(
+                "Import-DistroNexusInstance",
+                It.IsAny<Dictionary<string, object>>(),
+                It.IsAny<ModuleCallOptions>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 1, Error = "name taken" });
+
+        await Assert.ThrowsAsync<WslImportFailedException>(
+            () => _service.ImportInstanceAsync("Ubuntu", @"C:\src.tar", @"C:\wsl"));
     }
 }
