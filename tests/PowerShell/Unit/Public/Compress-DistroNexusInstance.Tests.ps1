@@ -250,11 +250,6 @@ Describe "Compress-DistroNexusInstance" -Tag 'Unit', 'Public', 'Compact' {
                     return [PSCustomObject]@{ BasePath = $TestDrive }
                 } -ModuleName DistroNexus
 
-                $vhdx1 = Join-Path $TestDrive "ubuntu.vhdx"
-                $vhdx2 = Join-Path $TestDrive "debian.vhdx"
-                New-Item -Path $vhdx1 -ItemType File -Force | Out-Null
-                New-Item -Path $vhdx2 -ItemType File -Force | Out-Null
-
                 { Compress-DistroNexusInstance -Name "Ubuntu", "Debian" -WhatIf } | Should -Not -Throw
             }
         }
@@ -269,12 +264,24 @@ Describe "Compress-DistroNexusInstance" -Tag 'Unit', 'Public', 'Compact' {
                     return [PSCustomObject]@{ BasePath = $TestDrive }
                 } -ModuleName DistroNexus
 
-                $vhdx1 = Join-Path $TestDrive "ubuntu.vhdx"
-                $vhdx2 = Join-Path $TestDrive "debian.vhdx"
-                New-Item -Path $vhdx1 -ItemType File -Force | Out-Null
-                New-Item -Path $vhdx2 -ItemType File -Force | Out-Null
-
                 { "Ubuntu", "Debian" | Compress-DistroNexusInstance -WhatIf } | Should -Not -Throw
+            }
+        }
+
+        It "Should return WhatIf results for all items in an array" {
+            InModuleScope DistroNexus {
+                Mock Get-DistroNexusInstance {
+                    return [PSCustomObject]@{ Name = $Name; State = "Stopped"; Version = 2 }
+                } -ModuleName DistroNexus
+
+                Mock Get-ItemProperty {
+                    return [PSCustomObject]@{ BasePath = $TestDrive }
+                } -ModuleName DistroNexus
+
+                New-Item -Path "$TestDrive/ext4.vhdx" -ItemType File -Force | Out-Null
+
+                $results = Compress-DistroNexusInstance -Name "Ubuntu", "Debian" -WhatIf
+                $results.Count | Should -Be 2
             }
         }
     }

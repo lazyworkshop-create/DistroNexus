@@ -59,7 +59,7 @@ function Compress-DistroNexusInstance {
             if (-not $instance) {
                 Write-Error "Instance '$instanceName' not found."
                 Write-DistroNexusLog "Instance not found: $instanceName" -Level ERROR
-                return
+                continue
             }
 
             # Resolve VHDX path from registry
@@ -67,7 +67,7 @@ function Compress-DistroNexusInstance {
             if (-not $vhdxPath) {
                 Write-Error "Could not resolve VHDX path for instance '$instanceName'."
                 Write-DistroNexusLog "VHDX path not found for: $instanceName" -Level ERROR
-                return
+                continue
             }
 
             # Measure current size
@@ -78,13 +78,14 @@ function Compress-DistroNexusInstance {
 
             if ($WhatIf) {
                 Write-DistroNexusLog "WhatIf: current VHDX size for '$instanceName' is $sizeBefore bytes"
-                return [PSCustomObject]@{
+                [PSCustomObject]@{
                     Name       = $instanceName
                     SizeBefore = $sizeBefore
                     SizeAfter  = $null
                     SpaceSaved = $null
                     WhatIf     = $true
                 }
+                continue
             }
 
             # Confirm if not forced
@@ -93,7 +94,7 @@ function Compress-DistroNexusInstance {
                 $confirm = Read-Host "Compact VHDX for '$instanceName' (current: ${sizeGB} GB)? [y/N]"
                 if ($confirm -notmatch '^[yY]$') {
                     Write-DistroNexusLog "Compaction cancelled by user for: $instanceName"
-                    return
+                    continue
                 }
             }
 
@@ -129,7 +130,7 @@ function Compress-DistroNexusInstance {
                     if (-not (Test-AdminPrivilege)) {
                         Write-Error "diskpart requires administrator privileges. Re-run as administrator."
                         Write-DistroNexusLog "Compaction aborted: not running as administrator" -Level ERROR
-                        return
+                        continue
                     }
                     $diskpartScript = @"
 select vdisk file="$vhdxPath"
@@ -150,7 +151,7 @@ exit
                 Write-DistroNexusLog "Compaction complete for '$instanceName': saved $([math]::Round($spaceSaved / 1MB, 1)) MB"
                 Write-Progress -Activity "Compacting $instanceName" -Status "Done" -PercentComplete 100 -Completed
 
-                return [PSCustomObject]@{
+                [PSCustomObject]@{
                     Name       = $instanceName
                     SizeBefore = $sizeBefore
                     SizeAfter  = $sizeAfter
