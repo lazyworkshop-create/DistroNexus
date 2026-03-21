@@ -134,6 +134,19 @@ public partial class MainViewModel : ObservableObject
         await uiMessageBox.ShowDialogAsync();
     }
 
+    private async Task ShowAlert(string title, Exception ex)
+        => await ShowAlert(title, FormatAlertMessage(ex));
+
+    public static string FormatAlertMessage(Exception ex)
+    {
+        var code = ex is DistroNexus.Core.Exceptions.WslException wslEx
+            ? $"[DN-{(int)wslEx.Code:D4}] "
+            : ex is DistroNexus.Core.Exceptions.WslOperationException opEx
+                ? $"[DN-{(int)opEx.Code:D4}] "
+                : string.Empty;
+        return $"{code}{ex.Message}";
+    }
+
     [RelayCommand]
     private async Task LoadInstancesAsync(CancellationToken cancellationToken = default)
     {
@@ -182,7 +195,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to load WSL instances");
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.LoadInstancesError, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, ex);
         }
         // Note: Don't set IsLoading = false here as it's controlled by MainWindow
     }
@@ -487,7 +500,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to generate diagnostics");
-            await ShowAlert(Properties.Resources.ErrorApplicationTitle, string.Format(Properties.Resources.ErrorGenerateDiagnostics, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorApplicationTitle, ex);
             StatusMessage = "Failed to generate diagnostics";
         }
     }
@@ -594,6 +607,9 @@ public partial class WslInstanceViewModel : ObservableObject
         await uiMessageBox.ShowDialogAsync();
     }
 
+    private async Task ShowAlert(string title, Exception ex)
+        => await ShowAlert(title, MainViewModel.FormatAlertMessage(ex));
+
     /// <summary>
     /// Forces a complete refresh of this instance, starting it and loading full information.
     /// Shows a confirmation dialog before proceeding.
@@ -644,7 +660,7 @@ public partial class WslInstanceViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Force refresh failed for instance {Name}", Name);
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorForceRefreshEx, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, ex);
         }
         finally
         {
@@ -740,7 +756,7 @@ public partial class WslInstanceViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to start instance {Name}", Name);
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorStartInstanceEx, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, ex);
         }
     }
 
@@ -785,7 +801,7 @@ public partial class WslInstanceViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to stop instance {Name}", Name);
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorStopInstanceEx, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, ex);
         }
     }
 
@@ -822,7 +838,7 @@ public partial class WslInstanceViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to remove instance {Name}", Name);
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorRemoveInstanceEx, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, ex);
         }
         finally
         {
@@ -858,7 +874,7 @@ public partial class WslInstanceViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to open terminal for instance {Name}", Name);
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorOpenTerminalEx, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, ex);
         }
     }
 
@@ -902,7 +918,7 @@ public partial class WslInstanceViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to move instance {Name}", Name);
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorMoveInstanceEx, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, ex);
         }
         finally
         {
@@ -955,7 +971,7 @@ public partial class WslInstanceViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to rename instance {Name}", Name);
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorRenameInstanceEx, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, ex);
         }
         finally
         {
@@ -1031,7 +1047,7 @@ public partial class WslInstanceViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to set credentials for instance {Name}", Name);
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorSetCredentialsEx, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, ex);
         }
         finally
         {
