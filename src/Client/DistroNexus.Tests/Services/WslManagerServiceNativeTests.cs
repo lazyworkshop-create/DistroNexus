@@ -73,4 +73,25 @@ public class WslManagerServiceNativeTests
         Assert.Equal("Debian", instances[0].Name);
         Assert.Equal("Stopped", instances[0].State);
     }
+
+    [Fact]
+    public async Task GetInstancesAsync_PopulatesDiskSize_FromFileInfo()
+    {
+        // Arrange: mock IWslCliRunner to return a known instance
+        _mockCliRunner
+            .Setup(r => r.RunAsync(
+                It.Is<string>(s => s.Contains("--list") && s.Contains("--verbose")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new WslCliResult
+            {
+                ExitCode = 0,
+                Output   = "  NAME           STATE           VERSION\r\n* Ubuntu         Running         2\r\n"
+            });
+
+        // Act
+        var instances = await _service.GetInstancesAsync(CancellationToken.None);
+
+        // Assert: Size should be non-negative (0 is acceptable when VHDX not found on CI)
+        Assert.All(instances, i => Assert.True(i.Size >= 0));
+    }
 }

@@ -153,7 +153,37 @@ public partial class WslManagerService : IWslManagerService
             State     = d.State,
             Version   = d.Version,
             IsDefault = d.IsDefault,
+            Size      = GetVhdxSizeBytes(d.Name),
         }).ToList();
+    }
+
+    /// <summary>
+    /// Looks up the VHDX file size for a WSL instance via the Windows registry (LXSS).
+    /// Returns 0 if the registry key or VHDX file is not found, or on any access failure.
+    /// </summary>
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    private static long GetVhdxSizeBytes(string instanceName)
+    {
+        try
+        {
+            using var hive = Microsoft.Win32.RegistryKey.OpenBaseKey(
+                Microsoft.Win32.RegistryHive.CurrentUser,
+                Microsoft.Win32.RegistryView.Registry64);
+            using var lxss = hive.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Lxss");
+            if (lxss == null) return 0;
+            foreach (var subKeyName in lxss.GetSubKeyNames())
+            {
+                using var sub = lxss.OpenSubKey(subKeyName);
+                if (sub?.GetValue("DistributionName") is string name && name == instanceName)
+                {
+                    var basePath = sub.GetValue("BasePath") as string ?? string.Empty;
+                    var vhdx = Path.Combine(basePath, "ext4.vhdx");
+                    return File.Exists(vhdx) ? new FileInfo(vhdx).Length : 0;
+                }
+            }
+        }
+        catch { /* registry or file access failure */ }
+        return 0;
     }
 
     private List<WslInstance> ParseInstancesFromModule(List<JsonElement> parsedObjects)
