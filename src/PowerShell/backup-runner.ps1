@@ -31,7 +31,7 @@ catch {
     $notifs.notifications += @{
         type     = "BackupFailure"
         instance = $InstanceName
-        message  = $_.Exception.Message
+        message  = $_.ToString()
         time     = (Get-Date -Format "o")
     }
     $notifs | ConvertTo-Json -Depth 5 | Set-Content $notifPath -Encoding UTF8

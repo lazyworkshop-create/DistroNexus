@@ -125,11 +125,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             var json = await File.ReadAllTextAsync(notifPath);
             var doc = System.Text.Json.JsonDocument.Parse(json);
-            var notifs = doc.RootElement.GetProperty("notifications");
+            if (!doc.RootElement.TryGetProperty("notifications", out var notifs))
+            {
+                // corrupt or unexpected file format — still deleted by finally
+                return;
+            }
             foreach (var n in notifs.EnumerateArray())
             {
-                var msg = n.GetProperty("message").GetString();
-                var inst = n.GetProperty("instance").GetString();
+                var msg = n.TryGetProperty("message", out var msgEl) ? msgEl.GetString() : "Unknown error";
+                var inst = n.TryGetProperty("instance", out var instEl) ? instEl.GetString() : "Unknown instance";
                 await ShowAlert("Backup Failure", $"Backup failed for '{inst}': {msg}");
             }
         }
