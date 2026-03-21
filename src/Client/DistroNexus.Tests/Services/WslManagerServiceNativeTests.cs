@@ -6,6 +6,26 @@ using Moq;
 
 namespace DistroNexus.Tests.Services;
 
+internal static class WslManagerServiceTestAccessor
+{
+    public static long GetVhdxSizeBytesForTest(WslManagerService svc, string instanceName)
+    {
+        var method = typeof(WslManagerService)
+            .GetMethod("GetVhdxSizeBytes",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        if (method == null) return -1L;
+        try
+        {
+            return (long)method.Invoke(null, new object[] { instanceName })!;
+        }
+        catch (System.Reflection.TargetInvocationException tie)
+            when (tie.InnerException is InvalidOperationException)
+        {
+            return -2L;
+        }
+    }
+}
+
 /// <summary>
 /// Tests that verify WslManagerService uses IWslCliRunner for native operations (E-08).
 /// </summary>
@@ -112,5 +132,12 @@ public class WslManagerServiceNativeTests
 
         // Assert: Size should be non-negative (0 is acceptable when VHDX not found on CI)
         Assert.All(instances, i => Assert.True(i.Size >= 0));
+    }
+
+    [Fact]
+    public void GetVhdxSizeBytes_Uses_Registry64_View_Not_Default()
+    {
+        var size = WslManagerServiceTestAccessor.GetVhdxSizeBytesForTest(_service, "__nonexistent_test_instance__");
+        Assert.Equal(0L, size);
     }
 }
