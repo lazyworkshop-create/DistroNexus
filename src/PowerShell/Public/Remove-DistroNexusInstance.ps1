@@ -94,6 +94,11 @@ function Remove-DistroNexusInstance {
         }
         catch {
             Write-DistroNexusLog "Exception while removing instance: $_" -Level ERROR
+            Write-Error -Message $_.Exception.Message `
+                        -ErrorId "DistroNexus.RemoveFailed" `
+                        -Category OperationStopped `
+                        -TargetObject $Name `
+                        -ErrorAction Stop
             return $false
         }
     }

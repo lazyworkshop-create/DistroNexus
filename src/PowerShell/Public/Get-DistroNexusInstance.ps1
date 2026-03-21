@@ -65,17 +65,21 @@ function Get-DistroNexusInstance {
     
     begin {
         Initialize-DistroNexusLogger
-        
+
+        $storedConfig = $null
+        $configMap = @{}
+        $script:_beginFailed = $false
+
+        try {
         # Load stored configuration for metadata (disk size, install time, etc.)
         $storedConfig = Get-InstanceCache
-        $configMap = @{}
         if ($storedConfig) {
             foreach ($instance in $storedConfig) {
                 $configMap[$instance.Name] = $instance
             }
             Write-Verbose "Loaded configuration for $($storedConfig.Count) instance(s)"
         }
-        
+
         # Use cache only if ForceUpdate is not specified and additional data not requested
         if (-not $ForceUpdate -and -not $IncludeRelease -and -not $IncludeUser -and $storedConfig) {
             Write-DistroNexusLog "Using stored instance configuration" -FileOnly
@@ -87,11 +91,21 @@ function Get-DistroNexusInstance {
             
             return $storedConfig
         }
-        
+
         Write-DistroNexusLog "Scanning WSL instances..." -FileOnly
+        }
+        catch {
+            $script:_beginFailed = $true
+            Write-DistroNexusLog "Failed to initialise instance data: $_" -Level ERROR
+            Write-Error -Message $_.Exception.Message `
+                        -ErrorId "DistroNexus.InstanceNotFound" `
+                        -Category OperationStopped `
+                        -TargetObject $Name
+        }
     }
-    
+
     process {
+        if ($script:_beginFailed) { return }
         # Get running state from wsl --list --verbose
         $wslStatus = @{}
         try {

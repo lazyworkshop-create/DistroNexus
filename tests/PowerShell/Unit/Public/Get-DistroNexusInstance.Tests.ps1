@@ -191,9 +191,18 @@ Describe "Get-DistroNexusInstance" -Tag 'Unit', 'Public', 'Get' {
                 Mock Invoke-Expression {
                     throw "wsl.exe not found"
                 } -ModuleName DistroNexus
-                
+
                 # Act & Assert
                 { Get-DistroNexusInstance } | Should -Not -Throw
+            }
+        }
+
+        It "sets FullyQualifiedErrorId with DistroNexus prefix on failure" {
+            InModuleScope DistroNexus {
+                Mock Get-InstanceCache { throw "not found" } -ModuleName DistroNexus
+                $err = $null
+                Get-DistroNexusInstance -Name "NoSuch" -ErrorVariable err -ErrorAction SilentlyContinue
+                ($err | Where-Object { $_.FullyQualifiedErrorId -match "^DistroNexus\." }) | Should -Not -BeNullOrEmpty
             }
         }
     }

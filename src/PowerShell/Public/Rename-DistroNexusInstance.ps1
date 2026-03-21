@@ -86,6 +86,11 @@ function Rename-DistroNexusInstance {
         }
         catch {
             Write-DistroNexusLog "Failed to rename instance: $_" -Level ERROR
+            Write-Error -Message $_.Exception.Message `
+                        -ErrorId "DistroNexus.RenameFailed" `
+                        -Category OperationStopped `
+                        -TargetObject $Name `
+                        -ErrorAction Stop
             return $false
         }
         finally {
