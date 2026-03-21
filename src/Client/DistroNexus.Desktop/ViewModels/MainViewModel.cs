@@ -7,6 +7,7 @@ using DistroNexus.Desktop.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Windows;
 using WPFLocalizeExtension.Engine;
 using System.Globalization;
@@ -105,6 +106,45 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public async Task InitializeAsync()
     {
         await LoadUserPreferencesAsync();
+        await ShowPendingBackupNotificationsAsync();
+    }
+
+    /// <summary>
+    /// Reads and displays any backup failure notifications persisted by backup-runner.ps1 (E-04-1).
+    /// Deletes the notification file after displaying to prevent repeat display.
+    /// </summary>
+    private async Task ShowPendingBackupNotificationsAsync()
+    {
+        var notifPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "DistroNexus", "pending-notifications.json");
+        if (!File.Exists(notifPath))
+            return;
+
+        try
+        {
+            var json = await File.ReadAllTextAsync(notifPath);
+            var doc = System.Text.Json.JsonDocument.Parse(json);
+            var notifs = doc.RootElement.GetProperty("notifications");
+            foreach (var n in notifs.EnumerateArray())
+            {
+                var msg = n.GetProperty("message").GetString();
+                var inst = n.GetProperty("instance").GetString();
+                await ShowAlert("Backup Failure", $"Backup failed for '{inst}': {msg}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to read or display pending backup notifications");
+        }
+        finally
+        {
+            try { File.Delete(notifPath); }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to delete pending-notifications.json after display");
+            }
+        }
     }
 
     /// <summary>
