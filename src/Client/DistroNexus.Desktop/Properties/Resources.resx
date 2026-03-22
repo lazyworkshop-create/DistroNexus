@@ -1321,4 +1321,45 @@ This will start the installation process.</value>
   <data name="TooltipSparseModeEnabled" xml:space="preserve">
     <value>Sparse VHDX automatically shrinks the disk file when space is freed. Requires WSL v2 and Windows 11. Enabling or disabling requires the instance to restart.</value>
   </data>
-</root>
+  <data name="MoreMenu_Details" xml:space="preserve">
+    <value>Details...</value>
+  </data>
+  <data name="MoreMenu_CompactDisk" xml:space="preserve">
+    <value>Compact Disk</value>
+  </data>
+  <data name="MoreMenu_ExportInstance" xml:space="preserve">
+    <value>Export Instance...</value>
+  </data>
+  <data name="Toolbar_ImportInstance" xml:space="preserve">
+    <value>Import Instance</value>
+  </data>
+  <data name="Toolbar_SelectMode" xml:space="preserve">
+    <value>Select</value>
+  </data>
+  <data name="Toolbar_CompactSelected" xml:space="preserve">
+    <value>Compact Selected</value>
+  </data>
+  <data name="InstanceDetail_Title" xml:space="preserve">
+    <value>Instance Details</value>
+  </data>
+  <data name="InstanceDetail_Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Tab_Disk" xml:space="preserve">
+    <value>Disk</value>
+  </data>
+  <data name="Tab_Resources" xml:space="preserve">
+    <value>Resources</value>
+  </data>
+  <data name="Tab_Integrations" xml:space="preserve">
+    <value>Integrations</value>
+  </data>
+  <data name="Tab_Network" xml:space="preserve">
+    <value>Network</value>
+  </data>
+  <data name="Tab_Backup" xml:space="preserve">
+    <value>Backup</value>
+  </data>
+  <data name="ErrorGenericOperation" xml:space="preserve">
+    <value>Operation failed: {0}</value>
+  </data></root>

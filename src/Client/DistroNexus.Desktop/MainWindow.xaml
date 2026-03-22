@@ -69,13 +69,25 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                               Icon="{ui:SymbolIcon Symbol=Library20}"
                               Command="{Binding ShowTemplatesCommand}"
                               Margin="0,0,10,0"/>
+                    <ui:Button Content="{lex:Loc Toolbar_ImportInstance}"
+                              Icon="{ui:SymbolIcon Symbol=ArrowImport20}"
+                              Command="{Binding ImportInstanceCommand}"
+                              Margin="0,0,10,0"/>
                     <ui:Button Content="{lex:Loc SettingsTitle}" 
                               Icon="{ui:SymbolIcon Symbol=Settings20}"
-                              Command="{Binding ShowSettingsCommand}"/>
+                              Command="{Binding ShowSettingsCommand}"
+                              Margin="0,0,10,0"/>
+                    <ToggleButton Content="{lex:Loc Toolbar_SelectMode}"
+                                  IsChecked="{Binding IsMultiSelectMode}"
+                                  Command="{Binding ToggleMultiSelectCommand}"/>
                 </StackPanel>
                 
                 <!-- Right Side: Theme and Language Controls (always visible) -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <!-- Auto-refresh indicator -->
+                    <ui:ProgressRing Width="16" Height="16" IsIndeterminate="True"
+                                     Visibility="{Binding IsAutoRefreshing, Converter={StaticResource BoolToVisibilityConverter}}"
+                                     Margin="0,0,8,0"/>
                     <!-- Download Tasks Button -->
                     <ui:Button Icon="{ui:SymbolIcon Symbol=ArrowDownload24}"
                               Command="{Binding ToggleDownloadPanelCommand}"
@@ -95,12 +107,25 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
 
             <!-- Dashboard View (Instance List) -->
             <Grid Grid.Column="0" Grid.Row="1" Visibility="{Binding IsOnDashboard, Converter={StaticResource BoolToVisibilityConverter}}">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,0,16,0">
+                <!-- Inner Grid: list + compact-selected action bar -->
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Margin="0,0,16,0">
                     <ItemsControl ItemsSource="{Binding Instances}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="{x:Type vm:WslInstanceViewModel}">
                                 <ui:Card Margin="0,0,0,10" Padding="0">
                                     <Grid>
+                                        <!-- Multi-select checkbox (visible only in select mode) -->
+                                        <CheckBox IsChecked="{Binding IsSelected}"
+                                                  VerticalAlignment="Top"
+                                                  HorizontalAlignment="Left"
+                                                  Margin="8,8,0,0"
+                                                  Panel.ZIndex="1"
+                                                  Visibility="{Binding DataContext.IsMultiSelectMode, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource BoolToVisibilityConverter}}"/>
                                         <Grid Margin="15">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
@@ -155,9 +180,16 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                                                 <ui:DropDownButton Content="{lex:Loc InstanceMore}" Icon="{ui:SymbolIcon Symbol=MoreHorizontal20}">
                                                     <ui:DropDownButton.Flyout>
                                                         <ContextMenu>
+                                                            <ui:MenuItem Header="{lex:Loc MoreMenu_Details}" Icon="{ui:SymbolIcon Symbol=Info20}" Command="{Binding OpenDetailsCommand}"/>
+                                                            <Separator/>
+                                                            <ui:MenuItem Header="{lex:Loc MoreMenu_CompactDisk}" Icon="{ui:SymbolIcon Symbol=DatabaseArrowDown20}" Command="{Binding CompactDiskCommand}"
+                                                                         Visibility="{Binding IsWslV2, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                            <ui:MenuItem Header="{lex:Loc MoreMenu_ExportInstance}" Icon="{ui:SymbolIcon Symbol=ArrowExport20}" Command="{Binding ExportInstanceCommand}"/>
+                                                            <Separator/>
                                                             <ui:MenuItem Header="{lex:Loc ActionMove}" Icon="{ui:SymbolIcon Symbol=ArrowMove20}" Command="{Binding MoveCommand}"/>
                                                             <ui:MenuItem Header="{lex:Loc ActionRename}" Icon="{ui:SymbolIcon Symbol=Rename20}" Command="{Binding RenameCommand}"/>
                                                             <ui:MenuItem Header="{lex:Loc ActionSetCredentials}" Icon="{ui:SymbolIcon Symbol=Key20}" Command="{Binding SetCredentialsCommand}"/>
+                                                            <Separator/>
                                                             <ui:MenuItem Header="{lex:Loc ActionForceRefresh}" Icon="{ui:SymbolIcon Symbol=ArrowSync20}" Command="{Binding ForceRefreshCommand}"/>
                                                             <Separator/>
                                                             <ui:MenuItem Header="{lex:Loc ActionRemove}" Icon="{ui:SymbolIcon Symbol=Delete20}" Command="{Binding RemoveCommand}"/>
@@ -178,6 +210,14 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </ScrollViewer>
+                    <!-- Compact Selected action bar (multi-select mode) -->
+                    <Border Grid.Row="1" Padding="0,8,0,0"
+                            Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <ui:Button Content="{lex:Loc Toolbar_CompactSelected}"
+                                   Icon="{ui:SymbolIcon Symbol=DatabaseArrowDown20}"
+                                   Command="{Binding CompactSelectedCommand}"/>
+                    </Border>
+                </Grid>
 
                 <!-- Empty State -->
                 <StackPanel VerticalAlignment="Center" 

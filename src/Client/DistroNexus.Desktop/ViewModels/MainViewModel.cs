@@ -63,6 +63,19 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(ActiveDownloadsDisplayText))]
     private int _activeDownloadsCount;
 
+    // ── Multi-select mode (P1-8) ──────────────────────────────────────────
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectedCount))]
+    private bool _isMultiSelectMode;
+
+    public int SelectedCount => Instances.Count(i => i.IsSelected);
+
+    // ── Auto-refresh indicator (P1-9) ────────────────────────────────────
+
+    [ObservableProperty]
+    private bool _isAutoRefreshing;
+
     public string ActiveDownloadsDisplayText => 
         string.Format(Properties.Resources.ActiveDownloadsFormat, ActiveDownloadsCount);
 
@@ -221,7 +234,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 Instances.Clear();
                 foreach (var instance in instances)
                 {
-                    var vm = new WslInstanceViewModel(instance, _wslManager, _terminalService, _settingsService, _logger, _tagService, _backupService);
+                    var vm = new WslInstanceViewModel(instance, _wslManager, _terminalService, _settingsService, _logger, _tagService, _backupService, _serviceProvider);
                     vm.RefreshRequested += (s, e) => _ = RefreshAsync();
                     Instances.Add(vm);
                 }
@@ -571,5 +584,33 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _wslEventWatcher.CacheInvalidationRequested -= OnCacheInvalidated;
+    }
+
+    // ── Multi-select commands (P1-8) ─────────────────────────────────────
+
+    [RelayCommand]
+    private void ToggleMultiSelect()
+    {
+        IsMultiSelectMode = !IsMultiSelectMode;
+        if (!IsMultiSelectMode)
+        {
+            foreach (var vm in Instances)
+                vm.IsSelected = false;
+        }
+        OnPropertyChanged(nameof(SelectedCount));
+    }
+
+    [RelayCommand]
+    private void CompactSelected()
+    {
+        // Phase 2: bulk compaction of selected instances
+        _logger.LogInformation("Compact selected triggered ({Count} selected)", SelectedCount);
+    }
+
+    [RelayCommand]
+    private void ImportInstance()
+    {
+        // Phase 2: ImportInstanceDialog
+        _logger.LogInformation("Import instance requested");
     }
 }

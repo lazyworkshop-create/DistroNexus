@@ -2139,5 +2139,20 @@ namespace DistroNexus.Desktop.Properties {
         public static string ErrorLoadWslInstances { get { return ResourceManager.GetString("ErrorLoadWslInstances", resourceCulture); } }
         public static string TitleLoadError { get { return ResourceManager.GetString("TitleLoadError", resourceCulture); } }
         public static string TooltipSparseModeEnabled { get { return ResourceManager.GetString("TooltipSparseModeEnabled", resourceCulture); } }
+
+        public static string MoreMenu_Details { get { return ResourceManager.GetString("MoreMenu_Details", resourceCulture); } }
+        public static string MoreMenu_CompactDisk { get { return ResourceManager.GetString("MoreMenu_CompactDisk", resourceCulture); } }
+        public static string MoreMenu_ExportInstance { get { return ResourceManager.GetString("MoreMenu_ExportInstance", resourceCulture); } }
+        public static string Toolbar_ImportInstance { get { return ResourceManager.GetString("Toolbar_ImportInstance", resourceCulture); } }
+        public static string Toolbar_SelectMode { get { return ResourceManager.GetString("Toolbar_SelectMode", resourceCulture); } }
+        public static string Toolbar_CompactSelected { get { return ResourceManager.GetString("Toolbar_CompactSelected", resourceCulture); } }
+        public static string InstanceDetail_Title { get { return ResourceManager.GetString("InstanceDetail_Title", resourceCulture); } }
+        public static string InstanceDetail_Close { get { return ResourceManager.GetString("InstanceDetail_Close", resourceCulture); } }
+        public static string Tab_Disk { get { return ResourceManager.GetString("Tab_Disk", resourceCulture); } }
+        public static string Tab_Resources { get { return ResourceManager.GetString("Tab_Resources", resourceCulture); } }
+        public static string Tab_Integrations { get { return ResourceManager.GetString("Tab_Integrations", resourceCulture); } }
+        public static string Tab_Network { get { return ResourceManager.GetString("Tab_Network", resourceCulture); } }
+        public static string Tab_Backup { get { return ResourceManager.GetString("Tab_Backup", resourceCulture); } }
+        public static string ErrorGenericOperation { get { return ResourceManager.GetString("ErrorGenericOperation", resourceCulture); } }
     }
 }

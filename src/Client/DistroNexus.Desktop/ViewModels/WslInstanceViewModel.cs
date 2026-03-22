@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using DistroNexus.Desktop.Views;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Windows;
 
@@ -19,6 +20,7 @@ public partial class WslInstanceViewModel : ObservableObject
     private readonly ILogger _logger;
     private readonly ITagService _tagService;
     private readonly IBackupService _backupService;
+    private readonly IServiceProvider _serviceProvider;
 
     /// <summary>
     /// Event raised when the instance requests a refresh of the main list (e.g. after deletion).
@@ -37,11 +39,16 @@ public partial class WslInstanceViewModel : ObservableObject
     [ObservableProperty]
     private bool _isBusy;
 
+    /// <summary>True when this instance is checked in multi-select mode.</summary>
+    [ObservableProperty]
+    private bool _isSelected;
+
     public string Name => Instance.Name;
     public string State => Instance.State == "Running" ? Properties.Resources.StateRunning : 
                           (Instance.State == "Stopped" ? Properties.Resources.StateStopped : Instance.State);
     public string RawState => Instance.State;
     public bool IsRunning => Instance.IsRunning;
+    public bool IsWslV2 => Instance.Version == 2;
     public string InstallPath => WslInstance.NormalizeWindowsPath(Instance.InstallPath);
     public string Distribution => Instance.Distribution;
     public long DiskSize => Instance.Size;
@@ -77,12 +84,14 @@ public partial class WslInstanceViewModel : ObservableObject
         ISettingsService settingsService,
         ILogger logger,
         ITagService tagService,
-        IBackupService backupService)
+        IBackupService backupService,
+        IServiceProvider serviceProvider)
     {
         _instance = instance;
         _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
         _terminalService = terminalService ?? throw new ArgumentNullException(nameof(terminalService));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _tagService = tagService ?? throw new ArgumentNullException(nameof(tagService));
         _backupService = backupService ?? throw new ArgumentNullException(nameof(backupService));
@@ -606,5 +615,47 @@ public partial class WslInstanceViewModel : ObservableObject
         {
             IsBusy = false;
         }
+    }
+
+    /// <summary>
+    /// Opens the InstanceDetailDialog for this instance.
+    /// </summary>
+    [RelayCommand]
+    private void OpenDetails()
+    {
+        var wslManager = _serviceProvider.GetRequiredService<IWslManagerService>();
+        var dockerSvc = _serviceProvider.GetRequiredService<IDockerIntegrationService>();
+        var networkSvc = _serviceProvider.GetRequiredService<INetworkService>();
+        var backupSvc = _serviceProvider.GetRequiredService<IBackupService>();
+        var wslConfigSvc = _serviceProvider.GetRequiredService<IWslConfigService>();
+        var tagSvc = _serviceProvider.GetRequiredService<ITagService>();
+        var dialogSvc = _serviceProvider.GetRequiredService<IDialogService>();
+
+        var vm = new InstanceDetailViewModel(this, wslManager, dockerSvc, networkSvc, backupSvc, wslConfigSvc, tagSvc, dialogSvc);
+        var dialog = new InstanceDetailDialog(vm)
+        {
+            Owner = Application.Current.MainWindow
+        };
+        dialog.ShowDialog();
+    }
+
+    /// <summary>
+    /// Initiates disk compaction for this instance (stub — implemented in Phase 2).
+    /// </summary>
+    [RelayCommand]
+    private void CompactDisk()
+    {
+        // Phase 2: navigate to Disk tab of InstanceDetailDialog
+        OpenDetails();
+    }
+
+    /// <summary>
+    /// Exports this instance to a TAR file (stub — implemented in Phase 2).
+    /// </summary>
+    [RelayCommand]
+    private void ExportInstance()
+    {
+        // Phase 2: open export dialog
+        OpenDetails();
     }
 }
