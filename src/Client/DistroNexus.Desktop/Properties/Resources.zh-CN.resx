@@ -1608,4 +1608,97 @@
   <data name="NetworkTab_StoppedPlaceholder" xml:space="preserve">
     <value>启动实例以查看网络信息。</value>
   </data>
+  <data name="BackupTab_ScheduleTitle" xml:space="preserve">
+    <value>备份计划</value>
+  </data>
+  <data name="BackupTab_Frequency" xml:space="preserve">
+    <value>频率</value>
+  </data>
+  <data name="BackupTab_FrequencyDaily" xml:space="preserve">
+    <value>每天</value>
+  </data>
+  <data name="BackupTab_FrequencyWeekly" xml:space="preserve">
+    <value>每周</value>
+  </data>
+  <data name="BackupTab_FrequencyMonthly" xml:space="preserve">
+    <value>每月</value>
+  </data>
+  <data name="BackupTab_DayOfWeek" xml:space="preserve">
+    <value>星期</value>
+  </data>
+  <data name="BackupTab_DayOfMonth" xml:space="preserve">
+    <value>日期</value>
+  </data>
+  <data name="BackupTab_TimeOfDay" xml:space="preserve">
+    <value>时间</value>
+  </data>
+  <data name="BackupTab_Destination" xml:space="preserve">
+    <value>目标文件夹</value>
+  </data>
+  <data name="BackupTab_Browse" xml:space="preserve">
+    <value>浏览...</value>
+  </data>
+  <data name="BackupTab_RetentionCount" xml:space="preserve">
+    <value>保留文件数</value>
+  </data>
+  <data name="BackupTab_SaveSchedule" xml:space="preserve">
+    <value>保存计划</value>
+  </data>
+  <data name="BackupTab_RemoveSchedule" xml:space="preserve">
+    <value>删除计划</value>
+  </data>
+  <data name="BackupTab_BackupNow" xml:space="preserve">
+    <value>立即备份</value>
+  </data>
+  <data name="BackupTab_RemoveConfirm" xml:space="preserve">
+    <value>确定要删除 '{0}' 的备份计划吗？</value>
+  </data>
+  <data name="BackupTab_BackingUp" xml:space="preserve">
+    <value>备份中...</value>
+  </data>
+  <data name="BackupTab_HistoryTitle" xml:space="preserve">
+    <value>备份历史</value>
+  </data>
+  <data name="BackupTab_Timestamp" xml:space="preserve">
+    <value>日期/时间</value>
+  </data>
+  <data name="BackupTab_FileName" xml:space="preserve">
+    <value>文件名</value>
+  </data>
+  <data name="BackupTab_Size" xml:space="preserve">
+    <value>大小</value>
+  </data>
+  <data name="BackupTab_Status" xml:space="preserve">
+    <value>状态</value>
+  </data>
+  <data name="BackupTab_StatusSuccess" xml:space="preserve">
+    <value>成功</value>
+  </data>
+  <data name="BackupTab_StatusFailed" xml:space="preserve">
+    <value>失败</value>
+  </data>
+  <data name="BackupTab_NoDestination" xml:space="preserve">
+    <value>请指定目标文件夹。</value>
+  </data>
+  <data name="BackupTab_SavedSchedule" xml:space="preserve">
+    <value>备份计划已成功保存。</value>
+  </data>
+  <data name="BackupTab_ScheduleRemoved" xml:space="preserve">
+    <value>备份计划已删除。</value>
+  </data>
+  <data name="BackupTab_BackupComplete" xml:space="preserve">
+    <value>备份已成功完成。</value>
+  </data>
+  <data name="BackupTab_NoHistory" xml:space="preserve">
+    <value>在目标文件夹中未找到备份文件。</value>
+  </data>
+  <data name="BackupTab_SelectDestinationTitle" xml:space="preserve">
+    <value>选择备份目标文件夹</value>
+  </data>
+  <data name="Remove_DeleteTask" xml:space="preserve">
+    <value>同时删除此备份计划对应的任务计划程序任务？</value>
+  </data>
+  <data name="Remove_DeleteFiles" xml:space="preserve">
+    <value>同时删除 '{0}' 中的备份文件？</value>
+  </data>
 </root>

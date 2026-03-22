@@ -1614,4 +1614,97 @@ This will start the installation process.</value>
   <data name="NetworkTab_StoppedPlaceholder" xml:space="preserve">
     <value>Start the instance to view network information.</value>
   </data>
+  <data name="BackupTab_ScheduleTitle" xml:space="preserve">
+    <value>Backup Schedule</value>
+  </data>
+  <data name="BackupTab_Frequency" xml:space="preserve">
+    <value>Frequency</value>
+  </data>
+  <data name="BackupTab_FrequencyDaily" xml:space="preserve">
+    <value>Daily</value>
+  </data>
+  <data name="BackupTab_FrequencyWeekly" xml:space="preserve">
+    <value>Weekly</value>
+  </data>
+  <data name="BackupTab_FrequencyMonthly" xml:space="preserve">
+    <value>Monthly</value>
+  </data>
+  <data name="BackupTab_DayOfWeek" xml:space="preserve">
+    <value>Day of Week</value>
+  </data>
+  <data name="BackupTab_DayOfMonth" xml:space="preserve">
+    <value>Day of Month</value>
+  </data>
+  <data name="BackupTab_TimeOfDay" xml:space="preserve">
+    <value>Time</value>
+  </data>
+  <data name="BackupTab_Destination" xml:space="preserve">
+    <value>Destination Folder</value>
+  </data>
+  <data name="BackupTab_Browse" xml:space="preserve">
+    <value>Browse...</value>
+  </data>
+  <data name="BackupTab_RetentionCount" xml:space="preserve">
+    <value>Keep Last (files)</value>
+  </data>
+  <data name="BackupTab_SaveSchedule" xml:space="preserve">
+    <value>Save Schedule</value>
+  </data>
+  <data name="BackupTab_RemoveSchedule" xml:space="preserve">
+    <value>Remove Schedule</value>
+  </data>
+  <data name="BackupTab_BackupNow" xml:space="preserve">
+    <value>Backup Now</value>
+  </data>
+  <data name="BackupTab_RemoveConfirm" xml:space="preserve">
+    <value>Are you sure you want to remove the backup schedule for '{0}'?</value>
+  </data>
+  <data name="BackupTab_BackingUp" xml:space="preserve">
+    <value>Backup in progress...</value>
+  </data>
+  <data name="BackupTab_HistoryTitle" xml:space="preserve">
+    <value>Backup History</value>
+  </data>
+  <data name="BackupTab_Timestamp" xml:space="preserve">
+    <value>Date / Time</value>
+  </data>
+  <data name="BackupTab_FileName" xml:space="preserve">
+    <value>File Name</value>
+  </data>
+  <data name="BackupTab_Size" xml:space="preserve">
+    <value>Size</value>
+  </data>
+  <data name="BackupTab_Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="BackupTab_StatusSuccess" xml:space="preserve">
+    <value>Success</value>
+  </data>
+  <data name="BackupTab_StatusFailed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="BackupTab_NoDestination" xml:space="preserve">
+    <value>Please specify a destination folder.</value>
+  </data>
+  <data name="BackupTab_SavedSchedule" xml:space="preserve">
+    <value>Backup schedule saved successfully.</value>
+  </data>
+  <data name="BackupTab_ScheduleRemoved" xml:space="preserve">
+    <value>Backup schedule removed.</value>
+  </data>
+  <data name="BackupTab_BackupComplete" xml:space="preserve">
+    <value>Backup completed successfully.</value>
+  </data>
+  <data name="BackupTab_NoHistory" xml:space="preserve">
+    <value>No backup files found in the destination folder.</value>
+  </data>
+  <data name="BackupTab_SelectDestinationTitle" xml:space="preserve">
+    <value>Select Backup Destination Folder</value>
+  </data>
+  <data name="Remove_DeleteTask" xml:space="preserve">
+    <value>Also remove the associated Task Scheduler task for this backup schedule?</value>
+  </data>
+  <data name="Remove_DeleteFiles" xml:space="preserve">
+    <value>Also delete backup files in '{0}'?</value>
+  </data>
 </root>

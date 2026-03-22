@@ -2235,5 +2235,37 @@ namespace DistroNexus.Desktop.Properties {
         public static string NetworkTab_Copy { get { return ResourceManager.GetString("NetworkTab_Copy", resourceCulture); } }
         public static string NetworkTab_Refresh { get { return ResourceManager.GetString("NetworkTab_Refresh", resourceCulture); } }
         public static string NetworkTab_StoppedPlaceholder { get { return ResourceManager.GetString("NetworkTab_StoppedPlaceholder", resourceCulture); } }
+        // Phase 5 — Backup Tab
+        public static string BackupTab_ScheduleTitle { get { return ResourceManager.GetString("BackupTab_ScheduleTitle", resourceCulture); } }
+        public static string BackupTab_Frequency { get { return ResourceManager.GetString("BackupTab_Frequency", resourceCulture); } }
+        public static string BackupTab_FrequencyDaily { get { return ResourceManager.GetString("BackupTab_FrequencyDaily", resourceCulture); } }
+        public static string BackupTab_FrequencyWeekly { get { return ResourceManager.GetString("BackupTab_FrequencyWeekly", resourceCulture); } }
+        public static string BackupTab_FrequencyMonthly { get { return ResourceManager.GetString("BackupTab_FrequencyMonthly", resourceCulture); } }
+        public static string BackupTab_DayOfWeek { get { return ResourceManager.GetString("BackupTab_DayOfWeek", resourceCulture); } }
+        public static string BackupTab_DayOfMonth { get { return ResourceManager.GetString("BackupTab_DayOfMonth", resourceCulture); } }
+        public static string BackupTab_TimeOfDay { get { return ResourceManager.GetString("BackupTab_TimeOfDay", resourceCulture); } }
+        public static string BackupTab_Destination { get { return ResourceManager.GetString("BackupTab_Destination", resourceCulture); } }
+        public static string BackupTab_Browse { get { return ResourceManager.GetString("BackupTab_Browse", resourceCulture); } }
+        public static string BackupTab_RetentionCount { get { return ResourceManager.GetString("BackupTab_RetentionCount", resourceCulture); } }
+        public static string BackupTab_SaveSchedule { get { return ResourceManager.GetString("BackupTab_SaveSchedule", resourceCulture); } }
+        public static string BackupTab_RemoveSchedule { get { return ResourceManager.GetString("BackupTab_RemoveSchedule", resourceCulture); } }
+        public static string BackupTab_BackupNow { get { return ResourceManager.GetString("BackupTab_BackupNow", resourceCulture); } }
+        public static string BackupTab_RemoveConfirm { get { return ResourceManager.GetString("BackupTab_RemoveConfirm", resourceCulture); } }
+        public static string BackupTab_BackingUp { get { return ResourceManager.GetString("BackupTab_BackingUp", resourceCulture); } }
+        public static string BackupTab_HistoryTitle { get { return ResourceManager.GetString("BackupTab_HistoryTitle", resourceCulture); } }
+        public static string BackupTab_Timestamp { get { return ResourceManager.GetString("BackupTab_Timestamp", resourceCulture); } }
+        public static string BackupTab_FileName { get { return ResourceManager.GetString("BackupTab_FileName", resourceCulture); } }
+        public static string BackupTab_Size { get { return ResourceManager.GetString("BackupTab_Size", resourceCulture); } }
+        public static string BackupTab_Status { get { return ResourceManager.GetString("BackupTab_Status", resourceCulture); } }
+        public static string BackupTab_StatusSuccess { get { return ResourceManager.GetString("BackupTab_StatusSuccess", resourceCulture); } }
+        public static string BackupTab_StatusFailed { get { return ResourceManager.GetString("BackupTab_StatusFailed", resourceCulture); } }
+        public static string BackupTab_NoDestination { get { return ResourceManager.GetString("BackupTab_NoDestination", resourceCulture); } }
+        public static string BackupTab_SavedSchedule { get { return ResourceManager.GetString("BackupTab_SavedSchedule", resourceCulture); } }
+        public static string BackupTab_ScheduleRemoved { get { return ResourceManager.GetString("BackupTab_ScheduleRemoved", resourceCulture); } }
+        public static string BackupTab_BackupComplete { get { return ResourceManager.GetString("BackupTab_BackupComplete", resourceCulture); } }
+        public static string BackupTab_NoHistory { get { return ResourceManager.GetString("BackupTab_NoHistory", resourceCulture); } }
+        public static string BackupTab_SelectDestinationTitle { get { return ResourceManager.GetString("BackupTab_SelectDestinationTitle", resourceCulture); } }
+        public static string Remove_DeleteTask { get { return ResourceManager.GetString("Remove_DeleteTask", resourceCulture); } }
+        public static string Remove_DeleteFiles { get { return ResourceManager.GetString("Remove_DeleteFiles", resourceCulture); } }
     }
 }

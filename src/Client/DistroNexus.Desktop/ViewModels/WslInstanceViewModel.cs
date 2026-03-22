@@ -353,13 +353,16 @@ public partial class WslInstanceViewModel : ObservableObject
 
         var instanceName = Name;
 
-        // Check if a backup schedule exists and warn user (E-04-2)
+        // Check if a backup schedule exists and offer cleanup (P5-4 / D-01-6)
+        string? backupDestination = null;
+        bool removeBackupTask = false;
+        bool deleteBackupFiles = false;
         try
         {
             var schedules = await _backupService.GetSchedulesAsync();
-            var hasSchedule = schedules.Any(s =>
+            var schedule = schedules.FirstOrDefault(s =>
                 string.Equals(s.Name, instanceName, StringComparison.OrdinalIgnoreCase));
-            if (hasSchedule)
+            if (schedule is not null)
             {
                 var confirm = new Wpf.Ui.Controls.MessageBox
                 {
@@ -373,6 +376,23 @@ public partial class WslInstanceViewModel : ObservableObject
                 {
                     return;
                 }
+
+                backupDestination = schedule.Destination;
+
+                // Ask whether to clean up Task Scheduler task
+                removeBackupTask = ConfirmDialog.Show(
+                    Properties.Resources.ConfirmRemoveTitle,
+                    Properties.Resources.Remove_DeleteTask,
+                    Properties.Resources.ButtonRemove);
+
+                // Ask whether to delete backup files
+                if (!string.IsNullOrWhiteSpace(backupDestination))
+                {
+                    deleteBackupFiles = ConfirmDialog.Show(
+                        Properties.Resources.ConfirmRemoveTitle,
+                        string.Format(Properties.Resources.Remove_DeleteFiles, backupDestination),
+                        Properties.Resources.ButtonRemove);
+                }
             }
         }
         catch (Exception ex)
@@ -384,6 +404,38 @@ public partial class WslInstanceViewModel : ObservableObject
         {
             IsBusy = true;
             _logger.LogInformation("Removing instance {Name}", instanceName);
+
+            if (removeBackupTask)
+            {
+                try
+                {
+                    await _backupService.RemoveScheduleAsync(instanceName);
+                    _logger.LogInformation("Backup schedule removed for instance {Name}", instanceName);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to remove backup schedule for instance {Name}", instanceName);
+                }
+            }
+
+            if (deleteBackupFiles && !string.IsNullOrWhiteSpace(backupDestination)
+                && System.IO.Directory.Exists(backupDestination))
+            {
+                try
+                {
+                    foreach (var file in System.IO.Directory.EnumerateFiles(backupDestination)
+                        .Where(f => f.EndsWith(".tar", StringComparison.OrdinalIgnoreCase)
+                                 || f.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        System.IO.File.Delete(file);
+                    }
+                    _logger.LogInformation("Deleted backup files for instance {Name} from {Dest}", instanceName, backupDestination);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to delete backup files for instance {Name}", instanceName);
+                }
+            }
 
             await _wslManager.RemoveInstanceAsync(instanceName);
 
