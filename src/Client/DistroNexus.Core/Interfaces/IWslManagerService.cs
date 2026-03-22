@@ -140,4 +140,11 @@ public interface IWslManagerService
     /// <param name="enabled">True to enable sparse mode, false to disable.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     Task SetSparseModeAsync(string name, bool enabled, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Shuts down the WSL virtual machine and all running instances.
+    /// </summary>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    Task ShutdownWslAsync(CancellationToken cancellationToken = default);
 }
+

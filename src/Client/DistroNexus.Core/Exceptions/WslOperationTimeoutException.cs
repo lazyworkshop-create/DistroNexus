@@ -20,7 +20,7 @@ public class WslOperationTimeoutException : WslOperationException
     /// <param name="timeoutSeconds">The timeout duration in seconds.</param>
     /// <param name="instanceName">The name of the WSL instance.</param>
     public WslOperationTimeoutException(string operation, int timeoutSeconds, string? instanceName = null)
-        : base($"Operation '{operation}' timed out after {timeoutSeconds} seconds.", DistroNexusErrorCode.UnknownError, operation: operation, instanceName: instanceName)
+        : base($"Operation '{operation}' timed out after {timeoutSeconds} seconds.", DistroNexusErrorCode.OperationTimeout, operation: operation, instanceName: instanceName)
     {
         TimeoutSeconds = timeoutSeconds;
     }
@@ -33,7 +33,7 @@ public class WslOperationTimeoutException : WslOperationException
     /// <param name="timeoutSeconds">The timeout duration in seconds.</param>
     /// <param name="instanceName">The name of the WSL instance.</param>
     public WslOperationTimeoutException(string message, string operation, int timeoutSeconds, string? instanceName = null)
-        : base(message, DistroNexusErrorCode.UnknownError, operation: operation, instanceName: instanceName)
+        : base(message, DistroNexusErrorCode.OperationTimeout, operation: operation, instanceName: instanceName)
     {
         TimeoutSeconds = timeoutSeconds;
     }
@@ -47,8 +47,9 @@ public class WslOperationTimeoutException : WslOperationException
     /// <param name="timeoutSeconds">The timeout duration in seconds.</param>
     /// <param name="instanceName">The name of the WSL instance.</param>
     public WslOperationTimeoutException(string message, Exception? innerException, string operation, int timeoutSeconds, string? instanceName = null)
-        : base(message, innerException, DistroNexusErrorCode.UnknownError, operation: operation, instanceName: instanceName)
+        : base(message, innerException, DistroNexusErrorCode.OperationTimeout, operation: operation, instanceName: instanceName)
     {
         TimeoutSeconds = timeoutSeconds;
     }
 }
+

@@ -41,5 +41,6 @@ public enum DistroNexusErrorCode
     // ── System / Unknown ──────────────────────────────────────────────────
     WslNotInstalled  = 9001,
     WslVersionTooLow = 9002,
+    OperationTimeout = 9003,
     UnknownError     = 9999,
 }

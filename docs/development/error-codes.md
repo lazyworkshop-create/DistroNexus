@@ -73,6 +73,7 @@ in PowerShell via `-ErrorId "DistroNexus.<CodeName>"` on `Write-Error` calls.
 |------|-------------------|-------------|
 | 9001 | `WslNotInstalled` | `wsl.exe` is not found on `PATH` |
 | 9002 | `WslVersionTooLow`| Installed WSL version is below the minimum required |
+| 9003 | `OperationTimeout`| A WSL operation exceeded its timeout; thrown by `WslOperationTimeoutException` |
 | 9999 | `UnknownError`    | Catch-all for unexpected exceptions; check inner exception |
 
 ---

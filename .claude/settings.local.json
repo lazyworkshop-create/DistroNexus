@@ -10,7 +10,8 @@
       "Bash(dotnet build DistroNexus.slnx --configuration Debug --no-restore)",
       "Bash(dotnet test DistroNexus.slnx --filter \"FullyQualifiedName~ErrorCodeTests\" --no-build)",
       "Bash(dotnet test DistroNexus.slnx --no-build)",
-      "Bash(dotnet test DistroNexus.slnx --filter \"FullyQualifiedName~WslEventWatcherTests\" --no-build)"
+      "Bash(dotnet test DistroNexus.slnx --filter \"FullyQualifiedName~WslEventWatcherTests\" --no-build)",
+      "Bash(gh run:*)"
     ]
   }
 }

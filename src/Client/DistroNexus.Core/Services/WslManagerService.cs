@@ -1549,4 +1549,26 @@ public partial class WslManagerService : IWslManagerService
 
         _logger.LogInformation("Sparse mode set to {Enabled} for {Name}", enabled, name);
     }
+    /// <inheritdoc/>
+    public async Task ShutdownWslAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Shutting down WSL");
+        if (_wslCliRunner != null)
+        {
+            var result = await _wslCliRunner.RunAsync("--shutdown", cancellationToken);
+            if (result.ExitCode != 0)
+                _logger.LogWarning("wsl --shutdown returned non-zero exit code: {Code}", result.ExitCode);
+            return;
+        }
+
+        var psResult = await _powerShellService.ExecuteModuleCmdletAsync(
+            "Stop-DistroNexusAllInstances",
+            parameters: new Dictionary<string, object>(),
+            options: new ModuleCallOptions { TimeoutSeconds = NormalOperationTimeoutSeconds, ParseAsJson = false, UseModuleFallback = false },
+            cancellationToken: cancellationToken);
+
+        if (psResult == null || !psResult.Success)
+            _logger.LogWarning("WSL shutdown via PowerShell may have failed: {Error}", psResult?.Error);
+    }
 }
+
