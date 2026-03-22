@@ -6,15 +6,69 @@
              lex:ResxLocalizationProvider.DefaultAssembly="DistroNexus.Desktop"
              lex:ResxLocalizationProvider.DefaultDictionary="Properties.Resources">
     <Grid Margin="20">
-        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-            <ui:SymbolIcon Symbol="SlideSize20" FontSize="48"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-            <TextBlock Text="{lex:Loc Tab_Resources}"
-                       FontSize="18" FontWeight="SemiBold"
-                       HorizontalAlignment="Center" Margin="0,12,0,4"/>
-            <TextBlock Text="Resource configuration features coming in Phase 2"
-                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                       HorizontalAlignment="Center"/>
+        <!-- WSL v1 guard -->
+        <TextBlock Text="{lex:Loc ResourcesTab_WslV1Message}"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                   Visibility="{Binding IsWslV1, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+        <!-- Main content (WSL v2 only) -->
+        <StackPanel Visibility="{Binding IsWslV1, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
+            <!-- Loading indicator -->
+            <ui:ProgressRing Width="28" Height="28" IsIndeterminate="True" Margin="0,0,0,12"
+                              Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+            <!-- Sparse Mode section -->
+            <TextBlock Text="{lex:Loc ResourcesTab_SparseMode}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,8"/>
+            <Grid Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="{Binding SparseModeStatus}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                    <TextBlock Text="{lex:Loc ResourcesTab_SparseModeTooltip}"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                               TextWrapping="Wrap" MaxWidth="400" Margin="0,4,0,0" FontSize="11"/>
+                </StackPanel>
+                <ToggleButton Grid.Column="1"
+                              IsChecked="{Binding SparseMode}"
+                              Command="{Binding ToggleSparseModeCommand}"
+                              VerticalAlignment="Top"/>
+            </Grid>
+
+            <!-- Global Resource Limits section -->
+            <TextBlock Text="{lex:Loc ResourcesTab_GlobalLimits}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,8"/>
+            <Border Padding="12" CornerRadius="8"
+                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                    Margin="0,0,0,12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Memory:" Margin="0,0,12,6"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding MemoryDisplay}" Margin="0,0,0,6"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="CPU:" Margin="0,0,12,6"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding CpuDisplay}" Margin="0,0,0,6"/>
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Swap:" Margin="0,0,12,0"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SwapDisplay}"/>
+                </Grid>
+            </Border>
+            <TextBlock>
+                <Hyperlink NavigateUri="#">
+                    <Run Text="{lex:Loc ResourcesTab_EditInWslConfig}"/>
+                </Hyperlink>
+            </TextBlock>
         </StackPanel>
     </Grid>
 </UserControl>

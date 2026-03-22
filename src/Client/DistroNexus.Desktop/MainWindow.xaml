@@ -213,9 +213,18 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                     <!-- Compact Selected action bar (multi-select mode) -->
                     <Border Grid.Row="1" Padding="0,8,0,0"
                             Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BoolToVisibilityConverter}}">
-                        <ui:Button Content="{lex:Loc Toolbar_CompactSelected}"
-                                   Icon="{ui:SymbolIcon Symbol=DatabaseArrowDown20}"
-                                   Command="{Binding CompactSelectedCommand}"/>
+                        <StackPanel Orientation="Horizontal">
+                            <ui:Button Content="{lex:Loc Toolbar_CompactSelected}"
+                                       Icon="{ui:SymbolIcon Symbol=DatabaseArrowDown20}"
+                                       Command="{Binding CompactSelectedCommand}"
+                                       Margin="0,0,12,0"/>
+                            <!-- Bulk progress (shown while compacting) -->
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                                        Visibility="{Binding IsBulkCompacting, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <ui:ProgressRing Width="14" Height="14" IsIndeterminate="True" Margin="0,0,6,0"/>
+                                <TextBlock Text="{Binding BulkCompactProgressText}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </StackPanel>
                     </Border>
                 </Grid>
 

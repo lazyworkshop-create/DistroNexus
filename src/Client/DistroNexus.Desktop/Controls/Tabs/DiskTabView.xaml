@@ -6,15 +6,82 @@
              lex:ResxLocalizationProvider.DefaultAssembly="DistroNexus.Desktop"
              lex:ResxLocalizationProvider.DefaultDictionary="Properties.Resources">
     <Grid Margin="20">
-        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-            <ui:SymbolIcon Symbol="HardDrive20" FontSize="48"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-            <TextBlock Text="{lex:Loc Tab_Disk}"
-                       FontSize="18" FontWeight="SemiBold"
-                       HorizontalAlignment="Center" Margin="0,12,0,4"/>
-            <TextBlock Text="Disk management features coming in Phase 2"
-                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                       HorizontalAlignment="Center"/>
+        <!-- WSL v1 guard -->
+        <TextBlock Text="{lex:Loc DiskTab_WslV1Message}"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                   Visibility="{Binding IsWslV1, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+        <!-- Main content (WSL v2 only) -->
+        <StackPanel Visibility="{Binding IsWslV1, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
+            <!-- Disk info -->
+            <Grid Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="{lex:Loc DiskTab_VhdxPath}"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,12,6"/>
+                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding VhdxPath}"
+                           TextWrapping="Wrap" Margin="0,0,0,6"/>
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="{lex:Loc DiskTab_CurrentSize}"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,12,0"/>
+                <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal">
+                    <TextBlock Text="{Binding Instance.DiskSizeDisplay}"/>
+                    <ui:ProgressRing Width="14" Height="14" IsIndeterminate="True" Margin="8,0,0,0"
+                                     Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Compact button -->
+            <ui:Button Content="{lex:Loc DiskTab_CompactDisk}"
+                       Icon="{ui:SymbolIcon Symbol=DatabaseArrowDown20}"
+                       Command="{Binding CompactDiskCommand}"
+                       IsEnabled="{Binding IsCompacting, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}"/>
+
+            <!-- Progress area -->
+            <StackPanel Margin="0,16,0,0"
+                        Visibility="{Binding IsCompacting, Converter={StaticResource BoolToVisibilityConverter}}">
+                <StackPanel Orientation="Horizontal">
+                    <ui:ProgressRing Width="18" Height="18" IsIndeterminate="True" Margin="0,0,8,0"/>
+                    <TextBlock Text="{Binding PhaseText}" VerticalAlignment="Center"/>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Result panel -->
+            <Border Margin="0,16,0,0" Padding="12" CornerRadius="8"
+                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                    Visibility="{Binding ShowResult, Converter={StaticResource BoolToVisibilityConverter}}">
+                <StackPanel>
+                    <TextBlock Text="{lex:Loc DiskTab_ResultSaved}" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Before:" Margin="0,0,12,4"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding BeforeSizeDisplay}" Margin="0,0,0,4"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="After:" Margin="0,0,12,4"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding AfterSizeDisplay}" Margin="0,0,0,4"/>
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Saved:" Margin="0,0,12,0"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SavedSizeDisplay}" FontWeight="SemiBold"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
         </StackPanel>
     </Grid>
 </UserControl>

@@ -2154,5 +2154,41 @@ namespace DistroNexus.Desktop.Properties {
         public static string Tab_Network { get { return ResourceManager.GetString("Tab_Network", resourceCulture); } }
         public static string Tab_Backup { get { return ResourceManager.GetString("Tab_Backup", resourceCulture); } }
         public static string ErrorGenericOperation { get { return ResourceManager.GetString("ErrorGenericOperation", resourceCulture); } }
+        public static string DiskTab_VhdxPath { get { return ResourceManager.GetString("DiskTab_VhdxPath", resourceCulture); } }
+        public static string DiskTab_CurrentSize { get { return ResourceManager.GetString("DiskTab_CurrentSize", resourceCulture); } }
+        public static string DiskTab_CompactDisk { get { return ResourceManager.GetString("DiskTab_CompactDisk", resourceCulture); } }
+        public static string DiskTab_Estimating { get { return ResourceManager.GetString("DiskTab_Estimating", resourceCulture); } }
+        public static string DiskTab_CompactConfirm { get { return ResourceManager.GetString("DiskTab_CompactConfirm", resourceCulture); } }
+        public static string DiskTab_CompactConfirmEstimate { get { return ResourceManager.GetString("DiskTab_CompactConfirmEstimate", resourceCulture); } }
+        public static string DiskTab_PhaseStop { get { return ResourceManager.GetString("DiskTab_PhaseStop", resourceCulture); } }
+        public static string DiskTab_WslV1Message { get { return ResourceManager.GetString("DiskTab_WslV1Message", resourceCulture); } }
+        public static string DiskTab_ResultSaved { get { return ResourceManager.GetString("DiskTab_ResultSaved", resourceCulture); } }
+        public static string Export_StopPromptTitle { get { return ResourceManager.GetString("Export_StopPromptTitle", resourceCulture); } }
+        public static string Export_StopPrompt { get { return ResourceManager.GetString("Export_StopPrompt", resourceCulture); } }
+        public static string Export_SaveDialogTitle { get { return ResourceManager.GetString("Export_SaveDialogTitle", resourceCulture); } }
+        public static string Export_CompleteTitle { get { return ResourceManager.GetString("Export_CompleteTitle", resourceCulture); } }
+        public static string Export_Complete { get { return ResourceManager.GetString("Export_Complete", resourceCulture); } }
+        public static string Import_Title { get { return ResourceManager.GetString("Import_Title", resourceCulture); } }
+        public static string Import_NameLabel { get { return ResourceManager.GetString("Import_NameLabel", resourceCulture); } }
+        public static string Import_PathLabel { get { return ResourceManager.GetString("Import_PathLabel", resourceCulture); } }
+        public static string Import_SourceLabel { get { return ResourceManager.GetString("Import_SourceLabel", resourceCulture); } }
+        public static string Import_NameRequired { get { return ResourceManager.GetString("Import_NameRequired", resourceCulture); } }
+        public static string Import_NameExists { get { return ResourceManager.GetString("Import_NameExists", resourceCulture); } }
+        public static string Import_PathRequired { get { return ResourceManager.GetString("Import_PathRequired", resourceCulture); } }
+        public static string Import_SourceRequired { get { return ResourceManager.GetString("Import_SourceRequired", resourceCulture); } }
+        public static string Import_SourceNotFound { get { return ResourceManager.GetString("Import_SourceNotFound", resourceCulture); } }
+        public static string Import_CompleteTitle { get { return ResourceManager.GetString("Import_CompleteTitle", resourceCulture); } }
+        public static string Import_Complete { get { return ResourceManager.GetString("Import_Complete", resourceCulture); } }
+        public static string ResourcesTab_SparseMode { get { return ResourceManager.GetString("ResourcesTab_SparseMode", resourceCulture); } }
+        public static string ResourcesTab_SparseModeTooltip { get { return ResourceManager.GetString("ResourcesTab_SparseModeTooltip", resourceCulture); } }
+        public static string ResourcesTab_SparseModeEnabled { get { return ResourceManager.GetString("ResourcesTab_SparseModeEnabled", resourceCulture); } }
+        public static string ResourcesTab_SparseModeDisabled { get { return ResourceManager.GetString("ResourcesTab_SparseModeDisabled", resourceCulture); } }
+        public static string ResourcesTab_SparseModeUnknown { get { return ResourceManager.GetString("ResourcesTab_SparseModeUnknown", resourceCulture); } }
+        public static string ResourcesTab_GlobalLimits { get { return ResourceManager.GetString("ResourcesTab_GlobalLimits", resourceCulture); } }
+        public static string ResourcesTab_EditInWslConfig { get { return ResourceManager.GetString("ResourcesTab_EditInWslConfig", resourceCulture); } }
+        public static string ResourcesTab_WslV1Message { get { return ResourceManager.GetString("ResourcesTab_WslV1Message", resourceCulture); } }
+        public static string BulkCompact_Counter { get { return ResourceManager.GetString("BulkCompact_Counter", resourceCulture); } }
+        public static string Import_PathBrowseTitle { get { return ResourceManager.GetString("Import_PathBrowseTitle", resourceCulture); } }
+        public static string Import_SourceBrowseTitle { get { return ResourceManager.GetString("Import_SourceBrowseTitle", resourceCulture); } }
     }
 }

@@ -1362,4 +1362,120 @@ This will start the installation process.</value>
   </data>
   <data name="ErrorGenericOperation" xml:space="preserve">
     <value>Operation failed: {0}</value>
+  </data>  <data name="DiskTab_VhdxPath" xml:space="preserve">
+    <value>VHDX Path:</value>
+  </data>
+  <data name="DiskTab_CurrentSize" xml:space="preserve">
+    <value>Current Size:</value>
+  </data>
+  <data name="DiskTab_CompactDisk" xml:space="preserve">
+    <value>Compact Disk...</value>
+  </data>
+  <data name="DiskTab_Estimating" xml:space="preserve">
+    <value>Estimating reclaimable space...</value>
+  </data>
+  <data name="DiskTab_CompactConfirm" xml:space="preserve">
+    <value>This will stop the instance, trim unused blocks, and compact the VHDX file. The instance will be restarted afterward. Continue?</value>
+  </data>
+  <data name="DiskTab_CompactConfirmEstimate" xml:space="preserve">
+    <value>Estimated reclaimable: {0}. This will stop the instance, trim blocks, and compact the VHDX. The instance will restart. Continue?</value>
+  </data>
+  <data name="DiskTab_PhaseStop" xml:space="preserve">
+    <value>Stopping instance...</value>
+  </data>
+  <data name="DiskTab_PhaseTrim" xml:space="preserve">
+    <value>Trimming blocks...</value>
+  </data>
+  <data name="DiskTab_PhaseCompact" xml:space="preserve">
+    <value>Compacting VHDX...</value>
+  </data>
+  <data name="DiskTab_PhaseRestart" xml:space="preserve">
+    <value>Restarting instance...</value>
+  </data>
+  <data name="DiskTab_ResultSaved" xml:space="preserve">
+    <value>Compaction complete</value>
+  </data>
+  <data name="DiskTab_WslV1Message" xml:space="preserve">
+    <value>Disk compaction requires WSL v2.</value>
+  </data>
+  <data name="Export_StopPromptTitle" xml:space="preserve">
+    <value>Stop Instance</value>
+  </data>
+  <data name="Export_StopPrompt" xml:space="preserve">
+    <value>The instance is currently running. It must be stopped before exporting. Stop it now?</value>
+  </data>
+  <data name="Export_SaveDialogTitle" xml:space="preserve">
+    <value>Export Instance</value>
+  </data>
+  <data name="Export_CompleteTitle" xml:space="preserve">
+    <value>Export Complete</value>
+  </data>
+  <data name="Export_Complete" xml:space="preserve">
+    <value>Instance exported to {0} ({1}).</value>
+  </data>
+  <data name="Import_Title" xml:space="preserve">
+    <value>Import Instance</value>
+  </data>
+  <data name="Import_NameLabel" xml:space="preserve">
+    <value>Instance Name</value>
+  </data>
+  <data name="Import_PathLabel" xml:space="preserve">
+    <value>Install Path</value>
+  </data>
+  <data name="Import_SourceLabel" xml:space="preserve">
+    <value>Source TAR File</value>
+  </data>
+  <data name="Import_NameRequired" xml:space="preserve">
+    <value>Instance name is required.</value>
+  </data>
+  <data name="Import_NameExists" xml:space="preserve">
+    <value>An instance named '{0}' already exists.</value>
+  </data>
+  <data name="Import_PathRequired" xml:space="preserve">
+    <value>Install path is required.</value>
+  </data>
+  <data name="Import_SourceRequired" xml:space="preserve">
+    <value>Source TAR file is required.</value>
+  </data>
+  <data name="Import_SourceNotFound" xml:space="preserve">
+    <value>Source file not found.</value>
+  </data>
+  <data name="Import_PathBrowseTitle" xml:space="preserve">
+    <value>Select Install Path</value>
+  </data>
+  <data name="Import_SourceBrowseTitle" xml:space="preserve">
+    <value>Select Source TAR File</value>
+  </data>
+  <data name="Import_CompleteTitle" xml:space="preserve">
+    <value>Import Complete</value>
+  </data>
+  <data name="Import_Complete" xml:space="preserve">
+    <value>Instance '{0}' imported successfully.</value>
+  </data>
+  <data name="ResourcesTab_SparseMode" xml:space="preserve">
+    <value>Sparse Mode</value>
+  </data>
+  <data name="ResourcesTab_SparseModeTooltip" xml:space="preserve">
+    <value>Sparse VHDX automatically shrinks the disk file when space is freed. Requires WSL v2 and Windows 11.</value>
+  </data>
+  <data name="ResourcesTab_SparseModeEnabled" xml:space="preserve">
+    <value>Enabled</value>
+  </data>
+  <data name="ResourcesTab_SparseModeDisabled" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
+  <data name="ResourcesTab_SparseModeUnknown" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
+  <data name="ResourcesTab_GlobalLimits" xml:space="preserve">
+    <value>Global Resource Limits</value>
+  </data>
+  <data name="ResourcesTab_EditInWslConfig" xml:space="preserve">
+    <value>Edit in WSL Config...</value>
+  </data>
+  <data name="ResourcesTab_WslV1Message" xml:space="preserve">
+    <value>Resource configuration requires WSL v2.</value>
+  </data>
+  <data name="BulkCompact_Counter" xml:space="preserve">
+    <value>Compacting {0} of {1}: {2}</value>
   </data></root>

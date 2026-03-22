@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using DistroNexus.Desktop.Wizard;
@@ -600,17 +601,97 @@ public partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(SelectedCount));
     }
 
+    [ObservableProperty]
+    private string _bulkCompactProgressText = string.Empty;
+
+    [ObservableProperty]
+    private bool _isBulkCompacting;
+
     [RelayCommand]
-    private void CompactSelected()
+    private async Task CompactSelectedAsync(CancellationToken ct)
     {
-        // Phase 2: bulk compaction of selected instances
-        _logger.LogInformation("Compact selected triggered ({Count} selected)", SelectedCount);
+        var dialogSvc = _serviceProvider.GetRequiredService<IDialogService>();
+        var selected = Instances.Where(i => i.IsSelected && i.IsWslV2).ToList();
+        if (selected.Count == 0) return;
+
+        IsBulkCompacting = true;
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+
+        try
+        {
+            for (int i = 0; i < selected.Count; i++)
+            {
+                if (cts.IsCancellationRequested) break;
+
+                var inst = selected[i];
+                BulkCompactProgressText = string.Format(
+                    Properties.Resources.BulkCompact_Counter, i + 1, selected.Count, inst.Name);
+
+                var wslManager = _serviceProvider.GetRequiredService<IWslManagerService>();
+                var diskVm = new ViewModels.Tabs.DiskTabViewModel(inst, wslManager, dialogSvc);
+                await diskVm.RunCompactionAsync(cts.Token);
+            }
+        }
+        finally
+        {
+            IsBulkCompacting = false;
+            BulkCompactProgressText = string.Empty;
+            IsMultiSelectMode = false;
+            foreach (var vm in Instances) vm.IsSelected = false;
+        }
     }
 
     [RelayCommand]
-    private void ImportInstance()
+    private async Task ImportInstanceAsync()
     {
-        // Phase 2: ImportInstanceDialog
-        _logger.LogInformation("Import instance requested");
+        var dialogSvc = _serviceProvider.GetRequiredService<IDialogService>();
+        var existingNames = Instances.Select(i => i.Name).ToList();
+        var vm = new ImportInstanceViewModel(existingNames);
+        var dialog = new ImportInstanceDialog(vm) { Owner = Application.Current.MainWindow };
+        dialog.ShowDialog();
+
+        if (!vm.Confirmed) return;
+
+        IsLoading = true;
+        try
+        {
+            await _wslManager.ImportInstanceAsync(
+                vm.InstanceName.Trim(),
+                vm.SourcePath.Trim(),
+                vm.InstallPath.Trim());
+
+            await LoadInstancesAsync();
+
+            var newVm = Instances.FirstOrDefault(i =>
+                string.Equals(i.Name, vm.InstanceName.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (newVm is not null)
+                SelectedInstance = newVm;
+
+            await dialogSvc.ShowAlertAsync(
+                Properties.Resources.Import_CompleteTitle,
+                string.Format(Properties.Resources.Import_Complete, vm.InstanceName.Trim()));
+        }
+        catch (WslInstanceAlreadyExistsException ex)
+        {
+            await dialogSvc.ShowAlertAsync(
+                Properties.Resources.ErrorTitle,
+                string.Format(Properties.Resources.Import_NameExists, ex.InstanceName ?? vm.InstanceName));
+        }
+        catch (WslOperationException ex)
+        {
+            await dialogSvc.ShowAlertAsync(
+                Properties.Resources.ErrorTitle,
+                string.Format(Properties.Resources.ErrorGenericOperation, $"[{(int)ex.Code}] {ex.Message}"));
+        }
+        catch (Exception ex)
+        {
+            await dialogSvc.ShowAlertAsync(
+                Properties.Resources.ErrorTitle,
+                string.Format(Properties.Resources.ErrorGenericOperation, ex.Message));
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 }

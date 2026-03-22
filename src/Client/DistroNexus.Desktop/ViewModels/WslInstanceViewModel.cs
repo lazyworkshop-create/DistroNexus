@@ -1,10 +1,12 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using DistroNexus.Desktop.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Win32;
 using System.Windows;
 
 namespace DistroNexus.Desktop.ViewModels;
@@ -640,22 +642,72 @@ public partial class WslInstanceViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Initiates disk compaction for this instance (stub — implemented in Phase 2).
+    /// Initiates disk compaction for this instance (navigates to Disk tab).
     /// </summary>
     [RelayCommand]
     private void CompactDisk()
     {
-        // Phase 2: navigate to Disk tab of InstanceDetailDialog
-        OpenDetails();
+        OpenDetailsCommand.Execute(null);
     }
 
     /// <summary>
-    /// Exports this instance to a TAR file (stub — implemented in Phase 2).
+    /// Exports this instance to a TAR file.
     /// </summary>
     [RelayCommand]
-    private void ExportInstance()
+    private async Task ExportInstanceAsync()
     {
-        // Phase 2: open export dialog
-        OpenDetails();
+        var dialogSvc = _serviceProvider.GetRequiredService<IDialogService>();
+
+        // Check running status — prompt auto-stop
+        if (IsRunning)
+        {
+            bool stopOk = await dialogSvc.ShowConfirmAsync(
+                Properties.Resources.Export_StopPromptTitle,
+                Properties.Resources.Export_StopPrompt);
+            if (!stopOk) return;
+        }
+
+        // Open SaveFileDialog
+        var dlg = new SaveFileDialog
+        {
+            Title = Properties.Resources.Export_SaveDialogTitle,
+            Filter = "TAR archive (*.tar)|*.tar|All files (*.*)|*.*",
+            FileName = $"{Name}-{DateTime.Now:yyyyMMdd}.tar"
+        };
+        if (dlg.ShowDialog() != true) return;
+
+        string destPath = dlg.FileName;
+        bool force = System.IO.File.Exists(destPath);
+
+        IsBusy = true;
+        try
+        {
+            await _wslManager.ExportInstanceAsync(Name, destPath, force);
+
+            long fileSize = new System.IO.FileInfo(destPath).Length;
+            string sizeDisplay = FormatFileSize(fileSize);
+            await dialogSvc.ShowAlertAsync(
+                Properties.Resources.Export_CompleteTitle,
+                string.Format(Properties.Resources.Export_Complete, destPath, sizeDisplay));
+        }
+        catch (WslOperationException ex)
+        {
+            try { if (System.IO.File.Exists(destPath)) System.IO.File.Delete(destPath); } catch { /* best effort */ }
+            await dialogSvc.ShowAlertAsync(
+                Properties.Resources.ErrorTitle,
+                string.Format(Properties.Resources.ErrorGenericOperation, $"[{(int)ex.Code}] {ex.Message}"));
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            try { if (System.IO.File.Exists(destPath)) System.IO.File.Delete(destPath); } catch { /* best effort */ }
+            await dialogSvc.ShowAlertAsync(
+                Properties.Resources.ErrorTitle,
+                string.Format(Properties.Resources.ErrorGenericOperation, ex.Message));
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 }

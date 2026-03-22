@@ -1356,4 +1356,120 @@
   </data>
   <data name="ErrorGenericOperation" xml:space="preserve">
     <value>操作失败：{0}</value>
+  </data>  <data name="DiskTab_VhdxPath" xml:space="preserve">
+    <value>VHDX 路径：</value>
+  </data>
+  <data name="DiskTab_CurrentSize" xml:space="preserve">
+    <value>当前大小：</value>
+  </data>
+  <data name="DiskTab_CompactDisk" xml:space="preserve">
+    <value>压缩磁盘...</value>
+  </data>
+  <data name="DiskTab_Estimating" xml:space="preserve">
+    <value>正在估算可回收空间...</value>
+  </data>
+  <data name="DiskTab_CompactConfirm" xml:space="preserve">
+    <value>此操作将停止实例、整理块并压缩 VHDX 文件，完成后实例将重新启动。继续？</value>
+  </data>
+  <data name="DiskTab_CompactConfirmEstimate" xml:space="preserve">
+    <value>预计可回收：{0}。此操作将停止实例、整理块并压缩 VHDX，完成后实例将重启。继续？</value>
+  </data>
+  <data name="DiskTab_PhaseStop" xml:space="preserve">
+    <value>正在停止实例...</value>
+  </data>
+  <data name="DiskTab_PhaseTrim" xml:space="preserve">
+    <value>正在整理块...</value>
+  </data>
+  <data name="DiskTab_PhaseCompact" xml:space="preserve">
+    <value>正在压缩 VHDX...</value>
+  </data>
+  <data name="DiskTab_PhaseRestart" xml:space="preserve">
+    <value>正在重启实例...</value>
+  </data>
+  <data name="DiskTab_ResultSaved" xml:space="preserve">
+    <value>压缩完成</value>
+  </data>
+  <data name="DiskTab_WslV1Message" xml:space="preserve">
+    <value>磁盘压缩需要 WSL v2。</value>
+  </data>
+  <data name="Export_StopPromptTitle" xml:space="preserve">
+    <value>停止实例</value>
+  </data>
+  <data name="Export_StopPrompt" xml:space="preserve">
+    <value>实例正在运行，导出前必须停止。现在停止？</value>
+  </data>
+  <data name="Export_SaveDialogTitle" xml:space="preserve">
+    <value>导出实例</value>
+  </data>
+  <data name="Export_CompleteTitle" xml:space="preserve">
+    <value>导出完成</value>
+  </data>
+  <data name="Export_Complete" xml:space="preserve">
+    <value>实例已导出至 {0}（{1}）。</value>
+  </data>
+  <data name="Import_Title" xml:space="preserve">
+    <value>导入实例</value>
+  </data>
+  <data name="Import_NameLabel" xml:space="preserve">
+    <value>实例名称</value>
+  </data>
+  <data name="Import_PathLabel" xml:space="preserve">
+    <value>安装路径</value>
+  </data>
+  <data name="Import_SourceLabel" xml:space="preserve">
+    <value>源 TAR 文件</value>
+  </data>
+  <data name="Import_NameRequired" xml:space="preserve">
+    <value>实例名称不能为空。</value>
+  </data>
+  <data name="Import_NameExists" xml:space="preserve">
+    <value>名为"{0}"的实例已存在。</value>
+  </data>
+  <data name="Import_PathRequired" xml:space="preserve">
+    <value>安装路径不能为空。</value>
+  </data>
+  <data name="Import_SourceRequired" xml:space="preserve">
+    <value>源 TAR 文件不能为空。</value>
+  </data>
+  <data name="Import_SourceNotFound" xml:space="preserve">
+    <value>找不到源文件。</value>
+  </data>
+  <data name="Import_PathBrowseTitle" xml:space="preserve">
+    <value>选择安装路径</value>
+  </data>
+  <data name="Import_SourceBrowseTitle" xml:space="preserve">
+    <value>选择源 TAR 文件</value>
+  </data>
+  <data name="Import_CompleteTitle" xml:space="preserve">
+    <value>导入完成</value>
+  </data>
+  <data name="Import_Complete" xml:space="preserve">
+    <value>实例"{0}"导入成功。</value>
+  </data>
+  <data name="ResourcesTab_SparseMode" xml:space="preserve">
+    <value>稀疏模式</value>
+  </data>
+  <data name="ResourcesTab_SparseModeTooltip" xml:space="preserve">
+    <value>稀疏 VHDX 在释放空间时自动缩小磁盘文件。需要 WSL v2 和 Windows 11。</value>
+  </data>
+  <data name="ResourcesTab_SparseModeEnabled" xml:space="preserve">
+    <value>已启用</value>
+  </data>
+  <data name="ResourcesTab_SparseModeDisabled" xml:space="preserve">
+    <value>已禁用</value>
+  </data>
+  <data name="ResourcesTab_SparseModeUnknown" xml:space="preserve">
+    <value>未知</value>
+  </data>
+  <data name="ResourcesTab_GlobalLimits" xml:space="preserve">
+    <value>全局资源限制</value>
+  </data>
+  <data name="ResourcesTab_EditInWslConfig" xml:space="preserve">
+    <value>在 WSL 配置中编辑...</value>
+  </data>
+  <data name="ResourcesTab_WslV1Message" xml:space="preserve">
+    <value>资源配置需要 WSL v2。</value>
+  </data>
+  <data name="BulkCompact_Counter" xml:space="preserve">
+    <value>正在压缩 {0}/{1}：{2}</value>
   </data></root>
