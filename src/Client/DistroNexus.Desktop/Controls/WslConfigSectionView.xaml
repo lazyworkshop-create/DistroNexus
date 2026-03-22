@@ -1,0 +1,108 @@
+<UserControl x:Class="DistroNexus.Desktop.Controls.WslConfigSectionView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:lex="http://wpflocalizeextension.codeplex.com"
+             lex:ResxLocalizationProvider.DefaultAssembly="DistroNexus.Desktop"
+             lex:ResxLocalizationProvider.DefaultDictionary="Properties.Resources">
+
+    <ui:CardExpander Header="{lex:Loc WslConfig_SectionTitle}"
+                     Icon="{ui:SymbolIcon Symbol=Settings20}"
+                     IsExpanded="False"
+                     Expanded="OnExpanded">
+
+        <Grid IsEnabled="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
+            <StackPanel Margin="0,12,0,0">
+
+                <!-- Loading indicator -->
+                <ui:ProgressRing IsIndeterminate="True"
+                                 Width="24" Height="24"
+                                 Margin="0,0,0,12"
+                                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+                <!-- Host info -->
+                <TextBlock Text="{Binding HostInfo}"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           FontSize="12"
+                           Margin="0,0,0,16"
+                           Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}"/>
+
+                <!-- High memory warning -->
+                <ui:InfoBar Title="{lex:Loc WslConfig_MemoryWarning}"
+                            Severity="Warning"
+                            IsOpen="{Binding ShowHighMemoryWarning}"
+                            IsClosable="False"
+                            Margin="0,0,0,12"/>
+
+                <!-- Memory -->
+                <TextBlock Text="{lex:Loc WslConfig_Memory}" Margin="0,0,0,4"/>
+                <ui:TextBox Text="{Binding Memory, UpdateSourceTrigger=PropertyChanged}"
+                            PlaceholderText="e.g. 4GB"
+                            Margin="0,0,0,4"/>
+                <TextBlock Text="{Binding MemoryError}"
+                           Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                           FontSize="11"
+                           Margin="0,0,0,12"
+                           Visibility="{Binding HasMemoryError, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+                <!-- Processors -->
+                <TextBlock Text="{lex:Loc WslConfig_Processors}" Margin="0,0,0,4"/>
+                <ui:TextBox Text="{Binding Processors, UpdateSourceTrigger=PropertyChanged}"
+                            PlaceholderText="e.g. 4"
+                            Margin="0,0,0,4"/>
+                <TextBlock Text="{Binding ProcessorsError}"
+                           Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                           FontSize="11"
+                           Margin="0,0,0,12"
+                           Visibility="{Binding HasProcessorsError, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+                <!-- Swap -->
+                <TextBlock Text="{lex:Loc WslConfig_Swap}" Margin="0,0,0,4"/>
+                <ui:TextBox Text="{Binding Swap, UpdateSourceTrigger=PropertyChanged}"
+                            PlaceholderText="e.g. 2GB (0 = disabled)"
+                            Margin="0,0,0,4"/>
+                <TextBlock Text="{Binding SwapError}"
+                           Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                           FontSize="11"
+                           Margin="0,0,0,12"
+                           Visibility="{Binding HasSwapError, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+                <!-- Localhost Forwarding -->
+                <ui:ToggleSwitch Content="{lex:Loc WslConfig_LocalhostForwarding}"
+                                 IsChecked="{Binding LocalhostForwarding}"
+                                 Margin="0,0,0,12"/>
+
+                <!-- Networking Mode -->
+                <TextBlock Text="{lex:Loc WslConfig_NetworkingMode}" Margin="0,0,0,4"/>
+                <ComboBox SelectedItem="{Binding NetworkingMode}" Margin="0,0,0,16">
+                    <ComboBoxItem Content="NAT"/>
+                    <ComboBoxItem Content="mirrored"/>
+                    <ComboBoxItem Content="bridged"/>
+                    <ComboBoxItem Content="virtiofs"/>
+                </ComboBox>
+
+                <!-- Action buttons -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <ui:Button Grid.Column="0"
+                               Content="{lex:Loc WslConfig_SaveAndRestart}"
+                               Icon="{ui:SymbolIcon Symbol=Save20}"
+                               Appearance="Primary"
+                               Command="{Binding SaveAndRestartCommand}"
+                               Margin="0,0,10,0"/>
+                    <ui:Button Grid.Column="1"
+                               Content="{lex:Loc WslConfig_OpenRawFile}"
+                               Icon="{ui:SymbolIcon Symbol=Open20}"
+                               Command="{Binding OpenRawFileCommand}"/>
+                </Grid>
+
+            </StackPanel>
+        </Grid>
+
+    </ui:CardExpander>
+
+</UserControl>

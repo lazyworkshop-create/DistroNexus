@@ -8,6 +8,7 @@ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       xmlns:vm="clr-namespace:DistroNexus.Desktop.ViewModels"
+      xmlns:ctrl="clr-namespace:DistroNexus.Desktop.Controls"
       mc:Ignorable="d"
       Title="{lex:Loc SettingsTitle}"
       d:DataContext="{d:DesignInstance Type=vm:SettingsViewModel}">
@@ -393,6 +394,13 @@ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                                    Visibility="{Binding EnableLogging, Converter={StaticResource BoolToVisibilityConverter}}"/>
                     </StackPanel>
                 </ui:Card>
+
+                <!-- Manage Tags section (E-02-9) -->
+                <ctrl:ManageTagsSectionView DataContext="{Binding ManageTags}" Margin="0,0,0,15"/>
+
+                <!-- WSL Global Configuration section (E-01) -->
+                <ctrl:WslConfigSectionView DataContext="{Binding WslConfigSection}" Margin="0,0,0,15"/>
+
             </StackPanel>
         </ScrollViewer>
     </Grid>

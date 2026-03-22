@@ -2190,5 +2190,33 @@ namespace DistroNexus.Desktop.Properties {
         public static string BulkCompact_Counter { get { return ResourceManager.GetString("BulkCompact_Counter", resourceCulture); } }
         public static string Import_PathBrowseTitle { get { return ResourceManager.GetString("Import_PathBrowseTitle", resourceCulture); } }
         public static string Import_SourceBrowseTitle { get { return ResourceManager.GetString("Import_SourceBrowseTitle", resourceCulture); } }
+        public static string WslConfig_SectionTitle { get { return ResourceManager.GetString("WslConfig_SectionTitle", resourceCulture); } }
+        public static string WslConfig_HostInfo { get { return ResourceManager.GetString("WslConfig_HostInfo", resourceCulture); } }
+        public static string WslConfig_Memory { get { return ResourceManager.GetString("WslConfig_Memory", resourceCulture); } }
+        public static string WslConfig_Processors { get { return ResourceManager.GetString("WslConfig_Processors", resourceCulture); } }
+        public static string WslConfig_Swap { get { return ResourceManager.GetString("WslConfig_Swap", resourceCulture); } }
+        public static string WslConfig_SwapDisabled { get { return ResourceManager.GetString("WslConfig_SwapDisabled", resourceCulture); } }
+        public static string WslConfig_LocalhostForwarding { get { return ResourceManager.GetString("WslConfig_LocalhostForwarding", resourceCulture); } }
+        public static string WslConfig_NetworkingMode { get { return ResourceManager.GetString("WslConfig_NetworkingMode", resourceCulture); } }
+        public static string WslConfig_SaveAndRestart { get { return ResourceManager.GetString("WslConfig_SaveAndRestart", resourceCulture); } }
+        public static string WslConfig_OpenRawFile { get { return ResourceManager.GetString("WslConfig_OpenRawFile", resourceCulture); } }
+        public static string WslConfig_RestartConfirm { get { return ResourceManager.GetString("WslConfig_RestartConfirm", resourceCulture); } }
+        public static string WslConfig_MemoryWarning { get { return ResourceManager.GetString("WslConfig_MemoryWarning", resourceCulture); } }
+        public static string WslConfig_InvalidMemory { get { return ResourceManager.GetString("WslConfig_InvalidMemory", resourceCulture); } }
+        public static string WslConfig_InvalidProcessors { get { return ResourceManager.GetString("WslConfig_InvalidProcessors", resourceCulture); } }
+        public static string WslConfig_InvalidSwap { get { return ResourceManager.GetString("WslConfig_InvalidSwap", resourceCulture); } }
+        public static string WslConfig_SaveComplete { get { return ResourceManager.GetString("WslConfig_SaveComplete", resourceCulture); } }
+        public static string ManageTags_SectionTitle { get { return ResourceManager.GetString("ManageTags_SectionTitle", resourceCulture); } }
+        public static string ManageTags_TagName { get { return ResourceManager.GetString("ManageTags_TagName", resourceCulture); } }
+        public static string ManageTags_UsedBy { get { return ResourceManager.GetString("ManageTags_UsedBy", resourceCulture); } }
+        public static string ManageTags_Rename { get { return ResourceManager.GetString("ManageTags_Rename", resourceCulture); } }
+        public static string ManageTags_Delete { get { return ResourceManager.GetString("ManageTags_Delete", resourceCulture); } }
+        public static string ManageTags_BulkDelete { get { return ResourceManager.GetString("ManageTags_BulkDelete", resourceCulture); } }
+        public static string ManageTags_DeleteConfirmTitle { get { return ResourceManager.GetString("ManageTags_DeleteConfirmTitle", resourceCulture); } }
+        public static string ManageTags_DeleteConfirm { get { return ResourceManager.GetString("ManageTags_DeleteConfirm", resourceCulture); } }
+        public static string ManageTags_BulkDeleteTitle { get { return ResourceManager.GetString("ManageTags_BulkDeleteTitle", resourceCulture); } }
+        public static string ManageTags_BulkDeleteConfirm { get { return ResourceManager.GetString("ManageTags_BulkDeleteConfirm", resourceCulture); } }
+        public static string ManageTags_RenamePrompt { get { return ResourceManager.GetString("ManageTags_RenamePrompt", resourceCulture); } }
+        public static string ManageTags_NoTags { get { return ResourceManager.GetString("ManageTags_NoTags", resourceCulture); } }
     }
 }

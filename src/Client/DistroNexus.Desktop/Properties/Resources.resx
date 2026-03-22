@@ -1478,4 +1478,88 @@ This will start the installation process.</value>
   </data>
   <data name="BulkCompact_Counter" xml:space="preserve">
     <value>Compacting {0} of {1}: {2}</value>
+  </data>
+  <data name="WslConfig_SectionTitle" xml:space="preserve">
+    <value>WSL Global Configuration</value>
+  </data>
+  <data name="WslConfig_HostInfo" xml:space="preserve">
+    <value>Host: {0} MB RAM, {1} CPUs</value>
+  </data>
+  <data name="WslConfig_Memory" xml:space="preserve">
+    <value>Memory Limit (e.g. 4GB, 512MB)</value>
+  </data>
+  <data name="WslConfig_Processors" xml:space="preserve">
+    <value>CPU Count</value>
+  </data>
+  <data name="WslConfig_Swap" xml:space="preserve">
+    <value>Swap Size (0 = disabled)</value>
+  </data>
+  <data name="WslConfig_SwapDisabled" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
+  <data name="WslConfig_LocalhostForwarding" xml:space="preserve">
+    <value>Localhost Forwarding</value>
+  </data>
+  <data name="WslConfig_NetworkingMode" xml:space="preserve">
+    <value>Networking Mode</value>
+  </data>
+  <data name="WslConfig_SaveAndRestart" xml:space="preserve">
+    <value>Save &amp; Restart WSL</value>
+  </data>
+  <data name="WslConfig_OpenRawFile" xml:space="preserve">
+    <value>Open Raw File</value>
+  </data>
+  <data name="WslConfig_RestartConfirm" xml:space="preserve">
+    <value>Run wsl --shutdown now to apply the changes? All running WSL instances will be stopped.</value>
+  </data>
+  <data name="WslConfig_MemoryWarning" xml:space="preserve">
+    <value>Memory limit exceeds 80% of host RAM. This may cause system instability.</value>
+  </data>
+  <data name="WslConfig_InvalidMemory" xml:space="preserve">
+    <value>Invalid memory value. Use a number with GB or MB suffix (e.g. 4GB).</value>
+  </data>
+  <data name="WslConfig_InvalidProcessors" xml:space="preserve">
+    <value>Processors must be a number between 1 and the host CPU count.</value>
+  </data>
+  <data name="WslConfig_InvalidSwap" xml:space="preserve">
+    <value>Invalid swap value. Use 0 to disable, or a number with GB/MB suffix.</value>
+  </data>
+  <data name="WslConfig_SaveComplete" xml:space="preserve">
+    <value>Configuration saved successfully.</value>
+  </data>
+  <data name="ManageTags_SectionTitle" xml:space="preserve">
+    <value>Manage Tags</value>
+  </data>
+  <data name="ManageTags_TagName" xml:space="preserve">
+    <value>Tag Name</value>
+  </data>
+  <data name="ManageTags_UsedBy" xml:space="preserve">
+    <value>Used by:</value>
+  </data>
+  <data name="ManageTags_Rename" xml:space="preserve">
+    <value>Rename</value>
+  </data>
+  <data name="ManageTags_Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="ManageTags_BulkDelete" xml:space="preserve">
+    <value>Delete Selected</value>
+  </data>
+  <data name="ManageTags_DeleteConfirmTitle" xml:space="preserve">
+    <value>Delete Tag</value>
+  </data>
+  <data name="ManageTags_DeleteConfirm" xml:space="preserve">
+    <value>Delete tag "{0}" from all instances?</value>
+  </data>
+  <data name="ManageTags_BulkDeleteTitle" xml:space="preserve">
+    <value>Delete Selected Tags</value>
+  </data>
+  <data name="ManageTags_BulkDeleteConfirm" xml:space="preserve">
+    <value>Delete {0} selected tag(s) from all instances?</value>
+  </data>
+  <data name="ManageTags_RenamePrompt" xml:space="preserve">
+    <value>Enter new name for tag:</value>
+  </data>
+  <data name="ManageTags_NoTags" xml:space="preserve">
+    <value>No tags defined yet.</value>
   </data></root>

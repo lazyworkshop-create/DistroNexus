@@ -117,18 +117,30 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private string? _powerShellModulePath;
 
+    /// <summary>WSL Global Configuration editor section (E-01).</summary>
+    public WslConfigSectionViewModel WslConfigSection { get; }
+
+    /// <summary>Manage Tags section (E-02-9).</summary>
+    public ManageTagsViewModel ManageTags { get; }
+
     public SettingsViewModel(
         ISettingsService settingsService, 
         ICatalogService catalogService,
         ITerminalService terminalService,
         IStoreComplianceModeService storeComplianceModeService,
-        ILogger<SettingsViewModel> logger)
+        ILogger<SettingsViewModel> logger,
+        IWslConfigService wslConfigService,
+        IWslManagerService wslManagerService,
+        ITagService tagService,
+        IDialogService dialogService)
     {
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
         _terminalService = terminalService ?? throw new ArgumentNullException(nameof(terminalService));
         _storeComplianceModeService = storeComplianceModeService ?? throw new ArgumentNullException(nameof(storeComplianceModeService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        WslConfigSection = new WslConfigSectionViewModel(wslConfigService, wslManagerService, dialogService);
+        ManageTags = new ManageTagsViewModel(tagService, wslManagerService, dialogService);
         
         // Initialize auto-save timer
         SetupAutoSaveTimer();

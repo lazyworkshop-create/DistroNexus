@@ -1472,4 +1472,89 @@
   </data>
   <data name="BulkCompact_Counter" xml:space="preserve">
     <value>正在压缩 {0}/{1}：{2}</value>
-  </data></root>
+  </data>
+  <data name="WslConfig_SectionTitle" xml:space="preserve">
+    <value>WSL 全局配置</value>
+  </data>
+  <data name="WslConfig_HostInfo" xml:space="preserve">
+    <value>主机：{0} MB 内存，{1} 个 CPU</value>
+  </data>
+  <data name="WslConfig_Memory" xml:space="preserve">
+    <value>内存限制（如 4GB、512MB）</value>
+  </data>
+  <data name="WslConfig_Processors" xml:space="preserve">
+    <value>CPU 核心数</value>
+  </data>
+  <data name="WslConfig_Swap" xml:space="preserve">
+    <value>交换空间大小（0 = 禁用）</value>
+  </data>
+  <data name="WslConfig_SwapDisabled" xml:space="preserve">
+    <value>已禁用</value>
+  </data>
+  <data name="WslConfig_LocalhostForwarding" xml:space="preserve">
+    <value>本地主机转发</value>
+  </data>
+  <data name="WslConfig_NetworkingMode" xml:space="preserve">
+    <value>网络模式</value>
+  </data>
+  <data name="WslConfig_SaveAndRestart" xml:space="preserve">
+    <value>保存并重启 WSL</value>
+  </data>
+  <data name="WslConfig_OpenRawFile" xml:space="preserve">
+    <value>打开原始文件</value>
+  </data>
+  <data name="WslConfig_RestartConfirm" xml:space="preserve">
+    <value>立即运行 wsl --shutdown 以应用更改？所有运行中的 WSL 实例将被停止。</value>
+  </data>
+  <data name="WslConfig_MemoryWarning" xml:space="preserve">
+    <value>内存限制超过主机内存的 80%，可能导致系统不稳定。</value>
+  </data>
+  <data name="WslConfig_InvalidMemory" xml:space="preserve">
+    <value>无效的内存值，请使用带 GB 或 MB 后缀的数字（如 4GB）。</value>
+  </data>
+  <data name="WslConfig_InvalidProcessors" xml:space="preserve">
+    <value>CPU 核心数必须在 1 到主机 CPU 数量之间。</value>
+  </data>
+  <data name="WslConfig_InvalidSwap" xml:space="preserve">
+    <value>无效的交换空间值，使用 0 禁用，或带 GB/MB 后缀的数字。</value>
+  </data>
+  <data name="WslConfig_SaveComplete" xml:space="preserve">
+    <value>配置已成功保存。</value>
+  </data>
+  <data name="ManageTags_SectionTitle" xml:space="preserve">
+    <value>管理标签</value>
+  </data>
+  <data name="ManageTags_TagName" xml:space="preserve">
+    <value>标签名称</value>
+  </data>
+  <data name="ManageTags_UsedBy" xml:space="preserve">
+    <value>使用次数：</value>
+  </data>
+  <data name="ManageTags_Rename" xml:space="preserve">
+    <value>重命名</value>
+  </data>
+  <data name="ManageTags_Delete" xml:space="preserve">
+    <value>删除</value>
+  </data>
+  <data name="ManageTags_BulkDelete" xml:space="preserve">
+    <value>删除所选</value>
+  </data>
+  <data name="ManageTags_DeleteConfirmTitle" xml:space="preserve">
+    <value>删除标签</value>
+  </data>
+  <data name="ManageTags_DeleteConfirm" xml:space="preserve">
+    <value>从所有实例中删除标签"{0}"？</value>
+  </data>
+  <data name="ManageTags_BulkDeleteTitle" xml:space="preserve">
+    <value>删除所选标签</value>
+  </data>
+  <data name="ManageTags_BulkDeleteConfirm" xml:space="preserve">
+    <value>从所有实例中删除 {0} 个所选标签？</value>
+  </data>
+  <data name="ManageTags_RenamePrompt" xml:space="preserve">
+    <value>输入标签的新名称：</value>
+  </data>
+  <data name="ManageTags_NoTags" xml:space="preserve">
+    <value>尚未定义任何标签。</value>
+  </data>
+</root>
