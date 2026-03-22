@@ -563,8 +563,18 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// </summary>
     private void OnCacheInvalidated(object? sender, EventArgs e)
     {
-        _ = Application.Current.Dispatcher.InvokeAsync(
-            async () => await LoadInstancesAsync(CancellationToken.None));
+        _ = Application.Current.Dispatcher.InvokeAsync(async () =>
+        {
+            IsAutoRefreshing = true;
+            try
+            {
+                await LoadInstancesAsync(CancellationToken.None);
+            }
+            finally
+            {
+                IsAutoRefreshing = false;
+            }
+        });
     }
 
     private void OnDownloadTaskStatusChanged(object? sender, DownloadTask task)
@@ -769,6 +779,24 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _wslEventWatcher.CacheInvalidationRequested -= OnCacheInvalidated;
+        _wslEventWatcher.Stop();
+    }
+
+    /// <summary>
+    /// Starts the WSL event watcher after the initial instance load completes.
+    /// Called from MainWindow.LoadDataInBackgroundAsync to avoid race conditions (Design Review #1).
+    /// </summary>
+    public void StartEventWatcherAfterLoad()
+    {
+        try
+        {
+            _wslEventWatcher.Start();
+            _logger.LogInformation("WSL event watcher started after initial load");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to start WSL event watcher; proactive cache invalidation unavailable");
+        }
     }
 
     // ── Multi-select commands (P1-8) ─────────────────────────────────────

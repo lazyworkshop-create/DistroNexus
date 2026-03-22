@@ -127,6 +127,9 @@ public partial class MainWindow : FluentWindow
                         : "Ready";
                 });
 
+                // Start event watcher after initial load to avoid race conditions (F-01-1, Design Review #1)
+                _viewModel.StartEventWatcherAfterLoad();
+
                 System.Diagnostics.Debug.WriteLine("Background data loading completed successfully");
             }
             catch (OperationCanceledException)
