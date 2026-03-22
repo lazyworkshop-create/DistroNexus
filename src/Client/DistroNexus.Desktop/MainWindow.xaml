@@ -156,6 +156,24 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
                                                     <TextBlock Text="{Binding InstallPath}" 
                                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+                                                    <!-- Docker integration indicator (C-01-8) -->
+                                                    <StackPanel Orientation="Horizontal" Margin="10,0,0,0"
+                                                                Visibility="{Binding IsDockerStatusVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                        <Ellipse Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,4,0">
+                                                            <Ellipse.Style>
+                                                                <Style TargetType="Ellipse">
+                                                                    <Setter Property="Fill" Value="{DynamicResource TextFillColorTertiaryBrush}"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding DockerIntegrationEnabled}" Value="True">
+                                                                            <Setter Property="Fill" Value="#22c55e"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Ellipse.Style>
+                                                        </Ellipse>
+                                                        <TextBlock Text="Docker" FontSize="11"
+                                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+                                                    </StackPanel>
                                                 </StackPanel>
                                             </StackPanel>
 

@@ -45,6 +45,17 @@ public partial class WslInstanceViewModel : ObservableObject
     [ObservableProperty]
     private bool _isSelected;
 
+    /// <summary>
+    /// Docker integration status for this instance as loaded on the dashboard.
+    /// null = not yet loaded / not applicable.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsDockerStatusVisible))]
+    private bool? _dockerIntegrationEnabled;
+
+    /// <summary>True when Docker status has been queried and should be shown on the card.</summary>
+    public bool IsDockerStatusVisible => _dockerIntegrationEnabled.HasValue;
+
     public string Name => Instance.Name;
     public string State => Instance.State == "Running" ? Properties.Resources.StateRunning : 
                           (Instance.State == "Stopped" ? Properties.Resources.StateStopped : Instance.State);

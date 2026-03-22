@@ -256,6 +256,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
             });
 
             _logger.LogInformation("Loaded {Count} WSL instances", Instances.Count);
+
+            // Load Docker integration status in the background (C-01-8)
+            _ = LoadDockerStatusAsync(Instances.ToList(), cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -268,6 +271,44 @@ public partial class MainViewModel : ObservableObject, IDisposable
             await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.LoadInstancesError, MainViewModel.FormatAlertMessage(ex)));
         }
         // Note: Don't set IsLoading = false here as it's controlled by MainWindow
+    }
+
+    /// <summary>
+    /// Loads Docker integration status for each eligible instance and updates
+    /// <see cref="WslInstanceViewModel.DockerIntegrationEnabled"/> asynchronously.
+    /// Skips docker-desktop/docker-desktop-data and WSL v1 instances (C-01-8).
+    /// </summary>
+    private async Task LoadDockerStatusAsync(List<WslInstanceViewModel> snapshot, CancellationToken ct)
+    {
+        try
+        {
+            bool isInstalled = await _dockerIntegrationService.IsDockerDesktopInstalledAsync(ct);
+            if (!isInstalled) return;
+
+            foreach (var vm in snapshot)
+            {
+                if (ct.IsCancellationRequested) return;
+                var name = vm.Name;
+                if (!vm.IsWslV2) continue;
+                if (name.Equals("docker-desktop", StringComparison.OrdinalIgnoreCase) ||
+                    name.Equals("docker-desktop-data", StringComparison.OrdinalIgnoreCase)) continue;
+
+                try
+                {
+                    var status = await _dockerIntegrationService.GetIntegrationStatusAsync(name, ct);
+                    vm.DockerIntegrationEnabled = status == Core.Services.DockerIntegrationStatus.Enabled;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Could not get Docker status for instance {Name}", name);
+                }
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Docker status background load failed");
+        }
     }
 
     [RelayCommand]

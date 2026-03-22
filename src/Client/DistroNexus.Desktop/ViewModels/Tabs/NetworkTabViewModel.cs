@@ -1,11 +1,28 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using DistroNexus.Core.Interfaces;
+using DistroNexus.Core.Models;
+using System.Collections.ObjectModel;
+using System.Windows;
 
 namespace DistroNexus.Desktop.ViewModels.Tabs;
 
 /// <summary>
+/// ViewModel for a single port mapping row in the Network tab grid.
+/// </summary>
+public class PortMappingViewModel
+{
+    public string Protocol       { get; init; } = string.Empty;
+    public string LocalAddress   { get; init; } = string.Empty;
+    public int    Port           { get; init; }
+    public string ProcessName    { get; init; } = string.Empty;
+    public bool   HasWindowsProxy { get; init; }
+    public string CopyText => $"{LocalAddress}:{Port}";
+}
+
+/// <summary>
 /// ViewModel for the Network tab of InstanceDetailDialog.
-/// Displays IP address, port mappings and proxy information.
+/// Displays WSL IP address and port mappings (C-02).
 /// </summary>
 public partial class NetworkTabViewModel : ObservableObject
 {
@@ -19,7 +36,13 @@ public partial class NetworkTabViewModel : ObservableObject
     private bool _isLoading;
 
     [ObservableProperty]
-    private string _statusMessage = string.Empty;
+    private string _instanceIp = string.Empty;
+
+    [ObservableProperty]
+    private ObservableCollection<PortMappingViewModel> _portMappings = [];
+
+    [ObservableProperty]
+    private bool _showStoppedPlaceholder;
 
     public WslInstanceViewModel Instance => _instance;
 
@@ -33,11 +56,58 @@ public partial class NetworkTabViewModel : ObservableObject
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
     }
 
-    public Task InitializeAsync()
+    public async Task InitializeAsync()
     {
-        if (_initialized) return Task.CompletedTask;
+        if (_initialized) return;
         _initialized = true;
-        // Network tab initialization will be implemented in Phase 4
-        return Task.CompletedTask;
+
+        await RefreshNetworkAsync();
+    }
+
+    [RelayCommand]
+    private async Task RefreshNetworkAsync()
+    {
+        if (!Instance.IsRunning)
+        {
+            ShowStoppedPlaceholder = true;
+            return;
+        }
+
+        ShowStoppedPlaceholder = false;
+        IsLoading = true;
+        try
+        {
+            var ip = await _networkService.GetInstanceIpAddressAsync(_instance.Name);
+            InstanceIp = ip ?? string.Empty;
+
+            var mappings = await _networkService.GetPortMappingsAsync(_instance.Name);
+            PortMappings = new ObservableCollection<PortMappingViewModel>(
+                mappings.Select(m => new PortMappingViewModel
+                {
+                    Protocol       = m.Protocol,
+                    LocalAddress   = m.LocalAddress,
+                    Port           = m.Port,
+                    ProcessName    = m.ProcessName,
+                    HasWindowsProxy = m.HasWindowsProxy
+                }));
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowAlertAsync(
+                Properties.Resources.ErrorTitle,
+                string.Format(Properties.Resources.ErrorGenericOperation, ex.Message));
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    private void CopyAddress(PortMappingViewModel? row)
+    {
+        if (row is null) return;
+        try { Clipboard.SetText(row.CopyText); }
+        catch { /* ignore clipboard failures */ }
     }
 }

@@ -2218,5 +2218,22 @@ namespace DistroNexus.Desktop.Properties {
         public static string ManageTags_BulkDeleteConfirm { get { return ResourceManager.GetString("ManageTags_BulkDeleteConfirm", resourceCulture); } }
         public static string ManageTags_RenamePrompt { get { return ResourceManager.GetString("ManageTags_RenamePrompt", resourceCulture); } }
         public static string ManageTags_NoTags { get { return ResourceManager.GetString("ManageTags_NoTags", resourceCulture); } }
+        public static string IntegrationsTab_DockerTitle { get { return ResourceManager.GetString("IntegrationsTab_DockerTitle", resourceCulture); } }
+        public static string IntegrationsTab_DockerEnabled { get { return ResourceManager.GetString("IntegrationsTab_DockerEnabled", resourceCulture); } }
+        public static string IntegrationsTab_DockerDisabled { get { return ResourceManager.GetString("IntegrationsTab_DockerDisabled", resourceCulture); } }
+        public static string IntegrationsTab_DockerUnavailable { get { return ResourceManager.GetString("IntegrationsTab_DockerUnavailable", resourceCulture); } }
+        public static string IntegrationsTab_DockerInstallLink { get { return ResourceManager.GetString("IntegrationsTab_DockerInstallLink", resourceCulture); } }
+        public static string IntegrationsTab_RestartBanner { get { return ResourceManager.GetString("IntegrationsTab_RestartBanner", resourceCulture); } }
+        public static string IntegrationsTab_Dismiss { get { return ResourceManager.GetString("IntegrationsTab_Dismiss", resourceCulture); } }
+        public static string IntegrationsTab_WslV1Message { get { return ResourceManager.GetString("IntegrationsTab_WslV1Message", resourceCulture); } }
+        public static string NetworkTab_InstanceIP { get { return ResourceManager.GetString("NetworkTab_InstanceIP", resourceCulture); } }
+        public static string NetworkTab_Protocol { get { return ResourceManager.GetString("NetworkTab_Protocol", resourceCulture); } }
+        public static string NetworkTab_LocalAddress { get { return ResourceManager.GetString("NetworkTab_LocalAddress", resourceCulture); } }
+        public static string NetworkTab_Port { get { return ResourceManager.GetString("NetworkTab_Port", resourceCulture); } }
+        public static string NetworkTab_Process { get { return ResourceManager.GetString("NetworkTab_Process", resourceCulture); } }
+        public static string NetworkTab_WindowsProxy { get { return ResourceManager.GetString("NetworkTab_WindowsProxy", resourceCulture); } }
+        public static string NetworkTab_Copy { get { return ResourceManager.GetString("NetworkTab_Copy", resourceCulture); } }
+        public static string NetworkTab_Refresh { get { return ResourceManager.GetString("NetworkTab_Refresh", resourceCulture); } }
+        public static string NetworkTab_StoppedPlaceholder { get { return ResourceManager.GetString("NetworkTab_StoppedPlaceholder", resourceCulture); } }
     }
 }

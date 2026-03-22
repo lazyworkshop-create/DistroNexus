@@ -1562,4 +1562,56 @@ This will start the installation process.</value>
   </data>
   <data name="ManageTags_NoTags" xml:space="preserve">
     <value>No tags defined yet.</value>
-  </data></root>
+  </data>
+  <data name="IntegrationsTab_DockerTitle" xml:space="preserve">
+    <value>Docker Desktop Integration</value>
+  </data>
+  <data name="IntegrationsTab_DockerEnabled" xml:space="preserve">
+    <value>Enabled</value>
+  </data>
+  <data name="IntegrationsTab_DockerDisabled" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
+  <data name="IntegrationsTab_DockerUnavailable" xml:space="preserve">
+    <value>Unavailable</value>
+  </data>
+  <data name="IntegrationsTab_DockerInstallLink" xml:space="preserve">
+    <value>Docker Desktop is not installed. Click to install.</value>
+  </data>
+  <data name="IntegrationsTab_RestartBanner" xml:space="preserve">
+    <value>Restart Docker Desktop for the change to take effect.</value>
+  </data>
+  <data name="IntegrationsTab_Dismiss" xml:space="preserve">
+    <value>Dismiss</value>
+  </data>
+  <data name="IntegrationsTab_WslV1Message" xml:space="preserve">
+    <value>Docker integration requires WSL v2.</value>
+  </data>
+  <data name="NetworkTab_InstanceIP" xml:space="preserve">
+    <value>Instance IP: </value>
+  </data>
+  <data name="NetworkTab_Protocol" xml:space="preserve">
+    <value>Protocol</value>
+  </data>
+  <data name="NetworkTab_LocalAddress" xml:space="preserve">
+    <value>Local Address</value>
+  </data>
+  <data name="NetworkTab_Port" xml:space="preserve">
+    <value>Port</value>
+  </data>
+  <data name="NetworkTab_Process" xml:space="preserve">
+    <value>Process</value>
+  </data>
+  <data name="NetworkTab_WindowsProxy" xml:space="preserve">
+    <value>Windows Proxy</value>
+  </data>
+  <data name="NetworkTab_Copy" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="NetworkTab_Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="NetworkTab_StoppedPlaceholder" xml:space="preserve">
+    <value>Start the instance to view network information.</value>
+  </data>
+</root>

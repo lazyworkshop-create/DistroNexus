@@ -4,17 +4,96 @@
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:lex="http://wpflocalizeextension.codeplex.com"
              lex:ResxLocalizationProvider.DefaultAssembly="DistroNexus.Desktop"
-             lex:ResxLocalizationProvider.DefaultDictionary="Properties.Resources">
-    <Grid Margin="20">
-        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-            <ui:SymbolIcon Symbol="NetworkCheck20" FontSize="48"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-            <TextBlock Text="{lex:Loc Tab_Network}"
-                       FontSize="18" FontWeight="SemiBold"
-                       HorizontalAlignment="Center" Margin="0,12,0,4"/>
-            <TextBlock Text="Network features coming in Phase 4"
-                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                       HorizontalAlignment="Center"/>
+             lex:ResxLocalizationProvider.DefaultDictionary="Properties.Resources"
+             Loaded="OnLoaded">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="20" MaxWidth="720">
+
+            <!-- Stopped placeholder -->
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                        Visibility="{Binding ShowStoppedPlaceholder, Converter={StaticResource BoolToVisibilityConverter}}">
+                <ui:SymbolIcon Symbol="PlugDisconnected20" FontSize="36"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               HorizontalAlignment="Center"/>
+                <TextBlock Text="{lex:Loc NetworkTab_StoppedPlaceholder}"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           HorizontalAlignment="Center" Margin="0,8,0,0"/>
+            </StackPanel>
+
+            <!-- Loading indicator -->
+            <ui:ProgressRing IsIndeterminate="True" Width="28" Height="28" Margin="0,0,0,16"
+                             Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+            <StackPanel Visibility="{Binding ShowStoppedPlaceholder, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
+
+                <!-- IP address + Refresh row -->
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="{lex:Loc NetworkTab_InstanceIP}"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="{Binding InstanceIp}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <ui:Button Grid.Column="1"
+                               Content="{lex:Loc NetworkTab_Refresh}"
+                               Icon="{ui:SymbolIcon Symbol=ArrowSync20}"
+                               Command="{Binding RefreshNetworkCommand}"
+                               IsEnabled="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                </Grid>
+
+                <!-- Ports DataGrid -->
+                <DataGrid ItemsSource="{Binding PortMappings}"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          CanUserDeleteRows="False"
+                          IsReadOnly="True"
+                          GridLinesVisibility="Horizontal"
+                          HeadersVisibility="Column"
+                          Background="Transparent"
+                          RowBackground="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                          AlternatingRowBackground="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
+                          BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                          BorderThickness="1">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="{lex:Loc NetworkTab_Protocol}"
+                                            Binding="{Binding Protocol}" Width="60"/>
+                        <DataGridTextColumn Header="{lex:Loc NetworkTab_LocalAddress}"
+                                            Binding="{Binding LocalAddress}" Width="120"/>
+                        <DataGridTextColumn Header="{lex:Loc NetworkTab_Port}"
+                                            Binding="{Binding Port}" Width="60"/>
+                        <DataGridTextColumn Header="{lex:Loc NetworkTab_Process}"
+                                            Binding="{Binding ProcessName}" Width="*"/>
+                        <DataGridTemplateColumn Header="{lex:Loc NetworkTab_WindowsProxy}" Width="90">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="✓"
+                                               FontWeight="Bold"
+                                               Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                               HorizontalAlignment="Center"
+                                               Visibility="{Binding HasWindowsProxy, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="" Width="60">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <ui:Button Content="{lex:Loc NetworkTab_Copy}"
+                                               Appearance="Secondary"
+                                               FontSize="11" Padding="4,2"
+                                               Command="{Binding DataContext.CopyAddressCommand,
+                                                         RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                               CommandParameter="{Binding}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+
+            </StackPanel>
         </StackPanel>
-    </Grid>
+    </ScrollViewer>
 </UserControl>

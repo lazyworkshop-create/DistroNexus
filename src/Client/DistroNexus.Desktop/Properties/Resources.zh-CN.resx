@@ -1557,4 +1557,55 @@
   <data name="ManageTags_NoTags" xml:space="preserve">
     <value>尚未定义任何标签。</value>
   </data>
+  <data name="IntegrationsTab_DockerTitle" xml:space="preserve">
+    <value>Docker Desktop 集成</value>
+  </data>
+  <data name="IntegrationsTab_DockerEnabled" xml:space="preserve">
+    <value>已启用</value>
+  </data>
+  <data name="IntegrationsTab_DockerDisabled" xml:space="preserve">
+    <value>已禁用</value>
+  </data>
+  <data name="IntegrationsTab_DockerUnavailable" xml:space="preserve">
+    <value>不可用</value>
+  </data>
+  <data name="IntegrationsTab_DockerInstallLink" xml:space="preserve">
+    <value>未安装 Docker Desktop，点击安装。</value>
+  </data>
+  <data name="IntegrationsTab_RestartBanner" xml:space="preserve">
+    <value>重启 Docker Desktop 以使更改生效。</value>
+  </data>
+  <data name="IntegrationsTab_Dismiss" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="IntegrationsTab_WslV1Message" xml:space="preserve">
+    <value>Docker 集成需要 WSL v2。</value>
+  </data>
+  <data name="NetworkTab_InstanceIP" xml:space="preserve">
+    <value>实例 IP：</value>
+  </data>
+  <data name="NetworkTab_Protocol" xml:space="preserve">
+    <value>协议</value>
+  </data>
+  <data name="NetworkTab_LocalAddress" xml:space="preserve">
+    <value>本地地址</value>
+  </data>
+  <data name="NetworkTab_Port" xml:space="preserve">
+    <value>端口</value>
+  </data>
+  <data name="NetworkTab_Process" xml:space="preserve">
+    <value>进程</value>
+  </data>
+  <data name="NetworkTab_WindowsProxy" xml:space="preserve">
+    <value>Windows 代理</value>
+  </data>
+  <data name="NetworkTab_Copy" xml:space="preserve">
+    <value>复制</value>
+  </data>
+  <data name="NetworkTab_Refresh" xml:space="preserve">
+    <value>刷新</value>
+  </data>
+  <data name="NetworkTab_StoppedPlaceholder" xml:space="preserve">
+    <value>启动实例以查看网络信息。</value>
+  </data>
 </root>
