@@ -57,7 +57,8 @@ function Compress-DistroNexusInstance {
             # Validate instance exists
             $instance = Get-DistroNexusInstance -Name $instanceName | Where-Object { $_.Name -eq $instanceName }
             if (-not $instance) {
-                Write-Error "Instance '$instanceName' not found."
+                Write-Error "Instance '$instanceName' not found." `
+                    -ErrorId "DistroNexus.InstanceNotFound"
                 Write-DistroNexusLog "Instance not found: $instanceName" -Level ERROR
                 continue
             }
@@ -65,7 +66,8 @@ function Compress-DistroNexusInstance {
             # Resolve VHDX path from registry
             $vhdxPath = Get-InstanceVhdxPath -Name $instanceName
             if (-not $vhdxPath) {
-                Write-Error "Could not resolve VHDX path for instance '$instanceName'."
+                Write-Error "Could not resolve VHDX path for instance '$instanceName'." `
+                    -ErrorId "DistroNexus.VhdxNotFound"
                 Write-DistroNexusLog "VHDX path not found for: $instanceName" -Level ERROR
                 continue
             }
@@ -128,7 +130,8 @@ function Compress-DistroNexusInstance {
                 else {
                     Write-DistroNexusLog "Hyper-V not available — using diskpart fallback"
                     if (-not (Test-AdminPrivilege)) {
-                        Write-Error "diskpart requires administrator privileges. Re-run as administrator."
+                        Write-Error "diskpart requires administrator privileges. Re-run as administrator." `
+                            -ErrorId "DistroNexus.VhdxAccessDenied"
                         Write-DistroNexusLog "Compaction aborted: not running as administrator" -Level ERROR
                         continue
                     }
@@ -160,7 +163,8 @@ exit
             }
             catch {
                 Write-DistroNexusLog "Compaction failed for '$instanceName': $_" -Level ERROR
-                Write-Error "Compaction failed: $_"
+                Write-Error "Compaction failed: $_" `
+                    -ErrorId "DistroNexus.CompactionFailed"
             }
             finally {
                 # Restart instance if it was running

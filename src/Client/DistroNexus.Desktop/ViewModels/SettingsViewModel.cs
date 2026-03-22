@@ -206,7 +206,7 @@ public partial class SettingsViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to load settings");
-            await ShowAlert(Properties.Resources.ErrorApplicationTitle, string.Format(Properties.Resources.ErrorLoadSettings, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorApplicationTitle, string.Format(Properties.Resources.ErrorLoadSettings, MainViewModel.FormatAlertMessage(ex)));
         }
     }
 
@@ -288,7 +288,7 @@ public partial class SettingsViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to save settings");
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.SaveSettingsError, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.SaveSettingsError, MainViewModel.FormatAlertMessage(ex)));
         }
     }
 
@@ -315,7 +315,7 @@ public partial class SettingsViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to reset settings");
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorResetSettings, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorResetSettings, MainViewModel.FormatAlertMessage(ex)));
         }
     }
 
@@ -369,7 +369,7 @@ public partial class SettingsViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to apply theme");
-            await ShowAlert(Properties.Resources.TitleThemeError, string.Format(Properties.Resources.ErrorApplyTheme, ex.Message));
+            await ShowAlert(Properties.Resources.TitleThemeError, string.Format(Properties.Resources.ErrorApplyTheme, MainViewModel.FormatAlertMessage(ex)));
         }
     }
 
@@ -432,7 +432,7 @@ public partial class SettingsViewModel : ObservableObject
             }
             else
             {
-                await ShowAlert("Invalid Module Path", $"The selected directory does not contain 'DistroNexus.psd1'.\n\nPlease select the directory that contains the PowerShell module manifest file.");
+                await ShowAlert(Properties.Resources.TitleInvalidModulePath, Properties.Resources.ErrorInvalidModulePath);
                 _logger.LogWarning("Invalid PowerShell module path selected: {Path}", selectedPath);
             }
         }
@@ -524,7 +524,7 @@ public partial class SettingsViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to clear cache");
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorClearCache, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorClearCache, MainViewModel.FormatAlertMessage(ex)));
         }
     }
 
@@ -559,7 +559,7 @@ public partial class SettingsViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to delete cached file");
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.DeleteFileError, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.DeleteFileError, MainViewModel.FormatAlertMessage(ex)));
         }
     }
 
@@ -590,7 +590,7 @@ public partial class SettingsViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to open cache folder");
-            await ShowAlert(Properties.Resources.ErrorApplicationTitle, string.Format(Properties.Resources.ErrorOpenCacheFolder, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorApplicationTitle, string.Format(Properties.Resources.ErrorOpenCacheFolder, MainViewModel.FormatAlertMessage(ex)));
         }
     }
 

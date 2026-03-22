@@ -16,8 +16,7 @@ public enum DistroNexusErrorCode
     InstanceNotFound      = 1001,
     InstanceAlreadyRunning = 1002,
     InstanceAlreadyStopped = 1003,
-    InstanceAlreadyExists  = 1004,
-
+    InstanceAlreadyExists  = 1004,    TooManyTags            = 1005,
     // ── Disk / VHDX ───────────────────────────────────────────────────────
     VhdxNotFound      = 2001,
     VhdxAccessDenied  = 2002,
@@ -31,16 +30,20 @@ public enum DistroNexusErrorCode
     ExportFailed           = 4001,
     ImportFailed           = 4002,
     BackupDestinationFull  = 4003,
-    ScheduleCreateFailed   = 4004,
+    ScheduleCreateFailed   = 4004,    ScheduleNotFound       = 4005,
 
+    // ── Templates ──────────────────────────────────────────────────
+    TemplateNotFound       = 6001,
+    TemplateScriptFailed   = 6002,
     // ── Configuration ─────────────────────────────────────────────────────
     WslConfigReadFailed   = 5001,
     WslConfigWriteFailed  = 5002,
     RegistryAccessDenied  = 5003,
 
     // ── System / Unknown ──────────────────────────────────────────────────
-    WslNotInstalled  = 9001,
-    WslVersionTooLow = 9002,
-    OperationTimeout = 9003,
-    UnknownError     = 9999,
+    WslNotInstalled             = 9001,
+    WslVersionTooLow            = 9002,
+    OperationTimeout            = 9003,
+    PowerShellModuleUnavailable = 9004,
+    UnknownError                = 9999,
 }

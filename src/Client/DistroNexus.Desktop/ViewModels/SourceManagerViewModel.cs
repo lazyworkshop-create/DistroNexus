@@ -95,7 +95,7 @@ public partial class SourceManagerViewModel : ObservableObject
         {
             _logger.LogError(ex, "Failed to initialize source manager");
             StatusMessage = Properties.Resources.StatusLoadSourcesFailed;
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorLoadSourcesEx, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorLoadSourcesEx, MainViewModel.FormatAlertMessage(ex)));
         }
         finally
         {
@@ -182,7 +182,7 @@ public partial class SourceManagerViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to save source");
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorSaveSourceEx, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorSaveSourceEx, MainViewModel.FormatAlertMessage(ex)));
         }
     }
 
@@ -223,7 +223,7 @@ public partial class SourceManagerViewModel : ObservableObject
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to remove source");
-                await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorRemoveSourceEx, ex.Message));
+                await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorRemoveSourceEx, MainViewModel.FormatAlertMessage(ex)));
             }
         }
     }
@@ -245,7 +245,7 @@ public partial class SourceManagerViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to toggle source active state");
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorToggleSourceEx, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorToggleSourceEx, MainViewModel.FormatAlertMessage(ex)));
         }
     }
 
@@ -302,7 +302,7 @@ public partial class SourceManagerViewModel : ObservableObject
         {
             _logger.LogError(ex, "Failed to refresh sources");
             StatusMessage = Properties.Resources.StatusRefreshFailed;
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorRefreshSourcesEx, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorRefreshSourcesEx, MainViewModel.FormatAlertMessage(ex)));
         }
         finally
         {
@@ -329,7 +329,7 @@ public partial class SourceManagerViewModel : ObservableObject
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to reset sources");
-                await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorResetSourcesEx, ex.Message));
+                await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorResetSourcesEx, MainViewModel.FormatAlertMessage(ex)));
             }
         }
     }
@@ -359,7 +359,7 @@ public partial class SourceManagerViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to move source up");
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorMoveSource, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorMoveSource, MainViewModel.FormatAlertMessage(ex)));
         }
     }
 
@@ -388,7 +388,7 @@ public partial class SourceManagerViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to move source down");
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorMoveSource, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorMoveSource, MainViewModel.FormatAlertMessage(ex)));
         }
     }
 }

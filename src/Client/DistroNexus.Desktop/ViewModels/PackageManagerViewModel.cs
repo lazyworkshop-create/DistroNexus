@@ -112,7 +112,7 @@ public partial class PackageManagerViewModel : ObservableObject
         {
             _logger.LogError(ex, "Failed to load catalog");
             StatusMessage = string.Format(Properties.Resources.ErrorLoadingCatalogShort, ex.Message);
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.LoadCatalogError, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.LoadCatalogError, MainViewModel.FormatAlertMessage(ex)));
         }
         finally
         {
@@ -158,7 +158,7 @@ public partial class PackageManagerViewModel : ObservableObject
             // Try to load from cache anyway
             await LoadCatalogAsync();
             
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorRefreshCatalogFailed, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorRefreshCatalogFailed, MainViewModel.FormatAlertMessage(ex)));
         }
         finally
         {
@@ -188,7 +188,7 @@ public partial class PackageManagerViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Search failed");
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorSearchFailed, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorSearchFailed, MainViewModel.FormatAlertMessage(ex)));
         }
     }
 
@@ -240,7 +240,7 @@ public partial class PackageManagerViewModel : ObservableObject
             package.IsDownloading = false;
             _logger.LogError(ex, "Failed to queue download");
             StatusMessage = Properties.Resources.StatusQueueFailed;
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorQueueDownload, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorQueueDownload, MainViewModel.FormatAlertMessage(ex)));
         }
     }
 
@@ -311,7 +311,7 @@ public partial class PackageManagerViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to cancel download for {PackageName}", package.Name);
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorCancelDownload, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorCancelDownload, MainViewModel.FormatAlertMessage(ex)));
         }
     }
 
@@ -704,7 +704,7 @@ public partial class PackageManagerViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to redownload package");
-            await ShowAlert(Properties.Resources.ErrorApplicationTitle, string.Format(Properties.Resources.ErrorRedownloadPackage, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorApplicationTitle, string.Format(Properties.Resources.ErrorRedownloadPackage, MainViewModel.FormatAlertMessage(ex)));
         }
     }
 
@@ -739,7 +739,7 @@ public partial class PackageManagerViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to add custom source");
-            await ShowAlert(Properties.Resources.ErrorApplicationTitle, string.Format(Properties.Resources.ErrorAddCustomSource, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorApplicationTitle, string.Format(Properties.Resources.ErrorAddCustomSource, MainViewModel.FormatAlertMessage(ex)));
         }
     }
 
@@ -778,7 +778,7 @@ public partial class PackageManagerViewModel : ObservableObject
         {
             _logger.LogError(ex, "Failed to update sources");
             StatusMessage = "Failed to update sources";
-            await ShowAlert(Properties.Resources.ErrorApplicationTitle, string.Format(Properties.Resources.ErrorUpdateSources, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorApplicationTitle, string.Format(Properties.Resources.ErrorUpdateSources, MainViewModel.FormatAlertMessage(ex)));
         }
     }
 
@@ -878,7 +878,7 @@ public partial class PackageManagerViewModel : ObservableObject
         {
             _logger.LogError(ex, "Failed to download all packages");
             StatusMessage = "Failed to queue downloads";
-            await ShowAlert(Properties.Resources.ErrorApplicationTitle, string.Format(Properties.Resources.ErrorStartDownloadAll, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorApplicationTitle, string.Format(Properties.Resources.ErrorStartDownloadAll, MainViewModel.FormatAlertMessage(ex)));
         }
     }
 
@@ -929,7 +929,7 @@ public partial class PackageManagerViewModel : ObservableObject
         {
             _logger.LogError(ex, "Failed to install cached package: {PackageId}", package.Id);
             StatusMessage = $"Failed to install {package.Name}";
-            await ShowAlert(Properties.Resources.ErrorApplicationTitle, string.Format(Properties.Resources.ErrorInstallPackage, package.Name, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorApplicationTitle, string.Format(Properties.Resources.ErrorInstallPackage, package.Name, MainViewModel.FormatAlertMessage(ex)));
         }
     }
 }

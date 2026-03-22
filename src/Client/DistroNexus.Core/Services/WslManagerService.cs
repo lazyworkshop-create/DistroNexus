@@ -76,7 +76,7 @@ public partial class WslManagerService : IWslManagerService
 
         if (moduleResult == null)
         {
-            throw new WslOperationFailedException("PowerShell module execution returned no result.", DistroNexusErrorCode.UnknownError, operation: "GetInstances");
+            throw new WslOperationFailedException("PowerShell module execution returned no result.", DistroNexusErrorCode.PowerShellModuleUnavailable, operation: "GetInstances");
         }
 
         // Check if module call succeeded
@@ -87,7 +87,7 @@ public partial class WslManagerService : IWslManagerService
                 : "Failed to retrieve WSL instances using PowerShell module.";
 
             _logger.LogError(moduleResult.Exception, "Module call failed for Get-DistroNexusInstance");
-            throw new WslOperationFailedException(errorMessage, moduleResult.Exception, DistroNexusErrorCode.UnknownError, operation: "GetInstances");
+            throw new WslOperationFailedException(errorMessage, moduleResult.Exception, DistroNexusErrorCode.PowerShellModuleUnavailable, operation: "GetInstances");
         }
 
         if (!moduleResult.UsedModule)
@@ -95,7 +95,7 @@ public partial class WslManagerService : IWslManagerService
             _logger.LogError("PowerShell module was not used for Get-DistroNexusInstance");
             throw new WslOperationFailedException(
                 "DistroNexus PowerShell module is not available. Please ensure the module is properly installed.",
-                DistroNexusErrorCode.UnknownError, operation: "GetInstances");
+                DistroNexusErrorCode.PowerShellModuleUnavailable, operation: "GetInstances");
         }
 
         if (moduleResult.ParsedObjects == null || moduleResult.ParsedObjects.Count == 0)

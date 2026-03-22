@@ -30,7 +30,7 @@
                           Icon="{ui:SymbolIcon Symbol=ArrowSync20}"
                           Command="{Binding LoadTemplatesCommand}"
                           Margin="0,0,10,0"/>
-                <ui:Button Content="Import" 
+                <ui:Button Content="{lex:Loc ActionImport}" 
                           Icon="{ui:SymbolIcon Symbol=ArrowImport20}"
                           Command="{Binding ImportTemplateCommand}"
                           Visibility="Collapsed"
@@ -45,7 +45,7 @@
                           Width="120"
                           Height="36"
                           Margin="0,0,10,0"/>
-                <ui:TextBox PlaceholderText="Search templates..." 
+                <ui:TextBox PlaceholderText="{lex:Loc PlaceholderSearchTemplates}" 
                            Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
                            Height="36"
                            MinWidth="250"
@@ -84,11 +84,11 @@
                                         <TextBlock Text="{Binding Name}" 
                                                   FontSize="16" 
                                                   FontWeight="SemiBold"/>
-                                        <ui:Badge Content="Official" 
+                                        <ui:Badge Content="{lex:Loc BadgeOfficial}" 
                                                  Appearance="Success" 
                                                  Margin="10,0,0,0"
                                                  Visibility="{Binding IsOfficial, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                        <ui:Badge Content="Custom" 
+                                        <ui:Badge Content="{lex:Loc BadgeCustom}" 
                                                  Appearance="Caution" 
                                                  Margin="10,0,0,0"
                                                  Visibility="{Binding IsCustom, Converter={StaticResource BoolToVisibilityConverter}}"/>
@@ -137,12 +137,12 @@
                                                             Icon="{ui:SymbolIcon Symbol=Play20}"
                                                             Command="{Binding PlacementTarget.Tag.ApplyToInstanceCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                             CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                                <ui:MenuItem Header="Export"
+                                                <ui:MenuItem Header="{lex:Loc ActionExport}"
                                                             Icon="{ui:SymbolIcon Symbol=ArrowExport20}"
                                                             Command="{Binding PlacementTarget.Tag.ExportTemplateCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                             CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                                 <Separator/>
-                                                <ui:MenuItem Header="Remove"
+                                                <ui:MenuItem Header="{lex:Loc ActionRemove}"
                                                             Icon="{ui:SymbolIcon Symbol=Delete20}"
                                                             Command="{Binding PlacementTarget.Tag.RemoveTemplateCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                                             CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"

@@ -767,6 +767,7 @@ public partial class WslInstanceViewModel : ObservableObject
         catch (WslOperationException ex)
         {
             try { if (System.IO.File.Exists(destPath)) System.IO.File.Delete(destPath); } catch { /* best effort */ }
+            _logger.LogError(ex, "Export failed for {Name}. ErrorCode={ErrorCode}", Name, (int)ex.Code);
             await dialogSvc.ShowAlertAsync(
                 Properties.Resources.ErrorTitle,
                 string.Format(Properties.Resources.ErrorGenericOperation, $"[{(int)ex.Code}] {ex.Message}"));

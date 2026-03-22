@@ -212,7 +212,7 @@ public partial class TemplatesViewModel : ObservableObject
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error importing template");
-                 MessageBox.Show($"Error importing template: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                 MessageBox.Show($"Error importing template: {MainViewModel.FormatAlertMessage(ex)}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -246,7 +246,7 @@ public partial class TemplatesViewModel : ObservableObject
              catch (Exception ex)
             {
                 _logger.LogError(ex, "Error exporting template");
-                 MessageBox.Show($"Error exporting template: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                 MessageBox.Show($"Error exporting template: {MainViewModel.FormatAlertMessage(ex)}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -273,7 +273,7 @@ public partial class TemplatesViewModel : ObservableObject
             catch (Exception ex)
             {
                  _logger.LogError(ex, "Error removing template");
-                 MessageBox.Show($"Error removing template: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                 MessageBox.Show($"Error removing template: {MainViewModel.FormatAlertMessage(ex)}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {

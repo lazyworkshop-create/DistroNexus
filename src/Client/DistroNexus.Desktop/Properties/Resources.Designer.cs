@@ -692,6 +692,14 @@ namespace DistroNexus.Desktop.Properties {
             }
         }        
         /// <summary>
+        ///   Looks up a localized string similar to Copy error code {0}.
+        /// </summary>
+        public static string ErrorCopyCode {
+            get {
+                return ResourceManager.GetString("ErrorCopyCode", resourceCulture);
+            }
+        }        
+        /// <summary>
         ///   Looks up a localized string similar to Cancel.
         /// </summary>
         public static string Cancel {
@@ -2275,5 +2283,13 @@ namespace DistroNexus.Desktop.Properties {
         public static string TagFilter_ClearAll { get { return ResourceManager.GetString("TagFilter_ClearAll", resourceCulture); } }
         public static string TagFilter_GroupByTag { get { return ResourceManager.GetString("TagFilter_GroupByTag", resourceCulture); } }
         public static string TagFilter_NoTags { get { return ResourceManager.GetString("TagFilter_NoTags", resourceCulture); } }
+        public static string TitleBackupFailure { get { return ResourceManager.GetString("TitleBackupFailure", resourceCulture); } }
+        public static string ErrorBackupFailedForInstance { get { return ResourceManager.GetString("ErrorBackupFailedForInstance", resourceCulture); } }
+        public static string TitleInvalidModulePath { get { return ResourceManager.GetString("TitleInvalidModulePath", resourceCulture); } }
+        public static string ErrorInvalidModulePath { get { return ResourceManager.GetString("ErrorInvalidModulePath", resourceCulture); } }
+        public static string ActionApply { get { return ResourceManager.GetString("ActionApply", resourceCulture); } }
+        public static string ActionExport { get { return ResourceManager.GetString("ActionExport", resourceCulture); } }
+        public static string ActionImport { get { return ResourceManager.GetString("ActionImport", resourceCulture); } }
+        public static string BadgeOfficial { get { return ResourceManager.GetString("BadgeOfficial", resourceCulture); } }
     }
 }

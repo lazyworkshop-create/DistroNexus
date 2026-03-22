@@ -295,6 +295,9 @@
   <data name="ErrorTitle" xml:space="preserve">
     <value>Error</value>
   </data>
+  <data name="ErrorCopyCode" xml:space="preserve">
+    <value>Copy error code {0}</value>
+  </data>
   <data name="Cancel" xml:space="preserve">
     <value>Cancel</value>
   </data>
@@ -863,6 +866,18 @@ This may take a while depending on the instance size.</value>
   </data>
   <data name="ActionDeleteCache" xml:space="preserve">
     <value>Delete Cache</value>
+  </data>
+  <data name="ActionApply" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="ActionExport" xml:space="preserve">
+    <value>Export</value>
+  </data>
+  <data name="ActionImport" xml:space="preserve">
+    <value>Import</value>
+  </data>
+  <data name="BadgeOfficial" xml:space="preserve">
+    <value>Official</value>
   </data>
   <data name="CustomSourceUrlLabel" xml:space="preserve">
     <value>Custom Source URL:</value>
@@ -1730,5 +1745,19 @@ This will start the installation process.</value>
   </data>
   <data name="TagFilter_NoTags" xml:space="preserve">
     <value>No tags assigned yet.</value>
+  </data>
+  <data name="TitleBackupFailure" xml:space="preserve">
+    <value>Backup Failure</value>
+  </data>
+  <data name="ErrorBackupFailedForInstance" xml:space="preserve">
+    <value>Backup failed for '{0}': {1}</value>
+  </data>
+  <data name="TitleInvalidModulePath" xml:space="preserve">
+    <value>Invalid Module Path</value>
+  </data>
+  <data name="ErrorInvalidModulePath" xml:space="preserve">
+    <value>The selected directory does not contain 'DistroNexus.psd1'.
+
+Please select the directory that contains the PowerShell module manifest file.</value>
   </data>
 </root>

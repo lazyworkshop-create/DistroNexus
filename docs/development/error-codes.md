@@ -12,6 +12,7 @@ in PowerShell via `-ErrorId "DistroNexus.<CodeName>"` on `Write-Error` calls.
 | 3xxx   | Docker integration     |
 | 4xxx   | Backup / Export / Import |
 | 5xxx   | Configuration          |
+| 6xxx   | Templates              |
 | 9xxx   | System / Unknown       |
 
 ---
@@ -24,6 +25,7 @@ in PowerShell via `-ErrorId "DistroNexus.<CodeName>"` on `Write-Error` calls.
 | 1002 | `InstanceAlreadyRunning`| Start attempted on a running instance |
 | 1003 | `InstanceAlreadyStopped`| Stop attempted on an already-stopped instance |
 | 1004 | `InstanceAlreadyExists` | Import or create attempted with a name that already exists |
+| 1005 | `TooManyTags`           | Tag limit exceeded; an instance cannot have more than the allowed number of tags |
 
 ---
 
@@ -54,6 +56,7 @@ in PowerShell via `-ErrorId "DistroNexus.<CodeName>"` on `Write-Error` calls.
 | 4002 | `ImportFailed`          | `wsl --import` returned a non-zero exit code |
 | 4003 | `BackupDestinationFull` | Destination drive has insufficient free space |
 | 4004 | `ScheduleCreateFailed`  | `Register-ScheduledTask` failed to create the backup task |
+| 4005 | `ScheduleNotFound`      | Referenced backup schedule task does not exist in Task Scheduler |
 
 ---
 
@@ -67,14 +70,24 @@ in PowerShell via `-ErrorId "DistroNexus.<CodeName>"` on `Write-Error` calls.
 
 ---
 
+## 6xxx — Templates
+
+| Code | Name                  | When thrown |
+|------|-----------------------|-------------|
+| 6001 | `TemplateNotFound`    | Requested template ID does not exist in the template catalog |
+| 6002 | `TemplateScriptFailed`| The template's post-install script exited with a non-zero code or threw an exception |
+
+---
+
 ## 9xxx — System / Unknown
 
 | Code | Name              | When thrown |
 |------|-------------------|-------------|
 | 9001 | `WslNotInstalled` | `wsl.exe` is not found on `PATH` |
 | 9002 | `WslVersionTooLow`| Installed WSL version is below the minimum required |
-| 9003 | `OperationTimeout`| A WSL operation exceeded its timeout; thrown by `WslOperationTimeoutException` |
-| 9999 | `UnknownError`    | Catch-all for unexpected exceptions; check inner exception |
+| 9003 | `OperationTimeout`            | A WSL operation exceeded its timeout; thrown by `WslOperationTimeoutException` |
+| 9004 | `PowerShellModuleUnavailable` | The DistroNexus PowerShell module could not be loaded or its path could not be resolved |
+| 9999 | `UnknownError`                | Catch-all for unexpected exceptions; check inner exception |
 
 ---
 

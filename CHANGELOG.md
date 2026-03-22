@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.1] - 2026-03-22
+
+### Added
+
+- Added `TemplateNotFound (6001)` and `TemplateScriptFailed (6002)` error codes; new 6xxx Templates
+  category added to the `DistroNexusErrorCode` enum with corresponding documentation.
+- Added `TooManyTags (1005)` and `ScheduleNotFound (4005)` error codes to complete coverage of
+  instance lifecycle and backup error paths.
+- Added `PowerShellModuleUnavailable (9004)` error code surfaced when the PowerShell module path
+  cannot be resolved at runtime.
+- Added `ActionApply`, `ActionExport`, `ActionImport`, `BadgeOfficial` localization keys (en / zh-CN).
+- Added `TitleBackupFailure`, `ErrorBackupFailedForInstance`, `TitleInvalidModulePath`,
+  `ErrorInvalidModulePath` localization keys (en / zh-CN) replacing hardcoded English strings.
+- Added `ErrorCopyCode` resource key; `ShowAlert` now auto-detects `[DN-XXXX]` error codes and
+  shows a "Copy error code" hyperlink so users can report structured codes.
+- Added `errorCode` field to NLog JSON and console layouts for structured error telemetry.
+
+### Changed
+
+- All `ShowAlert` error calls across all ViewModels now use `MainViewModel.FormatAlertMessage(ex)`
+  to consistently prepend `[DN-XXXX]` codes to displayed error messages.
+- `WslEventWatcher.Start()` is now called after the initial instance-list load finishes, preventing
+  race conditions between startup data fetch and first event delivery.
+- `RenameInstanceAsync` fallback path now resolves install directory via native `Microsoft.Win32`
+  registry reads instead of a secondary PowerShell process invocation.
+- All PowerShell `Write-Error` calls in public cmdlets now include `-ErrorId "DistroNexus.<Code>"`
+  for machine-readable structured errors in PS error streams.
+- `TemplatesPage.xaml` hardcoded strings replaced with `{lex:Loc ...}` bindings.
+
+### Fixed
+
+- Fixed `WslEventWatcher` leak: `Stop()` / `Dispose()` now called from both `WslManagerService` and
+  `MainViewModel` disposal paths so the WMI subscription does not outlive the application.
+- Fixed 3 catch blocks in `WslManagerService.GetInstancesAsync` that incorrectly used `UnknownError`
+  for PowerShell module resolution failures; now correctly use `PowerShellModuleUnavailable`.
+
 ## [2.2.0] - 2026-03-02
 
 ### Added

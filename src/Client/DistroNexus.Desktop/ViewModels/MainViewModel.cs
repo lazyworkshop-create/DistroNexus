@@ -173,7 +173,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             {
                 var msg = n.TryGetProperty("message", out var msgEl) ? msgEl.GetString() : "Unknown error";
                 var inst = n.TryGetProperty("instance", out var instEl) ? instEl.GetString() : "Unknown instance";
-                await ShowAlert("Backup Failure", $"Backup failed for '{inst}': {msg}");
+                await ShowAlert(Properties.Resources.TitleBackupFailure, string.Format(Properties.Resources.ErrorBackupFailedForInstance, inst, msg));
             }
         }
         catch (Exception ex)
@@ -212,12 +212,45 @@ public partial class MainViewModel : ObservableObject, IDisposable
         return Task.CompletedTask;
     }
 
+    private static readonly System.Text.RegularExpressions.Regex _errorCodePattern =
+        new(@"\[DN-(\d+)\]", System.Text.RegularExpressions.RegexOptions.Compiled);
+
     private async Task ShowAlert(string title, string message)
     {
+        var match = _errorCodePattern.Match(message);
+
+        object content;
+        if (match.Success)
+        {
+            var code = match.Value;
+            var panel = new System.Windows.Controls.StackPanel();
+            panel.Children.Add(new System.Windows.Controls.TextBlock
+            {
+                Text = message,
+                TextWrapping = System.Windows.TextWrapping.Wrap
+            });
+            var link = new System.Windows.Documents.Hyperlink(
+                new System.Windows.Documents.Run(
+                    string.Format(Properties.Resources.ErrorCopyCode ?? "Copy error code {0}", code)));
+            link.Click += (_, _) =>
+                System.Windows.Clipboard.SetText(code);
+            var linkBlock = new System.Windows.Controls.TextBlock
+            {
+                Margin = new System.Windows.Thickness(0, 8, 0, 0)
+            };
+            linkBlock.Inlines.Add(link);
+            panel.Children.Add(linkBlock);
+            content = panel;
+        }
+        else
+        {
+            content = message;
+        }
+
         var uiMessageBox = new Wpf.Ui.Controls.MessageBox
         {
             Title = title,
-            Content = message,
+            Content = content,
             CloseButtonText = Properties.Resources.ButtonClose ?? "Close"
         };
         await uiMessageBox.ShowDialogAsync();
@@ -891,6 +924,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
         catch (WslOperationException ex)
         {
+            _logger.LogError(ex, "Import failed. ErrorCode={ErrorCode}", (int)ex.Code);
             await dialogSvc.ShowAlertAsync(
                 Properties.Resources.ErrorTitle,
                 string.Format(Properties.Resources.ErrorGenericOperation, $"[{(int)ex.Code}] {ex.Message}"));

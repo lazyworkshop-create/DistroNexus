@@ -19,7 +19,10 @@ function Apply-DistroNexusTemplate {
         if ($PSCmdlet.ParameterSetName -eq 'ById') {
             $Template = Get-DistroNexusTemplate -Id $TemplateId
             if (-not $Template) {
-                Write-Error "Template '$TemplateId' not found."
+                Write-Error "Template '$TemplateId' not found." `
+                    -ErrorId "DistroNexus.TemplateNotFound" `
+                    -Category ObjectNotFound `
+                    -TargetObject $TemplateId
                 return
             }
         }
@@ -301,7 +304,9 @@ function Apply-DistroNexusTemplate {
                  if ($script.ContinueOnError) {
                      Write-Warning $msg
                  } else {
-                     Write-Error $msg
+                     Write-Error $msg `
+                         -ErrorId "DistroNexus.TemplateScriptFailed" `
+                         -Category OperationStopped
                      return
                  }
              }

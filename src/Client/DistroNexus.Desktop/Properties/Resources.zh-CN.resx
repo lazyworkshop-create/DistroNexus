@@ -295,6 +295,9 @@
   <data name="ErrorTitle" xml:space="preserve">
     <value>错误</value>
   </data>
+  <data name="ErrorCopyCode" xml:space="preserve">
+    <value>复制错误代码 {0}</value>
+  </data>
   <data name="Cancel" xml:space="preserve">
     <value>取消</value>
   </data>
@@ -875,6 +878,18 @@
   </data>
   <data name="BadgeCustom" xml:space="preserve">
     <value>自定义</value>
+  </data>
+  <data name="ActionApply" xml:space="preserve">
+    <value>应用</value>
+  </data>
+  <data name="ActionExport" xml:space="preserve">
+    <value>导出</value>
+  </data>
+  <data name="ActionImport" xml:space="preserve">
+    <value>导入</value>
+  </data>
+  <data name="BadgeOfficial" xml:space="preserve">
+    <value>官方</value>
   </data>
   <data name="StepConnector" xml:space="preserve">
     <value> - </value>
@@ -1724,5 +1739,19 @@
   </data>
   <data name="TagFilter_NoTags" xml:space="preserve">
     <value>尚未分配任何标签。</value>
+  </data>
+  <data name="TitleBackupFailure" xml:space="preserve">
+    <value>备份失败</value>
+  </data>
+  <data name="ErrorBackupFailedForInstance" xml:space="preserve">
+    <value>'{0}' 的备份失败：{1}</value>
+  </data>
+  <data name="TitleInvalidModulePath" xml:space="preserve">
+    <value>无效的模块路径</value>
+  </data>
+  <data name="ErrorInvalidModulePath" xml:space="preserve">
+    <value>所选目录不包含 'DistroNexus.psd1'。
+
+请选择包含 PowerShell 模块清单文件的目录。</value>
   </data>
 </root>
