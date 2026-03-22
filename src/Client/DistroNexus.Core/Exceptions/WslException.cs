@@ -7,6 +7,11 @@ namespace DistroNexus.Core.Exceptions;
 public class WslException : Exception
 {
     /// <summary>
+    /// Gets the structured DistroNexus error code for this exception.
+    /// </summary>
+    public DistroNexusErrorCode Code { get; }
+
+    /// <summary>
     /// Gets the error code from the underlying WSL operation, if available.
     /// </summary>
     public int? ErrorCode { get; }
@@ -21,8 +26,24 @@ public class WslException : Exception
     /// </summary>
     /// <param name="message">The error message.</param>
     public WslException(string? message = null) : base(message)
-    {
-    }
+        => Code = DistroNexusErrorCode.UnknownError;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WslException"/> class with a structured error code.
+    /// </summary>
+    /// <param name="message">The error message.</param>
+    /// <param name="code">The DistroNexus structured error code.</param>
+    public WslException(string? message, DistroNexusErrorCode code) : base(message)
+        => Code = code;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WslException"/> class with a structured error code and inner exception.
+    /// </summary>
+    /// <param name="message">The error message.</param>
+    /// <param name="code">The DistroNexus structured error code.</param>
+    /// <param name="innerException">The inner exception.</param>
+    public WslException(string? message, DistroNexusErrorCode code, Exception? innerException)
+        : base(message, innerException) { Code = code; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WslException"/> class with a specified error code.
@@ -31,6 +52,7 @@ public class WslException : Exception
     /// <param name="errorCode">The error code from the WSL operation.</param>
     public WslException(string? message, int errorCode) : base(message)
     {
+        Code = DistroNexusErrorCode.UnknownError;
         ErrorCode = errorCode;
     }
 
@@ -42,6 +64,7 @@ public class WslException : Exception
     /// <param name="errorOutput">The error output from the WSL operation.</param>
     public WslException(string? message, int errorCode, string? errorOutput) : base(message)
     {
+        Code = DistroNexusErrorCode.UnknownError;
         ErrorCode = errorCode;
         ErrorOutput = errorOutput;
     }
@@ -52,8 +75,7 @@ public class WslException : Exception
     /// <param name="message">The error message.</param>
     /// <param name="innerException">The inner exception.</param>
     public WslException(string? message, Exception? innerException) : base(message, innerException)
-    {
-    }
+        => Code = DistroNexusErrorCode.UnknownError;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WslException"/> class with error details and an inner exception.
@@ -62,9 +84,10 @@ public class WslException : Exception
     /// <param name="errorCode">The error code from the WSL operation.</param>
     /// <param name="errorOutput">The error output from the WSL operation.</param>
     /// <param name="innerException">The inner exception.</param>
-    public WslException(string? message, int errorCode, string? errorOutput, Exception? innerException) 
+    public WslException(string? message, int errorCode, string? errorOutput, Exception? innerException)
         : base(message, innerException)
     {
+        Code = DistroNexusErrorCode.UnknownError;
         ErrorCode = errorCode;
         ErrorOutput = errorOutput;
     }

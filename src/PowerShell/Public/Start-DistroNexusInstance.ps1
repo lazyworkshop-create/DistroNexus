@@ -53,6 +53,11 @@ function Start-DistroNexusInstance {
         }
         catch {
             Write-DistroNexusLog "Exception while starting instance: $_" -Level ERROR
+            Write-Error -Message $_.Exception.Message `
+                        -ErrorId "DistroNexus.StartFailed" `
+                        -Category OperationStopped `
+                        -TargetObject $Name `
+                        -ErrorAction Continue
             return $false
         }
     }

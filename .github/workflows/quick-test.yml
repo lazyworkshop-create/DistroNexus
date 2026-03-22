@@ -92,6 +92,8 @@ jobs:
       if: always()
       uses: EnricoMi/publish-unit-test-result-action/windows@v2
       with:
-        files: test-results/*.trx, tests/test-results/*.xml
+        files: |
+          test-results/*.trx
+          tests/test-results/*.xml
         check_name: 'Quick Validation Tests'
         compare_to_earlier_commit: true

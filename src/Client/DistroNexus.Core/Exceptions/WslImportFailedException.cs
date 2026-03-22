@@ -14,7 +14,7 @@ public class WslImportFailedException : WslOperationException
     /// <param name="instanceName">The name of the instance being imported.</param>
     /// <param name="packagePath">The path to the package file.</param>
     public WslImportFailedException(string instanceName, string packagePath)
-        : base($"Failed to import WSL instance '{instanceName}' from '{packagePath}'.", operation: "ImportInstance", instanceName: instanceName)
+        : base($"Failed to import WSL instance '{instanceName}' from '{packagePath}'.", DistroNexusErrorCode.ImportFailed, operation: "ImportInstance", instanceName: instanceName)
     {
     }
 
@@ -25,7 +25,7 @@ public class WslImportFailedException : WslOperationException
     /// <param name="innerException">The exception that is the cause of the current exception.</param>
     /// <param name="instanceName">The name of the instance being imported.</param>
     public WslImportFailedException(string message, Exception? innerException, string? instanceName = null)
-        : base(message, innerException, operation: "ImportInstance", instanceName: instanceName)
+        : base(message, innerException, DistroNexusErrorCode.ImportFailed, operation: "ImportInstance", instanceName: instanceName)
     {
     }
 }

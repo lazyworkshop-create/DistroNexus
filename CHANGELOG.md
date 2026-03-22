@@ -5,6 +5,53 @@ All notable changes to DistroNexus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [2.2.0] - 2026-03-02
+
+### Added
+
+- Added `Compress-DistroNexusInstance` cmdlet to compact WSL VHDX disks and reclaim unused space (F-01).
+  Supports `-WhatIf` for dry-run estimates; uses `Optimize-VHD` (Hyper-V) with `diskpart` fallback.
+- Added `CompactInstanceAsync` to `IWslManagerService` / `WslManagerService` (F-01).
+- Added Docker Desktop integration management cmdlets: `Get-DistroNexusDockerIntegration`,
+  `Enable-DistroNexusDockerIntegration`, and `Disable-DistroNexusDockerIntegration` (F-02).
+  Reads/writes `integratedWslDistros` in Docker's settings JSON; guards against WSL v1 and reserved distros.
+- Added `IDockerIntegrationService` / `DockerIntegrationService` with `IsDockerDesktopInstalledAsync`,
+  `GetIntegrationStatusAsync`, and `SetIntegrationAsync` (F-02).
+- Added `Export-DistroNexusInstance` and `Import-DistroNexusInstance` cmdlets for WSL instance
+  backup/restore workflows (E-01). Export supports `-Force` auto-stop; Import validates no name collision.
+- Added `ExportInstanceAsync` and `ImportInstanceAsync` to `IWslManagerService` / `WslManagerService` (E-01).
+- Added `Get-DistroNexusWslConfig` and `Set-DistroNexusWslConfig` cmdlets for editing the global
+  `~/.wslconfig` INI file (E-02). Set preserves unknown keys and comments; warns when Memory > 80% of host RAM.
+- Added `IWslConfigService` / `WslConfigService` with `GetWslConfigAsync`, `SetWslConfigAsync`,
+  and `GetHostSpecsAsync` (E-02).
+- Added `Get-DistroNexusInstanceConfig` and `Set-DistroNexusInstanceSparseMode` cmdlets for
+  per-instance sparse VHDX mode configuration (E-03). Guards against WSL v1 instances.
+- Added `New-DistroNexusBackupSchedule`, `Remove-DistroNexusBackupSchedule`,
+  `Get-DistroNexusBackupSchedule`, and `Invoke-DistroNexusBackup` cmdlets for automated
+  scheduled instance backups via Windows Task Scheduler (E-04). Supports Daily/Weekly/Monthly
+  frequency, configurable retention, and on-demand backup with stop/restart lifecycle.
+- Added `IBackupService` / `BackupService` for managing backup schedules and invoking backups (E-04).
+- Added `Get-DistroNexusPortMapping` cmdlet for visualizing listening ports inside WSL instances (E-05).
+  Parses `ss` output, cross-references `netsh portproxy` rules, and returns WSL IP address.
+- Added `INetworkService` / `NetworkService` with `GetPortMappingsAsync` and `GetInstanceIpAddressAsync` (E-05).
+- Added `Get-DistroNexusInstanceTag`, `Set-DistroNexusInstanceTag`, `Add-DistroNexusInstanceTag`,
+  and `Remove-DistroNexusInstanceTag` cmdlets for per-instance tagging (E-06). Tags are case-insensitively
+  normalised, max 10 per instance, persisted in `settings.json`.
+- Added `ITagService` / `TagService` with tag CRUD, rename-migration, and delete hooks (E-06).
+- Added `Invalidate-InstanceCache`, `Reset-CacheInvalidationState` to `Cache.ps1` for event-driven
+  cache invalidation (E-07). Added `Get-DistroNexusCache` diagnostic cmdlet.
+- Added `IWslEventWatcher` / `WslEventWatcher` with 2-second debounce timer for coalescing rapid
+  WSL process events into a single cache refresh signal (E-07).
+- Added `IWslCliRunner` / `WslCliRunner` to wrap direct `wsl.exe` process invocations (E-08).
+  `WslManagerService` now uses native `wsl --list --verbose` parsing (Phase 1) when `IWslCliRunner`
+  is injected, eliminating one PowerShell process spin-up per instance-list operation.
+- Added `DistroNexusErrorCode` enum with stable numeric prefixes for all error categories (E-09):
+  1xxx = instance lifecycle, 2xxx = disk/VHDX, 3xxx = Docker, 4xxx = backup/export, 5xxx = config,
+  9xxx = system/unknown. `WslException` and `WslOperationException` now carry a `Code` property;
+  all concrete exception subclasses are pre-wired with their canonical codes.
+
 ## [2.1.1] - 2026-02-21
 
 ### Added

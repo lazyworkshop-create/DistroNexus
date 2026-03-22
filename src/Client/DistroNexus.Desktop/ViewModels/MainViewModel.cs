@@ -7,6 +7,7 @@ using DistroNexus.Desktop.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Windows;
 using WPFLocalizeExtension.Engine;
 using System.Globalization;
@@ -17,7 +18,7 @@ namespace DistroNexus.Desktop.ViewModels;
 /// <summary>
 /// Main view model for the application shell.
 /// </summary>
-public partial class MainViewModel : ObservableObject
+public partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly IWslManagerService _wslManager;
     private readonly ISettingsService _settingsService;
@@ -26,6 +27,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IDownloadTaskManager _downloadTaskManager;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<MainViewModel> _logger;
+    private readonly IWslEventWatcher _wslEventWatcher;
 
     [ObservableProperty]
     private ObservableCollection<WslInstanceViewModel> _instances = new();
@@ -73,7 +75,8 @@ public partial class MainViewModel : ObservableObject
         ITerminalService terminalService,
         IDownloadTaskManager downloadTaskManager,
         IServiceProvider serviceProvider,
-        ILogger<MainViewModel> logger)
+        ILogger<MainViewModel> logger,
+        IWslEventWatcher wslEventWatcher)
     {
         _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
@@ -82,9 +85,13 @@ public partial class MainViewModel : ObservableObject
         _downloadTaskManager = downloadTaskManager ?? throw new ArgumentNullException(nameof(downloadTaskManager));
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _wslEventWatcher = wslEventWatcher ?? throw new ArgumentNullException(nameof(wslEventWatcher));
 
         // Subscribe to download task status changes
         _downloadTaskManager.TaskStatusChanged += OnDownloadTaskStatusChanged;
+
+        // Subscribe to cache invalidation for auto-refresh (E-07-3)
+        _wslEventWatcher.CacheInvalidationRequested += OnCacheInvalidated;
 
         // NOTE: LoadUserPreferencesAsync is now called explicitly from MainWindow.OnLoaded
         // to avoid async operations in constructor which can block DI resolution
@@ -99,6 +106,49 @@ public partial class MainViewModel : ObservableObject
     public async Task InitializeAsync()
     {
         await LoadUserPreferencesAsync();
+        await ShowPendingBackupNotificationsAsync();
+    }
+
+    /// <summary>
+    /// Reads and displays any backup failure notifications persisted by backup-runner.ps1 (E-04-1).
+    /// Deletes the notification file after displaying to prevent repeat display.
+    /// </summary>
+    private async Task ShowPendingBackupNotificationsAsync()
+    {
+        var notifPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "DistroNexus", "pending-notifications.json");
+        if (!File.Exists(notifPath))
+            return;
+
+        try
+        {
+            var json = await File.ReadAllTextAsync(notifPath);
+            var doc = System.Text.Json.JsonDocument.Parse(json);
+            if (!doc.RootElement.TryGetProperty("notifications", out var notifs))
+            {
+                // corrupt or unexpected file format — still deleted by finally
+                return;
+            }
+            foreach (var n in notifs.EnumerateArray())
+            {
+                var msg = n.TryGetProperty("message", out var msgEl) ? msgEl.GetString() : "Unknown error";
+                var inst = n.TryGetProperty("instance", out var instEl) ? instEl.GetString() : "Unknown instance";
+                await ShowAlert("Backup Failure", $"Backup failed for '{inst}': {msg}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to read or display pending backup notifications");
+        }
+        finally
+        {
+            try { File.Delete(notifPath); }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to delete pending-notifications.json after display");
+            }
+        }
     }
 
     /// <summary>
@@ -134,6 +184,16 @@ public partial class MainViewModel : ObservableObject
         await uiMessageBox.ShowDialogAsync();
     }
 
+    public static string FormatAlertMessage(Exception ex)
+    {
+        var code = ex is DistroNexus.Core.Exceptions.WslException wslEx
+            ? $"[DN-{(int)wslEx.Code:D4}] "
+            : ex is DistroNexus.Core.Exceptions.WslOperationException opEx
+                ? $"[DN-{(int)opEx.Code:D4}] "
+                : string.Empty;
+        return $"{code}{ex.Message}";
+    }
+
     [RelayCommand]
     private async Task LoadInstancesAsync(CancellationToken cancellationToken = default)
     {
@@ -152,7 +212,9 @@ public partial class MainViewModel : ObservableObject
                 Instances.Clear();
                 foreach (var instance in instances)
                 {
-                    var vm = new WslInstanceViewModel(instance, _wslManager, _terminalService, _settingsService, _logger);
+                    var tagService = _serviceProvider.GetRequiredService<ITagService>();
+                    var backupService = _serviceProvider.GetRequiredService<IBackupService>();
+                    var vm = new WslInstanceViewModel(instance, _wslManager, _terminalService, _settingsService, _logger, tagService, backupService);
                     vm.RefreshRequested += (s, e) => _ = RefreshAsync();
                     Instances.Add(vm);
                 }
@@ -182,7 +244,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to load WSL instances");
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.LoadInstancesError, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.LoadInstancesError, MainViewModel.FormatAlertMessage(ex)));
         }
         // Note: Don't set IsLoading = false here as it's controlled by MainWindow
     }
@@ -294,6 +356,12 @@ public partial class MainViewModel : ObservableObject
     /// <summary>
     /// Handles download task status changes.
     /// </summary>
+    private void OnCacheInvalidated(object? sender, EventArgs e)
+    {
+        _ = Application.Current.Dispatcher.InvokeAsync(
+            async () => await LoadInstancesAsync(CancellationToken.None));
+    }
+
     private void OnDownloadTaskStatusChanged(object? sender, DownloadTask task)
     {
         Application.Current.Dispatcher.Invoke(() =>
@@ -487,9 +555,15 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to generate diagnostics");
-            await ShowAlert(Properties.Resources.ErrorApplicationTitle, string.Format(Properties.Resources.ErrorGenerateDiagnostics, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorApplicationTitle, string.Format(Properties.Resources.ErrorGenerateDiagnostics, MainViewModel.FormatAlertMessage(ex)));
             StatusMessage = "Failed to generate diagnostics";
         }
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        _wslEventWatcher.CacheInvalidationRequested -= OnCacheInvalidated;
     }
 }
 
@@ -502,6 +576,8 @@ public partial class WslInstanceViewModel : ObservableObject
     private readonly ITerminalService _terminalService;
     private readonly ISettingsService _settingsService;
     private readonly ILogger _logger;
+    private readonly ITagService _tagService;
+    private readonly IBackupService _backupService;
 
     /// <summary>
     /// Event raised when the instance requests a refresh of the main list (e.g. after deletion).
@@ -554,17 +630,21 @@ public partial class WslInstanceViewModel : ObservableObject
     }
 
     public WslInstanceViewModel(
-        WslInstance instance, 
+        WslInstance instance,
         IWslManagerService wslManager,
         ITerminalService terminalService,
         ISettingsService settingsService,
-        ILogger logger)
+        ILogger logger,
+        ITagService tagService,
+        IBackupService backupService)
     {
         _instance = instance;
         _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
         _terminalService = terminalService ?? throw new ArgumentNullException(nameof(terminalService));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _tagService = tagService ?? throw new ArgumentNullException(nameof(tagService));
+        _backupService = backupService ?? throw new ArgumentNullException(nameof(backupService));
     }
 
     private static string FormatFileSize(long bytes)
@@ -644,7 +724,7 @@ public partial class WslInstanceViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Force refresh failed for instance {Name}", Name);
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorForceRefreshEx, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorForceRefreshEx, MainViewModel.FormatAlertMessage(ex)));
         }
         finally
         {
@@ -740,7 +820,7 @@ public partial class WslInstanceViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to start instance {Name}", Name);
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorStartInstanceEx, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorStartInstanceEx, MainViewModel.FormatAlertMessage(ex)));
         }
     }
 
@@ -785,7 +865,7 @@ public partial class WslInstanceViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to stop instance {Name}", Name);
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorStopInstanceEx, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorStopInstanceEx, MainViewModel.FormatAlertMessage(ex)));
         }
     }
 
@@ -808,21 +888,59 @@ public partial class WslInstanceViewModel : ObservableObject
                 return;
         }
 
+        var instanceName = Name;
+
+        // Check if a backup schedule exists and warn user (E-04-2)
+        try
+        {
+            var schedules = await _backupService.GetSchedulesAsync();
+            var hasSchedule = schedules.Any(s =>
+                string.Equals(s.Name, instanceName, StringComparison.OrdinalIgnoreCase));
+            if (hasSchedule)
+            {
+                var confirm = new Wpf.Ui.Controls.MessageBox
+                {
+                    Title = Properties.Resources.ConfirmRemoveTitle,
+                    Content = string.Format(Properties.Resources.ConfirmRemoveWithBackupMessage, instanceName),
+                    PrimaryButtonText = Properties.Resources.ButtonRemove,
+                    CloseButtonText = Properties.Resources.ButtonClose
+                };
+                var result = await confirm.ShowDialogAsync();
+                if (result != Wpf.Ui.Controls.MessageBoxResult.Primary)
+                {
+                    return;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not check backup schedule for instance {Name}", instanceName);
+        }
+
         try
         {
             IsBusy = true;
-            _logger.LogInformation("Removing instance {Name}", Name);
-            
-            await _wslManager.RemoveInstanceAsync(Name);
-            
-            await ShowAlert(Properties.Resources.SuccessTitle, string.Format(Properties.Resources.SuccessInstanceRemoved, Name));
+            _logger.LogInformation("Removing instance {Name}", instanceName);
+
+            await _wslManager.RemoveInstanceAsync(instanceName);
+
+            try
+            {
+                await _tagService.DeleteInstanceTagsAsync(instanceName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Tag cleanup failed for removed instance {Name}", instanceName);
+            }
+
+            await ShowAlert(Properties.Resources.SuccessTitle, string.Format(Properties.Resources.SuccessInstanceRemoved, instanceName));
 
             RefreshRequested?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to remove instance {Name}", Name);
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorRemoveInstanceEx, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorRemoveInstanceEx, MainViewModel.FormatAlertMessage(ex)));
         }
         finally
         {
@@ -858,7 +976,7 @@ public partial class WslInstanceViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to open terminal for instance {Name}", Name);
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorOpenTerminalEx, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorOpenTerminalEx, MainViewModel.FormatAlertMessage(ex)));
         }
     }
 
@@ -902,7 +1020,7 @@ public partial class WslInstanceViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to move instance {Name}", Name);
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorMoveInstanceEx, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorMoveInstanceEx, MainViewModel.FormatAlertMessage(ex)));
         }
         finally
         {
@@ -940,14 +1058,24 @@ public partial class WslInstanceViewModel : ObservableObject
 
         try
         {
+            var oldName = Name;
             IsBusy = true;
-            _logger.LogInformation("Renaming instance {OldName} to {NewName}", Name, newName);
-            
-            await _wslManager.RenameInstanceAsync(Name, newName);
-            
+            _logger.LogInformation("Renaming instance {OldName} to {NewName}", oldName, newName);
+
+            await _wslManager.RenameInstanceAsync(oldName, newName);
+
             Instance.Name = newName;
             OnPropertyChanged(nameof(Name));
-            
+
+            try
+            {
+                await _tagService.RenameInstanceTagsAsync(oldName, newName);
+            }
+            catch (Exception tagEx)
+            {
+                _logger.LogWarning(tagEx, "Tag migration failed for rename {OldName} -> {NewName}", oldName, newName);
+            }
+
             await ShowAlert(Properties.Resources.SuccessTitle, string.Format(Properties.Resources.SuccessInstanceRenamed, newName));
 
             RefreshRequested?.Invoke(this, EventArgs.Empty);
@@ -955,7 +1083,7 @@ public partial class WslInstanceViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to rename instance {Name}", Name);
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorRenameInstanceEx, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorRenameInstanceEx, MainViewModel.FormatAlertMessage(ex)));
         }
         finally
         {
@@ -1031,7 +1159,7 @@ public partial class WslInstanceViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to set credentials for instance {Name}", Name);
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorSetCredentialsEx, ex.Message));
+            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorSetCredentialsEx, MainViewModel.FormatAlertMessage(ex)));
         }
         finally
         {

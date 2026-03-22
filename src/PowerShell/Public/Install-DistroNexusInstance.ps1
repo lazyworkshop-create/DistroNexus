@@ -406,6 +406,11 @@ generateResolvConf=true
         catch {
             Write-Progress -Activity "Installing WSL Instance" -Completed
             Write-DistroNexusLog "Installation failed: $_" -Level ERROR
+            Write-Error -Message $_.Exception.Message `
+                        -ErrorId "DistroNexus.InstallFailed" `
+                        -Category OperationStopped `
+                        -TargetObject $InstanceName `
+                        -ErrorAction Continue
             
             # Cleanup on failure
             $existingAfterError = Get-DistroNexusInstance -Name $InstanceName -ForceUpdate | 

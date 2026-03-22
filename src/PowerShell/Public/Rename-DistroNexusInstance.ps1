@@ -82,10 +82,25 @@ function Rename-DistroNexusInstance {
             }
             
             Write-DistroNexusLog "Successfully renamed instance to: $NewName"
+
+            # Migrate tags to new instance name (E06-2)
+            try {
+                Rename-DistroNexusInstanceTags -OldName $Name -NewName $NewName
+                Write-DistroNexusLog "Tags migrated from '$Name' to '$NewName'" -FileOnly
+            }
+            catch {
+                Write-DistroNexusLog "Tag migration warning for '$Name' -> '$NewName': $_" -Level WARN -FileOnly
+            }
+
             return $true
         }
         catch {
             Write-DistroNexusLog "Failed to rename instance: $_" -Level ERROR
+            Write-Error -Message $_.Exception.Message `
+                        -ErrorId "DistroNexus.RenameFailed" `
+                        -Category OperationStopped `
+                        -TargetObject $Name `
+                        -ErrorAction Continue
             return $false
         }
         finally {

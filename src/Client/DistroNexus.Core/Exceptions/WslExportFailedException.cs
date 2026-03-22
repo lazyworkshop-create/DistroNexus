@@ -14,7 +14,7 @@ public class WslExportFailedException : WslOperationException
     /// <param name="instanceName">The name of the instance being exported.</param>
     /// <param name="destinationPath">The destination path for the export.</param>
     public WslExportFailedException(string instanceName, string destinationPath)
-        : base($"Failed to export WSL instance '{instanceName}' to '{destinationPath}'.", operation: "ExportInstance", instanceName: instanceName)
+        : base($"Failed to export WSL instance '{instanceName}' to '{destinationPath}'.", DistroNexusErrorCode.ExportFailed, operation: "ExportInstance", instanceName: instanceName)
     {
     }
 
@@ -25,7 +25,7 @@ public class WslExportFailedException : WslOperationException
     /// <param name="innerException">The exception that is the cause of the current exception.</param>
     /// <param name="instanceName">The name of the instance being exported.</param>
     public WslExportFailedException(string message, Exception? innerException, string? instanceName = null)
-        : base(message, innerException, operation: "ExportInstance", instanceName: instanceName)
+        : base(message, innerException, DistroNexusErrorCode.ExportFailed, operation: "ExportInstance", instanceName: instanceName)
     {
     }
 }

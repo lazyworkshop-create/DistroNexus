@@ -63,6 +63,14 @@ function Get-InstanceCache {
         }
         
         Write-Verbose "Loaded $($cacheContent.Instances.Count) instance(s) from configuration"
+
+        # Populate in-memory TTL timestamp from file so Test-DistroNexusCacheStale
+        # uses the fast path on subsequent calls within the same session (E07-2).
+        $tsField = if ($cacheContent.LastUpdated) { $cacheContent.LastUpdated } elseif ($cacheContent.CachedAt) { $cacheContent.CachedAt } else { $null }
+        if ($tsField -and -not $script:__CacheState.CacheTimestamp) {
+            try { $script:__CacheState.CacheTimestamp = [datetime]$tsField } catch {}
+        }
+
         return $cacheContent.Instances
     }
     catch {
@@ -132,6 +140,8 @@ function Set-InstanceCache {
         $cacheObject | ConvertTo-Json -Depth 5 | Set-Content -Path $cacheFile -Force -Encoding UTF8
         Write-DistroNexusLog "Instance configuration updated: $($Instances.Count) instance(s)" -FileOnly
         Write-Verbose "Instance configuration saved to $cacheFile"
+        # Stamp TTL timestamp so Test-DistroNexusCacheStale can track freshness (E07-2)
+        Set-DistroNexusCache -Timestamp (Get-Date)
     }
     catch {
         Write-DistroNexusLog "Failed to save instance configuration: $_" -Level WARN
@@ -182,3 +192,97 @@ function Clear-InstanceCache {
         Write-Verbose "Instance configuration file does not exist: $cacheFile"
     }
 }
+
+# ── Cache invalidation state (E-07) ──────────────────────────────────────────
+# Module-scoped state used by Invalidate-InstanceCache and Get-DistroNexusCache.
+
+$script:__CacheState = [PSCustomObject]@{
+    IsStale        = $false
+    LastReason     = $null
+    InvalidatedAt  = $null
+    CacheTimestamp = $null
+}
+
+function Invalidate-InstanceCache {
+    <#
+    .SYNOPSIS
+        Marks the instance cache as stale so the next read triggers a full refresh.
+        Called by the C# WslEventWatcher host via ExecuteModuleCmdletAsync, or internally.
+    #>
+    param(
+        [Parameter(Mandatory = $false)]
+        [string]$Reason = "ExternalEvent"
+    )
+
+    $script:__CacheState.IsStale       = $true
+    $script:__CacheState.LastReason    = $Reason
+    $script:__CacheState.InvalidatedAt = Get-Date
+
+    Write-DistroNexusLog "Cache invalidated. Reason: $Reason" -FileOnly
+}
+
+function Reset-CacheInvalidationState {
+    <#
+    .SYNOPSIS
+        Clears the stale flag after a successful cache refresh.
+    #>
+    $script:__CacheState.IsStale = $false
+}
+
+function Get-CacheInvalidationState {
+    <#
+    .SYNOPSIS
+        Returns the current cache invalidation state object.
+    #>
+    return $script:__CacheState
+}
+
+function Set-DistroNexusCache {
+    <#
+    .SYNOPSIS
+        Records a cache timestamp for TTL tracking (E07-2).
+    #>
+    param(
+        [Parameter(Mandatory = $false)]
+        [object]$Data,
+        [Parameter(Mandatory = $false)]
+        [datetime]$Timestamp = (Get-Date)
+    )
+    $script:__CacheState.CacheTimestamp = $Timestamp
+}
+
+function Test-DistroNexusCacheStale {
+    <#
+    .SYNOPSIS
+        Returns $true when the TTL timestamp is absent or older than 10 minutes.
+
+    .DESCRIPTION
+        Checks the in-memory timestamp first. If not available (e.g. new session),
+        falls back to the LastUpdated field in the on-disk cache file so that a
+        freshly-written cache is not immediately treated as stale.
+    #>
+    # Fast path: in-memory timestamp is available
+    if ($script:__CacheState.CacheTimestamp) {
+        return ((Get-Date) - $script:__CacheState.CacheTimestamp).TotalMinutes -ge 10
+    }
+
+    # Slow path: new session — read LastUpdated from disk
+    $cachePath = Join-Path $env:APPDATA "DistroNexus"
+    $cacheFile = Join-Path $cachePath "instances.json"
+    if (Test-Path $cacheFile) {
+        try {
+            $data = Get-Content $cacheFile -Raw | ConvertFrom-Json -ErrorAction Stop
+            $tsField = if ($data.LastUpdated) { $data.LastUpdated } elseif ($data.CachedAt) { $data.CachedAt } else { $null }
+            if ($tsField) {
+                $fileTime = [datetime]$tsField
+                return ((Get-Date) - $fileTime).TotalMinutes -ge 10
+            }
+        }
+        catch {
+            # Unreadable file — treat as stale
+        }
+    }
+
+    return $true  # No timestamp found anywhere
+}
+

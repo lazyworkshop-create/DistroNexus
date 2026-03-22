@@ -15,15 +15,15 @@ sidebar_position: 2
 ## 下载 DistroNexus
 
 1.  前往 [GitHub Releases](https://github.com/lazyworkshop-create/DistroNexus/releases) 页面。
-2.  选择以下任一 v2.0.1 发布资产：
-    *   安装版：`DistroNexus-2.0.1-Setup.exe`
-    *   便携版：`DistroNexus-v2.0.1-Release.zip`
-    *   自包含版：`DistroNexus-v2.0.1-Release-selfcontained.zip`
+2.  选择以下任一 v2.2.0 发布资产：
+    *   安装版：`DistroNexus-2.2.0-Setup.exe`
+    *   便携版：`DistroNexus-v2.2.0-Release.zip`
+    *   自包含版：`DistroNexus-v2.2.0-Release-selfcontained.zip`
 
 ## 运行应用程序
 
 ### 安装版
-1.  运行 `DistroNexus-2.0.1-Setup.exe`。
+1.  运行 `DistroNexus-2.2.0-Setup.exe`。
 2.  完成安装后，从开始菜单启动 DistroNexus。
 
 ### 便携版 / 自包含版

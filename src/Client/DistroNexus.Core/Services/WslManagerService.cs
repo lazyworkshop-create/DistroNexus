@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -17,6 +18,7 @@ public partial class WslManagerService : IWslManagerService
     private readonly ICatalogService _catalogService;
     private readonly ILogger<WslManagerService> _logger;
     private readonly bool _useModuleFallback = true;
+    private readonly IWslCliRunner? _wslCliRunner;
 
     private const string LxssRegistryPath = @"HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss";
 
@@ -36,17 +38,23 @@ public partial class WslManagerService : IWslManagerService
     public WslManagerService(
         IPowerShellService powerShellService,
         ICatalogService catalogService,
-        ILogger<WslManagerService> logger)
+        ILogger<WslManagerService> logger,
+        IWslCliRunner? wslCliRunner = null)
     {
         _powerShellService = powerShellService ?? throw new ArgumentNullException(nameof(powerShellService));
         _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _wslCliRunner = wslCliRunner;
     }
 
     /// <inheritdoc/>
     public async Task<List<WslInstance>> GetInstancesAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+
+        // Phase 1 (E-08): when IWslCliRunner is injected, use native wsl.exe parsing
+        if (_wslCliRunner != null)
+            return await GetInstancesNativeAsync(cancellationToken);
 
         _logger.LogInformation("Retrieving WSL instances using PowerShell module");
 
@@ -70,25 +78,26 @@ public partial class WslManagerService : IWslManagerService
 
         if (moduleResult == null)
         {
-            throw new InvalidOperationException("PowerShell module execution returned no result.");
+            throw new WslOperationFailedException("PowerShell module execution returned no result.", DistroNexusErrorCode.UnknownError, operation: "GetInstances");
         }
 
         // Check if module call succeeded
         if (!moduleResult.Success)
         {
-            var errorMessage = moduleResult.Exception != null 
-                ? $"PowerShell module error: {moduleResult.Exception.Message}" 
+            var errorMessage = moduleResult.Exception != null
+                ? $"PowerShell module error: {moduleResult.Exception.Message}"
                 : "Failed to retrieve WSL instances using PowerShell module.";
 
             _logger.LogError(moduleResult.Exception, "Module call failed for Get-DistroNexusInstance");
-            throw new InvalidOperationException(errorMessage, moduleResult.Exception);
+            throw new WslOperationFailedException(errorMessage, moduleResult.Exception, DistroNexusErrorCode.UnknownError, operation: "GetInstances");
         }
 
         if (!moduleResult.UsedModule)
         {
             _logger.LogError("PowerShell module was not used for Get-DistroNexusInstance");
-            throw new InvalidOperationException(
-                "DistroNexus PowerShell module is not available. Please ensure the module is properly installed.");
+            throw new WslOperationFailedException(
+                "DistroNexus PowerShell module is not available. Please ensure the module is properly installed.",
+                DistroNexusErrorCode.UnknownError, operation: "GetInstances");
         }
 
         if (moduleResult.ParsedObjects == null || moduleResult.ParsedObjects.Count == 0)
@@ -117,6 +126,67 @@ public partial class WslManagerService : IWslManagerService
 
         _logger.LogInformation("Parsed {Count} instances from module, returning to caller", instances.Count);
         return instances;
+    }
+
+    /// <summary>
+    /// Native implementation of GetInstancesAsync using direct wsl.exe CLI parsing (E-08 Phase 1).
+    /// Called when IWslCliRunner is injected.
+    /// </summary>
+    private async Task<List<WslInstance>> GetInstancesNativeAsync(CancellationToken ct)
+    {
+        _logger.LogDebug("GetInstancesNativeAsync: using WslCliRunner");
+
+        var result = await _wslCliRunner!.RunAsync("--list --verbose --all", ct);
+
+        if (result.ExitCode != 0)
+        {
+            _logger.LogWarning("wsl --list --verbose returned exit code {Code}: {Error}", result.ExitCode, result.Error);
+            return [];
+        }
+
+        var descriptors = WslCliRunner.ParseWslListVerbose(result.Output);
+        _logger.LogDebug("GetInstancesNativeAsync: parsed {Count} instance(s)", descriptors.Count);
+
+        var runningResult = await _wslCliRunner!.RunAsync("--list --running", ct);
+        var runningNames = WslCliRunner.ParseWslListRunning(runningResult?.Output);
+
+        return descriptors.Select(d => new WslInstance
+        {
+            Name      = d.Name,
+            State     = runningNames.Contains(d.Name, StringComparer.OrdinalIgnoreCase) ? "Running" : d.State,
+            Version   = d.Version,
+            IsDefault = d.IsDefault,
+            Size      = GetVhdxSizeBytes(d.Name),
+        }).ToList();
+    }
+
+    /// <summary>
+    /// Looks up the VHDX file size for a WSL instance via the Windows registry (LXSS).
+    /// Returns 0 if the registry key or VHDX file is not found, or on any access failure.
+    /// </summary>
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    private static long GetVhdxSizeBytes(string instanceName)
+    {
+        try
+        {
+            using var hive = Microsoft.Win32.RegistryKey.OpenBaseKey(
+                Microsoft.Win32.RegistryHive.CurrentUser,
+                Microsoft.Win32.RegistryView.Registry64);
+            using var lxss = hive.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Lxss");
+            if (lxss == null) return 0;
+            foreach (var subKeyName in lxss.GetSubKeyNames())
+            {
+                using var sub = lxss.OpenSubKey(subKeyName);
+                if (sub?.GetValue("DistributionName") is string name && name == instanceName)
+                {
+                    var basePath = sub.GetValue("BasePath") as string ?? string.Empty;
+                    var vhdx = Path.Combine(basePath, "ext4.vhdx");
+                    return File.Exists(vhdx) ? new FileInfo(vhdx).Length : 0;
+                }
+            }
+        }
+        catch { /* registry or file access failure */ }
+        return 0;
     }
 
     private List<WslInstance> ParseInstancesFromModule(List<JsonElement> parsedObjects)
@@ -369,8 +439,7 @@ public partial class WslManagerService : IWslManagerService
             if (instances.Any(i => i.Name == options.InstanceName))
             {
                 _logger.LogError("Installation failed: Instance name '{InstanceName}' already exists", options.InstanceName);
-                throw new InvalidOperationException(
-                    $"An instance with the name \"{options.InstanceName}\" already exists. Please choose a different name.");
+                throw new WslInstanceAlreadyExistsException(options.InstanceName);
             }
             _logger.LogDebug("Instance name '{InstanceName}' is available", options.InstanceName);
 
@@ -1271,5 +1340,213 @@ public partial class WslManagerService : IWslManagerService
             _logger.LogError(ex, "Failed to force refresh instance {InstanceName}", instanceName);
             return null;
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task CompactInstanceAsync(
+        string instanceName,
+        IProgress<(double Percentage, string Message)>? progress = null,
+        bool whatIf = false,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(instanceName))
+            throw new ArgumentException("Instance name must not be null or empty.", nameof(instanceName));
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        _logger.LogInformation("Compacting VHDX for instance {InstanceName} (WhatIf={WhatIf})", instanceName, whatIf);
+
+        progress?.Report((5, "Preparing compaction…"));
+
+        var parameters = new Dictionary<string, object>
+        {
+            { "Name",  instanceName },
+            { "Force", true }
+        };
+
+        if (whatIf)
+            parameters["WhatIf"] = true;
+
+        progress?.Report((20, "Running fstrim and compacting VHDX…"));
+
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(
+            "Compress-DistroNexusInstance",
+            parameters: parameters,
+            options: new ModuleCallOptions
+            {
+                TimeoutSeconds  = VeryLongOperationTimeoutSeconds,
+                ParseAsJson     = false,
+                UseModuleFallback = false
+            },
+            cancellationToken: cancellationToken);
+
+        if (result == null || !result.Success)
+        {
+            var error = result?.Error ?? "Unknown error";
+            _logger.LogError("Compaction failed for {InstanceName}: {Error}", instanceName, error);
+            throw new WslOperationFailedException($"Compaction failed for '{instanceName}': {error}", DistroNexusErrorCode.CompactionFailed, operation: "CompactInstance", instanceName: instanceName);
+        }
+
+        progress?.Report((100, "Compaction complete."));
+        _logger.LogInformation("Compaction succeeded for instance {InstanceName}", instanceName);
+    }
+
+    /// <inheritdoc/>
+    public async Task ExportInstanceAsync(
+        string name,
+        string destination,
+        bool force = false,
+        CancellationToken cancellationToken = default)
+    {
+        if (name is null) throw new ArgumentNullException(nameof(name));
+        if (string.IsNullOrWhiteSpace(destination))
+            throw new ArgumentException("Destination must not be empty.", nameof(destination));
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        _logger.LogInformation("Exporting instance {Name} to {Destination}", name, destination);
+
+        var parameters = new Dictionary<string, object>
+        {
+            { "Name", name },
+            { "Destination", destination }
+        };
+
+        if (force) parameters["Force"] = true;
+
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(
+            "Export-DistroNexusInstance",
+            parameters: parameters,
+            options: new ModuleCallOptions
+            {
+                TimeoutSeconds    = VeryLongOperationTimeoutSeconds,
+                ParseAsJson       = false,
+                UseModuleFallback = false
+            },
+            cancellationToken: cancellationToken);
+
+        if (result == null || !result.Success)
+        {
+            var error = result?.Error ?? "Unknown error";
+            _logger.LogError("Export failed for {Name}: {Error}", name, error);
+            throw new WslExportFailedException($"Export failed for '{name}': {error}", null, name);
+        }
+
+        _logger.LogInformation("Export succeeded for instance {Name}", name);
+    }
+
+    /// <inheritdoc/>
+    public async Task ImportInstanceAsync(
+        string name,
+        string source,
+        string installPath,
+        CancellationToken cancellationToken = default)
+    {
+        if (name is null) throw new ArgumentNullException(nameof(name));
+        if (string.IsNullOrWhiteSpace(source))
+            throw new ArgumentException("Source must not be empty.", nameof(source));
+        if (string.IsNullOrWhiteSpace(installPath))
+            throw new ArgumentException("InstallPath must not be empty.", nameof(installPath));
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        _logger.LogInformation("Importing instance {Name} from {Source}", name, source);
+
+        var parameters = new Dictionary<string, object>
+        {
+            { "Name", name },
+            { "Source", source },
+            { "InstallPath", installPath }
+        };
+
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(
+            "Import-DistroNexusInstance",
+            parameters: parameters,
+            options: new ModuleCallOptions
+            {
+                TimeoutSeconds    = VeryLongOperationTimeoutSeconds,
+                ParseAsJson       = false,
+                UseModuleFallback = false
+            },
+            cancellationToken: cancellationToken);
+
+        if (result == null || !result.Success)
+        {
+            var error = result?.Error ?? "Unknown error";
+            _logger.LogError("Import failed for {Name}: {Error}", name, error);
+            throw new WslImportFailedException($"Import failed for '{name}': {error}", null, name);
+        }
+
+        _logger.LogInformation("Import succeeded for instance {Name}", name);
+    }
+
+    /// <inheritdoc/>
+    public async Task<object?> GetInstanceConfigAsync(
+        string name,
+        CancellationToken cancellationToken = default)
+    {
+        if (name is null) throw new ArgumentNullException(nameof(name));
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var parameters = new Dictionary<string, object> { { "Name", name } };
+
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(
+            "Get-DistroNexusInstanceConfig",
+            parameters: parameters,
+            options: new ModuleCallOptions
+            {
+                TimeoutSeconds    = QuickOperationTimeoutSeconds,
+                ParseAsJson       = true,
+                UseModuleFallback = false
+            },
+            cancellationToken: cancellationToken);
+
+        if (result == null || !result.Success)
+        {
+            _logger.LogWarning("GetInstanceConfig returned no result for {Name}", name);
+            return null;
+        }
+
+        return result.Output;
+    }
+
+    /// <inheritdoc/>
+    public async Task SetSparseModeAsync(
+        string name,
+        bool enabled,
+        CancellationToken cancellationToken = default)
+    {
+        if (name is null) throw new ArgumentNullException(nameof(name));
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        _logger.LogInformation("Setting sparse mode {Enabled} for {Name}", enabled, name);
+
+        var parameters = new Dictionary<string, object>
+        {
+            { "Name", name },
+            { "Enabled", enabled }
+        };
+
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(
+            "Set-DistroNexusInstanceSparseMode",
+            parameters: parameters,
+            options: new ModuleCallOptions
+            {
+                TimeoutSeconds    = NormalOperationTimeoutSeconds,
+                ParseAsJson       = false,
+                UseModuleFallback = false
+            },
+            cancellationToken: cancellationToken);
+
+        if (result == null || !result.Success)
+        {
+            var error = result?.Error ?? "Unknown error";
+            _logger.LogError("SetSparseMode failed for {Name}: {Error}", name, error);
+            throw new WslOperationFailedException($"SetSparseMode failed for '{name}': {error}", DistroNexusErrorCode.WslConfigWriteFailed, operation: "SetSparseMode", instanceName: name);
+        }
+
+        _logger.LogInformation("Sparse mode set to {Enabled} for {Name}", enabled, name);
     }
 }

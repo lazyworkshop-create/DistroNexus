@@ -97,4 +97,47 @@ public interface IWslManagerService
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>The refreshed instance information, or null if the operation failed.</returns>
     Task<WslInstance?> ForceRefreshInstanceAsync(string instanceName, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Compacts the VHDX disk of a WSL instance to reclaim unused space.
+    /// Runs fstrim inside the instance, then compacts the VHDX file using Optimize-VHD or diskpart.
+    /// </summary>
+    /// <param name="instanceName">The name of the instance to compact.</param>
+    /// <param name="progress">Optional progress reporter receiving (percentage, phase message).</param>
+    /// <param name="whatIf">If true, report estimated savings without performing compaction.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    Task CompactInstanceAsync(string instanceName, IProgress<(double Percentage, string Message)>? progress = null, bool whatIf = false, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Exports a WSL instance to a TAR file.
+    /// </summary>
+    /// <param name="name">The name of the instance to export.</param>
+    /// <param name="destination">Destination TAR file path or directory.</param>
+    /// <param name="force">If true, stop the instance if running before exporting.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    Task ExportInstanceAsync(string name, string destination, bool force = false, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Imports a WSL instance from a TAR file.
+    /// </summary>
+    /// <param name="name">Name for the new instance.</param>
+    /// <param name="source">Path to the source TAR file.</param>
+    /// <param name="installPath">Directory where the instance VHDX will be placed.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    Task ImportInstanceAsync(string name, string source, string installPath, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the per-instance resource configuration including sparse mode and WSL version.
+    /// </summary>
+    /// <param name="name">The name of the instance.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    Task<object?> GetInstanceConfigAsync(string name, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sets the sparse VHDX mode for a WSL2 instance.
+    /// </summary>
+    /// <param name="name">The name of the instance.</param>
+    /// <param name="enabled">True to enable sparse mode, false to disable.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    Task SetSparseModeAsync(string name, bool enabled, CancellationToken cancellationToken = default);
 }

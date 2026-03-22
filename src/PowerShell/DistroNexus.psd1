@@ -3,7 +3,7 @@
     RootModule = 'DistroNexus.psm1'
 
     # Version number of this module.
-    ModuleVersion = '2.1.1'
+    ModuleVersion = '2.2.0'
 
     # ID used to uniquely identify this module
     GUID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
@@ -42,7 +42,28 @@
         'Invoke-DistroNexusTemplateAutomation',
         'Test-DistroNexusTemplateEnvironment',
         'Test-DistroNexusTemplateMetadata',
-        'New-DistroNexusReleaseEvidenceBundle'
+        'New-DistroNexusReleaseEvidenceBundle',
+        'Compress-DistroNexusInstance',
+        'Get-DistroNexusDockerIntegration',
+        'Enable-DistroNexusDockerIntegration',
+        'Disable-DistroNexusDockerIntegration',
+        'Export-DistroNexusInstance',
+        'Import-DistroNexusInstance',
+        'Get-DistroNexusWslConfig',
+        'Set-DistroNexusWslConfig',
+        'Get-DistroNexusInstanceConfig',
+        'Set-DistroNexusInstanceSparseMode',
+        'New-DistroNexusBackupSchedule',
+        'Remove-DistroNexusBackupSchedule',
+        'Get-DistroNexusBackupSchedule',
+        'Invoke-DistroNexusBackup',
+        'Get-DistroNexusPortMapping',
+        'Get-DistroNexusInstanceTag',
+        'Set-DistroNexusInstanceTag',
+        'Add-DistroNexusInstanceTag',
+        'Remove-DistroNexusInstanceTag',
+        'Rename-DistroNexusInstanceTags',
+        'Get-DistroNexusCache'
     )
 
     # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
@@ -67,7 +88,7 @@
             ProjectUri = 'https://github.com/LazyWorkshop-Create/DistroNexus'
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Version 2.1.1 - Tooling enhancements, evidence pipeline standardization, and release readiness'
+            ReleaseNotes = 'Version 2.2.0 - Deep instance management: VHDX compaction, Docker Desktop integration, backup scheduling, port visualization, tagging, and internal architecture improvements'
         }
     }
 }

@@ -79,6 +79,11 @@ function Stop-DistroNexusInstance {
         }
         catch {
             Write-DistroNexusLog "Exception while stopping instance: $_" -Level ERROR
+            Write-Error -Message $_.Exception.Message `
+                        -ErrorId "DistroNexus.StopFailed" `
+                        -Category OperationStopped `
+                        -TargetObject $Name `
+                        -ErrorAction Continue
             return $false
         }
     }

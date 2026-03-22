@@ -13,7 +13,7 @@ public class WslInstanceAlreadyExistsException : WslOperationException
     /// </summary>
     /// <param name="instanceName">The name of the instance that already exists.</param>
     public WslInstanceAlreadyExistsException(string instanceName)
-        : base($"WSL instance '{instanceName}' already exists.", operation: "CreateInstance", instanceName: instanceName)
+        : base($"WSL instance '{instanceName}' already exists.", DistroNexusErrorCode.InstanceAlreadyExists, operation: "CreateInstance", instanceName: instanceName)
     {
     }
 
@@ -23,7 +23,7 @@ public class WslInstanceAlreadyExistsException : WslOperationException
     /// <param name="message">The error message that explains the reason for the exception.</param>
     /// <param name="instanceName">The name of the instance that already exists.</param>
     public WslInstanceAlreadyExistsException(string message, string instanceName)
-        : base(message, operation: "CreateInstance", instanceName: instanceName)
+        : base(message, DistroNexusErrorCode.InstanceAlreadyExists, operation: "CreateInstance", instanceName: instanceName)
     {
     }
 
@@ -34,7 +34,7 @@ public class WslInstanceAlreadyExistsException : WslOperationException
     /// <param name="innerException">The exception that is the cause of the current exception.</param>
     /// <param name="instanceName">The name of the instance that already exists.</param>
     public WslInstanceAlreadyExistsException(string message, Exception? innerException, string? instanceName = null)
-        : base(message, innerException, operation: "CreateInstance", instanceName: instanceName)
+        : base(message, innerException, DistroNexusErrorCode.InstanceAlreadyExists, operation: "CreateInstance", instanceName: instanceName)
     {
     }
 }

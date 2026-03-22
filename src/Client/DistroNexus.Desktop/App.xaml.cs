@@ -104,6 +104,13 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<IUpdateService, UpdateService>();
                     services.AddSingleton<ITerminalService, TerminalService>();
                     services.AddSingleton<IDownloadTaskManager, DownloadTaskManager>();
+                    services.AddSingleton<IDockerIntegrationService, DockerIntegrationService>();
+                    services.AddSingleton<IWslConfigService, WslConfigService>();
+                    services.AddSingleton<IBackupService, BackupService>();
+                    services.AddSingleton<INetworkService, NetworkService>();
+                    services.AddSingleton<ITagService, TagService>();
+                    services.AddSingleton<IWslEventWatcher, WslEventWatcher>();
+                    services.AddSingleton<IWslCliRunner, WslCliRunner>();
 
                     // Register ViewModels
                     services.AddTransient<MainViewModel>();

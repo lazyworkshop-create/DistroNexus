@@ -621,6 +621,9 @@ This action cannot be undone. All data in this instance will be permanently dele
   <data name="ErrorRemoveInstanceEx" xml:space="preserve">
     <value>Failed to remove instance: {0}</value>
   </data>
+  <data name="ConfirmRemoveWithBackupMessage" xml:space="preserve">
+    <value>Remove '{0}' and delete its backup schedule and backup files?</value>
+  </data>
   <data name="ErrorOpenTerminalFailed" xml:space="preserve">
     <value>Failed to open terminal for instance '{0}'</value>
   </data>
@@ -1314,5 +1317,8 @@ This will start the installation process.</value>
   </data>
   <data name="TitleLoadError" xml:space="preserve">
     <value>Load Error</value>
+  </data>
+  <data name="TooltipSparseModeEnabled" xml:space="preserve">
+    <value>Sparse VHDX automatically shrinks the disk file when space is freed. Requires WSL v2 and Windows 11. Enabling or disabling requires the instance to restart.</value>
   </data>
 </root>

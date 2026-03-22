@@ -72,6 +72,27 @@ function Remove-DistroNexusInstance {
                 catch {
                     Write-Verbose "Failed to update instance configuration: $_"
                 }
+
+                # Clean up tags for removed instance (E-06-3)
+                try {
+                    Set-DistroNexusInstanceTag -Name $Name -Tags @()
+                    Write-DistroNexusLog "Tags removed for instance '$Name'" -FileOnly
+                }
+                catch {
+                    Write-DistroNexusLog "Tag cleanup warning for '$Name': $_" -Level WARN -FileOnly
+                }
+
+                # Clean up backup schedule if one exists (E-04-2)
+                try {
+                    $schedule = Get-DistroNexusBackupSchedule -Name $Name -ErrorAction SilentlyContinue
+                    if ($schedule) {
+                        Remove-DistroNexusBackupSchedule -Name $Name
+                        Write-DistroNexusLog "Backup schedule removed for instance $Name" -FileOnly
+                    }
+                }
+                catch {
+                    Write-DistroNexusLog "Backup schedule cleanup warning for ${Name}: $($_)" -Level WARN -FileOnly
+                }
                 
                 # Optionally delete files
                 if (-not $KeepFiles -and $basePath -and (Test-Path $basePath)) {
@@ -94,6 +115,11 @@ function Remove-DistroNexusInstance {
         }
         catch {
             Write-DistroNexusLog "Exception while removing instance: $_" -Level ERROR
+            Write-Error -Message $_.Exception.Message `
+                        -ErrorId "DistroNexus.RemoveFailed" `
+                        -Category OperationStopped `
+                        -TargetObject $Name `
+                        -ErrorAction Continue
             return $false
         }
     }
