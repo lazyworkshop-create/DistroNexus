@@ -7,6 +7,7 @@
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:vm="clr-namespace:DistroNexus.Desktop.ViewModels"
         xmlns:tabs="clr-namespace:DistroNexus.Desktop.Controls.Tabs"
+        xmlns:controls="clr-namespace:DistroNexus.Desktop.Controls"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
@@ -62,6 +63,30 @@
                                    FontWeight="SemiBold"
                                    Foreground="{Binding Instance.RawState, Converter={StaticResource InstanceStateToColorConverter}}"/>
                     </StackPanel>
+                    <!-- Tag chips row (P6-3) -->
+                    <WrapPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <ItemsControl ItemsSource="{Binding Instance.Tags}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <controls:TagChipControl
+                                        TagName="{Binding}"
+                                        RemoveTagCommand="{Binding DataContext.Instance.RemoveTagCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Button Content="{lex:Loc Tag_AddTag}"
+                                Command="{Binding Instance.AddTagCommand}"
+                                Padding="6,1"
+                                Margin="0,2,0,2"
+                                FontSize="11"
+                                Cursor="Hand"
+                                VerticalAlignment="Center"/>
+                    </WrapPanel>
                 </StackPanel>
             </StackPanel>
         </Border>

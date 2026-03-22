@@ -8,6 +8,7 @@ xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
 lex:ResxLocalizationProvider.DefaultAssembly="DistroNexus.Desktop"
 lex:ResxLocalizationProvider.DefaultDictionary="Properties.Resources"
 xmlns:vm="clr-namespace:DistroNexus.Desktop.ViewModels"
+xmlns:controls="clr-namespace:DistroNexus.Desktop.Controls"
 xmlns:download="clr-namespace:DistroNexus.Core.Models;assembly=DistroNexus.Core"
 mc:Ignorable="d"
 Title="DistroNexus 2.0" 
@@ -107,14 +108,17 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
 
             <!-- Dashboard View (Instance List) -->
             <Grid Grid.Column="0" Grid.Row="1" Visibility="{Binding IsOnDashboard, Converter={StaticResource BoolToVisibilityConverter}}">
-                <!-- Inner Grid: list + compact-selected action bar -->
+                <!-- Inner Grid: tag filter bar + list + compact-selected action bar -->
                 <Grid>
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-                    <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Margin="0,0,16,0">
-                    <ItemsControl ItemsSource="{Binding Instances}">
+                    <!-- Tag filter bar (P6-4) -->
+                    <controls:TagFilterBar Grid.Row="0" DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Grid}}"/>
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,16,0">
+                    <ItemsControl ItemsSource="{Binding InstancesView}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="{x:Type vm:WslInstanceViewModel}">
                                 <ui:Card Margin="0,0,0,10" Padding="0">
@@ -175,6 +179,31 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                                                                    Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
                                                     </StackPanel>
                                                 </StackPanel>
+                                                <!-- Tag chips row (P6-2) -->
+                                                <WrapPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                                    <ItemsControl ItemsSource="{Binding Tags}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <WrapPanel Orientation="Horizontal"/>
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <controls:TagChipControl
+                                                                    TagName="{Binding}"
+                                                                    RemoveTagCommand="{Binding DataContext.RemoveTagCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"/>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                    <!-- + Tag button -->
+                                                    <Button Content="{lex:Loc Tag_AddTag}"
+                                                            Command="{Binding AddTagCommand}"
+                                                            Padding="6,1"
+                                                            Margin="0,2,0,2"
+                                                            FontSize="11"
+                                                            Cursor="Hand"
+                                                            VerticalAlignment="Center"/>
+                                                </WrapPanel>
                                             </StackPanel>
 
                                             <!-- Actions -->
@@ -229,7 +258,7 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                     </ItemsControl>
                 </ScrollViewer>
                     <!-- Compact Selected action bar (multi-select mode) -->
-                    <Border Grid.Row="1" Padding="0,8,0,0"
+                    <Border Grid.Row="2" Padding="0,8,0,0"
                             Visibility="{Binding IsMultiSelectMode, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel Orientation="Horizontal">
                             <ui:Button Content="{lex:Loc Toolbar_CompactSelected}"

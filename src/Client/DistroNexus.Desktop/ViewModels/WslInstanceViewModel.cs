@@ -7,6 +7,7 @@ using DistroNexus.Desktop.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
+using System.Collections.ObjectModel;
 using System.Windows;
 
 namespace DistroNexus.Desktop.ViewModels;
@@ -56,6 +57,13 @@ public partial class WslInstanceViewModel : ObservableObject
     /// <summary>True when Docker status has been queried and should be shown on the card.</summary>
     public bool IsDockerStatusVisible => _dockerIntegrationEnabled.HasValue;
 
+    /// <summary>Tags assigned to this instance.</summary>
+    [ObservableProperty]
+    private ObservableCollection<string> _tags = [];
+
+    /// <summary>Raised when tags are added or removed, so MainViewModel can refresh AvailableTags.</summary>
+    public event EventHandler? TagsChanged;
+
     public string Name => Instance.Name;
     public string State => Instance.State == "Running" ? Properties.Resources.StateRunning : 
                           (Instance.State == "Stopped" ? Properties.Resources.StateStopped : Instance.State);
@@ -65,6 +73,9 @@ public partial class WslInstanceViewModel : ObservableObject
     public string InstallPath => WslInstance.NormalizeWindowsPath(Instance.InstallPath);
     public string Distribution => Instance.Distribution;
     public long DiskSize => Instance.Size;
+
+    /// <summary>First tag for Group by Tag grouping; empty string means no tag.</summary>
+    public string PrimaryTag => Tags.Count > 0 ? Tags[0] : string.Empty;
     
     /// <summary>
     /// Gets the disk size formatted for display.
@@ -771,6 +782,78 @@ public partial class WslInstanceViewModel : ObservableObject
         finally
         {
             IsBusy = false;
+        }
+    }
+
+    /// <summary>
+    /// Prompts user to add a new tag, then calls ITagService to persist it.
+    /// </summary>
+    [RelayCommand]
+    private async Task AddTagAsync()
+    {
+        var textBox = new System.Windows.Controls.TextBox
+        {
+            MinWidth = 200,
+            MaxLength = 50
+        };
+        var dialog = new Wpf.Ui.Controls.MessageBox
+        {
+            Title = Properties.Resources.Tag_AddTag,
+            Content = textBox,
+            PrimaryButtonText = "OK",
+            CloseButtonText = Properties.Resources.ButtonCancel
+        };
+        var result = await dialog.ShowDialogAsync();
+        if (result != Wpf.Ui.Controls.MessageBoxResult.Primary) return;
+
+        var tagText = textBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(tagText)) return;
+
+        if (Tags.Contains(tagText, StringComparer.OrdinalIgnoreCase)) return;
+
+        try
+        {
+            await _tagService.AddTagAsync(Name, tagText);
+            Tags.Add(tagText);
+            OnPropertyChanged(nameof(PrimaryTag));
+            TagsChanged?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to add tag {Tag} to instance {Name}", tagText, Name);
+            await ShowAlert(Properties.Resources.ErrorTitle,
+                string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
+        }
+    }
+
+    /// <summary>
+    /// Removes a tag after confirmation.
+    /// </summary>
+    [RelayCommand]
+    private async Task RemoveTagAsync(string tagName)
+    {
+        if (string.IsNullOrEmpty(tagName)) return;
+
+        var confirmed = ConfirmDialog.Show(
+            Properties.Resources.Tag_RemoveTitle ?? "Remove Tag",
+            string.Format(Properties.Resources.Tag_RemoveConfirm, tagName),
+            Properties.Resources.ButtonRemove);
+
+        if (!confirmed) return;
+
+        try
+        {
+            await _tagService.RemoveTagAsync(Name, tagName);
+            var existing = Tags.FirstOrDefault(t => t.Equals(tagName, StringComparison.OrdinalIgnoreCase));
+            if (existing != null) Tags.Remove(existing);
+            OnPropertyChanged(nameof(PrimaryTag));
+            TagsChanged?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to remove tag {Tag} from instance {Name}", tagName, Name);
+            await ShowAlert(Properties.Resources.ErrorTitle,
+                string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
         }
     }
 }

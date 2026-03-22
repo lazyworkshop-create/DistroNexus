@@ -1707,4 +1707,28 @@ This will start the installation process.</value>
   <data name="Remove_DeleteFiles" xml:space="preserve">
     <value>Also delete backup files in '{0}'?</value>
   </data>
+  <data name="Tag_AddTag" xml:space="preserve">
+    <value>+ Tag</value>
+  </data>
+  <data name="Tag_RemoveTitle" xml:space="preserve">
+    <value>Remove Tag</value>
+  </data>
+  <data name="Tag_RemoveConfirm" xml:space="preserve">
+    <value>Remove tag '{0}' from this instance?</value>
+  </data>
+  <data name="Tag_EditTags" xml:space="preserve">
+    <value>Edit Tags</value>
+  </data>
+  <data name="TagFilter_Title" xml:space="preserve">
+    <value>Filter:</value>
+  </data>
+  <data name="TagFilter_ClearAll" xml:space="preserve">
+    <value>Clear All</value>
+  </data>
+  <data name="TagFilter_GroupByTag" xml:space="preserve">
+    <value>Group by Tag</value>
+  </data>
+  <data name="TagFilter_NoTags" xml:space="preserve">
+    <value>No tags assigned yet.</value>
+  </data>
 </root>

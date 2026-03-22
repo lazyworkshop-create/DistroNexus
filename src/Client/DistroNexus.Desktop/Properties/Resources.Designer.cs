@@ -2267,5 +2267,13 @@ namespace DistroNexus.Desktop.Properties {
         public static string BackupTab_SelectDestinationTitle { get { return ResourceManager.GetString("BackupTab_SelectDestinationTitle", resourceCulture); } }
         public static string Remove_DeleteTask { get { return ResourceManager.GetString("Remove_DeleteTask", resourceCulture); } }
         public static string Remove_DeleteFiles { get { return ResourceManager.GetString("Remove_DeleteFiles", resourceCulture); } }
+        public static string Tag_AddTag { get { return ResourceManager.GetString("Tag_AddTag", resourceCulture); } }
+        public static string Tag_RemoveTitle { get { return ResourceManager.GetString("Tag_RemoveTitle", resourceCulture); } }
+        public static string Tag_RemoveConfirm { get { return ResourceManager.GetString("Tag_RemoveConfirm", resourceCulture); } }
+        public static string Tag_EditTags { get { return ResourceManager.GetString("Tag_EditTags", resourceCulture); } }
+        public static string TagFilter_Title { get { return ResourceManager.GetString("TagFilter_Title", resourceCulture); } }
+        public static string TagFilter_ClearAll { get { return ResourceManager.GetString("TagFilter_ClearAll", resourceCulture); } }
+        public static string TagFilter_GroupByTag { get { return ResourceManager.GetString("TagFilter_GroupByTag", resourceCulture); } }
+        public static string TagFilter_NoTags { get { return ResourceManager.GetString("TagFilter_NoTags", resourceCulture); } }
     }
 }

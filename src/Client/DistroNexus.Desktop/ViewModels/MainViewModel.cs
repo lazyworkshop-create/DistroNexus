@@ -7,9 +7,13 @@ using DistroNexus.Desktop.Wizard;
 using DistroNexus.Desktop.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Windows;
+using System.Windows.Data;
 using WPFLocalizeExtension.Engine;
 using System.Globalization;
 using System.Threading;
@@ -35,6 +39,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private ObservableCollection<WslInstanceViewModel> _instances = new();
+
+    /// <summary>Filterable/groupable view over <see cref="Instances"/>.</summary>
+    public ICollectionView InstancesView { get; private set; }
+
+    /// <summary>All tags across all instances, used by the filter bar.</summary>
+    public ObservableCollection<TagFilterViewModel> AvailableTags { get; } = [];
+
+    [ObservableProperty]
+    private bool _isGroupByTag;
 
     [ObservableProperty]
     private WslInstanceViewModel? _selectedInstance;
@@ -109,6 +122,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _tagService = tagService ?? throw new ArgumentNullException(nameof(tagService));
         _backupService = backupService ?? throw new ArgumentNullException(nameof(backupService));
         _dockerIntegrationService = dockerIntegrationService ?? throw new ArgumentNullException(nameof(dockerIntegrationService));
+
+        // ICollectionView for filtering/grouping (Design Review #4)
+        InstancesView = CollectionViewSource.GetDefaultView(_instances);
 
         // Subscribe to download task status changes
         _downloadTaskManager.TaskStatusChanged += OnDownloadTaskStatusChanged;
@@ -237,6 +253,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 {
                     var vm = new WslInstanceViewModel(instance, _wslManager, _terminalService, _settingsService, _logger, _tagService, _backupService, _serviceProvider);
                     vm.RefreshRequested += (s, e) => _ = RefreshAsync();
+                    vm.TagsChanged += (s, e) => _ = RefreshAvailableTagsAsync();
                     Instances.Add(vm);
                 }
 
@@ -257,6 +274,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
             _logger.LogInformation("Loaded {Count} WSL instances", Instances.Count);
 
+            // Load tags per instance in background (P6-1)
+            _ = LoadTagsForInstancesAsync(Instances.ToList(), cancellationToken);
+
             // Load Docker integration status in the background (C-01-8)
             _ = LoadDockerStatusAsync(Instances.ToList(), cancellationToken);
         }
@@ -271,6 +291,129 @@ public partial class MainViewModel : ObservableObject, IDisposable
             await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.LoadInstancesError, MainViewModel.FormatAlertMessage(ex)));
         }
         // Note: Don't set IsLoading = false here as it's controlled by MainWindow
+    }
+
+    /// <summary>
+    /// Loads tags for each instance and populates <see cref="WslInstanceViewModel.Tags"/>,
+    /// then refreshes <see cref="AvailableTags"/>.
+    /// </summary>
+    private async Task LoadTagsForInstancesAsync(List<WslInstanceViewModel> snapshot, CancellationToken ct)
+    {
+        try
+        {
+            foreach (var vm in snapshot)
+            {
+                if (ct.IsCancellationRequested) return;
+                try
+                {
+                    var tags = await _tagService.GetTagsAsync(vm.Name);
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        vm.Tags.Clear();
+                        foreach (var t in tags) vm.Tags.Add(t);
+                    });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to load tags for instance {Name}", vm.Name);
+                }
+            }
+            await RefreshAvailableTagsAsync();
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Tag background load failed");
+        }
+    }
+
+    /// <summary>
+    /// Rebuilds <see cref="AvailableTags"/> from all loaded instance tags,
+    /// preserving existing selection state.
+    /// </summary>
+    internal async Task RefreshAvailableTagsAsync()
+    {
+        try
+        {
+            var allTags = await _tagService.GetAllTagsAsync();
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                // Preserve selection of currently selected tags
+                var selected = new HashSet<string>(
+                    AvailableTags.Where(t => t.IsSelected).Select(t => t.Name),
+                    StringComparer.OrdinalIgnoreCase);
+
+                AvailableTags.Clear();
+                foreach (var tag in allTags)
+                {
+                    var tfvm = new TagFilterViewModel { Name = tag, IsSelected = selected.Contains(tag) };
+                    tfvm.PropertyChanged += (s, e) =>
+                    {
+                        if (e.PropertyName == nameof(TagFilterViewModel.IsSelected))
+                            ApplyTagFilter();
+                    };
+                    AvailableTags.Add(tfvm);
+                }
+                ApplyTagFilter();
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to refresh available tags");
+        }
+    }
+
+    /// <summary>
+    /// Applies (or removes) the tag filter predicate on <see cref="InstancesView"/>.
+    /// </summary>
+    private void ApplyTagFilter()
+    {
+        var activeFilters = AvailableTags.Where(t => t.IsSelected).Select(t => t.Name).ToList();
+        InstancesView.Filter = activeFilters.Count > 0
+            ? o => o is WslInstanceViewModel vm && activeFilters.All(f => vm.Tags.Contains(f, StringComparer.OrdinalIgnoreCase))
+            : null;
+        InstancesView.Refresh();
+    }
+
+    /// <summary>Clears all selected tag filters.</summary>
+    [RelayCommand]
+    private void ClearTagFilters()
+    {
+        foreach (var tag in AvailableTags)
+            tag.IsSelected = false;
+        ApplyTagFilter();
+    }
+
+    /// <summary>Toggles a single tag filter pill.</summary>
+    [RelayCommand]
+    private void ToggleTagFilter(TagFilterViewModel? tag)
+    {
+        if (tag == null) return;
+        tag.IsSelected = !tag.IsSelected;
+        ApplyTagFilter();
+    }
+
+    /// <summary>Deselects a specific tag filter pill (called from × button).</summary>
+    [RelayCommand]
+    private void ClearSingleTagFilter(TagFilterViewModel? tag)
+    {
+        if (tag == null) return;
+        tag.IsSelected = false;
+        ApplyTagFilter();
+    }
+
+    /// <summary>Toggles Group by Tag grouping on <see cref="InstancesView"/>.</summary>
+    [RelayCommand]
+    private void ToggleGroupByTag()
+    {
+        IsGroupByTag = !IsGroupByTag;
+        InstancesView.GroupDescriptions.Clear();
+        if (IsGroupByTag)
+        {
+            // Group by primary tag (first tag); ungrouped instances go to empty group
+            InstancesView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(WslInstanceViewModel.PrimaryTag)));
+        }
+        InstancesView.Refresh();
     }
 
     /// <summary>
