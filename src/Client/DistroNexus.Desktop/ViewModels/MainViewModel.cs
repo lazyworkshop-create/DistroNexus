@@ -36,6 +36,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private readonly ITagService _tagService;
     private readonly IBackupService _backupService;
     private readonly IDockerIntegrationService _dockerIntegrationService;
+    private readonly IDialogService _dialogService;
 
     [ObservableProperty]
     private ObservableCollection<WslInstanceViewModel> _instances = new();
@@ -109,7 +110,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         IWslEventWatcher wslEventWatcher,
         ITagService tagService,
         IBackupService backupService,
-        IDockerIntegrationService dockerIntegrationService)
+        IDockerIntegrationService dockerIntegrationService,
+        IDialogService dialogService)
     {
         _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
@@ -122,6 +124,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _tagService = tagService ?? throw new ArgumentNullException(nameof(tagService));
         _backupService = backupService ?? throw new ArgumentNullException(nameof(backupService));
         _dockerIntegrationService = dockerIntegrationService ?? throw new ArgumentNullException(nameof(dockerIntegrationService));
+        _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
 
         // ICollectionView for filtering/grouping (Design Review #4)
         InstancesView = CollectionViewSource.GetDefaultView(_instances);
@@ -855,7 +858,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private async Task CompactSelectedAsync(CancellationToken ct)
     {
-        var dialogSvc = _serviceProvider.GetRequiredService<IDialogService>();
         var selected = Instances.Where(i => i.IsSelected && i.IsWslV2).ToList();
         if (selected.Count == 0) return;
 
@@ -872,8 +874,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 BulkCompactProgressText = string.Format(
                     Properties.Resources.BulkCompact_Counter, i + 1, selected.Count, inst.Name);
 
-                var wslManager = _serviceProvider.GetRequiredService<IWslManagerService>();
-                var diskVm = new ViewModels.Tabs.DiskTabViewModel(inst, wslManager, dialogSvc);
+                var diskVm = new ViewModels.Tabs.DiskTabViewModel(inst, _wslManager, _dialogService);
                 await diskVm.RunCompactionAsync(cts.Token);
             }
         }
@@ -889,7 +890,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private async Task ImportInstanceAsync()
     {
-        var dialogSvc = _serviceProvider.GetRequiredService<IDialogService>();
         var existingNames = Instances.Select(i => i.Name).ToList();
         var vm = new ImportInstanceViewModel(existingNames);
         var dialog = new ImportInstanceDialog(vm) { Owner = Application.Current.MainWindow };
@@ -912,26 +912,26 @@ public partial class MainViewModel : ObservableObject, IDisposable
             if (newVm is not null)
                 SelectedInstance = newVm;
 
-            await dialogSvc.ShowAlertAsync(
+            await _dialogService.ShowAlertAsync(
                 Properties.Resources.Import_CompleteTitle,
                 string.Format(Properties.Resources.Import_Complete, vm.InstanceName.Trim()));
         }
         catch (WslInstanceAlreadyExistsException ex)
         {
-            await dialogSvc.ShowAlertAsync(
+            await _dialogService.ShowAlertAsync(
                 Properties.Resources.ErrorTitle,
                 string.Format(Properties.Resources.Import_NameExists, ex.InstanceName ?? vm.InstanceName));
         }
         catch (WslOperationException ex)
         {
             _logger.LogError(ex, "Import failed. ErrorCode={ErrorCode}", (int)ex.Code);
-            await dialogSvc.ShowAlertAsync(
+            await _dialogService.ShowAlertAsync(
                 Properties.Resources.ErrorTitle,
                 string.Format(Properties.Resources.ErrorGenericOperation, $"[{(int)ex.Code}] {ex.Message}"));
         }
         catch (Exception ex)
         {
-            await dialogSvc.ShowAlertAsync(
+            await _dialogService.ShowAlertAsync(
                 Properties.Resources.ErrorTitle,
                 string.Format(Properties.Resources.ErrorGenericOperation, ex.Message));
         }

@@ -116,7 +116,8 @@ internal static class TestViewModelFactory
             mockWatcher.Object,
             new Mock<ITagService>().Object,
             new Mock<IBackupService>().Object,
-            new Mock<IDockerIntegrationService>().Object);
+            new Mock<IDockerIntegrationService>().Object,
+            dialogService.Object);
 
         return (vm, wslManager, dialogService, servicProvider);
     }
