@@ -69,6 +69,7 @@ public partial class IntegrationsTabViewModel : ObservableObject
         if (!IsTabVisible) return;
 
         IsLoading = true;
+        _instance.IsBusy = true;
         try
         {
             IsDockerInstalled = await _dockerIntegrationService.IsDockerDesktopInstalledAsync();
@@ -83,11 +84,12 @@ public partial class IntegrationsTabViewModel : ObservableObject
         {
             await _dialogService.ShowAlertAsync(
                 Properties.Resources.ErrorTitle,
-                string.Format(Properties.Resources.ErrorGenericOperation, ex.Message));
+                string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
         }
         finally
         {
             IsLoading = false;
+            _instance.IsBusy = false;
             OnPropertyChanged(nameof(IsToggleEnabled));
         }
     }
@@ -95,7 +97,10 @@ public partial class IntegrationsTabViewModel : ObservableObject
     [RelayCommand]
     private async Task ToggleDockerAsync()
     {
+        if (!IsToggleEnabled) return;
+
         IsLoading = true;
+        _instance.IsBusy = true;
         ShowRestartBanner = false;
         OnPropertyChanged(nameof(IsToggleEnabled));
         try
@@ -110,11 +115,12 @@ public partial class IntegrationsTabViewModel : ObservableObject
         {
             await _dialogService.ShowAlertAsync(
                 Properties.Resources.ErrorTitle,
-                string.Format(Properties.Resources.ErrorGenericOperation, ex.Message));
+                string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
         }
         finally
         {
             IsLoading = false;
+            _instance.IsBusy = false;
             OnPropertyChanged(nameof(IsToggleEnabled));
         }
     }

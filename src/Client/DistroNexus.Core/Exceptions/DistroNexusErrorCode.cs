@@ -8,15 +8,22 @@ namespace DistroNexus.Core.Exceptions;
 ///   3xxx = Docker integration
 ///   4xxx = backup / export / import
 ///   5xxx = configuration
+///   6xxx = templates
 ///   9xxx = system / unknown
 /// </summary>
 public enum DistroNexusErrorCode
 {
     // ── Instance lifecycle ────────────────────────────────────────────────
-    InstanceNotFound      = 1001,
+    InstanceNotFound       = 1001,
     InstanceAlreadyRunning = 1002,
     InstanceAlreadyStopped = 1003,
-    InstanceAlreadyExists  = 1004,    TooManyTags            = 1005,
+    InstanceAlreadyExists  = 1004,
+    TooManyTags            = 1005,
+    StartFailed            = 1006,
+    StopFailed             = 1007,
+    RemoveFailed           = 1008,
+    RenameFailed           = 1009,
+
     // ── Disk / VHDX ───────────────────────────────────────────────────────
     VhdxNotFound      = 2001,
     VhdxAccessDenied  = 2002,
@@ -30,15 +37,20 @@ public enum DistroNexusErrorCode
     ExportFailed           = 4001,
     ImportFailed           = 4002,
     BackupDestinationFull  = 4003,
-    ScheduleCreateFailed   = 4004,    ScheduleNotFound       = 4005,
+    ScheduleCreateFailed   = 4004,
+    ScheduleNotFound       = 4005,
+    BackupFailed           = 4006,
+    InvalidFrequency       = 4007,
+    InstallFailed          = 4008,
 
-    // ── Templates ──────────────────────────────────────────────────
-    TemplateNotFound       = 6001,
-    TemplateScriptFailed   = 6002,
     // ── Configuration ─────────────────────────────────────────────────────
     WslConfigReadFailed   = 5001,
     WslConfigWriteFailed  = 5002,
     RegistryAccessDenied  = 5003,
+
+    // ── Templates ─────────────────────────────────────────────────────────
+    TemplateNotFound       = 6001,
+    TemplateScriptFailed   = 6002,
 
     // ── System / Unknown ──────────────────────────────────────────────────
     WslNotInstalled             = 9001,

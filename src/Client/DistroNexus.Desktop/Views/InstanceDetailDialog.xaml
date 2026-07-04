@@ -105,7 +105,8 @@
                 <tabs:ResourcesTabView DataContext="{Binding ResourcesTab}"/>
             </TabItem>
             <!-- Integrations Tab -->
-            <TabItem Header="{lex:Loc Tab_Integrations}">
+            <TabItem Header="{lex:Loc Tab_Integrations}"
+                     Visibility="{Binding IntegrationsTab.IsTabVisible, Converter={StaticResource BoolToVisibilityConverter}}">
                 <tabs:IntegrationsTabView DataContext="{Binding IntegrationsTab}"/>
             </TabItem>
             <!-- Network Tab -->

@@ -777,6 +777,9 @@
   <data name="ButtonCancel" xml:space="preserve">
     <value>取消</value>
   </data>
+  <data name="ButtonOK" xml:space="preserve">
+    <value>确定</value>
+  </data>
   <data name="StatusSourceMovedUp" xml:space="preserve">
     <value>源已上移</value>
   </data>
@@ -1422,6 +1425,18 @@
   <data name="Export_Complete" xml:space="preserve">
     <value>实例已导出至 {0}（{1}）。</value>
   </data>
+  <data name="Export_ProgressTitle" xml:space="preserve">
+    <value>导出实例</value>
+  </data>
+  <data name="Export_ProgressMessage" xml:space="preserve">
+    <value>正在将“{0}”导出为 TAR 归档...</value>
+  </data>
+  <data name="Export_ProgressStatus" xml:space="preserve">
+    <value>已用时 {0} · 已写入 {1}</value>
+  </data>
+  <data name="Progress_Cancelling" xml:space="preserve">
+    <value>正在取消...</value>
+  </data>
   <data name="Import_Title" xml:space="preserve">
     <value>导入实例</value>
   </data>
@@ -1487,6 +1502,24 @@
   </data>
   <data name="BulkCompact_Counter" xml:space="preserve">
     <value>正在压缩 {0}/{1}：{2}</value>
+  </data>
+  <data name="BulkCompact_ConfirmTitle" xml:space="preserve">
+    <value>确认磁盘压缩</value>
+  </data>
+  <data name="BulkCompact_ConfirmMessage" xml:space="preserve">
+    <value>要按顺序压缩选中的 {0} 个 WSL v2 实例吗？每个实例可能会被临时停止。</value>
+  </data>
+  <data name="TemplatesTitle" xml:space="preserve">
+    <value>模板</value>
+  </data>
+  <data name="RetryTooltip" xml:space="preserve">
+    <value>重试</value>
+  </data>
+  <data name="NoDownloadTasksTitle" xml:space="preserve">
+    <value>暂无下载任务</value>
+  </data>
+  <data name="NoDownloadTasksSubtitle" xml:space="preserve">
+    <value>开始下载后任务会显示在这里</value>
   </data>
   <data name="WslConfig_SectionTitle" xml:space="preserve">
     <value>WSL 全局配置</value>

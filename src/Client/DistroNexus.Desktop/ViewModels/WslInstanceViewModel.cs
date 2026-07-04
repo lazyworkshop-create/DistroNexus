@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
+using DistroNexus.Desktop.Controls;
 using DistroNexus.Desktop.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -55,7 +56,7 @@ public partial class WslInstanceViewModel : ObservableObject
     private bool? _dockerIntegrationEnabled;
 
     /// <summary>True when Docker status has been queried and should be shown on the card.</summary>
-    public bool IsDockerStatusVisible => _dockerIntegrationEnabled.HasValue;
+    public bool IsDockerStatusVisible => DockerIntegrationEnabled.HasValue;
 
     /// <summary>Tags assigned to this instance.</summary>
     [ObservableProperty]
@@ -141,7 +142,7 @@ public partial class WslInstanceViewModel : ObservableObject
         {
             Title = title,
             Content = message,
-            CloseButtonText = "OK",
+            CloseButtonText = Properties.Resources.ButtonClose,
             MaxWidth = 400
         };
 
@@ -164,7 +165,7 @@ public partial class WslInstanceViewModel : ObservableObject
             var confirmed = DistroNexus.Desktop.Views.ConfirmDialog.Show(
                 Properties.Resources.ConfirmForceRefreshTitle,
                 Properties.Resources.ConfirmForceRefreshMessage,
-                "Force Refresh");
+                Properties.Resources.ActionForceRefresh);
 
             if (!confirmed)
                 return;
@@ -524,7 +525,7 @@ public partial class WslInstanceViewModel : ObservableObject
         var confirmed = DistroNexus.Desktop.Views.ConfirmDialog.Show(
             Properties.Resources.ConfirmMoveTitle,
             string.Format(Properties.Resources.ConfirmMoveMessage, Name, newPath),
-            "Move");
+            Properties.Resources.ActionMove);
 
         if (!confirmed)
             return;
@@ -640,7 +641,7 @@ public partial class WslInstanceViewModel : ObservableObject
                     userTextBox
                 }
             },
-            PrimaryButtonText = "Next",
+            PrimaryButtonText = Properties.Resources.ButtonNext,
             CloseButtonText = Properties.Resources.ButtonCancel
         };
 
@@ -664,7 +665,7 @@ public partial class WslInstanceViewModel : ObservableObject
                     passwordBox
                 }
             },
-            PrimaryButtonText = "OK",
+            PrimaryButtonText = Properties.Resources.ButtonOK,
             CloseButtonText = Properties.Resources.ButtonCancel
         };
 
@@ -739,6 +740,32 @@ public partial class WslInstanceViewModel : ObservableObject
                 Properties.Resources.Export_StopPromptTitle,
                 Properties.Resources.Export_StopPrompt);
             if (!stopOk) return;
+
+            IsBusy = true;
+            try
+            {
+                var stopped = await _wslManager.StopInstanceAsync(Name);
+                if (!stopped)
+                {
+                    await dialogSvc.ShowAlertAsync(
+                        Properties.Resources.ErrorTitle,
+                        string.Format(Properties.Resources.ErrorStopInstanceFailed, Name));
+                    return;
+                }
+
+                UpdateState("Stopped");
+            }
+            catch (Exception ex)
+            {
+                await dialogSvc.ShowAlertAsync(
+                    Properties.Resources.ErrorTitle,
+                    string.Format(Properties.Resources.ErrorStopInstanceEx, MainViewModel.FormatAlertMessage(ex)));
+                return;
+            }
+            finally
+            {
+                IsBusy = false;
+            }
         }
 
         // Open SaveFileDialog
@@ -753,10 +780,34 @@ public partial class WslInstanceViewModel : ObservableObject
         string destPath = dlg.FileName;
         bool force = System.IO.File.Exists(destPath);
 
+        var progressDialog = new ProgressDialog
+        {
+            Owner = Application.Current.MainWindow,
+            Title = Properties.Resources.Export_ProgressTitle,
+            Message = string.Format(Properties.Resources.Export_ProgressMessage, Name),
+            IsIndeterminate = true,
+            IsCancellable = true,
+            StatusMessage = string.Format(Properties.Resources.Export_ProgressStatus, "00:00", FormatFileSize(0))
+        };
+
         IsBusy = true;
         try
         {
-            await _wslManager.ExportInstanceAsync(Name, destPath, force);
+            progressDialog.Show();
+            var startedAt = DateTimeOffset.Now;
+
+            var exportTask = _wslManager.ExportInstanceAsync(Name, destPath, force, progressDialog.CancellationToken);
+            while (!exportTask.IsCompleted)
+            {
+                progressDialog.StatusMessage = string.Format(
+                    Properties.Resources.Export_ProgressStatus,
+                    FormatElapsed(DateTimeOffset.Now - startedAt),
+                    FormatFileSize(GetFileLengthOrZero(destPath)));
+
+                await Task.WhenAny(exportTask, Task.Delay(500));
+            }
+
+            await exportTask;
 
             long fileSize = new System.IO.FileInfo(destPath).Length;
             string sizeDisplay = FormatFileSize(fileSize);
@@ -770,7 +821,7 @@ public partial class WslInstanceViewModel : ObservableObject
             _logger.LogError(ex, "Export failed for {Name}. ErrorCode={ErrorCode}", Name, (int)ex.Code);
             await dialogSvc.ShowAlertAsync(
                 Properties.Resources.ErrorTitle,
-                string.Format(Properties.Resources.ErrorGenericOperation, $"[{(int)ex.Code}] {ex.Message}"));
+                string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
@@ -778,12 +829,32 @@ public partial class WslInstanceViewModel : ObservableObject
             try { if (System.IO.File.Exists(destPath)) System.IO.File.Delete(destPath); } catch { /* best effort */ }
             await dialogSvc.ShowAlertAsync(
                 Properties.Resources.ErrorTitle,
-                string.Format(Properties.Resources.ErrorGenericOperation, ex.Message));
+                string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
         }
         finally
         {
+            progressDialog.Close();
             IsBusy = false;
         }
+    }
+
+    private static long GetFileLengthOrZero(string path)
+    {
+        try
+        {
+            return System.IO.File.Exists(path) ? new System.IO.FileInfo(path).Length : 0;
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
+    private static string FormatElapsed(TimeSpan elapsed)
+    {
+        return elapsed.TotalHours >= 1
+            ? elapsed.ToString(@"h\:mm\:ss")
+            : elapsed.ToString(@"mm\:ss");
     }
 
     /// <summary>
@@ -801,7 +872,7 @@ public partial class WslInstanceViewModel : ObservableObject
         {
             Title = Properties.Resources.Tag_AddTag,
             Content = textBox,
-            PrimaryButtonText = "OK",
+            PrimaryButtonText = Properties.Resources.ButtonOK,
             CloseButtonText = Properties.Resources.ButtonCancel
         };
         var result = await dialog.ShowDialogAsync();

@@ -75,6 +75,7 @@ public partial class NetworkTabViewModel : ObservableObject
 
         ShowStoppedPlaceholder = false;
         IsLoading = true;
+        _instance.IsBusy = true;
         try
         {
             var ip = await _networkService.GetInstanceIpAddressAsync(_instance.Name);
@@ -95,11 +96,12 @@ public partial class NetworkTabViewModel : ObservableObject
         {
             await _dialogService.ShowAlertAsync(
                 Properties.Resources.ErrorTitle,
-                string.Format(Properties.Resources.ErrorGenericOperation, ex.Message));
+                string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
         }
         finally
         {
             IsLoading = false;
+            _instance.IsBusy = false;
         }
     }
 

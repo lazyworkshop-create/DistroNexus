@@ -10,8 +10,8 @@
 
 namespace DistroNexus.Desktop.Properties {
     using System;
-    
-    
+
+
     /// <summary>
     ///   A strongly-typed resource class, for looking up localized strings, etc.
     /// </summary>
@@ -23,15 +23,15 @@ namespace DistroNexus.Desktop.Properties {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     public class Resources {
-        
+
         private static global::System.Resources.ResourceManager resourceMan;
-        
+
         private static global::System.Globalization.CultureInfo resourceCulture;
-        
+
         [global::System.Diagnostics.CodeAnalysis.SuppressMessageAttribute("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
         internal Resources() {
         }
-        
+
         /// <summary>
         ///   Returns the cached ResourceManager instance used by this class.
         /// </summary>
@@ -45,7 +45,7 @@ namespace DistroNexus.Desktop.Properties {
                 return resourceMan;
             }
         }
-        
+
         /// <summary>
         ///   Overrides the current thread's CurrentUICulture property for all
         ///   resource lookups using this strongly typed resource class.
@@ -58,7 +58,7 @@ namespace DistroNexus.Desktop.Properties {
             set {
                 resourceCulture = value;
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to SettingsTitle.
         /// </summary>
@@ -66,7 +66,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("SettingsTitle", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to GeneralSettings.
         /// </summary>
@@ -74,7 +74,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("GeneralSettings", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to DefaultInstallPath.
         /// </summary>
@@ -82,7 +82,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("DefaultInstallPath", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to PackageCachePath.
         /// </summary>
@@ -90,7 +90,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("PackageCachePath", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to DefaultWslVersion.
         /// </summary>
@@ -98,7 +98,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("DefaultWslVersion", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to DefaultUsername.
         /// </summary>
@@ -106,7 +106,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("DefaultUsername", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to DefaultTerminalStartPath.
         /// </summary>
@@ -114,7 +114,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("DefaultTerminalStartPath", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to DefaultDistro.
         /// </summary>
@@ -122,7 +122,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("DefaultDistro", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to Appearance.
         /// </summary>
@@ -130,7 +130,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("Appearance", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to Theme.
         /// </summary>
@@ -138,7 +138,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("Theme", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to Language.
         /// </summary>
@@ -146,7 +146,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("Language", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to DownloadSettings.
         /// </summary>
@@ -154,7 +154,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("DownloadSettings", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to OnlineCatalogUrl.
         /// </summary>
@@ -162,7 +162,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("OnlineCatalogUrl", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to MaxConcurrentDownloads.
         /// </summary>
@@ -170,7 +170,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("MaxConcurrentDownloads", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to MaxRetryAttempts.
         /// </summary>
@@ -178,7 +178,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("MaxRetryAttempts", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to AutoRetryFailedDownloads.
         /// </summary>
@@ -186,7 +186,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("AutoRetryFailedDownloads", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to CacheManagement.
         /// </summary>
@@ -194,7 +194,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("CacheManagement", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to PackageCacheLocation.
         /// </summary>
@@ -202,7 +202,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("PackageCacheLocation", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to CachedPackages.
         /// </summary>
@@ -210,7 +210,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("CachedPackages", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to CachedFiles.
         /// </summary>
@@ -218,7 +218,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("CachedFiles", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to OpenFolder.
         /// </summary>
@@ -226,7 +226,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("OpenFolder", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to TotalSize.
         /// </summary>
@@ -234,7 +234,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("TotalSize", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to Refresh.
         /// </summary>
@@ -242,7 +242,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("Refresh", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ClearAllCache.
         /// </summary>
@@ -250,7 +250,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ClearAllCache", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to NoCachedFilesFound.
         /// </summary>
@@ -258,7 +258,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("NoCachedFilesFound", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to CachedDateLabel.
         /// </summary>
@@ -266,7 +266,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("CachedDateLabel", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to DeleteCachedFileTooltip.
         /// </summary>
@@ -274,7 +274,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("DeleteCachedFileTooltip", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to PowerShellModulePathHeader.
         /// </summary>
@@ -282,7 +282,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("PowerShellModulePathHeader", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to PowerShellModulePathDescription.
         /// </summary>
@@ -290,7 +290,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("PowerShellModulePathDescription", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to PowerShellModulePathPlaceholder.
         /// </summary>
@@ -298,7 +298,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("PowerShellModulePathPlaceholder", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ThemeLight.
         /// </summary>
@@ -306,7 +306,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ThemeLight", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ThemeDark.
         /// </summary>
@@ -314,7 +314,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ThemeDark", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ThemeAuto.
         /// </summary>
@@ -322,7 +322,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ThemeAuto", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to LangEnglish.
         /// </summary>
@@ -330,7 +330,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("LangEnglish", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to LangChinese.
         /// </summary>
@@ -338,7 +338,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("LangChinese", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to TerminalPathPlaceholder.
         /// </summary>
@@ -346,7 +346,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("TerminalPathPlaceholder", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to AdvancedSettings.
         /// </summary>
@@ -354,7 +354,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("AdvancedSettings", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to Behavior.
         /// </summary>
@@ -362,7 +362,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("Behavior", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to EnableLogging.
         /// </summary>
@@ -370,7 +370,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("EnableLogging", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to CheckUpdatesOnStartup.
         /// </summary>
@@ -378,7 +378,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("CheckUpdatesOnStartup", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ShowConfirmationDialogs.
         /// </summary>
@@ -386,7 +386,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ShowConfirmationDialogs", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to EnableAutoSave.
         /// </summary>
@@ -394,7 +394,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("EnableAutoSave", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to LogFilePath.
         /// </summary>
@@ -402,7 +402,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("LogFilePath", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to SettingsSaved.
         /// </summary>
@@ -410,7 +410,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("SettingsSaved", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to SettingsSavedRestart.
         /// </summary>
@@ -418,7 +418,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("SettingsSavedRestart", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to Browse.
         /// </summary>
@@ -426,7 +426,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("Browse", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to Back.
         /// </summary>
@@ -434,7 +434,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("Back", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ResetToDefaults.
         /// </summary>
@@ -442,7 +442,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ResetToDefaults", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to SaveSettings.
         /// </summary>
@@ -450,7 +450,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("SaveSettings", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to Clear.
         /// </summary>
@@ -458,7 +458,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("Clear", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ModulePathConfigTitle.
         /// </summary>
@@ -466,7 +466,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ModulePathConfigTitle", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ModulePathInfo1.
         /// </summary>
@@ -474,7 +474,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ModulePathInfo1", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ModulePathInfo2.
         /// </summary>
@@ -482,7 +482,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ModulePathInfo2", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ModulePathSearchLoc1.
         /// </summary>
@@ -490,7 +490,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ModulePathSearchLoc1", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ModulePathSearchLoc2.
         /// </summary>
@@ -498,7 +498,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ModulePathSearchLoc2", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ModulePathSearchLoc3.
         /// </summary>
@@ -506,7 +506,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ModulePathSearchLoc3", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ModulePathSearchLoc4.
         /// </summary>
@@ -514,7 +514,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ModulePathSearchLoc4", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to AutoSaveInterval.
         /// </summary>
@@ -522,7 +522,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("AutoSaveInterval", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to InstallNew.
         /// </summary>
@@ -530,7 +530,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("InstallNew", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to PackageManagerTitle.
         /// </summary>
@@ -538,7 +538,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("PackageManagerTitle", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to DownloadTasksTooltip.
         /// </summary>
@@ -546,7 +546,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("DownloadTasksTooltip", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ToggleThemeTooltip.
         /// </summary>
@@ -554,7 +554,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ToggleThemeTooltip", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to SwitchLanguageTooltip.
         /// </summary>
@@ -562,7 +562,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("SwitchLanguageTooltip", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to Update.
         /// </summary>
@@ -570,7 +570,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("Update", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to UpdateCatalogTooltip.
         /// </summary>
@@ -578,7 +578,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("UpdateCatalogTooltip", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to Download.
         /// </summary>
@@ -586,7 +586,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("Download", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to DownloadAllTooltip.
         /// </summary>
@@ -594,7 +594,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("DownloadAllTooltip", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to SearchPlaceholder.
         /// </summary>
@@ -602,7 +602,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("SearchPlaceholder", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to AddSource.
         /// </summary>
@@ -610,7 +610,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("AddSource", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to OfflineMode.
         /// </summary>
@@ -618,7 +618,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("OfflineMode", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to InstallWizardTitle.
         /// </summary>
@@ -626,7 +626,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("InstallWizardTitle", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StepLabel.
         /// </summary>
@@ -634,7 +634,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StepLabel", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to OfLabel.
         /// </summary>
@@ -642,7 +642,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("OfLabel", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to SelectDistroLabel.
         /// </summary>
@@ -650,7 +650,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("SelectDistroLabel", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ChooseLocationLabel.
         /// </summary>
@@ -658,7 +658,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ChooseLocationLabel", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to InstanceNameLabel.
         /// </summary>
@@ -666,7 +666,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("InstanceNameLabel", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to InstallPathLabel.
         /// </summary>
@@ -674,7 +674,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("InstallPathLabel", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to InstallSuccessLabel.
         /// </summary>
@@ -682,7 +682,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("InstallSuccessLabel", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorTitle.
         /// </summary>
@@ -690,15 +690,15 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorTitle", resourceCulture);
             }
-        }        
+        }
         /// <summary>
-        ///   Looks up a localized string similar to Copy error code {0}.
+        ///   Looks up a localized string similar to ErrorCopyCode.
         /// </summary>
         public static string ErrorCopyCode {
             get {
                 return ResourceManager.GetString("ErrorCopyCode", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to Cancel.
         /// </summary>
@@ -706,7 +706,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("Cancel", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to Next.
         /// </summary>
@@ -714,7 +714,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("Next", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to Install.
         /// </summary>
@@ -722,7 +722,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("Install", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to Finish.
         /// </summary>
@@ -730,7 +730,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("Finish", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to InstanceNamePlaceholder.
         /// </summary>
@@ -738,7 +738,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("InstanceNamePlaceholder", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to Success.
         /// </summary>
@@ -746,7 +746,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("Success", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to SaveSettingsError.
         /// </summary>
@@ -754,7 +754,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("SaveSettingsError", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusInitializing.
         /// </summary>
@@ -762,7 +762,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusInitializing", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to DashboardTitle.
         /// </summary>
@@ -770,7 +770,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("DashboardTitle", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusOpeningWizard.
         /// </summary>
@@ -778,7 +778,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusOpeningWizard", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusInstallCompleteRefresh.
         /// </summary>
@@ -786,7 +786,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusInstallCompleteRefresh", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusReady.
         /// </summary>
@@ -794,7 +794,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusReady", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusThemeChanged.
         /// </summary>
@@ -802,7 +802,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusThemeChanged", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusThemeChangeFailed.
         /// </summary>
@@ -810,7 +810,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusThemeChangeFailed", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusLanguageChangeFailed.
         /// </summary>
@@ -818,7 +818,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusLanguageChangeFailed", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusGeneratingDiagnostics.
         /// </summary>
@@ -826,7 +826,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusGeneratingDiagnostics", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to DiagnosticsServiceUnavailable.
         /// </summary>
@@ -834,7 +834,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("DiagnosticsServiceUnavailable", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to DiagnosticsErrorTitle.
         /// </summary>
@@ -842,7 +842,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("DiagnosticsErrorTitle", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to DiagnosticsWindowTitle.
         /// </summary>
@@ -850,7 +850,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("DiagnosticsWindowTitle", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to LanguageChangedMessage.
         /// </summary>
@@ -858,7 +858,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("LanguageChangedMessage", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to LanguageChangedTitle.
         /// </summary>
@@ -866,7 +866,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("LanguageChangedTitle", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to LoadInstancesError.
         /// </summary>
@@ -874,7 +874,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("LoadInstancesError", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to PackageManagerError.
         /// </summary>
@@ -882,7 +882,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("PackageManagerError", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to InstallWizardError.
         /// </summary>
@@ -890,7 +890,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("InstallWizardError", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to InformationTitle.
         /// </summary>
@@ -898,7 +898,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("InformationTitle", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to DeleteFileError.
         /// </summary>
@@ -906,7 +906,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("DeleteFileError", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to OpenCacheFolderError.
         /// </summary>
@@ -914,7 +914,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("OpenCacheFolderError", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to CachePathNotConfigured.
         /// </summary>
@@ -922,7 +922,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("CachePathNotConfigured", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StepTitleSelectDistro.
         /// </summary>
@@ -930,7 +930,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StepTitleSelectDistro", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StepTitleQuickInstall.
         /// </summary>
@@ -938,7 +938,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StepTitleQuickInstall", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StepTitleInstallation.
         /// </summary>
@@ -946,7 +946,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StepTitleInstallation", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StepTitleChoosePath.
         /// </summary>
@@ -954,7 +954,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StepTitleChoosePath", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StepTitleConfigUser.
         /// </summary>
@@ -962,7 +962,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StepTitleConfigUser", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StepTitleReview.
         /// </summary>
@@ -970,7 +970,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StepTitleReview", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ValMsgSelectDistro.
         /// </summary>
@@ -978,7 +978,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ValMsgSelectDistro", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ValMsgSpecifyPath.
         /// </summary>
@@ -986,7 +986,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ValMsgSpecifyPath", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ValMsgSpecifyName.
         /// </summary>
@@ -994,7 +994,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ValMsgSpecifyName", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ValMsgEnterUsername.
         /// </summary>
@@ -1002,7 +1002,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ValMsgEnterUsername", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ValMsgEnterPassword.
         /// </summary>
@@ -1010,7 +1010,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ValMsgEnterPassword", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ValMsgPasswordsNoMatch.
         /// </summary>
@@ -1018,7 +1018,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ValMsgPasswordsNoMatch", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ValMsgPathRequired.
         /// </summary>
@@ -1026,7 +1026,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ValMsgPathRequired", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ValMsgDirExists.
         /// </summary>
@@ -1034,7 +1034,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ValMsgDirExists", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ValMsgCannotCreateDir.
         /// </summary>
@@ -1042,7 +1042,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ValMsgCannotCreateDir", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ValMsgInstallTarget.
         /// </summary>
@@ -1050,7 +1050,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ValMsgInstallTarget", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ValMsgInvalidPath.
         /// </summary>
@@ -1058,7 +1058,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ValMsgInvalidPath", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusPreparingInstall.
         /// </summary>
@@ -1066,7 +1066,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusPreparingInstall", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to LogStartingInstall.
         /// </summary>
@@ -1074,7 +1074,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("LogStartingInstall", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusInstallCancelled.
         /// </summary>
@@ -1082,7 +1082,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusInstallCancelled", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorInstallCancelled.
         /// </summary>
@@ -1090,7 +1090,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorInstallCancelled", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusInstallFailed.
         /// </summary>
@@ -1098,7 +1098,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusInstallFailed", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorInstallFailed.
         /// </summary>
@@ -1106,7 +1106,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorInstallFailed", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to SelectInstallDirTitle.
         /// </summary>
@@ -1114,7 +1114,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("SelectInstallDirTitle", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to LoadDistributionsError.
         /// </summary>
@@ -1122,7 +1122,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("LoadDistributionsError", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusLoadingCatalog.
         /// </summary>
@@ -1130,7 +1130,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusLoadingCatalog", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusLoadedDistros.
         /// </summary>
@@ -1138,7 +1138,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusLoadedDistros", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorLoadingCatalogShort.
         /// </summary>
@@ -1146,7 +1146,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorLoadingCatalogShort", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to LoadCatalogError.
         /// </summary>
@@ -1154,7 +1154,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("LoadCatalogError", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusRefreshingCatalog.
         /// </summary>
@@ -1162,7 +1162,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusRefreshingCatalog", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusCatalogRefreshed.
         /// </summary>
@@ -1170,7 +1170,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusCatalogRefreshed", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorOfflineModeMessage.
         /// </summary>
@@ -1178,7 +1178,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorOfflineModeMessage", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to OfflineModeTitle.
         /// </summary>
@@ -1186,7 +1186,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("OfflineModeTitle", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusOfflineCached.
         /// </summary>
@@ -1194,7 +1194,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusOfflineCached", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusOfflineError.
         /// </summary>
@@ -1202,7 +1202,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusOfflineError", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorRefreshCatalogFailed.
         /// </summary>
@@ -1210,7 +1210,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorRefreshCatalogFailed", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusFoundDistros.
         /// </summary>
@@ -1218,7 +1218,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusFoundDistros", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorSearchFailed.
         /// </summary>
@@ -1226,7 +1226,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorSearchFailed", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusDownloadQueued.
         /// </summary>
@@ -1234,7 +1234,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusDownloadQueued", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusQueueFailed.
         /// </summary>
@@ -1242,7 +1242,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusQueueFailed", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorQueueDownload.
         /// </summary>
@@ -1250,7 +1250,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorQueueDownload", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusDownloadCancelled.
         /// </summary>
@@ -1258,7 +1258,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusDownloadCancelled", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorCancelDownload.
         /// </summary>
@@ -1266,7 +1266,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorCancelDownload", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorForceRefresh.
         /// </summary>
@@ -1274,7 +1274,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorForceRefresh", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorStartInstance.
         /// </summary>
@@ -1282,7 +1282,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorStartInstance", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorStopInstance.
         /// </summary>
@@ -1290,7 +1290,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorStopInstance", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ConfirmRemoveInstanceTitle.
         /// </summary>
@@ -1298,7 +1298,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ConfirmRemoveInstanceTitle", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ConfirmRemoveInstanceMessage.
         /// </summary>
@@ -1306,7 +1306,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ConfirmRemoveInstanceMessage", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusInstanceRemoved.
         /// </summary>
@@ -1314,7 +1314,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusInstanceRemoved", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorRemoveInstance.
         /// </summary>
@@ -1322,7 +1322,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorRemoveInstance", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorOpenTerminal.
         /// </summary>
@@ -1330,7 +1330,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorOpenTerminal", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ConfirmResetSettings.
         /// </summary>
@@ -1338,7 +1338,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ConfirmResetSettings", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusSettingsReset.
         /// </summary>
@@ -1346,7 +1346,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusSettingsReset", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorResetSettings.
         /// </summary>
@@ -1354,7 +1354,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorResetSettings", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ConfirmClearCache.
         /// </summary>
@@ -1362,7 +1362,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ConfirmClearCache", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusCacheCleared.
         /// </summary>
@@ -1370,7 +1370,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusCacheCleared", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorClearCache.
         /// </summary>
@@ -1378,7 +1378,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorClearCache", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ConfirmTitle.
         /// </summary>
@@ -1386,7 +1386,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ConfirmTitle", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusForceRefreshing.
         /// </summary>
@@ -1394,7 +1394,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusForceRefreshing", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusLoading.
         /// </summary>
@@ -1402,7 +1402,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusLoading", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusClickToLoad.
         /// </summary>
@@ -1410,7 +1410,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusClickToLoad", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusUnknown.
         /// </summary>
@@ -1418,7 +1418,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusUnknown", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ConfirmForceRefreshTitle.
         /// </summary>
@@ -1426,7 +1426,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ConfirmForceRefreshTitle", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ConfirmForceRefreshMessage.
         /// </summary>
@@ -1434,7 +1434,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ConfirmForceRefreshMessage", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorForceRefreshNull.
         /// </summary>
@@ -1442,7 +1442,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorForceRefreshNull", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorForceRefreshEx.
         /// </summary>
@@ -1450,7 +1450,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorForceRefreshEx", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorStartInstanceFailed.
         /// </summary>
@@ -1458,7 +1458,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorStartInstanceFailed", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorStartInstanceEx.
         /// </summary>
@@ -1466,7 +1466,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorStartInstanceEx", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ConfirmStopTitle.
         /// </summary>
@@ -1474,7 +1474,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ConfirmStopTitle", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ConfirmStopMessage.
         /// </summary>
@@ -1482,7 +1482,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ConfirmStopMessage", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ButtonStop.
         /// </summary>
@@ -1490,7 +1490,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ButtonStop", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorStopInstanceFailed.
         /// </summary>
@@ -1498,7 +1498,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorStopInstanceFailed", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorStopInstanceEx.
         /// </summary>
@@ -1506,7 +1506,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorStopInstanceEx", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ConfirmRemoveTitle.
         /// </summary>
@@ -1514,7 +1514,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ConfirmRemoveTitle", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ConfirmRemoveMessage.
         /// </summary>
@@ -1522,7 +1522,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ConfirmRemoveMessage", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ButtonRemove.
         /// </summary>
@@ -1530,7 +1530,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ButtonRemove", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to SuccessInstanceRemoved.
         /// </summary>
@@ -1538,7 +1538,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("SuccessInstanceRemoved", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorRemoveInstanceEx.
         /// </summary>
@@ -1562,7 +1562,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorOpenTerminalFailed", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorOpenTerminalEx.
         /// </summary>
@@ -1570,7 +1570,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorOpenTerminalEx", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to SelectMoveLocationTitle.
         /// </summary>
@@ -1578,7 +1578,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("SelectMoveLocationTitle", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ConfirmMoveTitle.
         /// </summary>
@@ -1586,7 +1586,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ConfirmMoveTitle", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ConfirmMoveMessage.
         /// </summary>
@@ -1594,7 +1594,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ConfirmMoveMessage", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to SuccessInstanceMoved.
         /// </summary>
@@ -1602,7 +1602,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("SuccessInstanceMoved", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorMoveInstanceEx.
         /// </summary>
@@ -1610,7 +1610,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorMoveInstanceEx", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to RenameTitle.
         /// </summary>
@@ -1618,7 +1618,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("RenameTitle", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ButtonRename.
         /// </summary>
@@ -1626,7 +1626,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ButtonRename", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to SuccessInstanceRenamed.
         /// </summary>
@@ -1634,7 +1634,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("SuccessInstanceRenamed", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorRenameInstanceEx.
         /// </summary>
@@ -1642,7 +1642,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorRenameInstanceEx", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to SetCredentialsTitle.
         /// </summary>
@@ -1650,7 +1650,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("SetCredentialsTitle", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to PromptEnterUsername.
         /// </summary>
@@ -1658,7 +1658,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("PromptEnterUsername", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to PromptEnterPassword.
         /// </summary>
@@ -1666,7 +1666,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("PromptEnterPassword", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to SuccessCredentialsSet.
         /// </summary>
@@ -1674,7 +1674,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("SuccessCredentialsSet", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorSetCredentialsEx.
         /// </summary>
@@ -1682,7 +1682,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorSetCredentialsEx", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusLoadingSources.
         /// </summary>
@@ -1690,7 +1690,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusLoadingSources", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusLoadedSources.
         /// </summary>
@@ -1698,7 +1698,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusLoadedSources", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorLoadSourcesEx.
         /// </summary>
@@ -1706,7 +1706,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorLoadSourcesEx", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusLoadSourcesFailed.
         /// </summary>
@@ -1714,7 +1714,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusLoadSourcesFailed", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ValidationNameUrlRequired.
         /// </summary>
@@ -1722,7 +1722,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ValidationNameUrlRequired", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ValidationTitle.
         /// </summary>
@@ -1730,7 +1730,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ValidationTitle", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusSourceUpdated.
         /// </summary>
@@ -1738,7 +1738,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusSourceUpdated", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusSourceAdded.
         /// </summary>
@@ -1746,7 +1746,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusSourceAdded", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorSaveSourceEx.
         /// </summary>
@@ -1754,7 +1754,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorSaveSourceEx", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to InfoSelectSourceRemove.
         /// </summary>
@@ -1762,7 +1762,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("InfoSelectSourceRemove", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to InfoDefaultSourceRemove.
         /// </summary>
@@ -1770,7 +1770,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("InfoDefaultSourceRemove", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ConfirmVerifyRemoveSource.
         /// </summary>
@@ -1778,7 +1778,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ConfirmVerifyRemoveSource", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ConfirmRemoveSourceTitle.
         /// </summary>
@@ -1786,7 +1786,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ConfirmRemoveSourceTitle", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusSourceRemoved.
         /// </summary>
@@ -1794,7 +1794,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusSourceRemoved", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorRemoveSourceEx.
         /// </summary>
@@ -1802,7 +1802,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorRemoveSourceEx", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusSourceEnabled.
         /// </summary>
@@ -1810,7 +1810,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusSourceEnabled", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusSourceDisabled.
         /// </summary>
@@ -1818,7 +1818,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusSourceDisabled", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusSourceToggled.
         /// </summary>
@@ -1826,7 +1826,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusSourceToggled", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorToggleSourceEx.
         /// </summary>
@@ -1834,7 +1834,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorToggleSourceEx", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to TestResultUrlRequired.
         /// </summary>
@@ -1842,7 +1842,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("TestResultUrlRequired", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to TestResultTesting.
         /// </summary>
@@ -1850,7 +1850,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("TestResultTesting", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to TestResultAccessible.
         /// </summary>
@@ -1858,7 +1858,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("TestResultAccessible", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to TestResultNotAccessible.
         /// </summary>
@@ -1866,7 +1866,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("TestResultNotAccessible", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to TestResultFailed.
         /// </summary>
@@ -1874,7 +1874,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("TestResultFailed", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusRefreshingSources.
         /// </summary>
@@ -1882,7 +1882,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusRefreshingSources", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusRefreshedSources.
         /// </summary>
@@ -1890,7 +1890,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusRefreshedSources", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusRefreshFailed.
         /// </summary>
@@ -1898,7 +1898,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusRefreshFailed", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorRefreshSourcesEx.
         /// </summary>
@@ -1906,7 +1906,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorRefreshSourcesEx", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ConfirmResetSourcesMessage.
         /// </summary>
@@ -1914,7 +1914,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ConfirmResetSourcesMessage", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ConfirmResetTitle.
         /// </summary>
@@ -1922,7 +1922,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ConfirmResetTitle", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusResetSourcesSuccess.
         /// </summary>
@@ -1930,7 +1930,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusResetSourcesSuccess", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ErrorResetSourcesEx.
         /// </summary>
@@ -1938,7 +1938,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ErrorResetSourcesEx", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to InfoSelectSourceEdit.
         /// </summary>
@@ -1946,7 +1946,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("InfoSelectSourceEdit", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to ButtonCancel.
         /// </summary>
@@ -1954,7 +1954,15 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("ButtonCancel", resourceCulture);
             }
-        }        
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ButtonOK.
+        /// </summary>
+        public static string ButtonOK {
+            get {
+                return ResourceManager.GetString("ButtonOK", resourceCulture);
+            }
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusSourceMovedUp.
         /// </summary>
@@ -1962,7 +1970,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusSourceMovedUp", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to StatusSourceMovedDown.
         /// </summary>
@@ -1970,7 +1978,7 @@ namespace DistroNexus.Desktop.Properties {
             get {
                 return ResourceManager.GetString("StatusSourceMovedDown", resourceCulture);
             }
-        }        
+        }
         /// <summary>
         ///   Looks up a localized string similar to SuccessTitle.
         /// </summary>
@@ -1979,317 +1987,2597 @@ namespace DistroNexus.Desktop.Properties {
                 return ResourceManager.GetString("SuccessTitle", resourceCulture);
             }
         }
-
-        public static string InstanceStateLabel { get { return ResourceManager.GetString("InstanceStateLabel", resourceCulture); } }
-        public static string InstanceDiskLabel { get { return ResourceManager.GetString("InstanceDiskLabel", resourceCulture); } }
-        public static string InstanceStart { get { return ResourceManager.GetString("InstanceStart", resourceCulture); } }
-        public static string InstanceStop { get { return ResourceManager.GetString("InstanceStop", resourceCulture); } }
-        public static string InstanceTerminal { get { return ResourceManager.GetString("InstanceTerminal", resourceCulture); } }
-        public static string InstanceMore { get { return ResourceManager.GetString("InstanceMore", resourceCulture); } }
-        public static string ActionMove { get { return ResourceManager.GetString("ActionMove", resourceCulture); } }
-        public static string ActionRename { get { return ResourceManager.GetString("ActionRename", resourceCulture); } }
-        public static string ActionSetCredentials { get { return ResourceManager.GetString("ActionSetCredentials", resourceCulture); } }
-        public static string ActionForceRefresh { get { return ResourceManager.GetString("ActionForceRefresh", resourceCulture); } }
-        public static string ActionRemove { get { return ResourceManager.GetString("ActionRemove", resourceCulture); } }
-        public static string NoInstancesTitle { get { return ResourceManager.GetString("NoInstancesTitle", resourceCulture); } }
-        public static string NoInstancesSubtitle { get { return ResourceManager.GetString("NoInstancesSubtitle", resourceCulture); } }
-        public static string LoadingText { get { return ResourceManager.GetString("LoadingText", resourceCulture); } }
-        public static string DownloadPanelTitle { get { return ResourceManager.GetString("DownloadPanelTitle", resourceCulture); } }
-        public static string ActiveDownloadsFormat { get { return ResourceManager.GetString("ActiveDownloadsFormat", resourceCulture); } }
-        public static string CloseTooltip { get { return ResourceManager.GetString("CloseTooltip", resourceCulture); } }
-        public static string CancelTooltip { get { return ResourceManager.GetString("CancelTooltip", resourceCulture); } }
-        public static string StateRunning { get { return ResourceManager.GetString("StateRunning", resourceCulture); } }
-        public static string StateStopped { get { return ResourceManager.GetString("StateStopped", resourceCulture); } }
-        public static string ActionDownload { get { return ResourceManager.GetString("ActionDownload", resourceCulture); } }
-        public static string ActionInstall { get { return ResourceManager.GetString("ActionInstall", resourceCulture); } }
-        public static string ActionActions { get { return ResourceManager.GetString("ActionActions", resourceCulture); } }
-        public static string ActionAdd { get { return ResourceManager.GetString("ActionAdd", resourceCulture); } }
-        public static string ActionRedownload { get { return ResourceManager.GetString("ActionRedownload", resourceCulture); } }
-        public static string ActionDeleteCache { get { return ResourceManager.GetString("ActionDeleteCache", resourceCulture); } }
-        public static string CustomSourceUrlLabel { get { return ResourceManager.GetString("CustomSourceUrlLabel", resourceCulture); } }
-        public static string LoadingCatalog { get { return ResourceManager.GetString("LoadingCatalog", resourceCulture); } }
-        public static string BadgeCached { get { return ResourceManager.GetString("BadgeCached", resourceCulture); } }
-        public static string BadgeOnline { get { return ResourceManager.GetString("BadgeOnline", resourceCulture); } }
-        public static string BadgeCustom { get { return ResourceManager.GetString("BadgeCustom", resourceCulture); } }
-        public static string StepConnector { get { return ResourceManager.GetString("StepConnector", resourceCulture); } }
-        public static string SelectDistroHeader { get { return ResourceManager.GetString("SelectDistroHeader", resourceCulture); } }
-        public static string ReviewInstallTitle { get { return ResourceManager.GetString("ReviewInstallTitle", resourceCulture); } }
-        public static string ReviewInstallDescription { get { return ResourceManager.GetString("ReviewInstallDescription", resourceCulture); } }
-        public static string DefaultUserRoot { get { return ResourceManager.GetString("DefaultUserRoot", resourceCulture); } }
-        public static string ResultCompleteTitle { get { return ResourceManager.GetString("ResultCompleteTitle", resourceCulture); } }
-        public static string ResultCompleteDescription { get { return ResourceManager.GetString("ResultCompleteDescription", resourceCulture); } }
-        public static string ResultSuccess { get { return ResourceManager.GetString("ResultSuccess", resourceCulture); } }
-        public static string ResultSuccessSimple { get { return ResourceManager.GetString("ResultSuccessSimple", resourceCulture); } }
-        public static string ButtonTryAgain { get { return ResourceManager.GetString("ButtonTryAgain", resourceCulture); } }
-        public static string ButtonFinish { get { return ResourceManager.GetString("ButtonFinish", resourceCulture); } }
-        public static string ButtonClose { get { return ResourceManager.GetString("ButtonClose", resourceCulture); } }
-        public static string ButtonNext { get { return ResourceManager.GetString("ButtonNext", resourceCulture); } }
-        public static string ButtonBack { get { return ResourceManager.GetString("ButtonBack", resourceCulture); } }
-        public static string InstallationSummaryTitle { get { return ResourceManager.GetString("InstallationSummaryTitle", resourceCulture); } }
-        public static string LabelDistribution { get { return ResourceManager.GetString("LabelDistribution", resourceCulture); } }
-        public static string LabelInstanceName { get { return ResourceManager.GetString("LabelInstanceName", resourceCulture); } }
-        public static string LabelInstallPath { get { return ResourceManager.GetString("LabelInstallPath", resourceCulture); } }
-        public static string LabelUsername { get { return ResourceManager.GetString("LabelUsername", resourceCulture); } }
-        public static string LabelWslVersion { get { return ResourceManager.GetString("LabelWslVersion", resourceCulture); } }
-        public static string OptionSetDefault { get { return ResourceManager.GetString("OptionSetDefault", resourceCulture); } }
-        public static string OptionLaunchAfter { get { return ResourceManager.GetString("OptionLaunchAfter", resourceCulture); } }
-        public static string WslVersionFormat { get { return ResourceManager.GetString("WslVersionFormat", resourceCulture); } }
-        public static string CreateUserAccount { get { return ResourceManager.GetString("CreateUserAccount", resourceCulture); } }
-        public static string CancelInstallation { get { return ResourceManager.GetString("CancelInstallation", resourceCulture); } }
-        public static string ButtonBrowse { get { return ResourceManager.GetString("ButtonBrowse", resourceCulture); } }
-        public static string ButtonClearCompleted { get { return ResourceManager.GetString("ButtonClearCompleted", resourceCulture); } }
-        public static string WslVersion1 { get { return ResourceManager.GetString("WslVersion1", resourceCulture); } }
-        public static string WslVersion2 { get { return ResourceManager.GetString("WslVersion2", resourceCulture); } }
-        public static string WslVersion2Recommended { get { return ResourceManager.GetString("WslVersion2Recommended", resourceCulture); } }
-        public static string LabelPassword { get { return ResourceManager.GetString("LabelPassword", resourceCulture); } }
-        public static string LabelConfirmPassword { get { return ResourceManager.GetString("LabelConfirmPassword", resourceCulture); } }
-        public static string PlaceholderUsername { get { return ResourceManager.GetString("PlaceholderUsername", resourceCulture); } }
-        public static string PlaceholderPassword { get { return ResourceManager.GetString("PlaceholderPassword", resourceCulture); } }
-        public static string PlaceholderConfirmPassword { get { return ResourceManager.GetString("PlaceholderConfirmPassword", resourceCulture); } }
-        public static string Wsl2RecommendedInfo { get { return ResourceManager.GetString("Wsl2RecommendedInfo", resourceCulture); } }
-        public static string RootUserWarning { get { return ResourceManager.GetString("RootUserWarning", resourceCulture); } }
-        public static string PlaceholderInstanceName { get { return ResourceManager.GetString("PlaceholderInstanceName", resourceCulture); } }
-        public static string PlaceholderInstallPath { get { return ResourceManager.GetString("PlaceholderInstallPath", resourceCulture); } }
-        public static string StatusValidating { get { return ResourceManager.GetString("StatusValidating", resourceCulture); } }
-        public static string ConfigureUserAccount { get { return ResourceManager.GetString("ConfigureUserAccount", resourceCulture); } }
-        public static string ReviewAndInstall { get { return ResourceManager.GetString("ReviewAndInstall", resourceCulture); } }
-        public static string InstallationSummary { get { return ResourceManager.GetString("InstallationSummary", resourceCulture); } }
-        public static string LabelInstance { get { return ResourceManager.GetString("LabelInstance", resourceCulture); } }
-        public static string LabelLocation { get { return ResourceManager.GetString("LabelLocation", resourceCulture); } }
-        public static string InstallFailedLabel { get { return ResourceManager.GetString("InstallFailedLabel", resourceCulture); } }
-        public static string WizardStepSelectDistribution { get { return ResourceManager.GetString("WizardStepSelectDistribution", resourceCulture); } }
-        public static string WizardStepChooseInstallPath { get { return ResourceManager.GetString("WizardStepChooseInstallPath", resourceCulture); } }
-        public static string WizardStepConfigureUser { get { return ResourceManager.GetString("WizardStepConfigureUser", resourceCulture); } }
-        public static string WizardStepSelectTemplate { get { return ResourceManager.GetString("WizardStepSelectTemplate", resourceCulture); } }
-        public static string WizardStepSelectTemplateDescription { get { return ResourceManager.GetString("WizardStepSelectTemplateDescription", resourceCulture); } }
-        public static string WizardStepInstalling { get { return ResourceManager.GetString("WizardStepInstalling", resourceCulture); } }
-        public static string ErrorSelectDistribution { get { return ResourceManager.GetString("ErrorSelectDistribution", resourceCulture); } }
-        public static string ErrorInvalidDownloadUrl { get { return ResourceManager.GetString("ErrorInvalidDownloadUrl", resourceCulture); } }
-        public static string ErrorInvalidUrlFormat { get { return ResourceManager.GetString("ErrorInvalidUrlFormat", resourceCulture); } }
-        public static string ErrorTemplateSelectionRequired { get { return ResourceManager.GetString("ErrorTemplateSelectionRequired", resourceCulture); } }
-        public static string ErrorTemplateLoadFailed { get { return ResourceManager.GetString("ErrorTemplateLoadFailed", resourceCulture); } }
-        public static string WizardTemplateCompatibilityWarningFormat { get { return ResourceManager.GetString("WizardTemplateCompatibilityWarningFormat", resourceCulture); } }
-        public static string WizardStartupTemplateNotFoundWarningFormat { get { return ResourceManager.GetString("WizardStartupTemplateNotFoundWarningFormat", resourceCulture); } }
-        public static string WizardStartupTemplateLoadFailedWarningFormat { get { return ResourceManager.GetString("WizardStartupTemplateLoadFailedWarningFormat", resourceCulture); } }
-        public static string ErrorInstanceNameRequired { get { return ResourceManager.GetString("ErrorInstanceNameRequired", resourceCulture); } }
-        public static string ErrorInvalidInstanceName { get { return ResourceManager.GetString("ErrorInvalidInstanceName", resourceCulture); } }
-        public static string ErrorInstanceAlreadyExists { get { return ResourceManager.GetString("ErrorInstanceAlreadyExists", resourceCulture); } }
-        public static string ErrorInstallPathRequired { get { return ResourceManager.GetString("ErrorInstallPathRequired", resourceCulture); } }
-        public static string ErrorPathNotAbsolute { get { return ResourceManager.GetString("ErrorPathNotAbsolute", resourceCulture); } }
-        public static string ErrorPasswordMismatch { get { return ResourceManager.GetString("ErrorPasswordMismatch", resourceCulture); } }
-        public static string ErrorWeakPassword { get { return ResourceManager.GetString("ErrorWeakPassword", resourceCulture); } }
-        public static string ErrorInstanceNameStartWith { get { return ResourceManager.GetString("ErrorInstanceNameStartWith", resourceCulture); } }
-        public static string ErrorInstanceNameTooShort { get { return ResourceManager.GetString("ErrorInstanceNameTooShort", resourceCulture); } }
-        public static string ErrorInstanceNameTooLong { get { return ResourceManager.GetString("ErrorInstanceNameTooLong", resourceCulture); } }
-        public static string ErrorInstanceNameReserved { get { return ResourceManager.GetString("ErrorInstanceNameReserved", resourceCulture); } }
-        public static string StatusVerifyingInstanceName { get { return ResourceManager.GetString("StatusVerifyingInstanceName", resourceCulture); } }
-        public static string ErrorVerificationTimeout { get { return ResourceManager.GetString("ErrorVerificationTimeout", resourceCulture); } }
-        public static string ErrorVerificationFailed { get { return ResourceManager.GetString("ErrorVerificationFailed", resourceCulture); } }
-        public static string ErrorInstanceExistsFormat { get { return ResourceManager.GetString("ErrorInstanceExistsFormat", resourceCulture); } }
-        public static string ErrorInvalidPathOrName { get { return ResourceManager.GetString("ErrorInvalidPathOrName", resourceCulture); } }
-        public static string LabelTemplateName { get { return ResourceManager.GetString("LabelTemplateName", resourceCulture); } }
-        public static string LabelTemplateCategory { get { return ResourceManager.GetString("LabelTemplateCategory", resourceCulture); } }
-        public static string LabelTemplateDescriptor { get { return ResourceManager.GetString("LabelTemplateDescriptor", resourceCulture); } }
-        public static string LabelNoTemplateSelected { get { return ResourceManager.GetString("LabelNoTemplateSelected", resourceCulture); } }
-        public static string LabelUnknownValue { get { return ResourceManager.GetString("LabelUnknownValue", resourceCulture); } }
-        public static string LabelDistributionUnknownValue { get { return ResourceManager.GetString("LabelDistributionUnknownValue", resourceCulture); } }
-        public static string TemplateSummaryDescriptorFormat { get { return ResourceManager.GetString("TemplateSummaryDescriptorFormat", resourceCulture); } }
-        public static string PlaceholderSearchTemplates { get { return ResourceManager.GetString("PlaceholderSearchTemplates", resourceCulture); } }
-        public static string SkipTemplateSetup { get { return ResourceManager.GetString("SkipTemplateSetup", resourceCulture); } }
-        public static string SelectTemplateEmptyState { get { return ResourceManager.GetString("SelectTemplateEmptyState", resourceCulture); } }
-        public static string LabelDescription { get { return ResourceManager.GetString("LabelDescription", resourceCulture); } }
-        public static string TemplateIncludedSoftware { get { return ResourceManager.GetString("TemplateIncludedSoftware", resourceCulture); } }
-        public static string TemplateAdvancedOptions { get { return ResourceManager.GetString("TemplateAdvancedOptions", resourceCulture); } }
-        public static string TemplateVersionOptions { get { return ResourceManager.GetString("TemplateVersionOptions", resourceCulture); } }
-        public static string TemplatePreflightChecks { get { return ResourceManager.GetString("TemplatePreflightChecks", resourceCulture); } }
-        public static string TemplateDoNotUse { get { return ResourceManager.GetString("TemplateDoNotUse", resourceCulture); } }
-        public static string ErrorTemplateRequiredOptionMissingFormat { get { return ResourceManager.GetString("ErrorTemplateRequiredOptionMissingFormat", resourceCulture); } }
-        public static string ErrorValidationFormat { get { return ResourceManager.GetString("ErrorValidationFormat", resourceCulture); } }
-        public static string ErrorStartupTitle { get { return ResourceManager.GetString("ErrorStartupTitle", resourceCulture); } }
-        public static string ErrorApplicationTitle { get { return ResourceManager.GetString("ErrorApplicationTitle", resourceCulture); } }
-        public static string ErrorFatalTitle { get { return ResourceManager.GetString("ErrorFatalTitle", resourceCulture); } }
-        public static string ErrorStartupMessage { get { return ResourceManager.GetString("ErrorStartupMessage", resourceCulture); } }
-        public static string ErrorUnexpectedException { get { return ResourceManager.GetString("ErrorUnexpectedException", resourceCulture); } }
-        public static string ErrorFatalException { get { return ResourceManager.GetString("ErrorFatalException", resourceCulture); } }
-        public static string UpdateAvailableTitle { get { return ResourceManager.GetString("UpdateAvailableTitle", resourceCulture); } }
-        public static string UpdateAvailableMessage { get { return ResourceManager.GetString("UpdateAvailableMessage", resourceCulture); } }
-        public static string ErrorGenerateDiagnostics { get { return ResourceManager.GetString("ErrorGenerateDiagnostics", resourceCulture); } }
-        public static string ErrorMoveSource { get { return ResourceManager.GetString("ErrorMoveSource", resourceCulture); } }
-        public static string ErrorLoadSettings { get { return ResourceManager.GetString("ErrorLoadSettings", resourceCulture); } }
-        public static string ErrorUsernameRequired { get { return ResourceManager.GetString("ErrorUsernameRequired", resourceCulture); } }
-        public static string ErrorUsernameFormat { get { return ResourceManager.GetString("ErrorUsernameFormat", resourceCulture); } }
-        public static string ErrorPasswordMinLength { get { return ResourceManager.GetString("ErrorPasswordMinLength", resourceCulture); } }
-        public static string ErrorInvalidWslVersion { get { return ResourceManager.GetString("ErrorInvalidWslVersion", resourceCulture); } }
-        public static string ErrorOpenLogFolder { get { return ResourceManager.GetString("ErrorOpenLogFolder", resourceCulture); } }
-        public static string ConfirmCancelInstallation { get { return ResourceManager.GetString("ConfirmCancelInstallation", resourceCulture); } }
-        public static string TitleCancelInstallation { get { return ResourceManager.GetString("TitleCancelInstallation", resourceCulture); } }
-        public static string ErrorDeletePackage { get { return ResourceManager.GetString("ErrorDeletePackage", resourceCulture); } }
-        public static string ErrorRedownloadPackage { get { return ResourceManager.GetString("ErrorRedownloadPackage", resourceCulture); } }
-        public static string ErrorInvalidUrl { get { return ResourceManager.GetString("ErrorInvalidUrl", resourceCulture); } }
-        public static string TitleInvalidUrl { get { return ResourceManager.GetString("TitleInvalidUrl", resourceCulture); } }
-        public static string ErrorCustomUrlInvalidFormat { get { return ResourceManager.GetString("ErrorCustomUrlInvalidFormat", resourceCulture); } }
-        public static string SuccessCustomSourceAdded { get { return ResourceManager.GetString("SuccessCustomSourceAdded", resourceCulture); } }
-        public static string TitleSuccess { get { return ResourceManager.GetString("TitleSuccess", resourceCulture); } }
-        public static string ErrorAddCustomSource { get { return ResourceManager.GetString("ErrorAddCustomSource", resourceCulture); } }
-        public static string ErrorUpdateSources { get { return ResourceManager.GetString("ErrorUpdateSources", resourceCulture); } }
-        public static string InfoAllPackagesCached { get { return ResourceManager.GetString("InfoAllPackagesCached", resourceCulture); } }
-        public static string TitleDownloadAll { get { return ResourceManager.GetString("TitleDownloadAll", resourceCulture); } }
-        public static string ErrorStartDownloadAll { get { return ResourceManager.GetString("ErrorStartDownloadAll", resourceCulture); } }
-        public static string ConfirmInstallPackage { get { return ResourceManager.GetString("ConfirmInstallPackage", resourceCulture); } }
-        public static string TitleInstallPackage { get { return ResourceManager.GetString("TitleInstallPackage", resourceCulture); } }
-        public static string ErrorInstallPackage { get { return ResourceManager.GetString("ErrorInstallPackage", resourceCulture); } }
-        public static string ErrorApplyTheme { get { return ResourceManager.GetString("ErrorApplyTheme", resourceCulture); } }
-        public static string TitleThemeError { get { return ResourceManager.GetString("TitleThemeError", resourceCulture); } }
-        public static string ErrorOpenCacheFolder { get { return ResourceManager.GetString("ErrorOpenCacheFolder", resourceCulture); } }
-        public static string ErrorInitializeMainWindow { get { return ResourceManager.GetString("ErrorInitializeMainWindow", resourceCulture); } }
-        public static string TitleInitializationError { get { return ResourceManager.GetString("TitleInitializationError", resourceCulture); } }
-        public static string ErrorInitializeApplication { get { return ResourceManager.GetString("ErrorInitializeApplication", resourceCulture); } }
-        public static string ErrorLoadWslInstances { get { return ResourceManager.GetString("ErrorLoadWslInstances", resourceCulture); } }
-        public static string TitleLoadError { get { return ResourceManager.GetString("TitleLoadError", resourceCulture); } }
-        public static string TooltipSparseModeEnabled { get { return ResourceManager.GetString("TooltipSparseModeEnabled", resourceCulture); } }
-
-        public static string MoreMenu_Details { get { return ResourceManager.GetString("MoreMenu_Details", resourceCulture); } }
-        public static string MoreMenu_CompactDisk { get { return ResourceManager.GetString("MoreMenu_CompactDisk", resourceCulture); } }
-        public static string MoreMenu_ExportInstance { get { return ResourceManager.GetString("MoreMenu_ExportInstance", resourceCulture); } }
-        public static string Toolbar_ImportInstance { get { return ResourceManager.GetString("Toolbar_ImportInstance", resourceCulture); } }
-        public static string Toolbar_SelectMode { get { return ResourceManager.GetString("Toolbar_SelectMode", resourceCulture); } }
-        public static string Toolbar_CompactSelected { get { return ResourceManager.GetString("Toolbar_CompactSelected", resourceCulture); } }
-        public static string InstanceDetail_Title { get { return ResourceManager.GetString("InstanceDetail_Title", resourceCulture); } }
-        public static string InstanceDetail_Close { get { return ResourceManager.GetString("InstanceDetail_Close", resourceCulture); } }
-        public static string Tab_Disk { get { return ResourceManager.GetString("Tab_Disk", resourceCulture); } }
-        public static string Tab_Resources { get { return ResourceManager.GetString("Tab_Resources", resourceCulture); } }
-        public static string Tab_Integrations { get { return ResourceManager.GetString("Tab_Integrations", resourceCulture); } }
-        public static string Tab_Network { get { return ResourceManager.GetString("Tab_Network", resourceCulture); } }
-        public static string Tab_Backup { get { return ResourceManager.GetString("Tab_Backup", resourceCulture); } }
-        public static string ErrorGenericOperation { get { return ResourceManager.GetString("ErrorGenericOperation", resourceCulture); } }
-        public static string DiskTab_VhdxPath { get { return ResourceManager.GetString("DiskTab_VhdxPath", resourceCulture); } }
-        public static string DiskTab_CurrentSize { get { return ResourceManager.GetString("DiskTab_CurrentSize", resourceCulture); } }
-        public static string DiskTab_CompactDisk { get { return ResourceManager.GetString("DiskTab_CompactDisk", resourceCulture); } }
-        public static string DiskTab_Estimating { get { return ResourceManager.GetString("DiskTab_Estimating", resourceCulture); } }
-        public static string DiskTab_CompactConfirm { get { return ResourceManager.GetString("DiskTab_CompactConfirm", resourceCulture); } }
-        public static string DiskTab_CompactConfirmEstimate { get { return ResourceManager.GetString("DiskTab_CompactConfirmEstimate", resourceCulture); } }
-        public static string DiskTab_PhaseStop { get { return ResourceManager.GetString("DiskTab_PhaseStop", resourceCulture); } }
-        public static string DiskTab_WslV1Message { get { return ResourceManager.GetString("DiskTab_WslV1Message", resourceCulture); } }
-        public static string DiskTab_ResultSaved { get { return ResourceManager.GetString("DiskTab_ResultSaved", resourceCulture); } }
-        public static string Export_StopPromptTitle { get { return ResourceManager.GetString("Export_StopPromptTitle", resourceCulture); } }
-        public static string Export_StopPrompt { get { return ResourceManager.GetString("Export_StopPrompt", resourceCulture); } }
-        public static string Export_SaveDialogTitle { get { return ResourceManager.GetString("Export_SaveDialogTitle", resourceCulture); } }
-        public static string Export_CompleteTitle { get { return ResourceManager.GetString("Export_CompleteTitle", resourceCulture); } }
-        public static string Export_Complete { get { return ResourceManager.GetString("Export_Complete", resourceCulture); } }
-        public static string Import_Title { get { return ResourceManager.GetString("Import_Title", resourceCulture); } }
-        public static string Import_NameLabel { get { return ResourceManager.GetString("Import_NameLabel", resourceCulture); } }
-        public static string Import_PathLabel { get { return ResourceManager.GetString("Import_PathLabel", resourceCulture); } }
-        public static string Import_SourceLabel { get { return ResourceManager.GetString("Import_SourceLabel", resourceCulture); } }
-        public static string Import_NameRequired { get { return ResourceManager.GetString("Import_NameRequired", resourceCulture); } }
-        public static string Import_NameExists { get { return ResourceManager.GetString("Import_NameExists", resourceCulture); } }
-        public static string Import_PathRequired { get { return ResourceManager.GetString("Import_PathRequired", resourceCulture); } }
-        public static string Import_SourceRequired { get { return ResourceManager.GetString("Import_SourceRequired", resourceCulture); } }
-        public static string Import_SourceNotFound { get { return ResourceManager.GetString("Import_SourceNotFound", resourceCulture); } }
-        public static string Import_CompleteTitle { get { return ResourceManager.GetString("Import_CompleteTitle", resourceCulture); } }
-        public static string Import_Complete { get { return ResourceManager.GetString("Import_Complete", resourceCulture); } }
-        public static string ResourcesTab_SparseMode { get { return ResourceManager.GetString("ResourcesTab_SparseMode", resourceCulture); } }
-        public static string ResourcesTab_SparseModeTooltip { get { return ResourceManager.GetString("ResourcesTab_SparseModeTooltip", resourceCulture); } }
-        public static string ResourcesTab_SparseModeEnabled { get { return ResourceManager.GetString("ResourcesTab_SparseModeEnabled", resourceCulture); } }
-        public static string ResourcesTab_SparseModeDisabled { get { return ResourceManager.GetString("ResourcesTab_SparseModeDisabled", resourceCulture); } }
-        public static string ResourcesTab_SparseModeUnknown { get { return ResourceManager.GetString("ResourcesTab_SparseModeUnknown", resourceCulture); } }
-        public static string ResourcesTab_GlobalLimits { get { return ResourceManager.GetString("ResourcesTab_GlobalLimits", resourceCulture); } }
-        public static string ResourcesTab_EditInWslConfig { get { return ResourceManager.GetString("ResourcesTab_EditInWslConfig", resourceCulture); } }
-        public static string ResourcesTab_WslV1Message { get { return ResourceManager.GetString("ResourcesTab_WslV1Message", resourceCulture); } }
-        public static string BulkCompact_Counter { get { return ResourceManager.GetString("BulkCompact_Counter", resourceCulture); } }
-        public static string Import_PathBrowseTitle { get { return ResourceManager.GetString("Import_PathBrowseTitle", resourceCulture); } }
-        public static string Import_SourceBrowseTitle { get { return ResourceManager.GetString("Import_SourceBrowseTitle", resourceCulture); } }
-        public static string WslConfig_SectionTitle { get { return ResourceManager.GetString("WslConfig_SectionTitle", resourceCulture); } }
-        public static string WslConfig_HostInfo { get { return ResourceManager.GetString("WslConfig_HostInfo", resourceCulture); } }
-        public static string WslConfig_Memory { get { return ResourceManager.GetString("WslConfig_Memory", resourceCulture); } }
-        public static string WslConfig_Processors { get { return ResourceManager.GetString("WslConfig_Processors", resourceCulture); } }
-        public static string WslConfig_Swap { get { return ResourceManager.GetString("WslConfig_Swap", resourceCulture); } }
-        public static string WslConfig_SwapDisabled { get { return ResourceManager.GetString("WslConfig_SwapDisabled", resourceCulture); } }
-        public static string WslConfig_LocalhostForwarding { get { return ResourceManager.GetString("WslConfig_LocalhostForwarding", resourceCulture); } }
-        public static string WslConfig_NetworkingMode { get { return ResourceManager.GetString("WslConfig_NetworkingMode", resourceCulture); } }
-        public static string WslConfig_SaveAndRestart { get { return ResourceManager.GetString("WslConfig_SaveAndRestart", resourceCulture); } }
-        public static string WslConfig_OpenRawFile { get { return ResourceManager.GetString("WslConfig_OpenRawFile", resourceCulture); } }
-        public static string WslConfig_RestartConfirm { get { return ResourceManager.GetString("WslConfig_RestartConfirm", resourceCulture); } }
-        public static string WslConfig_MemoryWarning { get { return ResourceManager.GetString("WslConfig_MemoryWarning", resourceCulture); } }
-        public static string WslConfig_InvalidMemory { get { return ResourceManager.GetString("WslConfig_InvalidMemory", resourceCulture); } }
-        public static string WslConfig_InvalidProcessors { get { return ResourceManager.GetString("WslConfig_InvalidProcessors", resourceCulture); } }
-        public static string WslConfig_InvalidSwap { get { return ResourceManager.GetString("WslConfig_InvalidSwap", resourceCulture); } }
-        public static string WslConfig_SaveComplete { get { return ResourceManager.GetString("WslConfig_SaveComplete", resourceCulture); } }
-        public static string ManageTags_SectionTitle { get { return ResourceManager.GetString("ManageTags_SectionTitle", resourceCulture); } }
-        public static string ManageTags_TagName { get { return ResourceManager.GetString("ManageTags_TagName", resourceCulture); } }
-        public static string ManageTags_UsedBy { get { return ResourceManager.GetString("ManageTags_UsedBy", resourceCulture); } }
-        public static string ManageTags_Rename { get { return ResourceManager.GetString("ManageTags_Rename", resourceCulture); } }
-        public static string ManageTags_Delete { get { return ResourceManager.GetString("ManageTags_Delete", resourceCulture); } }
-        public static string ManageTags_BulkDelete { get { return ResourceManager.GetString("ManageTags_BulkDelete", resourceCulture); } }
-        public static string ManageTags_DeleteConfirmTitle { get { return ResourceManager.GetString("ManageTags_DeleteConfirmTitle", resourceCulture); } }
-        public static string ManageTags_DeleteConfirm { get { return ResourceManager.GetString("ManageTags_DeleteConfirm", resourceCulture); } }
-        public static string ManageTags_BulkDeleteTitle { get { return ResourceManager.GetString("ManageTags_BulkDeleteTitle", resourceCulture); } }
-        public static string ManageTags_BulkDeleteConfirm { get { return ResourceManager.GetString("ManageTags_BulkDeleteConfirm", resourceCulture); } }
-        public static string ManageTags_RenamePrompt { get { return ResourceManager.GetString("ManageTags_RenamePrompt", resourceCulture); } }
-        public static string ManageTags_NoTags { get { return ResourceManager.GetString("ManageTags_NoTags", resourceCulture); } }
-        public static string IntegrationsTab_DockerTitle { get { return ResourceManager.GetString("IntegrationsTab_DockerTitle", resourceCulture); } }
-        public static string IntegrationsTab_DockerEnabled { get { return ResourceManager.GetString("IntegrationsTab_DockerEnabled", resourceCulture); } }
-        public static string IntegrationsTab_DockerDisabled { get { return ResourceManager.GetString("IntegrationsTab_DockerDisabled", resourceCulture); } }
-        public static string IntegrationsTab_DockerUnavailable { get { return ResourceManager.GetString("IntegrationsTab_DockerUnavailable", resourceCulture); } }
-        public static string IntegrationsTab_DockerInstallLink { get { return ResourceManager.GetString("IntegrationsTab_DockerInstallLink", resourceCulture); } }
-        public static string IntegrationsTab_RestartBanner { get { return ResourceManager.GetString("IntegrationsTab_RestartBanner", resourceCulture); } }
-        public static string IntegrationsTab_Dismiss { get { return ResourceManager.GetString("IntegrationsTab_Dismiss", resourceCulture); } }
-        public static string IntegrationsTab_WslV1Message { get { return ResourceManager.GetString("IntegrationsTab_WslV1Message", resourceCulture); } }
-        public static string NetworkTab_InstanceIP { get { return ResourceManager.GetString("NetworkTab_InstanceIP", resourceCulture); } }
-        public static string NetworkTab_Protocol { get { return ResourceManager.GetString("NetworkTab_Protocol", resourceCulture); } }
-        public static string NetworkTab_LocalAddress { get { return ResourceManager.GetString("NetworkTab_LocalAddress", resourceCulture); } }
-        public static string NetworkTab_Port { get { return ResourceManager.GetString("NetworkTab_Port", resourceCulture); } }
-        public static string NetworkTab_Process { get { return ResourceManager.GetString("NetworkTab_Process", resourceCulture); } }
-        public static string NetworkTab_WindowsProxy { get { return ResourceManager.GetString("NetworkTab_WindowsProxy", resourceCulture); } }
-        public static string NetworkTab_Copy { get { return ResourceManager.GetString("NetworkTab_Copy", resourceCulture); } }
-        public static string NetworkTab_Refresh { get { return ResourceManager.GetString("NetworkTab_Refresh", resourceCulture); } }
-        public static string NetworkTab_StoppedPlaceholder { get { return ResourceManager.GetString("NetworkTab_StoppedPlaceholder", resourceCulture); } }
-        // Phase 5 — Backup Tab
-        public static string BackupTab_ScheduleTitle { get { return ResourceManager.GetString("BackupTab_ScheduleTitle", resourceCulture); } }
-        public static string BackupTab_Frequency { get { return ResourceManager.GetString("BackupTab_Frequency", resourceCulture); } }
-        public static string BackupTab_FrequencyDaily { get { return ResourceManager.GetString("BackupTab_FrequencyDaily", resourceCulture); } }
-        public static string BackupTab_FrequencyWeekly { get { return ResourceManager.GetString("BackupTab_FrequencyWeekly", resourceCulture); } }
-        public static string BackupTab_FrequencyMonthly { get { return ResourceManager.GetString("BackupTab_FrequencyMonthly", resourceCulture); } }
-        public static string BackupTab_DayOfWeek { get { return ResourceManager.GetString("BackupTab_DayOfWeek", resourceCulture); } }
-        public static string BackupTab_DayOfMonth { get { return ResourceManager.GetString("BackupTab_DayOfMonth", resourceCulture); } }
-        public static string BackupTab_TimeOfDay { get { return ResourceManager.GetString("BackupTab_TimeOfDay", resourceCulture); } }
-        public static string BackupTab_Destination { get { return ResourceManager.GetString("BackupTab_Destination", resourceCulture); } }
-        public static string BackupTab_Browse { get { return ResourceManager.GetString("BackupTab_Browse", resourceCulture); } }
-        public static string BackupTab_RetentionCount { get { return ResourceManager.GetString("BackupTab_RetentionCount", resourceCulture); } }
-        public static string BackupTab_SaveSchedule { get { return ResourceManager.GetString("BackupTab_SaveSchedule", resourceCulture); } }
-        public static string BackupTab_RemoveSchedule { get { return ResourceManager.GetString("BackupTab_RemoveSchedule", resourceCulture); } }
-        public static string BackupTab_BackupNow { get { return ResourceManager.GetString("BackupTab_BackupNow", resourceCulture); } }
-        public static string BackupTab_RemoveConfirm { get { return ResourceManager.GetString("BackupTab_RemoveConfirm", resourceCulture); } }
-        public static string BackupTab_BackingUp { get { return ResourceManager.GetString("BackupTab_BackingUp", resourceCulture); } }
-        public static string BackupTab_HistoryTitle { get { return ResourceManager.GetString("BackupTab_HistoryTitle", resourceCulture); } }
-        public static string BackupTab_Timestamp { get { return ResourceManager.GetString("BackupTab_Timestamp", resourceCulture); } }
-        public static string BackupTab_FileName { get { return ResourceManager.GetString("BackupTab_FileName", resourceCulture); } }
-        public static string BackupTab_Size { get { return ResourceManager.GetString("BackupTab_Size", resourceCulture); } }
-        public static string BackupTab_Status { get { return ResourceManager.GetString("BackupTab_Status", resourceCulture); } }
-        public static string BackupTab_StatusSuccess { get { return ResourceManager.GetString("BackupTab_StatusSuccess", resourceCulture); } }
-        public static string BackupTab_StatusFailed { get { return ResourceManager.GetString("BackupTab_StatusFailed", resourceCulture); } }
-        public static string BackupTab_NoDestination { get { return ResourceManager.GetString("BackupTab_NoDestination", resourceCulture); } }
-        public static string BackupTab_SavedSchedule { get { return ResourceManager.GetString("BackupTab_SavedSchedule", resourceCulture); } }
-        public static string BackupTab_ScheduleRemoved { get { return ResourceManager.GetString("BackupTab_ScheduleRemoved", resourceCulture); } }
-        public static string BackupTab_BackupComplete { get { return ResourceManager.GetString("BackupTab_BackupComplete", resourceCulture); } }
-        public static string BackupTab_NoHistory { get { return ResourceManager.GetString("BackupTab_NoHistory", resourceCulture); } }
-        public static string BackupTab_SelectDestinationTitle { get { return ResourceManager.GetString("BackupTab_SelectDestinationTitle", resourceCulture); } }
-        public static string Remove_DeleteTask { get { return ResourceManager.GetString("Remove_DeleteTask", resourceCulture); } }
-        public static string Remove_DeleteFiles { get { return ResourceManager.GetString("Remove_DeleteFiles", resourceCulture); } }
-        public static string Tag_AddTag { get { return ResourceManager.GetString("Tag_AddTag", resourceCulture); } }
-        public static string Tag_RemoveTitle { get { return ResourceManager.GetString("Tag_RemoveTitle", resourceCulture); } }
-        public static string Tag_RemoveConfirm { get { return ResourceManager.GetString("Tag_RemoveConfirm", resourceCulture); } }
-        public static string Tag_EditTags { get { return ResourceManager.GetString("Tag_EditTags", resourceCulture); } }
-        public static string TagFilter_Title { get { return ResourceManager.GetString("TagFilter_Title", resourceCulture); } }
-        public static string TagFilter_ClearAll { get { return ResourceManager.GetString("TagFilter_ClearAll", resourceCulture); } }
-        public static string TagFilter_GroupByTag { get { return ResourceManager.GetString("TagFilter_GroupByTag", resourceCulture); } }
-        public static string TagFilter_NoTags { get { return ResourceManager.GetString("TagFilter_NoTags", resourceCulture); } }
-        public static string TitleBackupFailure { get { return ResourceManager.GetString("TitleBackupFailure", resourceCulture); } }
-        public static string ErrorBackupFailedForInstance { get { return ResourceManager.GetString("ErrorBackupFailedForInstance", resourceCulture); } }
-        public static string TitleInvalidModulePath { get { return ResourceManager.GetString("TitleInvalidModulePath", resourceCulture); } }
-        public static string ErrorInvalidModulePath { get { return ResourceManager.GetString("ErrorInvalidModulePath", resourceCulture); } }
-        public static string ActionApply { get { return ResourceManager.GetString("ActionApply", resourceCulture); } }
-        public static string ActionExport { get { return ResourceManager.GetString("ActionExport", resourceCulture); } }
-        public static string ActionImport { get { return ResourceManager.GetString("ActionImport", resourceCulture); } }
-        public static string BadgeOfficial { get { return ResourceManager.GetString("BadgeOfficial", resourceCulture); } }
+        /// <summary>
+        ///   Looks up a localized string similar to InstanceStateLabel.
+        /// </summary>
+        public static string InstanceStateLabel {
+            get {
+                return ResourceManager.GetString("InstanceStateLabel", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to InstanceDiskLabel.
+        /// </summary>
+        public static string InstanceDiskLabel {
+            get {
+                return ResourceManager.GetString("InstanceDiskLabel", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to InstanceStart.
+        /// </summary>
+        public static string InstanceStart {
+            get {
+                return ResourceManager.GetString("InstanceStart", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to InstanceStop.
+        /// </summary>
+        public static string InstanceStop {
+            get {
+                return ResourceManager.GetString("InstanceStop", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to InstanceTerminal.
+        /// </summary>
+        public static string InstanceTerminal {
+            get {
+                return ResourceManager.GetString("InstanceTerminal", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to InstanceMore.
+        /// </summary>
+        public static string InstanceMore {
+            get {
+                return ResourceManager.GetString("InstanceMore", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ActionMove.
+        /// </summary>
+        public static string ActionMove {
+            get {
+                return ResourceManager.GetString("ActionMove", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ActionRename.
+        /// </summary>
+        public static string ActionRename {
+            get {
+                return ResourceManager.GetString("ActionRename", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ActionSetCredentials.
+        /// </summary>
+        public static string ActionSetCredentials {
+            get {
+                return ResourceManager.GetString("ActionSetCredentials", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ActionForceRefresh.
+        /// </summary>
+        public static string ActionForceRefresh {
+            get {
+                return ResourceManager.GetString("ActionForceRefresh", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ActionRemove.
+        /// </summary>
+        public static string ActionRemove {
+            get {
+                return ResourceManager.GetString("ActionRemove", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to NoInstancesTitle.
+        /// </summary>
+        public static string NoInstancesTitle {
+            get {
+                return ResourceManager.GetString("NoInstancesTitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to NoInstancesSubtitle.
+        /// </summary>
+        public static string NoInstancesSubtitle {
+            get {
+                return ResourceManager.GetString("NoInstancesSubtitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to LoadingText.
+        /// </summary>
+        public static string LoadingText {
+            get {
+                return ResourceManager.GetString("LoadingText", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to DownloadPanelTitle.
+        /// </summary>
+        public static string DownloadPanelTitle {
+            get {
+                return ResourceManager.GetString("DownloadPanelTitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ActiveDownloadsFormat.
+        /// </summary>
+        public static string ActiveDownloadsFormat {
+            get {
+                return ResourceManager.GetString("ActiveDownloadsFormat", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to CloseTooltip.
+        /// </summary>
+        public static string CloseTooltip {
+            get {
+                return ResourceManager.GetString("CloseTooltip", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to CancelTooltip.
+        /// </summary>
+        public static string CancelTooltip {
+            get {
+                return ResourceManager.GetString("CancelTooltip", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to StateRunning.
+        /// </summary>
+        public static string StateRunning {
+            get {
+                return ResourceManager.GetString("StateRunning", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to StateStopped.
+        /// </summary>
+        public static string StateStopped {
+            get {
+                return ResourceManager.GetString("StateStopped", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ActionDownload.
+        /// </summary>
+        public static string ActionDownload {
+            get {
+                return ResourceManager.GetString("ActionDownload", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ActionInstall.
+        /// </summary>
+        public static string ActionInstall {
+            get {
+                return ResourceManager.GetString("ActionInstall", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ActionActions.
+        /// </summary>
+        public static string ActionActions {
+            get {
+                return ResourceManager.GetString("ActionActions", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ActionAdd.
+        /// </summary>
+        public static string ActionAdd {
+            get {
+                return ResourceManager.GetString("ActionAdd", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ActionRedownload.
+        /// </summary>
+        public static string ActionRedownload {
+            get {
+                return ResourceManager.GetString("ActionRedownload", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ActionDeleteCache.
+        /// </summary>
+        public static string ActionDeleteCache {
+            get {
+                return ResourceManager.GetString("ActionDeleteCache", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ActionApply.
+        /// </summary>
+        public static string ActionApply {
+            get {
+                return ResourceManager.GetString("ActionApply", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ActionExport.
+        /// </summary>
+        public static string ActionExport {
+            get {
+                return ResourceManager.GetString("ActionExport", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ActionImport.
+        /// </summary>
+        public static string ActionImport {
+            get {
+                return ResourceManager.GetString("ActionImport", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BadgeOfficial.
+        /// </summary>
+        public static string BadgeOfficial {
+            get {
+                return ResourceManager.GetString("BadgeOfficial", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to CustomSourceUrlLabel.
+        /// </summary>
+        public static string CustomSourceUrlLabel {
+            get {
+                return ResourceManager.GetString("CustomSourceUrlLabel", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to LoadingCatalog.
+        /// </summary>
+        public static string LoadingCatalog {
+            get {
+                return ResourceManager.GetString("LoadingCatalog", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BadgeCached.
+        /// </summary>
+        public static string BadgeCached {
+            get {
+                return ResourceManager.GetString("BadgeCached", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BadgeOnline.
+        /// </summary>
+        public static string BadgeOnline {
+            get {
+                return ResourceManager.GetString("BadgeOnline", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BadgeCustom.
+        /// </summary>
+        public static string BadgeCustom {
+            get {
+                return ResourceManager.GetString("BadgeCustom", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to StepConnector.
+        /// </summary>
+        public static string StepConnector {
+            get {
+                return ResourceManager.GetString("StepConnector", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to SelectDistroHeader.
+        /// </summary>
+        public static string SelectDistroHeader {
+            get {
+                return ResourceManager.GetString("SelectDistroHeader", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ReviewInstallTitle.
+        /// </summary>
+        public static string ReviewInstallTitle {
+            get {
+                return ResourceManager.GetString("ReviewInstallTitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ReviewInstallDescription.
+        /// </summary>
+        public static string ReviewInstallDescription {
+            get {
+                return ResourceManager.GetString("ReviewInstallDescription", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to DefaultUserRoot.
+        /// </summary>
+        public static string DefaultUserRoot {
+            get {
+                return ResourceManager.GetString("DefaultUserRoot", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ResultCompleteTitle.
+        /// </summary>
+        public static string ResultCompleteTitle {
+            get {
+                return ResourceManager.GetString("ResultCompleteTitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ResultCompleteDescription.
+        /// </summary>
+        public static string ResultCompleteDescription {
+            get {
+                return ResourceManager.GetString("ResultCompleteDescription", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ResultSuccess.
+        /// </summary>
+        public static string ResultSuccess {
+            get {
+                return ResourceManager.GetString("ResultSuccess", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ResultSuccessSimple.
+        /// </summary>
+        public static string ResultSuccessSimple {
+            get {
+                return ResourceManager.GetString("ResultSuccessSimple", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ButtonTryAgain.
+        /// </summary>
+        public static string ButtonTryAgain {
+            get {
+                return ResourceManager.GetString("ButtonTryAgain", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ButtonFinish.
+        /// </summary>
+        public static string ButtonFinish {
+            get {
+                return ResourceManager.GetString("ButtonFinish", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ButtonClose.
+        /// </summary>
+        public static string ButtonClose {
+            get {
+                return ResourceManager.GetString("ButtonClose", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ButtonNext.
+        /// </summary>
+        public static string ButtonNext {
+            get {
+                return ResourceManager.GetString("ButtonNext", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ButtonBack.
+        /// </summary>
+        public static string ButtonBack {
+            get {
+                return ResourceManager.GetString("ButtonBack", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to InstallationSummaryTitle.
+        /// </summary>
+        public static string InstallationSummaryTitle {
+            get {
+                return ResourceManager.GetString("InstallationSummaryTitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to LabelDistribution.
+        /// </summary>
+        public static string LabelDistribution {
+            get {
+                return ResourceManager.GetString("LabelDistribution", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to LabelInstanceName.
+        /// </summary>
+        public static string LabelInstanceName {
+            get {
+                return ResourceManager.GetString("LabelInstanceName", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to LabelInstallPath.
+        /// </summary>
+        public static string LabelInstallPath {
+            get {
+                return ResourceManager.GetString("LabelInstallPath", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to LabelUsername.
+        /// </summary>
+        public static string LabelUsername {
+            get {
+                return ResourceManager.GetString("LabelUsername", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to LabelWslVersion.
+        /// </summary>
+        public static string LabelWslVersion {
+            get {
+                return ResourceManager.GetString("LabelWslVersion", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to OptionSetDefault.
+        /// </summary>
+        public static string OptionSetDefault {
+            get {
+                return ResourceManager.GetString("OptionSetDefault", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to OptionLaunchAfter.
+        /// </summary>
+        public static string OptionLaunchAfter {
+            get {
+                return ResourceManager.GetString("OptionLaunchAfter", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to WslVersionFormat.
+        /// </summary>
+        public static string WslVersionFormat {
+            get {
+                return ResourceManager.GetString("WslVersionFormat", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to CreateUserAccount.
+        /// </summary>
+        public static string CreateUserAccount {
+            get {
+                return ResourceManager.GetString("CreateUserAccount", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to CancelInstallation.
+        /// </summary>
+        public static string CancelInstallation {
+            get {
+                return ResourceManager.GetString("CancelInstallation", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ButtonBrowse.
+        /// </summary>
+        public static string ButtonBrowse {
+            get {
+                return ResourceManager.GetString("ButtonBrowse", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ButtonClearCompleted.
+        /// </summary>
+        public static string ButtonClearCompleted {
+            get {
+                return ResourceManager.GetString("ButtonClearCompleted", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to WslVersion1.
+        /// </summary>
+        public static string WslVersion1 {
+            get {
+                return ResourceManager.GetString("WslVersion1", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to WslVersion2.
+        /// </summary>
+        public static string WslVersion2 {
+            get {
+                return ResourceManager.GetString("WslVersion2", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to WslVersion2Recommended.
+        /// </summary>
+        public static string WslVersion2Recommended {
+            get {
+                return ResourceManager.GetString("WslVersion2Recommended", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to LabelPassword.
+        /// </summary>
+        public static string LabelPassword {
+            get {
+                return ResourceManager.GetString("LabelPassword", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to LabelConfirmPassword.
+        /// </summary>
+        public static string LabelConfirmPassword {
+            get {
+                return ResourceManager.GetString("LabelConfirmPassword", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to PlaceholderUsername.
+        /// </summary>
+        public static string PlaceholderUsername {
+            get {
+                return ResourceManager.GetString("PlaceholderUsername", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to PlaceholderPassword.
+        /// </summary>
+        public static string PlaceholderPassword {
+            get {
+                return ResourceManager.GetString("PlaceholderPassword", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to PlaceholderConfirmPassword.
+        /// </summary>
+        public static string PlaceholderConfirmPassword {
+            get {
+                return ResourceManager.GetString("PlaceholderConfirmPassword", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Wsl2RecommendedInfo.
+        /// </summary>
+        public static string Wsl2RecommendedInfo {
+            get {
+                return ResourceManager.GetString("Wsl2RecommendedInfo", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to RootUserWarning.
+        /// </summary>
+        public static string RootUserWarning {
+            get {
+                return ResourceManager.GetString("RootUserWarning", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to PlaceholderInstanceName.
+        /// </summary>
+        public static string PlaceholderInstanceName {
+            get {
+                return ResourceManager.GetString("PlaceholderInstanceName", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to PlaceholderInstallPath.
+        /// </summary>
+        public static string PlaceholderInstallPath {
+            get {
+                return ResourceManager.GetString("PlaceholderInstallPath", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to StatusValidating.
+        /// </summary>
+        public static string StatusValidating {
+            get {
+                return ResourceManager.GetString("StatusValidating", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ConfigureUserAccount.
+        /// </summary>
+        public static string ConfigureUserAccount {
+            get {
+                return ResourceManager.GetString("ConfigureUserAccount", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ReviewAndInstall.
+        /// </summary>
+        public static string ReviewAndInstall {
+            get {
+                return ResourceManager.GetString("ReviewAndInstall", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to InstallationSummary.
+        /// </summary>
+        public static string InstallationSummary {
+            get {
+                return ResourceManager.GetString("InstallationSummary", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to LabelInstance.
+        /// </summary>
+        public static string LabelInstance {
+            get {
+                return ResourceManager.GetString("LabelInstance", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to LabelLocation.
+        /// </summary>
+        public static string LabelLocation {
+            get {
+                return ResourceManager.GetString("LabelLocation", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to InstallFailedLabel.
+        /// </summary>
+        public static string InstallFailedLabel {
+            get {
+                return ResourceManager.GetString("InstallFailedLabel", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to WizardStepSelectDistribution.
+        /// </summary>
+        public static string WizardStepSelectDistribution {
+            get {
+                return ResourceManager.GetString("WizardStepSelectDistribution", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to WizardStepChooseInstallPath.
+        /// </summary>
+        public static string WizardStepChooseInstallPath {
+            get {
+                return ResourceManager.GetString("WizardStepChooseInstallPath", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to WizardStepConfigureUser.
+        /// </summary>
+        public static string WizardStepConfigureUser {
+            get {
+                return ResourceManager.GetString("WizardStepConfigureUser", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to WizardStepSelectTemplate.
+        /// </summary>
+        public static string WizardStepSelectTemplate {
+            get {
+                return ResourceManager.GetString("WizardStepSelectTemplate", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to WizardStepSelectTemplateDescription.
+        /// </summary>
+        public static string WizardStepSelectTemplateDescription {
+            get {
+                return ResourceManager.GetString("WizardStepSelectTemplateDescription", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to WizardStepInstalling.
+        /// </summary>
+        public static string WizardStepInstalling {
+            get {
+                return ResourceManager.GetString("WizardStepInstalling", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorSelectDistribution.
+        /// </summary>
+        public static string ErrorSelectDistribution {
+            get {
+                return ResourceManager.GetString("ErrorSelectDistribution", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorInvalidDownloadUrl.
+        /// </summary>
+        public static string ErrorInvalidDownloadUrl {
+            get {
+                return ResourceManager.GetString("ErrorInvalidDownloadUrl", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorInvalidUrlFormat.
+        /// </summary>
+        public static string ErrorInvalidUrlFormat {
+            get {
+                return ResourceManager.GetString("ErrorInvalidUrlFormat", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorTemplateSelectionRequired.
+        /// </summary>
+        public static string ErrorTemplateSelectionRequired {
+            get {
+                return ResourceManager.GetString("ErrorTemplateSelectionRequired", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorTemplateLoadFailed.
+        /// </summary>
+        public static string ErrorTemplateLoadFailed {
+            get {
+                return ResourceManager.GetString("ErrorTemplateLoadFailed", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to WizardTemplateCompatibilityWarningFormat.
+        /// </summary>
+        public static string WizardTemplateCompatibilityWarningFormat {
+            get {
+                return ResourceManager.GetString("WizardTemplateCompatibilityWarningFormat", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to WizardStartupTemplateNotFoundWarningFormat.
+        /// </summary>
+        public static string WizardStartupTemplateNotFoundWarningFormat {
+            get {
+                return ResourceManager.GetString("WizardStartupTemplateNotFoundWarningFormat", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to WizardStartupTemplateLoadFailedWarningFormat.
+        /// </summary>
+        public static string WizardStartupTemplateLoadFailedWarningFormat {
+            get {
+                return ResourceManager.GetString("WizardStartupTemplateLoadFailedWarningFormat", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorInstanceNameRequired.
+        /// </summary>
+        public static string ErrorInstanceNameRequired {
+            get {
+                return ResourceManager.GetString("ErrorInstanceNameRequired", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorInvalidInstanceName.
+        /// </summary>
+        public static string ErrorInvalidInstanceName {
+            get {
+                return ResourceManager.GetString("ErrorInvalidInstanceName", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorInstanceAlreadyExists.
+        /// </summary>
+        public static string ErrorInstanceAlreadyExists {
+            get {
+                return ResourceManager.GetString("ErrorInstanceAlreadyExists", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorInstallPathRequired.
+        /// </summary>
+        public static string ErrorInstallPathRequired {
+            get {
+                return ResourceManager.GetString("ErrorInstallPathRequired", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorPathNotAbsolute.
+        /// </summary>
+        public static string ErrorPathNotAbsolute {
+            get {
+                return ResourceManager.GetString("ErrorPathNotAbsolute", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorPasswordMismatch.
+        /// </summary>
+        public static string ErrorPasswordMismatch {
+            get {
+                return ResourceManager.GetString("ErrorPasswordMismatch", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorWeakPassword.
+        /// </summary>
+        public static string ErrorWeakPassword {
+            get {
+                return ResourceManager.GetString("ErrorWeakPassword", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorInstanceNameStartWith.
+        /// </summary>
+        public static string ErrorInstanceNameStartWith {
+            get {
+                return ResourceManager.GetString("ErrorInstanceNameStartWith", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorInstanceNameTooShort.
+        /// </summary>
+        public static string ErrorInstanceNameTooShort {
+            get {
+                return ResourceManager.GetString("ErrorInstanceNameTooShort", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorInstanceNameTooLong.
+        /// </summary>
+        public static string ErrorInstanceNameTooLong {
+            get {
+                return ResourceManager.GetString("ErrorInstanceNameTooLong", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorInstanceNameReserved.
+        /// </summary>
+        public static string ErrorInstanceNameReserved {
+            get {
+                return ResourceManager.GetString("ErrorInstanceNameReserved", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to StatusVerifyingInstanceName.
+        /// </summary>
+        public static string StatusVerifyingInstanceName {
+            get {
+                return ResourceManager.GetString("StatusVerifyingInstanceName", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorVerificationTimeout.
+        /// </summary>
+        public static string ErrorVerificationTimeout {
+            get {
+                return ResourceManager.GetString("ErrorVerificationTimeout", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorVerificationFailed.
+        /// </summary>
+        public static string ErrorVerificationFailed {
+            get {
+                return ResourceManager.GetString("ErrorVerificationFailed", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorInstanceExistsFormat.
+        /// </summary>
+        public static string ErrorInstanceExistsFormat {
+            get {
+                return ResourceManager.GetString("ErrorInstanceExistsFormat", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorInvalidPathOrName.
+        /// </summary>
+        public static string ErrorInvalidPathOrName {
+            get {
+                return ResourceManager.GetString("ErrorInvalidPathOrName", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to LabelTemplateName.
+        /// </summary>
+        public static string LabelTemplateName {
+            get {
+                return ResourceManager.GetString("LabelTemplateName", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to LabelTemplateCategory.
+        /// </summary>
+        public static string LabelTemplateCategory {
+            get {
+                return ResourceManager.GetString("LabelTemplateCategory", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to LabelTemplateDescriptor.
+        /// </summary>
+        public static string LabelTemplateDescriptor {
+            get {
+                return ResourceManager.GetString("LabelTemplateDescriptor", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to LabelNoTemplateSelected.
+        /// </summary>
+        public static string LabelNoTemplateSelected {
+            get {
+                return ResourceManager.GetString("LabelNoTemplateSelected", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to LabelUnknownValue.
+        /// </summary>
+        public static string LabelUnknownValue {
+            get {
+                return ResourceManager.GetString("LabelUnknownValue", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to LabelDistributionUnknownValue.
+        /// </summary>
+        public static string LabelDistributionUnknownValue {
+            get {
+                return ResourceManager.GetString("LabelDistributionUnknownValue", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to TemplateSummaryDescriptorFormat.
+        /// </summary>
+        public static string TemplateSummaryDescriptorFormat {
+            get {
+                return ResourceManager.GetString("TemplateSummaryDescriptorFormat", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to PlaceholderSearchTemplates.
+        /// </summary>
+        public static string PlaceholderSearchTemplates {
+            get {
+                return ResourceManager.GetString("PlaceholderSearchTemplates", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to SkipTemplateSetup.
+        /// </summary>
+        public static string SkipTemplateSetup {
+            get {
+                return ResourceManager.GetString("SkipTemplateSetup", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to UseTemplateSetup.
+        /// </summary>
+        public static string UseTemplateSetup {
+            get {
+                return ResourceManager.GetString("UseTemplateSetup", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to SelectTemplateEmptyState.
+        /// </summary>
+        public static string SelectTemplateEmptyState {
+            get {
+                return ResourceManager.GetString("SelectTemplateEmptyState", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to LabelDescription.
+        /// </summary>
+        public static string LabelDescription {
+            get {
+                return ResourceManager.GetString("LabelDescription", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to TemplateIncludedSoftware.
+        /// </summary>
+        public static string TemplateIncludedSoftware {
+            get {
+                return ResourceManager.GetString("TemplateIncludedSoftware", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to TemplateAdvancedOptions.
+        /// </summary>
+        public static string TemplateAdvancedOptions {
+            get {
+                return ResourceManager.GetString("TemplateAdvancedOptions", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to TemplateVersionOptions.
+        /// </summary>
+        public static string TemplateVersionOptions {
+            get {
+                return ResourceManager.GetString("TemplateVersionOptions", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to TemplatePreflightChecks.
+        /// </summary>
+        public static string TemplatePreflightChecks {
+            get {
+                return ResourceManager.GetString("TemplatePreflightChecks", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to TemplateDoNotUse.
+        /// </summary>
+        public static string TemplateDoNotUse {
+            get {
+                return ResourceManager.GetString("TemplateDoNotUse", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorTemplateRequiredOptionMissingFormat.
+        /// </summary>
+        public static string ErrorTemplateRequiredOptionMissingFormat {
+            get {
+                return ResourceManager.GetString("ErrorTemplateRequiredOptionMissingFormat", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorValidationFormat.
+        /// </summary>
+        public static string ErrorValidationFormat {
+            get {
+                return ResourceManager.GetString("ErrorValidationFormat", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorStartupTitle.
+        /// </summary>
+        public static string ErrorStartupTitle {
+            get {
+                return ResourceManager.GetString("ErrorStartupTitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorApplicationTitle.
+        /// </summary>
+        public static string ErrorApplicationTitle {
+            get {
+                return ResourceManager.GetString("ErrorApplicationTitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorFatalTitle.
+        /// </summary>
+        public static string ErrorFatalTitle {
+            get {
+                return ResourceManager.GetString("ErrorFatalTitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorStartupMessage.
+        /// </summary>
+        public static string ErrorStartupMessage {
+            get {
+                return ResourceManager.GetString("ErrorStartupMessage", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorUnexpectedException.
+        /// </summary>
+        public static string ErrorUnexpectedException {
+            get {
+                return ResourceManager.GetString("ErrorUnexpectedException", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorFatalException.
+        /// </summary>
+        public static string ErrorFatalException {
+            get {
+                return ResourceManager.GetString("ErrorFatalException", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to UpdateAvailableTitle.
+        /// </summary>
+        public static string UpdateAvailableTitle {
+            get {
+                return ResourceManager.GetString("UpdateAvailableTitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to UpdateAvailableMessage.
+        /// </summary>
+        public static string UpdateAvailableMessage {
+            get {
+                return ResourceManager.GetString("UpdateAvailableMessage", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorGenerateDiagnostics.
+        /// </summary>
+        public static string ErrorGenerateDiagnostics {
+            get {
+                return ResourceManager.GetString("ErrorGenerateDiagnostics", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorMoveSource.
+        /// </summary>
+        public static string ErrorMoveSource {
+            get {
+                return ResourceManager.GetString("ErrorMoveSource", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorLoadSettings.
+        /// </summary>
+        public static string ErrorLoadSettings {
+            get {
+                return ResourceManager.GetString("ErrorLoadSettings", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorUsernameRequired.
+        /// </summary>
+        public static string ErrorUsernameRequired {
+            get {
+                return ResourceManager.GetString("ErrorUsernameRequired", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorUsernameFormat.
+        /// </summary>
+        public static string ErrorUsernameFormat {
+            get {
+                return ResourceManager.GetString("ErrorUsernameFormat", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorPasswordMinLength.
+        /// </summary>
+        public static string ErrorPasswordMinLength {
+            get {
+                return ResourceManager.GetString("ErrorPasswordMinLength", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorInvalidWslVersion.
+        /// </summary>
+        public static string ErrorInvalidWslVersion {
+            get {
+                return ResourceManager.GetString("ErrorInvalidWslVersion", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorOpenLogFolder.
+        /// </summary>
+        public static string ErrorOpenLogFolder {
+            get {
+                return ResourceManager.GetString("ErrorOpenLogFolder", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ConfirmCancelInstallation.
+        /// </summary>
+        public static string ConfirmCancelInstallation {
+            get {
+                return ResourceManager.GetString("ConfirmCancelInstallation", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to TitleCancelInstallation.
+        /// </summary>
+        public static string TitleCancelInstallation {
+            get {
+                return ResourceManager.GetString("TitleCancelInstallation", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to TooltipOnlyErrors.
+        /// </summary>
+        public static string TooltipOnlyErrors {
+            get {
+                return ResourceManager.GetString("TooltipOnlyErrors", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorDeletePackage.
+        /// </summary>
+        public static string ErrorDeletePackage {
+            get {
+                return ResourceManager.GetString("ErrorDeletePackage", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorRedownloadPackage.
+        /// </summary>
+        public static string ErrorRedownloadPackage {
+            get {
+                return ResourceManager.GetString("ErrorRedownloadPackage", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorInvalidUrl.
+        /// </summary>
+        public static string ErrorInvalidUrl {
+            get {
+                return ResourceManager.GetString("ErrorInvalidUrl", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to TitleInvalidUrl.
+        /// </summary>
+        public static string TitleInvalidUrl {
+            get {
+                return ResourceManager.GetString("TitleInvalidUrl", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorCustomUrlInvalidFormat.
+        /// </summary>
+        public static string ErrorCustomUrlInvalidFormat {
+            get {
+                return ResourceManager.GetString("ErrorCustomUrlInvalidFormat", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to SuccessCustomSourceAdded.
+        /// </summary>
+        public static string SuccessCustomSourceAdded {
+            get {
+                return ResourceManager.GetString("SuccessCustomSourceAdded", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to TitleSuccess.
+        /// </summary>
+        public static string TitleSuccess {
+            get {
+                return ResourceManager.GetString("TitleSuccess", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorAddCustomSource.
+        /// </summary>
+        public static string ErrorAddCustomSource {
+            get {
+                return ResourceManager.GetString("ErrorAddCustomSource", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorUpdateSources.
+        /// </summary>
+        public static string ErrorUpdateSources {
+            get {
+                return ResourceManager.GetString("ErrorUpdateSources", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to InfoAllPackagesCached.
+        /// </summary>
+        public static string InfoAllPackagesCached {
+            get {
+                return ResourceManager.GetString("InfoAllPackagesCached", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to TitleDownloadAll.
+        /// </summary>
+        public static string TitleDownloadAll {
+            get {
+                return ResourceManager.GetString("TitleDownloadAll", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorStartDownloadAll.
+        /// </summary>
+        public static string ErrorStartDownloadAll {
+            get {
+                return ResourceManager.GetString("ErrorStartDownloadAll", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ConfirmInstallPackage.
+        /// </summary>
+        public static string ConfirmInstallPackage {
+            get {
+                return ResourceManager.GetString("ConfirmInstallPackage", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to TitleInstallPackage.
+        /// </summary>
+        public static string TitleInstallPackage {
+            get {
+                return ResourceManager.GetString("TitleInstallPackage", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorInstallPackage.
+        /// </summary>
+        public static string ErrorInstallPackage {
+            get {
+                return ResourceManager.GetString("ErrorInstallPackage", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorApplyTheme.
+        /// </summary>
+        public static string ErrorApplyTheme {
+            get {
+                return ResourceManager.GetString("ErrorApplyTheme", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to TitleThemeError.
+        /// </summary>
+        public static string TitleThemeError {
+            get {
+                return ResourceManager.GetString("TitleThemeError", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorOpenCacheFolder.
+        /// </summary>
+        public static string ErrorOpenCacheFolder {
+            get {
+                return ResourceManager.GetString("ErrorOpenCacheFolder", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorInitializeMainWindow.
+        /// </summary>
+        public static string ErrorInitializeMainWindow {
+            get {
+                return ResourceManager.GetString("ErrorInitializeMainWindow", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to TitleInitializationError.
+        /// </summary>
+        public static string TitleInitializationError {
+            get {
+                return ResourceManager.GetString("TitleInitializationError", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorInitializeApplication.
+        /// </summary>
+        public static string ErrorInitializeApplication {
+            get {
+                return ResourceManager.GetString("ErrorInitializeApplication", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorLoadWslInstances.
+        /// </summary>
+        public static string ErrorLoadWslInstances {
+            get {
+                return ResourceManager.GetString("ErrorLoadWslInstances", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to TitleLoadError.
+        /// </summary>
+        public static string TitleLoadError {
+            get {
+                return ResourceManager.GetString("TitleLoadError", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to TooltipSparseModeEnabled.
+        /// </summary>
+        public static string TooltipSparseModeEnabled {
+            get {
+                return ResourceManager.GetString("TooltipSparseModeEnabled", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to MoreMenu_Details.
+        /// </summary>
+        public static string MoreMenu_Details {
+            get {
+                return ResourceManager.GetString("MoreMenu_Details", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to MoreMenu_CompactDisk.
+        /// </summary>
+        public static string MoreMenu_CompactDisk {
+            get {
+                return ResourceManager.GetString("MoreMenu_CompactDisk", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to MoreMenu_ExportInstance.
+        /// </summary>
+        public static string MoreMenu_ExportInstance {
+            get {
+                return ResourceManager.GetString("MoreMenu_ExportInstance", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Toolbar_ImportInstance.
+        /// </summary>
+        public static string Toolbar_ImportInstance {
+            get {
+                return ResourceManager.GetString("Toolbar_ImportInstance", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Toolbar_SelectMode.
+        /// </summary>
+        public static string Toolbar_SelectMode {
+            get {
+                return ResourceManager.GetString("Toolbar_SelectMode", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Toolbar_CompactSelected.
+        /// </summary>
+        public static string Toolbar_CompactSelected {
+            get {
+                return ResourceManager.GetString("Toolbar_CompactSelected", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to InstanceDetail_Title.
+        /// </summary>
+        public static string InstanceDetail_Title {
+            get {
+                return ResourceManager.GetString("InstanceDetail_Title", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to InstanceDetail_Close.
+        /// </summary>
+        public static string InstanceDetail_Close {
+            get {
+                return ResourceManager.GetString("InstanceDetail_Close", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Tab_Disk.
+        /// </summary>
+        public static string Tab_Disk {
+            get {
+                return ResourceManager.GetString("Tab_Disk", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Tab_Resources.
+        /// </summary>
+        public static string Tab_Resources {
+            get {
+                return ResourceManager.GetString("Tab_Resources", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Tab_Integrations.
+        /// </summary>
+        public static string Tab_Integrations {
+            get {
+                return ResourceManager.GetString("Tab_Integrations", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Tab_Network.
+        /// </summary>
+        public static string Tab_Network {
+            get {
+                return ResourceManager.GetString("Tab_Network", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Tab_Backup.
+        /// </summary>
+        public static string Tab_Backup {
+            get {
+                return ResourceManager.GetString("Tab_Backup", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorGenericOperation.
+        /// </summary>
+        public static string ErrorGenericOperation {
+            get {
+                return ResourceManager.GetString("ErrorGenericOperation", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to DiskTab_VhdxPath.
+        /// </summary>
+        public static string DiskTab_VhdxPath {
+            get {
+                return ResourceManager.GetString("DiskTab_VhdxPath", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to DiskTab_CurrentSize.
+        /// </summary>
+        public static string DiskTab_CurrentSize {
+            get {
+                return ResourceManager.GetString("DiskTab_CurrentSize", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to DiskTab_CompactDisk.
+        /// </summary>
+        public static string DiskTab_CompactDisk {
+            get {
+                return ResourceManager.GetString("DiskTab_CompactDisk", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to DiskTab_Estimating.
+        /// </summary>
+        public static string DiskTab_Estimating {
+            get {
+                return ResourceManager.GetString("DiskTab_Estimating", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to DiskTab_CompactConfirm.
+        /// </summary>
+        public static string DiskTab_CompactConfirm {
+            get {
+                return ResourceManager.GetString("DiskTab_CompactConfirm", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to DiskTab_CompactConfirmEstimate.
+        /// </summary>
+        public static string DiskTab_CompactConfirmEstimate {
+            get {
+                return ResourceManager.GetString("DiskTab_CompactConfirmEstimate", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to DiskTab_PhaseStop.
+        /// </summary>
+        public static string DiskTab_PhaseStop {
+            get {
+                return ResourceManager.GetString("DiskTab_PhaseStop", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to DiskTab_PhaseTrim.
+        /// </summary>
+        public static string DiskTab_PhaseTrim {
+            get {
+                return ResourceManager.GetString("DiskTab_PhaseTrim", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to DiskTab_PhaseCompact.
+        /// </summary>
+        public static string DiskTab_PhaseCompact {
+            get {
+                return ResourceManager.GetString("DiskTab_PhaseCompact", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to DiskTab_PhaseRestart.
+        /// </summary>
+        public static string DiskTab_PhaseRestart {
+            get {
+                return ResourceManager.GetString("DiskTab_PhaseRestart", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to DiskTab_ResultSaved.
+        /// </summary>
+        public static string DiskTab_ResultSaved {
+            get {
+                return ResourceManager.GetString("DiskTab_ResultSaved", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to DiskTab_WslV1Message.
+        /// </summary>
+        public static string DiskTab_WslV1Message {
+            get {
+                return ResourceManager.GetString("DiskTab_WslV1Message", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Export_StopPromptTitle.
+        /// </summary>
+        public static string Export_StopPromptTitle {
+            get {
+                return ResourceManager.GetString("Export_StopPromptTitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Export_StopPrompt.
+        /// </summary>
+        public static string Export_StopPrompt {
+            get {
+                return ResourceManager.GetString("Export_StopPrompt", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Export_SaveDialogTitle.
+        /// </summary>
+        public static string Export_SaveDialogTitle {
+            get {
+                return ResourceManager.GetString("Export_SaveDialogTitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Export_CompleteTitle.
+        /// </summary>
+        public static string Export_CompleteTitle {
+            get {
+                return ResourceManager.GetString("Export_CompleteTitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Export_Complete.
+        /// </summary>
+        public static string Export_Complete {
+            get {
+                return ResourceManager.GetString("Export_Complete", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Export_ProgressTitle.
+        /// </summary>
+        public static string Export_ProgressTitle {
+            get {
+                return ResourceManager.GetString("Export_ProgressTitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Export_ProgressMessage.
+        /// </summary>
+        public static string Export_ProgressMessage {
+            get {
+                return ResourceManager.GetString("Export_ProgressMessage", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Export_ProgressStatus.
+        /// </summary>
+        public static string Export_ProgressStatus {
+            get {
+                return ResourceManager.GetString("Export_ProgressStatus", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Progress_Cancelling.
+        /// </summary>
+        public static string Progress_Cancelling {
+            get {
+                return ResourceManager.GetString("Progress_Cancelling", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Import_Title.
+        /// </summary>
+        public static string Import_Title {
+            get {
+                return ResourceManager.GetString("Import_Title", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Import_NameLabel.
+        /// </summary>
+        public static string Import_NameLabel {
+            get {
+                return ResourceManager.GetString("Import_NameLabel", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Import_PathLabel.
+        /// </summary>
+        public static string Import_PathLabel {
+            get {
+                return ResourceManager.GetString("Import_PathLabel", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Import_SourceLabel.
+        /// </summary>
+        public static string Import_SourceLabel {
+            get {
+                return ResourceManager.GetString("Import_SourceLabel", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Import_NameRequired.
+        /// </summary>
+        public static string Import_NameRequired {
+            get {
+                return ResourceManager.GetString("Import_NameRequired", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Import_NameExists.
+        /// </summary>
+        public static string Import_NameExists {
+            get {
+                return ResourceManager.GetString("Import_NameExists", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Import_PathRequired.
+        /// </summary>
+        public static string Import_PathRequired {
+            get {
+                return ResourceManager.GetString("Import_PathRequired", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Import_SourceRequired.
+        /// </summary>
+        public static string Import_SourceRequired {
+            get {
+                return ResourceManager.GetString("Import_SourceRequired", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Import_SourceNotFound.
+        /// </summary>
+        public static string Import_SourceNotFound {
+            get {
+                return ResourceManager.GetString("Import_SourceNotFound", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Import_PathBrowseTitle.
+        /// </summary>
+        public static string Import_PathBrowseTitle {
+            get {
+                return ResourceManager.GetString("Import_PathBrowseTitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Import_SourceBrowseTitle.
+        /// </summary>
+        public static string Import_SourceBrowseTitle {
+            get {
+                return ResourceManager.GetString("Import_SourceBrowseTitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Import_CompleteTitle.
+        /// </summary>
+        public static string Import_CompleteTitle {
+            get {
+                return ResourceManager.GetString("Import_CompleteTitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Import_Complete.
+        /// </summary>
+        public static string Import_Complete {
+            get {
+                return ResourceManager.GetString("Import_Complete", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ResourcesTab_SparseMode.
+        /// </summary>
+        public static string ResourcesTab_SparseMode {
+            get {
+                return ResourceManager.GetString("ResourcesTab_SparseMode", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ResourcesTab_SparseModeTooltip.
+        /// </summary>
+        public static string ResourcesTab_SparseModeTooltip {
+            get {
+                return ResourceManager.GetString("ResourcesTab_SparseModeTooltip", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ResourcesTab_SparseModeEnabled.
+        /// </summary>
+        public static string ResourcesTab_SparseModeEnabled {
+            get {
+                return ResourceManager.GetString("ResourcesTab_SparseModeEnabled", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ResourcesTab_SparseModeDisabled.
+        /// </summary>
+        public static string ResourcesTab_SparseModeDisabled {
+            get {
+                return ResourceManager.GetString("ResourcesTab_SparseModeDisabled", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ResourcesTab_SparseModeUnknown.
+        /// </summary>
+        public static string ResourcesTab_SparseModeUnknown {
+            get {
+                return ResourceManager.GetString("ResourcesTab_SparseModeUnknown", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ResourcesTab_GlobalLimits.
+        /// </summary>
+        public static string ResourcesTab_GlobalLimits {
+            get {
+                return ResourceManager.GetString("ResourcesTab_GlobalLimits", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ResourcesTab_EditInWslConfig.
+        /// </summary>
+        public static string ResourcesTab_EditInWslConfig {
+            get {
+                return ResourceManager.GetString("ResourcesTab_EditInWslConfig", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ResourcesTab_WslV1Message.
+        /// </summary>
+        public static string ResourcesTab_WslV1Message {
+            get {
+                return ResourceManager.GetString("ResourcesTab_WslV1Message", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BulkCompact_Counter.
+        /// </summary>
+        public static string BulkCompact_Counter {
+            get {
+                return ResourceManager.GetString("BulkCompact_Counter", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BulkCompact_ConfirmTitle.
+        /// </summary>
+        public static string BulkCompact_ConfirmTitle {
+            get {
+                return ResourceManager.GetString("BulkCompact_ConfirmTitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BulkCompact_ConfirmMessage.
+        /// </summary>
+        public static string BulkCompact_ConfirmMessage {
+            get {
+                return ResourceManager.GetString("BulkCompact_ConfirmMessage", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to TemplatesTitle.
+        /// </summary>
+        public static string TemplatesTitle {
+            get {
+                return ResourceManager.GetString("TemplatesTitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to RetryTooltip.
+        /// </summary>
+        public static string RetryTooltip {
+            get {
+                return ResourceManager.GetString("RetryTooltip", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to NoDownloadTasksTitle.
+        /// </summary>
+        public static string NoDownloadTasksTitle {
+            get {
+                return ResourceManager.GetString("NoDownloadTasksTitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to NoDownloadTasksSubtitle.
+        /// </summary>
+        public static string NoDownloadTasksSubtitle {
+            get {
+                return ResourceManager.GetString("NoDownloadTasksSubtitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to WslConfig_SectionTitle.
+        /// </summary>
+        public static string WslConfig_SectionTitle {
+            get {
+                return ResourceManager.GetString("WslConfig_SectionTitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to WslConfig_HostInfo.
+        /// </summary>
+        public static string WslConfig_HostInfo {
+            get {
+                return ResourceManager.GetString("WslConfig_HostInfo", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to WslConfig_Memory.
+        /// </summary>
+        public static string WslConfig_Memory {
+            get {
+                return ResourceManager.GetString("WslConfig_Memory", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to WslConfig_Processors.
+        /// </summary>
+        public static string WslConfig_Processors {
+            get {
+                return ResourceManager.GetString("WslConfig_Processors", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to WslConfig_Swap.
+        /// </summary>
+        public static string WslConfig_Swap {
+            get {
+                return ResourceManager.GetString("WslConfig_Swap", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to WslConfig_SwapDisabled.
+        /// </summary>
+        public static string WslConfig_SwapDisabled {
+            get {
+                return ResourceManager.GetString("WslConfig_SwapDisabled", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to WslConfig_LocalhostForwarding.
+        /// </summary>
+        public static string WslConfig_LocalhostForwarding {
+            get {
+                return ResourceManager.GetString("WslConfig_LocalhostForwarding", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to WslConfig_NetworkingMode.
+        /// </summary>
+        public static string WslConfig_NetworkingMode {
+            get {
+                return ResourceManager.GetString("WslConfig_NetworkingMode", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to WslConfig_SaveAndRestart.
+        /// </summary>
+        public static string WslConfig_SaveAndRestart {
+            get {
+                return ResourceManager.GetString("WslConfig_SaveAndRestart", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to WslConfig_OpenRawFile.
+        /// </summary>
+        public static string WslConfig_OpenRawFile {
+            get {
+                return ResourceManager.GetString("WslConfig_OpenRawFile", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to WslConfig_RestartConfirm.
+        /// </summary>
+        public static string WslConfig_RestartConfirm {
+            get {
+                return ResourceManager.GetString("WslConfig_RestartConfirm", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to WslConfig_MemoryWarning.
+        /// </summary>
+        public static string WslConfig_MemoryWarning {
+            get {
+                return ResourceManager.GetString("WslConfig_MemoryWarning", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to WslConfig_InvalidMemory.
+        /// </summary>
+        public static string WslConfig_InvalidMemory {
+            get {
+                return ResourceManager.GetString("WslConfig_InvalidMemory", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to WslConfig_InvalidProcessors.
+        /// </summary>
+        public static string WslConfig_InvalidProcessors {
+            get {
+                return ResourceManager.GetString("WslConfig_InvalidProcessors", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to WslConfig_InvalidSwap.
+        /// </summary>
+        public static string WslConfig_InvalidSwap {
+            get {
+                return ResourceManager.GetString("WslConfig_InvalidSwap", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to WslConfig_SaveComplete.
+        /// </summary>
+        public static string WslConfig_SaveComplete {
+            get {
+                return ResourceManager.GetString("WslConfig_SaveComplete", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ManageTags_SectionTitle.
+        /// </summary>
+        public static string ManageTags_SectionTitle {
+            get {
+                return ResourceManager.GetString("ManageTags_SectionTitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ManageTags_TagName.
+        /// </summary>
+        public static string ManageTags_TagName {
+            get {
+                return ResourceManager.GetString("ManageTags_TagName", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ManageTags_UsedBy.
+        /// </summary>
+        public static string ManageTags_UsedBy {
+            get {
+                return ResourceManager.GetString("ManageTags_UsedBy", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ManageTags_Rename.
+        /// </summary>
+        public static string ManageTags_Rename {
+            get {
+                return ResourceManager.GetString("ManageTags_Rename", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ManageTags_Delete.
+        /// </summary>
+        public static string ManageTags_Delete {
+            get {
+                return ResourceManager.GetString("ManageTags_Delete", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ManageTags_BulkDelete.
+        /// </summary>
+        public static string ManageTags_BulkDelete {
+            get {
+                return ResourceManager.GetString("ManageTags_BulkDelete", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ManageTags_DeleteConfirmTitle.
+        /// </summary>
+        public static string ManageTags_DeleteConfirmTitle {
+            get {
+                return ResourceManager.GetString("ManageTags_DeleteConfirmTitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ManageTags_DeleteConfirm.
+        /// </summary>
+        public static string ManageTags_DeleteConfirm {
+            get {
+                return ResourceManager.GetString("ManageTags_DeleteConfirm", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ManageTags_BulkDeleteTitle.
+        /// </summary>
+        public static string ManageTags_BulkDeleteTitle {
+            get {
+                return ResourceManager.GetString("ManageTags_BulkDeleteTitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ManageTags_BulkDeleteConfirm.
+        /// </summary>
+        public static string ManageTags_BulkDeleteConfirm {
+            get {
+                return ResourceManager.GetString("ManageTags_BulkDeleteConfirm", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ManageTags_RenamePrompt.
+        /// </summary>
+        public static string ManageTags_RenamePrompt {
+            get {
+                return ResourceManager.GetString("ManageTags_RenamePrompt", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ManageTags_NoTags.
+        /// </summary>
+        public static string ManageTags_NoTags {
+            get {
+                return ResourceManager.GetString("ManageTags_NoTags", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to IntegrationsTab_DockerTitle.
+        /// </summary>
+        public static string IntegrationsTab_DockerTitle {
+            get {
+                return ResourceManager.GetString("IntegrationsTab_DockerTitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to IntegrationsTab_DockerEnabled.
+        /// </summary>
+        public static string IntegrationsTab_DockerEnabled {
+            get {
+                return ResourceManager.GetString("IntegrationsTab_DockerEnabled", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to IntegrationsTab_DockerDisabled.
+        /// </summary>
+        public static string IntegrationsTab_DockerDisabled {
+            get {
+                return ResourceManager.GetString("IntegrationsTab_DockerDisabled", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to IntegrationsTab_DockerUnavailable.
+        /// </summary>
+        public static string IntegrationsTab_DockerUnavailable {
+            get {
+                return ResourceManager.GetString("IntegrationsTab_DockerUnavailable", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to IntegrationsTab_DockerInstallLink.
+        /// </summary>
+        public static string IntegrationsTab_DockerInstallLink {
+            get {
+                return ResourceManager.GetString("IntegrationsTab_DockerInstallLink", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to IntegrationsTab_RestartBanner.
+        /// </summary>
+        public static string IntegrationsTab_RestartBanner {
+            get {
+                return ResourceManager.GetString("IntegrationsTab_RestartBanner", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to IntegrationsTab_Dismiss.
+        /// </summary>
+        public static string IntegrationsTab_Dismiss {
+            get {
+                return ResourceManager.GetString("IntegrationsTab_Dismiss", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to IntegrationsTab_WslV1Message.
+        /// </summary>
+        public static string IntegrationsTab_WslV1Message {
+            get {
+                return ResourceManager.GetString("IntegrationsTab_WslV1Message", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to NetworkTab_InstanceIP.
+        /// </summary>
+        public static string NetworkTab_InstanceIP {
+            get {
+                return ResourceManager.GetString("NetworkTab_InstanceIP", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to NetworkTab_Protocol.
+        /// </summary>
+        public static string NetworkTab_Protocol {
+            get {
+                return ResourceManager.GetString("NetworkTab_Protocol", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to NetworkTab_LocalAddress.
+        /// </summary>
+        public static string NetworkTab_LocalAddress {
+            get {
+                return ResourceManager.GetString("NetworkTab_LocalAddress", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to NetworkTab_Port.
+        /// </summary>
+        public static string NetworkTab_Port {
+            get {
+                return ResourceManager.GetString("NetworkTab_Port", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to NetworkTab_Process.
+        /// </summary>
+        public static string NetworkTab_Process {
+            get {
+                return ResourceManager.GetString("NetworkTab_Process", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to NetworkTab_WindowsProxy.
+        /// </summary>
+        public static string NetworkTab_WindowsProxy {
+            get {
+                return ResourceManager.GetString("NetworkTab_WindowsProxy", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to NetworkTab_Copy.
+        /// </summary>
+        public static string NetworkTab_Copy {
+            get {
+                return ResourceManager.GetString("NetworkTab_Copy", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to NetworkTab_Refresh.
+        /// </summary>
+        public static string NetworkTab_Refresh {
+            get {
+                return ResourceManager.GetString("NetworkTab_Refresh", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to NetworkTab_StoppedPlaceholder.
+        /// </summary>
+        public static string NetworkTab_StoppedPlaceholder {
+            get {
+                return ResourceManager.GetString("NetworkTab_StoppedPlaceholder", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BackupTab_ScheduleTitle.
+        /// </summary>
+        public static string BackupTab_ScheduleTitle {
+            get {
+                return ResourceManager.GetString("BackupTab_ScheduleTitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BackupTab_Frequency.
+        /// </summary>
+        public static string BackupTab_Frequency {
+            get {
+                return ResourceManager.GetString("BackupTab_Frequency", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BackupTab_FrequencyDaily.
+        /// </summary>
+        public static string BackupTab_FrequencyDaily {
+            get {
+                return ResourceManager.GetString("BackupTab_FrequencyDaily", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BackupTab_FrequencyWeekly.
+        /// </summary>
+        public static string BackupTab_FrequencyWeekly {
+            get {
+                return ResourceManager.GetString("BackupTab_FrequencyWeekly", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BackupTab_FrequencyMonthly.
+        /// </summary>
+        public static string BackupTab_FrequencyMonthly {
+            get {
+                return ResourceManager.GetString("BackupTab_FrequencyMonthly", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BackupTab_DayOfWeek.
+        /// </summary>
+        public static string BackupTab_DayOfWeek {
+            get {
+                return ResourceManager.GetString("BackupTab_DayOfWeek", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BackupTab_DayOfMonth.
+        /// </summary>
+        public static string BackupTab_DayOfMonth {
+            get {
+                return ResourceManager.GetString("BackupTab_DayOfMonth", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BackupTab_TimeOfDay.
+        /// </summary>
+        public static string BackupTab_TimeOfDay {
+            get {
+                return ResourceManager.GetString("BackupTab_TimeOfDay", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BackupTab_Destination.
+        /// </summary>
+        public static string BackupTab_Destination {
+            get {
+                return ResourceManager.GetString("BackupTab_Destination", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BackupTab_Browse.
+        /// </summary>
+        public static string BackupTab_Browse {
+            get {
+                return ResourceManager.GetString("BackupTab_Browse", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BackupTab_RetentionCount.
+        /// </summary>
+        public static string BackupTab_RetentionCount {
+            get {
+                return ResourceManager.GetString("BackupTab_RetentionCount", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BackupTab_SaveSchedule.
+        /// </summary>
+        public static string BackupTab_SaveSchedule {
+            get {
+                return ResourceManager.GetString("BackupTab_SaveSchedule", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BackupTab_RemoveSchedule.
+        /// </summary>
+        public static string BackupTab_RemoveSchedule {
+            get {
+                return ResourceManager.GetString("BackupTab_RemoveSchedule", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BackupTab_BackupNow.
+        /// </summary>
+        public static string BackupTab_BackupNow {
+            get {
+                return ResourceManager.GetString("BackupTab_BackupNow", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BackupTab_RemoveConfirm.
+        /// </summary>
+        public static string BackupTab_RemoveConfirm {
+            get {
+                return ResourceManager.GetString("BackupTab_RemoveConfirm", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BackupTab_BackingUp.
+        /// </summary>
+        public static string BackupTab_BackingUp {
+            get {
+                return ResourceManager.GetString("BackupTab_BackingUp", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BackupTab_HistoryTitle.
+        /// </summary>
+        public static string BackupTab_HistoryTitle {
+            get {
+                return ResourceManager.GetString("BackupTab_HistoryTitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BackupTab_Timestamp.
+        /// </summary>
+        public static string BackupTab_Timestamp {
+            get {
+                return ResourceManager.GetString("BackupTab_Timestamp", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BackupTab_FileName.
+        /// </summary>
+        public static string BackupTab_FileName {
+            get {
+                return ResourceManager.GetString("BackupTab_FileName", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BackupTab_Size.
+        /// </summary>
+        public static string BackupTab_Size {
+            get {
+                return ResourceManager.GetString("BackupTab_Size", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BackupTab_Status.
+        /// </summary>
+        public static string BackupTab_Status {
+            get {
+                return ResourceManager.GetString("BackupTab_Status", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BackupTab_StatusSuccess.
+        /// </summary>
+        public static string BackupTab_StatusSuccess {
+            get {
+                return ResourceManager.GetString("BackupTab_StatusSuccess", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BackupTab_StatusFailed.
+        /// </summary>
+        public static string BackupTab_StatusFailed {
+            get {
+                return ResourceManager.GetString("BackupTab_StatusFailed", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BackupTab_NoDestination.
+        /// </summary>
+        public static string BackupTab_NoDestination {
+            get {
+                return ResourceManager.GetString("BackupTab_NoDestination", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BackupTab_SavedSchedule.
+        /// </summary>
+        public static string BackupTab_SavedSchedule {
+            get {
+                return ResourceManager.GetString("BackupTab_SavedSchedule", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BackupTab_ScheduleRemoved.
+        /// </summary>
+        public static string BackupTab_ScheduleRemoved {
+            get {
+                return ResourceManager.GetString("BackupTab_ScheduleRemoved", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BackupTab_BackupComplete.
+        /// </summary>
+        public static string BackupTab_BackupComplete {
+            get {
+                return ResourceManager.GetString("BackupTab_BackupComplete", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BackupTab_NoHistory.
+        /// </summary>
+        public static string BackupTab_NoHistory {
+            get {
+                return ResourceManager.GetString("BackupTab_NoHistory", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to BackupTab_SelectDestinationTitle.
+        /// </summary>
+        public static string BackupTab_SelectDestinationTitle {
+            get {
+                return ResourceManager.GetString("BackupTab_SelectDestinationTitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Remove_DeleteTask.
+        /// </summary>
+        public static string Remove_DeleteTask {
+            get {
+                return ResourceManager.GetString("Remove_DeleteTask", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Remove_DeleteFiles.
+        /// </summary>
+        public static string Remove_DeleteFiles {
+            get {
+                return ResourceManager.GetString("Remove_DeleteFiles", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Tag_AddTag.
+        /// </summary>
+        public static string Tag_AddTag {
+            get {
+                return ResourceManager.GetString("Tag_AddTag", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Tag_RemoveTitle.
+        /// </summary>
+        public static string Tag_RemoveTitle {
+            get {
+                return ResourceManager.GetString("Tag_RemoveTitle", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Tag_RemoveConfirm.
+        /// </summary>
+        public static string Tag_RemoveConfirm {
+            get {
+                return ResourceManager.GetString("Tag_RemoveConfirm", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to Tag_EditTags.
+        /// </summary>
+        public static string Tag_EditTags {
+            get {
+                return ResourceManager.GetString("Tag_EditTags", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to TagFilter_Title.
+        /// </summary>
+        public static string TagFilter_Title {
+            get {
+                return ResourceManager.GetString("TagFilter_Title", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to TagFilter_ClearAll.
+        /// </summary>
+        public static string TagFilter_ClearAll {
+            get {
+                return ResourceManager.GetString("TagFilter_ClearAll", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to TagFilter_GroupByTag.
+        /// </summary>
+        public static string TagFilter_GroupByTag {
+            get {
+                return ResourceManager.GetString("TagFilter_GroupByTag", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to TagFilter_NoTags.
+        /// </summary>
+        public static string TagFilter_NoTags {
+            get {
+                return ResourceManager.GetString("TagFilter_NoTags", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to TitleBackupFailure.
+        /// </summary>
+        public static string TitleBackupFailure {
+            get {
+                return ResourceManager.GetString("TitleBackupFailure", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorBackupFailedForInstance.
+        /// </summary>
+        public static string ErrorBackupFailedForInstance {
+            get {
+                return ResourceManager.GetString("ErrorBackupFailedForInstance", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to TitleInvalidModulePath.
+        /// </summary>
+        public static string TitleInvalidModulePath {
+            get {
+                return ResourceManager.GetString("TitleInvalidModulePath", resourceCulture);
+            }
+        }
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorInvalidModulePath.
+        /// </summary>
+        public static string ErrorInvalidModulePath {
+            get {
+                return ResourceManager.GetString("ErrorInvalidModulePath", resourceCulture);
+            }
+        }
     }
 }

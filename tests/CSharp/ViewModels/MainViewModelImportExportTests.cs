@@ -155,6 +155,8 @@ public sealed class MainViewModelImportExportTests
         // Setup service provider to return needed services via GetRequiredService (uses IServiceProviderExtensions)
         sp.Setup(x => x.GetService(typeof(IWslManagerService))).Returns(wslManager.Object);
         sp.Setup(x => x.GetService(typeof(IDialogService))).Returns(dialogService.Object);
+        dialogService.Setup(d => d.ShowConfirmAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(true);
 
         wslManager.Setup(m =>
                 m.GetInstanceDiskSizeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -200,6 +202,8 @@ public sealed class MainViewModelImportExportTests
     {
         // Arrange
         var (mainVm, wslManager, dialogService, _) = TestViewModelFactory.CreateMainViewModel();
+        dialogService.Setup(d => d.ShowConfirmAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(true);
 
         var v1Instance = TestViewModelFactory.CreateInstance(version: 1);
         var v1Vm = TestViewModelFactory.CreateWslInstanceViewModel(v1Instance, wslManager, dialogService);

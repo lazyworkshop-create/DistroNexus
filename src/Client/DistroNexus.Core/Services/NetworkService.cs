@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -31,7 +32,11 @@ public class NetworkService : INetworkService
         CancellationToken cancellationToken = default)
     {
         if (instanceName is null) throw new ArgumentNullException(nameof(instanceName));
-        if (string.IsNullOrWhiteSpace(instanceName)) throw new ArgumentException("Instance name must not be empty.", nameof(instanceName));
+        if (string.IsNullOrWhiteSpace(instanceName))
+            throw new WslOperationFailedException(
+                "Instance name must not be empty.",
+                DistroNexusErrorCode.InstanceNotFound,
+                operation: "GetPortMappings");
 
         var parameters = new Dictionary<string, object> { ["Name"] = instanceName };
         if (!string.IsNullOrWhiteSpace(protocol))
@@ -44,8 +49,11 @@ public class NetworkService : INetworkService
             cancellationToken);
 
         if (result.ExitCode != 0)
-            throw new InvalidOperationException(
-                $"Port mapping query failed for '{instanceName}': {result.Error}");
+            throw new WslOperationFailedException(
+                $"Port mapping query failed for '{instanceName}': {result.Error}",
+                DistroNexusErrorCode.PowerShellModuleUnavailable,
+                operation: "GetPortMappings",
+                instanceName: instanceName);
 
         if (string.IsNullOrWhiteSpace(result.Output))
             return [];

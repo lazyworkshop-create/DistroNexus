@@ -325,7 +325,7 @@ public class TimeoutHandlingIntegrationTests
         {
             terminated = true;
         }
-        catch (InvalidOperationException)
+        catch (WslOperationException)
         {
             terminated = true;
         }

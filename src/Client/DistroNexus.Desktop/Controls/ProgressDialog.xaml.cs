@@ -141,7 +141,7 @@ public partial class ProgressDialog : FluentWindow
         _cts?.Cancel();
         CancellationRequested?.Invoke(this, EventArgs.Empty);
         CancelButton.IsEnabled = false;
-        CancelButton.Content = "Cancelling...";
+        CancelButton.Content = Properties.Resources.Progress_Cancelling;
     }
 
     /// <summary>

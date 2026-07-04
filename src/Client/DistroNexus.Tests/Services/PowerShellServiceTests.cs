@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Models;
 using DistroNexus.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -118,9 +119,10 @@ public class PowerShellServiceTests : IDisposable
                      "[Console]::Error.WriteLine('Actual failure from script'); exit 1";
 
         // Act
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _powerShellService.ExecuteScriptAsync(script));
+        var exception = await Assert.ThrowsAsync<WslOperationFailedException>(() => _powerShellService.ExecuteScriptAsync(script));
 
         // Assert
+        Assert.Equal(DistroNexusErrorCode.PowerShellModuleUnavailable, exception.Code);
         Assert.Contains("Actual failure from script", exception.Message);
         Assert.DoesNotContain("CLIXML", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("unapproved verbs", exception.Message, StringComparison.OrdinalIgnoreCase);

@@ -88,7 +88,10 @@ public class DockerIntegrationService : IDockerIntegrationService
     {
         if (instanceName is null) throw new ArgumentNullException(nameof(instanceName));
         if (string.IsNullOrWhiteSpace(instanceName))
-            throw new ArgumentException("Instance name cannot be empty.", nameof(instanceName));
+            throw new WslOperationFailedException(
+                "Instance name cannot be empty.",
+                DistroNexusErrorCode.InstanceNotFound,
+                operation: "GetDockerIntegrationStatus");
 
         // Reserved distros are never eligible
         if (ReservedDistros.Contains(instanceName))
@@ -134,13 +137,18 @@ public class DockerIntegrationService : IDockerIntegrationService
     {
         if (instanceName is null) throw new ArgumentNullException(nameof(instanceName));
         if (string.IsNullOrWhiteSpace(instanceName))
-            throw new ArgumentException("Instance name cannot be empty.", nameof(instanceName));
+            throw new WslOperationFailedException(
+                "Instance name cannot be empty.",
+                DistroNexusErrorCode.InstanceNotFound,
+                operation: "SetDockerIntegration");
 
         // Reserved distros must never be toggled — matches GetIntegrationStatusAsync contract
         if (ReservedDistros.Contains(instanceName))
-            throw new ArgumentException(
+            throw new WslOperationFailedException(
                 $"Cannot modify Docker integration for reserved distro '{instanceName}'.",
-                nameof(instanceName));
+                DistroNexusErrorCode.DockerConfigWriteConflict,
+                operation: "SetDockerIntegration",
+                instanceName: instanceName);
 
         // Check WSL version — Docker Desktop integration requires WSL v2
         var instance = await GetInstanceAsync(instanceName, ct);
@@ -154,7 +162,11 @@ public class DockerIntegrationService : IDockerIntegrationService
 
         var settingsPath = ResolveSettingsPath();
         if (settingsPath is null)
-            throw new InvalidOperationException("Docker Desktop settings file not found.");
+            throw new WslOperationFailedException(
+                "Docker Desktop settings file not found.",
+                DistroNexusErrorCode.DockerDesktopNotFound,
+                operation: "SetDockerIntegration",
+                instanceName: instanceName);
 
         // Read current content (or empty object if missing)
         JsonObject root;

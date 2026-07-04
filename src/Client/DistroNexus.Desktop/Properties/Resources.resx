@@ -780,6 +780,9 @@ This may take a while depending on the instance size.</value>
   <data name="ButtonCancel" xml:space="preserve">
     <value>Cancel</value>
   </data>
+  <data name="ButtonOK" xml:space="preserve">
+    <value>OK</value>
+  </data>
   <data name="StatusSourceMovedUp" xml:space="preserve">
     <value>Source moved up</value>
   </data>
@@ -1428,6 +1431,18 @@ This will start the installation process.</value>
   <data name="Export_Complete" xml:space="preserve">
     <value>Instance exported to {0} ({1}).</value>
   </data>
+  <data name="Export_ProgressTitle" xml:space="preserve">
+    <value>Export Instance</value>
+  </data>
+  <data name="Export_ProgressMessage" xml:space="preserve">
+    <value>Exporting '{0}' to TAR archive...</value>
+  </data>
+  <data name="Export_ProgressStatus" xml:space="preserve">
+    <value>Elapsed {0} · {1} written</value>
+  </data>
+  <data name="Progress_Cancelling" xml:space="preserve">
+    <value>Cancelling...</value>
+  </data>
   <data name="Import_Title" xml:space="preserve">
     <value>Import Instance</value>
   </data>
@@ -1493,6 +1508,24 @@ This will start the installation process.</value>
   </data>
   <data name="BulkCompact_Counter" xml:space="preserve">
     <value>Compacting {0} of {1}: {2}</value>
+  </data>
+  <data name="BulkCompact_ConfirmTitle" xml:space="preserve">
+    <value>Confirm Disk Compaction</value>
+  </data>
+  <data name="BulkCompact_ConfirmMessage" xml:space="preserve">
+    <value>Compact {0} selected WSL v2 instances sequentially? Each instance may be stopped temporarily.</value>
+  </data>
+  <data name="TemplatesTitle" xml:space="preserve">
+    <value>Templates</value>
+  </data>
+  <data name="RetryTooltip" xml:space="preserve">
+    <value>Retry</value>
+  </data>
+  <data name="NoDownloadTasksTitle" xml:space="preserve">
+    <value>No download tasks</value>
+  </data>
+  <data name="NoDownloadTasksSubtitle" xml:space="preserve">
+    <value>Downloads will appear here when started</value>
   </data>
   <data name="WslConfig_SectionTitle" xml:space="preserve">
     <value>WSL Global Configuration</value>

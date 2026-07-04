@@ -146,7 +146,7 @@ public partial class WslConfigSectionViewModel : ObservableObject
         {
             await _dialogService.ShowAlertAsync(
                 Properties.Resources.ErrorTitle,
-                string.Format(Properties.Resources.ErrorGenericOperation, ex.Message));
+                string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
         }
         finally
         {
@@ -186,13 +186,13 @@ public partial class WslConfigSectionViewModel : ObservableObject
         {
             await _dialogService.ShowAlertAsync(
                 Properties.Resources.ErrorTitle,
-                string.Format(Properties.Resources.ErrorGenericOperation, $"[{(int)ex.Code}] {ex.Message}"));
+                string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
         }
         catch (Exception ex)
         {
             await _dialogService.ShowAlertAsync(
                 Properties.Resources.ErrorTitle,
-                string.Format(Properties.Resources.ErrorGenericOperation, ex.Message));
+                string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
         }
         finally
         {
@@ -215,7 +215,7 @@ public partial class WslConfigSectionViewModel : ObservableObject
             // Fire-and-forget alert via async void (UI thread call)
             _ = _dialogService.ShowAlertAsync(
                 Properties.Resources.ErrorTitle,
-                string.Format(Properties.Resources.ErrorGenericOperation, ex.Message));
+                string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
         }
     }
 

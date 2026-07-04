@@ -177,7 +177,7 @@
                                                 Binding="{Binding Timestamp, StringFormat='yyyy-MM-dd HH:mm'}"
                                                 Width="160"/>
                             <DataGridTextColumn Header="{lex:Loc BackupTab_FileName}"
-                                                Binding="{Binding FileName}" Width="*"/>
+                                                Binding="{Binding DisplayName}" Width="*"/>
                             <DataGridTextColumn Header="{lex:Loc BackupTab_Size}"
                                                 Binding="{Binding FileSizeBytes, Converter={StaticResource FileSizeFormatter}}"
                                                 Width="90"/>

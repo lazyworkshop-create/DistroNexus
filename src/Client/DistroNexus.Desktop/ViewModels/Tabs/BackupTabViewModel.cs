@@ -5,6 +5,7 @@ using DistroNexus.Core.Models;
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Text.Json;
 
 namespace DistroNexus.Desktop.ViewModels.Tabs;
 
@@ -101,6 +102,7 @@ public partial class BackupTabViewModel : ObservableObject
         _initialized = true;
 
         IsLoading = true;
+        _instance.IsBusy = true;
         try
         {
             var schedules = await _backupService.GetSchedulesAsync();
@@ -122,11 +124,12 @@ public partial class BackupTabViewModel : ObservableObject
         {
             await _dialogService.ShowAlertAsync(
                 Properties.Resources.ErrorTitle,
-                string.Format(Properties.Resources.ErrorGenericOperation, ex.Message));
+                string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
         }
         finally
         {
             IsLoading = false;
+            _instance.IsBusy = false;
         }
     }
 
@@ -159,6 +162,7 @@ public partial class BackupTabViewModel : ObservableObject
         };
 
         IsLoading = true;
+        _instance.IsBusy = true;
         try
         {
             await _backupService.SaveScheduleAsync(schedule);
@@ -171,11 +175,12 @@ public partial class BackupTabViewModel : ObservableObject
         {
             await _dialogService.ShowAlertAsync(
                 Properties.Resources.ErrorTitle,
-                string.Format(Properties.Resources.ErrorGenericOperation, ex.Message));
+                string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
         }
         finally
         {
             IsLoading = false;
+            _instance.IsBusy = false;
         }
     }
 
@@ -189,6 +194,7 @@ public partial class BackupTabViewModel : ObservableObject
         if (!confirmed) return;
 
         IsLoading = true;
+        _instance.IsBusy = true;
         try
         {
             await _backupService.RemoveScheduleAsync(_instance.Name);
@@ -201,11 +207,12 @@ public partial class BackupTabViewModel : ObservableObject
         {
             await _dialogService.ShowAlertAsync(
                 Properties.Resources.ErrorTitle,
-                string.Format(Properties.Resources.ErrorGenericOperation, ex.Message));
+                string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
         }
         finally
         {
             IsLoading = false;
+            _instance.IsBusy = false;
         }
     }
 
@@ -221,6 +228,7 @@ public partial class BackupTabViewModel : ObservableObject
         }
 
         IsBackingUp = true;
+        _instance.IsBusy = true;
         OnPropertyChanged(nameof(IsFormEnabled));
         try
         {
@@ -239,11 +247,12 @@ public partial class BackupTabViewModel : ObservableObject
         {
             await _dialogService.ShowAlertAsync(
                 Properties.Resources.ErrorTitle,
-                string.Format(Properties.Resources.ErrorGenericOperation, ex.Message));
+                string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
         }
         finally
         {
             IsBackingUp = false;
+            _instance.IsBusy = false;
             OnPropertyChanged(nameof(IsFormEnabled));
         }
     }
@@ -292,35 +301,86 @@ public partial class BackupTabViewModel : ObservableObject
 
     internal async Task LoadBackupHistoryAsync()
     {
-        if (string.IsNullOrWhiteSpace(DestinationPath) || !Directory.Exists(DestinationPath))
-        {
-            BackupHistory = [];
-            return;
-        }
+        var entries = new List<BackupHistoryEntry>();
 
         try
         {
-            var entries = Directory
-                .EnumerateFiles(DestinationPath)
-                .Where(f => f.EndsWith(".tar", StringComparison.OrdinalIgnoreCase)
-                         || f.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase))
-                .Select(f => new FileInfo(f))
-                .OrderByDescending(fi => fi.CreationTimeUtc)
-                .Take(Math.Max(1, RetentionCount))
-                .Select(fi => new BackupHistoryEntry
-                {
-                    Timestamp    = new DateTimeOffset(fi.CreationTimeUtc),
-                    FileSizeBytes = fi.Length,
-                    FilePath     = fi.FullName,
-                    IsSuccess    = true
-                })
-                .ToList();
+            if (!string.IsNullOrWhiteSpace(DestinationPath) && Directory.Exists(DestinationPath))
+            {
+                entries.AddRange(Directory
+                    .EnumerateFiles(DestinationPath)
+                    .Where(f => f.EndsWith(".tar", StringComparison.OrdinalIgnoreCase)
+                             || f.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase))
+                    .Select(f => new FileInfo(f))
+                    .Select(fi => new BackupHistoryEntry
+                    {
+                        Timestamp    = new DateTimeOffset(fi.CreationTimeUtc),
+                        FileSizeBytes = fi.Length,
+                        FilePath     = fi.FullName,
+                        IsSuccess    = true
+                    }));
+            }
 
-            BackupHistory = new ObservableCollection<BackupHistoryEntry>(entries);
+            entries.AddRange(await LoadFailureHistoryAsync());
+
+            BackupHistory = new ObservableCollection<BackupHistoryEntry>(
+                entries
+                    .OrderByDescending(e => e.Timestamp)
+                    .Take(10));
         }
         catch
         {
             BackupHistory = [];
+        }
+    }
+
+    private async Task<IEnumerable<BackupHistoryEntry>> LoadFailureHistoryAsync()
+    {
+        var notifPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "DistroNexus", "pending-notifications.json");
+        if (!File.Exists(notifPath))
+            return [];
+
+        try
+        {
+            var json = await File.ReadAllTextAsync(notifPath);
+            using var doc = JsonDocument.Parse(json);
+            if (!doc.RootElement.TryGetProperty("notifications", out var notifications))
+                return [];
+
+            return notifications
+                .EnumerateArray()
+                .Where(n => string.Equals(
+                    n.TryGetProperty("type", out var type) ? type.GetString() : null,
+                    "BackupFailure",
+                    StringComparison.OrdinalIgnoreCase))
+                .Where(n => string.Equals(
+                    n.TryGetProperty("instance", out var inst) ? inst.GetString() : null,
+                    _instance.Name,
+                    StringComparison.OrdinalIgnoreCase))
+                .Select(n =>
+                {
+                    var message = n.TryGetProperty("message", out var messageEl)
+                        ? messageEl.GetString()
+                        : Properties.Resources.BackupTab_StatusFailed;
+                    var timestamp = n.TryGetProperty("time", out var timeEl)
+                        && DateTimeOffset.TryParse(timeEl.GetString(), out var parsed)
+                            ? parsed
+                            : DateTimeOffset.Now;
+
+                    return new BackupHistoryEntry
+                    {
+                        Timestamp = timestamp,
+                        ErrorMessage = message ?? Properties.Resources.BackupTab_StatusFailed,
+                        IsSuccess = false
+                    };
+                })
+                .ToList();
+        }
+        catch
+        {
+            return [];
         }
     }
 }

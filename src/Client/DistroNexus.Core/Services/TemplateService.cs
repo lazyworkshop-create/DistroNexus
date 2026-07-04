@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Diagnostics;
 using System.Text;
+using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -161,7 +162,12 @@ public class TemplateService : ITemplateService
     public async Task<TemplateApplicationResult> ApplyTemplateAsync(string templateId, string instanceName, Dictionary<string, string>? variables = null, IProgress<TemplateProgress>? progress = null, CancellationToken cancellationToken = default)
     {
         var template = await GetTemplateByIdAsync(templateId, cancellationToken);
-        if (template == null) throw new ArgumentException($"Template {templateId} not found");
+        if (template == null)
+            throw new WslOperationFailedException(
+                $"Template {templateId} not found.",
+                DistroNexusErrorCode.TemplateNotFound,
+                operation: "ApplyTemplate",
+                instanceName: instanceName);
 
         var result = new TemplateApplicationResult { ExecutedScripts = new List<string>(), Errors = new List<string>() };
         var startTime = DateTime.Now;
@@ -573,7 +579,10 @@ public class TemplateService : ITemplateService
 
         if (Path.IsPathRooted(scriptPath))
         {
-            throw new InvalidOperationException($"Absolute script path is not allowed: {scriptPath}");
+            throw new WslOperationFailedException(
+                $"Absolute script path is not allowed: {scriptPath}",
+                DistroNexusErrorCode.TemplateScriptFailed,
+                operation: "ResolveTemplateScript");
         }
 
         var allowedRoots = new List<string>
@@ -593,7 +602,10 @@ public class TemplateService : ITemplateService
             var fullPath = Path.GetFullPath(candidate);
             if (!allowedRoots.Any(root => fullPath.StartsWith(root, StringComparison.OrdinalIgnoreCase)))
             {
-                throw new InvalidOperationException($"Script path traversal detected: {scriptPath}");
+                throw new WslOperationFailedException(
+                    $"Script path traversal detected: {scriptPath}",
+                    DistroNexusErrorCode.TemplateScriptFailed,
+                    operation: "ResolveTemplateScript");
             }
 
             if (File.Exists(fullPath))
@@ -680,7 +692,11 @@ public class TemplateService : ITemplateService
             }
         }
 
-        throw new InvalidOperationException($"PowerShell script failed: There is no distribution with the supplied name: {instanceName}");
+        throw new WslOperationFailedException(
+            $"PowerShell script failed: There is no distribution with the supplied name: {instanceName}",
+            DistroNexusErrorCode.InstanceNotFound,
+            operation: "ExecuteTemplateScript",
+            instanceName: instanceName);
     }
 
     private static bool IsDistributionNotFoundError(string message)
@@ -764,7 +780,12 @@ public class TemplateService : ITemplateService
 
                 if (check.Required)
                 {
-                    throw new InvalidOperationException(message, ex);
+                    throw new WslOperationFailedException(
+                        message,
+                        ex,
+                        DistroNexusErrorCode.TemplateScriptFailed,
+                        operation: "TemplatePreflight",
+                        instanceName: instanceName);
                 }
 
                 _logger.LogWarning(ex, "Optional preflight check failed: {CheckName}", check.Name);
@@ -904,7 +925,10 @@ public class TemplateService : ITemplateService
         var root = Path.GetPathRoot(fullPath);
         if (string.IsNullOrWhiteSpace(root) || root.Length < 2 || root[1] != ':')
         {
-            throw new InvalidOperationException($"Unsupported Windows path for WSL conversion: {windowsPath}");
+            throw new WslOperationFailedException(
+                $"Unsupported Windows path for WSL conversion: {windowsPath}",
+                DistroNexusErrorCode.TemplateScriptFailed,
+                operation: "ConvertWindowsPathToWslPath");
         }
 
         var drive = char.ToLowerInvariant(root[0]);

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -288,7 +289,10 @@ public class CatalogService : ICatalogService
 
             if (customPackages == null || customPackages.Count == 0)
             {
-                throw new InvalidOperationException("No packages found in the custom source");
+                throw new WslOperationFailedException(
+                    "No packages found in the custom source.",
+                    DistroNexusErrorCode.WslConfigReadFailed,
+                    operation: "AddCustomSource");
             }
 
             // Mark packages as custom

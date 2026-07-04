@@ -26,6 +26,10 @@ in PowerShell via `-ErrorId "DistroNexus.<CodeName>"` on `Write-Error` calls.
 | 1003 | `InstanceAlreadyStopped`| Stop attempted on an already-stopped instance |
 | 1004 | `InstanceAlreadyExists` | Import or create attempted with a name that already exists |
 | 1005 | `TooManyTags`           | Tag limit exceeded; an instance cannot have more than the allowed number of tags |
+| 1006 | `StartFailed`           | Starting a WSL instance failed |
+| 1007 | `StopFailed`            | Stopping a WSL instance failed |
+| 1008 | `RemoveFailed`          | Removing/unregistering a WSL instance failed |
+| 1009 | `RenameFailed`          | Renaming a WSL instance failed |
 
 ---
 
@@ -57,6 +61,9 @@ in PowerShell via `-ErrorId "DistroNexus.<CodeName>"` on `Write-Error` calls.
 | 4003 | `BackupDestinationFull` | Destination drive has insufficient free space |
 | 4004 | `ScheduleCreateFailed`  | `Register-ScheduledTask` failed to create the backup task |
 | 4005 | `ScheduleNotFound`      | Referenced backup schedule task does not exist in Task Scheduler |
+| 4006 | `BackupFailed`          | Backup invocation failed after validation, including export or retention failures |
+| 4007 | `InvalidFrequency`      | Backup schedule frequency format is invalid |
+| 4008 | `InstallFailed`         | WSL instance installation failed |
 
 ---
 
@@ -86,7 +93,7 @@ in PowerShell via `-ErrorId "DistroNexus.<CodeName>"` on `Write-Error` calls.
 | 9001 | `WslNotInstalled` | `wsl.exe` is not found on `PATH` |
 | 9002 | `WslVersionTooLow`| Installed WSL version is below the minimum required |
 | 9003 | `OperationTimeout`            | A WSL operation exceeded its timeout; thrown by `WslOperationTimeoutException` |
-| 9004 | `PowerShellModuleUnavailable` | The DistroNexus PowerShell module could not be loaded or its path could not be resolved |
+| 9004 | `PowerShellModuleUnavailable` | PowerShell execution failed, or the DistroNexus PowerShell module could not be loaded/resolved |
 | 9999 | `UnknownError`                | Catch-all for unexpected exceptions; check inner exception |
 
 ---

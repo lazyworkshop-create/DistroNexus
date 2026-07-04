@@ -1,3 +1,4 @@
+using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using DistroNexus.Core.Services;
@@ -136,8 +137,9 @@ public class BackupServiceTests
     [Fact]
     public async Task RemoveScheduleAsync_WithEmptyName_ThrowsArgumentException()
     {
-        await Assert.ThrowsAsync<ArgumentException>(
+        var ex = await Assert.ThrowsAsync<WslOperationFailedException>(
             () => _service.RemoveScheduleAsync(string.Empty));
+        Assert.Equal(DistroNexusErrorCode.InstanceNotFound, ex.Code);
     }
 
     [Fact]
@@ -162,8 +164,9 @@ public class BackupServiceTests
     [Fact]
     public async Task RemoveScheduleAsync_ThrowsWhenScheduleNotFound()
     {
-        await Assert.ThrowsAsync<InvalidOperationException>(
+        var ex = await Assert.ThrowsAsync<WslOperationFailedException>(
             () => _service.RemoveScheduleAsync("NonExistentInstance"));
+        Assert.Equal(DistroNexusErrorCode.ScheduleNotFound, ex.Code);
     }
 
     // -----------------------------------------------------------------------
@@ -180,8 +183,9 @@ public class BackupServiceTests
     [Fact]
     public async Task InvokeBackupAsync_WithEmptyDestination_ThrowsArgumentException()
     {
-        await Assert.ThrowsAsync<ArgumentException>(
+        var ex = await Assert.ThrowsAsync<WslOperationFailedException>(
             () => _service.InvokeBackupAsync("Ubuntu-22.04", string.Empty, 5));
+        Assert.Equal(DistroNexusErrorCode.BackupDestinationFull, ex.Code);
     }
 
     [Fact]
@@ -227,7 +231,8 @@ public class BackupServiceTests
                 UsedModule = true
             });
 
-        await Assert.ThrowsAsync<InvalidOperationException>(
+        var ex = await Assert.ThrowsAsync<WslOperationFailedException>(
             () => _service.InvokeBackupAsync("Ubuntu-22.04", @"C:\Backups", 5));
+        Assert.Equal(DistroNexusErrorCode.BackupFailed, ex.Code);
     }
 }

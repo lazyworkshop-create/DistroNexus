@@ -436,10 +436,17 @@ public partial class WslManagerService : IWslManagerService
         ArgumentNullException.ThrowIfNull(options);
 
         if (string.IsNullOrWhiteSpace(options.InstanceName))
-            throw new ArgumentException("Instance name is required", nameof(options));
+            throw new WslOperationFailedException(
+                "Instance name is required.",
+                DistroNexusErrorCode.InstallFailed,
+                operation: "InstallInstance");
 
         if (string.IsNullOrWhiteSpace(options.InstallPath))
-            throw new ArgumentException("Install path is required", nameof(options));
+            throw new WslOperationFailedException(
+                "Install path is required.",
+                DistroNexusErrorCode.InstallFailed,
+                operation: "InstallInstance",
+                instanceName: options.InstanceName);
 
         try
         {
@@ -571,7 +578,12 @@ public partial class WslManagerService : IWslManagerService
                         ? moduleResult.Error
                         : "PowerShell module reported installation failure.";
 
-                    throw new InvalidOperationException(installFailureMessage, moduleResult.Exception);
+                    throw new WslOperationFailedException(
+                        installFailureMessage,
+                        moduleResult.Exception,
+                        DistroNexusErrorCode.InstallFailed,
+                        operation: "InstallInstance",
+                        instanceName: options.InstanceName);
                 }
 
                 if (moduleInstallSucceeded == null)
@@ -593,11 +605,20 @@ public partial class WslManagerService : IWslManagerService
             _logger.LogError("Output: {Output}", moduleResult.Output ?? "<empty>");
             _logger.LogError("Used Module: {UsedModule}", moduleResult.UsedModule);
 
-            var errorMsg = !string.IsNullOrWhiteSpace(moduleResult.Error) 
-                ? moduleResult.Error 
+            var errorMsg = !string.IsNullOrWhiteSpace(moduleResult.Error)
+                ? ExtractUserFriendlyError(moduleResult.Error)
                 : "Failed to install WSL distribution using PowerShell module. Please check the error logs and try again.";
 
-            throw new InvalidOperationException(errorMsg, moduleResult.Exception);
+            throw new WslOperationFailedException(
+                errorMsg,
+                moduleResult.Exception,
+                DistroNexusErrorCode.InstallFailed,
+                operation: "InstallInstance",
+                instanceName: options.InstanceName);
+        }
+        catch (WslOperationException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -614,7 +635,12 @@ public partial class WslManagerService : IWslManagerService
 
             // Extract user-friendly error message
             var friendlyMessage = ExtractUserFriendlyError(ex.Message);
-            throw new InvalidOperationException(friendlyMessage, ex);
+            throw new WslOperationFailedException(
+                friendlyMessage,
+                ex,
+                DistroNexusErrorCode.InstallFailed,
+                operation: "InstallInstance",
+                instanceName: options.InstanceName);
         }
     }
 
@@ -794,7 +820,11 @@ public partial class WslManagerService : IWslManagerService
             var keepAliveProcess = Process.Start(processStartInfo);
             if (keepAliveProcess == null)
             {
-                throw new InvalidOperationException($"Failed to start keep-alive process for instance '{instanceName}'");
+                throw new WslOperationFailedException(
+                    $"Failed to start keep-alive process for instance '{instanceName}'.",
+                    DistroNexusErrorCode.PowerShellModuleUnavailable,
+                    operation: "StartInstanceWithKeepAlive",
+                    instanceName: instanceName);
             }
 
             _logger.LogDebug("Keep-alive process started with PID {ProcessId}", keepAliveProcess.Id);
@@ -1145,7 +1175,11 @@ public partial class WslManagerService : IWslManagerService
     {
         var downloadUrl = options.Package?.DownloadUrl ?? string.Empty;
         if (string.IsNullOrEmpty(downloadUrl))
-            throw new ArgumentException("Download URL is required when UseLocalCache is false or no cached package is available.");
+            throw new WslOperationFailedException(
+                "Download URL is required when UseLocalCache is false or no cached package is available.",
+                DistroNexusErrorCode.InstallFailed,
+                operation: "DownloadPackage",
+                instanceName: options.InstanceName);
 
         var tempFile = Path.Combine(Path.GetTempPath(), $"{options.InstanceName}_{Guid.NewGuid():N}.tar.gz");
         var escapedTempFile = EscapePowerShellString(tempFile);
@@ -1175,9 +1209,13 @@ public partial class WslManagerService : IWslManagerService
             // Check if it was cancelled
             cancellationToken.ThrowIfCancellationRequested();
             
-            throw new InvalidOperationException(
+            throw new WslOperationFailedException(
                 $"Failed to download distribution package from {options.Package?.Name}. " +
-                $"Please check your internet connection and try again.", ex);
+                $"Please check your internet connection and try again.",
+                ex,
+                DistroNexusErrorCode.InstallFailed,
+                operation: "DownloadPackage",
+                instanceName: options.InstanceName);
         }
     }
 
@@ -1378,7 +1416,10 @@ public partial class WslManagerService : IWslManagerService
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(instanceName))
-            throw new ArgumentException("Instance name must not be null or empty.", nameof(instanceName));
+            throw new WslOperationFailedException(
+                "Instance name must not be null or empty.",
+                DistroNexusErrorCode.InstanceNotFound,
+                operation: "CompactInstance");
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -1428,7 +1469,7 @@ public partial class WslManagerService : IWslManagerService
     {
         if (name is null) throw new ArgumentNullException(nameof(name));
         if (string.IsNullOrWhiteSpace(destination))
-            throw new ArgumentException("Destination must not be empty.", nameof(destination));
+            throw new WslExportFailedException("Export destination must not be empty.", null, name);
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -1472,9 +1513,9 @@ public partial class WslManagerService : IWslManagerService
     {
         if (name is null) throw new ArgumentNullException(nameof(name));
         if (string.IsNullOrWhiteSpace(source))
-            throw new ArgumentException("Source must not be empty.", nameof(source));
+            throw new WslImportFailedException("Import source must not be empty.", null, name);
         if (string.IsNullOrWhiteSpace(installPath))
-            throw new ArgumentException("InstallPath must not be empty.", nameof(installPath));
+            throw new WslImportFailedException("Import install path must not be empty.", null, name);
 
         cancellationToken.ThrowIfCancellationRequested();
 

@@ -85,6 +85,7 @@ public partial class DiskTabViewModel : ObservableObject
         _instance.IsBusy = true;
 
         string reclaimableEstimate = string.Empty;
+        var estimateSucceeded = false;
         try
         {
             var whatIfProgress = new Progress<(double Percentage, string Message)>(p =>
@@ -95,6 +96,7 @@ public partial class DiskTabViewModel : ObservableObject
 
             _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             await _wslManager.CompactInstanceAsync(_instance.Name, whatIfProgress, whatIf: true, _cts.Token);
+            estimateSucceeded = true;
         }
         catch (OperationCanceledException)
         {
@@ -104,19 +106,24 @@ public partial class DiskTabViewModel : ObservableObject
         {
             await _dialogService.ShowAlertAsync(
                 Properties.Resources.ErrorTitle,
-                string.Format(Properties.Resources.ErrorGenericOperation, $"[{(int)ex.Code}] {ex.Message}"));
+                string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
             return;
         }
         catch (Exception ex)
         {
             await _dialogService.ShowAlertAsync(
                 Properties.Resources.ErrorTitle,
-                string.Format(Properties.Resources.ErrorGenericOperation, ex.Message));
+                string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
             return;
         }
         finally
         {
-            if (!IsCompacting) _instance.IsBusy = false;
+            if (!estimateSucceeded)
+            {
+                IsCompacting = false;
+                PhaseText = string.Empty;
+                _instance.IsBusy = false;
+            }
         }
 
         // Step 2: confirm dialog
@@ -178,14 +185,14 @@ public partial class DiskTabViewModel : ObservableObject
             PhaseText = string.Empty;
             await _dialogService.ShowAlertAsync(
                 Properties.Resources.ErrorTitle,
-                string.Format(Properties.Resources.ErrorGenericOperation, $"[{(int)ex.Code}] {ex.Message}"));
+                string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
         }
         catch (Exception ex)
         {
             PhaseText = string.Empty;
             await _dialogService.ShowAlertAsync(
                 Properties.Resources.ErrorTitle,
-                string.Format(Properties.Resources.ErrorGenericOperation, ex.Message));
+                string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
         }
         finally
         {

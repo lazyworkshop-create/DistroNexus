@@ -666,7 +666,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void ShowTemplates()
     {
-        StatusMessage = "Templates";
+        StatusMessage = Properties.Resources.TemplatesTitle;
         var page = _serviceProvider.GetRequiredService<TemplatesPage>();
         CurrentPage = page;
         IsOnDashboard = false;
@@ -801,13 +801,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
             };
             window.ShowDialog();
 
-            StatusMessage = "Ready";
+            StatusMessage = Properties.Resources.StatusReady;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to generate diagnostics");
             await ShowAlert(Properties.Resources.ErrorApplicationTitle, string.Format(Properties.Resources.ErrorGenerateDiagnostics, MainViewModel.FormatAlertMessage(ex)));
-            StatusMessage = "Failed to generate diagnostics";
+            StatusMessage = string.Format(Properties.Resources.ErrorGenerateDiagnostics, MainViewModel.FormatAlertMessage(ex));
         }
     }
 
@@ -855,14 +855,22 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private bool _isBulkCompacting;
 
+    private CancellationTokenSource? _bulkCompactCts;
+
     [RelayCommand]
     private async Task CompactSelectedAsync(CancellationToken ct)
     {
         var selected = Instances.Where(i => i.IsSelected && i.IsWslV2).ToList();
         if (selected.Count == 0) return;
 
+        var confirmed = await _dialogService.ShowConfirmAsync(
+            Properties.Resources.BulkCompact_ConfirmTitle,
+            string.Format(Properties.Resources.BulkCompact_ConfirmMessage, selected.Count));
+        if (!confirmed) return;
+
         IsBulkCompacting = true;
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        _bulkCompactCts = cts;
 
         try
         {
@@ -880,11 +888,18 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
         finally
         {
+            _bulkCompactCts = null;
             IsBulkCompacting = false;
             BulkCompactProgressText = string.Empty;
             IsMultiSelectMode = false;
             foreach (var vm in Instances) vm.IsSelected = false;
         }
+    }
+
+    [RelayCommand]
+    private void CancelBulkCompact()
+    {
+        _bulkCompactCts?.Cancel();
     }
 
     [RelayCommand]
@@ -927,13 +942,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
             _logger.LogError(ex, "Import failed. ErrorCode={ErrorCode}", (int)ex.Code);
             await _dialogService.ShowAlertAsync(
                 Properties.Resources.ErrorTitle,
-                string.Format(Properties.Resources.ErrorGenericOperation, $"[{(int)ex.Code}] {ex.Message}"));
+                string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
         }
         catch (Exception ex)
         {
             await _dialogService.ShowAlertAsync(
                 Properties.Resources.ErrorTitle,
-                string.Format(Properties.Resources.ErrorGenericOperation, ex.Message));
+                string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
         }
         finally
         {

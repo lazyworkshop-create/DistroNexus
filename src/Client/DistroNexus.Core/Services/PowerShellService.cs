@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -284,7 +285,10 @@ public class PowerShellService : IPowerShellService, IDisposable
                     process.ExitCode,
                     error,
                     friendlyError);
-                throw new InvalidOperationException($"PowerShell script failed: {friendlyError}");
+                throw new WslOperationFailedException(
+                    $"PowerShell script failed: {friendlyError}",
+                    DistroNexusErrorCode.PowerShellModuleUnavailable,
+                    operation: "ExecutePowerShellScript");
             }
 
             return output;

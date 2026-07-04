@@ -63,6 +63,7 @@ public partial class ResourcesTabViewModel : ObservableObject
         if (!_instance.IsWslV2) return;
 
         IsLoading = true;
+        _instance.IsBusy = true;
         try
         {
             // Read sparse mode from instance config
@@ -102,11 +103,12 @@ public partial class ResourcesTabViewModel : ObservableObject
         {
             await _dialogService.ShowAlertAsync(
                 Properties.Resources.ErrorTitle,
-                string.Format(Properties.Resources.ErrorGenericOperation, ex.Message));
+                string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
         }
         finally
         {
             IsLoading = false;
+            _instance.IsBusy = false;
         }
     }
 
@@ -117,6 +119,7 @@ public partial class ResourcesTabViewModel : ObservableObject
 
         bool newValue = !SparseMode.Value;
         IsLoading = true;
+        _instance.IsBusy = true;
         try
         {
             await _wslManager.SetSparseModeAsync(_instance.Name, newValue);
@@ -130,17 +133,18 @@ public partial class ResourcesTabViewModel : ObservableObject
         {
             await _dialogService.ShowAlertAsync(
                 Properties.Resources.ErrorTitle,
-                string.Format(Properties.Resources.ErrorGenericOperation, $"[{(int)ex.Code}] {ex.Message}"));
+                string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
         }
         catch (Exception ex)
         {
             await _dialogService.ShowAlertAsync(
                 Properties.Resources.ErrorTitle,
-                string.Format(Properties.Resources.ErrorGenericOperation, ex.Message));
+                string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
         }
         finally
         {
             IsLoading = false;
+            _instance.IsBusy = false;
         }
     }
 }

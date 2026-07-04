@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -59,12 +60,18 @@ public class CatalogSourceManager : ICatalogSourceManager
 
         if (string.IsNullOrWhiteSpace(source.Name))
         {
-            throw new ArgumentException("Source name is required", nameof(source));
+            throw new WslOperationFailedException(
+                "Source name is required.",
+                DistroNexusErrorCode.WslConfigWriteFailed,
+                operation: "AddCatalogSource");
         }
 
         if (string.IsNullOrWhiteSpace(source.Url))
         {
-            throw new ArgumentException("Source URL is required", nameof(source));
+            throw new WslOperationFailedException(
+                "Source URL is required.",
+                DistroNexusErrorCode.WslConfigWriteFailed,
+                operation: "AddCatalogSource");
         }
 
         try
@@ -76,7 +83,10 @@ public class CatalogSourceManager : ICatalogSourceManager
             // Check for duplicate URLs
             if (sources.Any(s => s.Url.Equals(source.Url, StringComparison.OrdinalIgnoreCase)))
             {
-                throw new InvalidOperationException("A source with this URL already exists.");
+                throw new WslOperationFailedException(
+                    "A source with this URL already exists.",
+                    DistroNexusErrorCode.WslConfigWriteFailed,
+                    operation: "AddCatalogSource");
             }
 
             source.CreatedDate = DateTime.UtcNow;
@@ -109,7 +119,10 @@ public class CatalogSourceManager : ICatalogSourceManager
             
             if (existingSource == null)
             {
-                throw new ArgumentException($"Source with ID '{source.Id}' not found.", nameof(source));
+                throw new WslOperationFailedException(
+                    $"Source with ID '{source.Id}' not found.",
+                    DistroNexusErrorCode.WslConfigReadFailed,
+                    operation: "UpdateCatalogSource");
             }
 
             // Update properties

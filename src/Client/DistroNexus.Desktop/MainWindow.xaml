@@ -11,14 +11,14 @@ xmlns:vm="clr-namespace:DistroNexus.Desktop.ViewModels"
 xmlns:controls="clr-namespace:DistroNexus.Desktop.Controls"
 xmlns:download="clr-namespace:DistroNexus.Core.Models;assembly=DistroNexus.Core"
 mc:Ignorable="d"
-Title="DistroNexus 2.0" 
-Height="600" 
+Title="DistroNexus 2.0"
+Height="600"
 Width="900"
 WindowStartupLocation="CenterScreen"
 WindowBackdropType="Mica"
 ExtendsContentIntoTitleBar="True"
 d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
-    
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -27,7 +27,7 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
         </Grid.RowDefinitions>
 
         <!-- Title Bar -->
-        <ui:TitleBar Grid.Row="0" 
+        <ui:TitleBar Grid.Row="0"
                      Title="DistroNexus 2.0"
                      Icon="pack://application:,,,/Resources/icon.ico"
                      ShowMaximize="True"
@@ -49,24 +49,24 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                
+
                 <!-- Left Side: Main Actions (only visible on dashboard) -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" 
+                <StackPanel Grid.Column="0" Orientation="Horizontal"
                            Visibility="{Binding IsOnDashboard, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <ui:Button Content="{lex:Loc Refresh}" 
+                    <ui:Button Content="{lex:Loc Refresh}"
                               Icon="{ui:SymbolIcon Symbol=ArrowSync20}"
                               Command="{Binding RefreshCommand}"
                               Margin="0,0,10,0"/>
-                    <ui:Button Content="{lex:Loc InstallNew}" 
+                    <ui:Button Content="{lex:Loc InstallNew}"
                               Icon="{ui:SymbolIcon Symbol=Add20}"
                               Command="{Binding ShowInstallWizardCommand}"
                               Margin="0,0,10,0"
                               Appearance="Primary"/>
-                    <ui:Button Content="{lex:Loc PackageManagerTitle}" 
+                    <ui:Button Content="{lex:Loc PackageManagerTitle}"
                               Icon="{ui:SymbolIcon Symbol=Apps20}"
                               Command="{Binding ShowPackageManagerCommand}"
                               Margin="0,0,10,0"/>
-                    <ui:Button Content="Templates" 
+                    <ui:Button Content="{lex:Loc TemplatesTitle}"
                               Icon="{ui:SymbolIcon Symbol=Library20}"
                               Command="{Binding ShowTemplatesCommand}"
                               Margin="0,0,10,0"/>
@@ -74,7 +74,7 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                               Icon="{ui:SymbolIcon Symbol=ArrowImport20}"
                               Command="{Binding ImportInstanceCommand}"
                               Margin="0,0,10,0"/>
-                    <ui:Button Content="{lex:Loc SettingsTitle}" 
+                    <ui:Button Content="{lex:Loc SettingsTitle}"
                               Icon="{ui:SymbolIcon Symbol=Settings20}"
                               Command="{Binding ShowSettingsCommand}"
                               Margin="0,0,10,0"/>
@@ -82,7 +82,7 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                                   IsChecked="{Binding IsMultiSelectMode}"
                                   Command="{Binding ToggleMultiSelectCommand}"/>
                 </StackPanel>
-                
+
                 <!-- Right Side: Theme and Language Controls (always visible) -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                     <!-- Auto-refresh indicator -->
@@ -94,12 +94,12 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                               Command="{Binding ToggleDownloadPanelCommand}"
                               ToolTip="{lex:Loc DownloadTasksTooltip}"
                               Margin="0,0,10,0"/>
-                    
+
                     <ui:Button ToolTip="{lex:Loc ToggleThemeTooltip}"
                               Icon="{ui:SymbolIcon Symbol=WeatherMoon20}"
                               Command="{Binding ToggleThemeCommand}"
                               Margin="0,0,5,0"/>
-                    
+
                     <ui:Button ToolTip="{lex:Loc SwitchLanguageTooltip}"
                               Icon="{ui:SymbolIcon Symbol=LocalLanguage20}"
                               Command="{Binding ToggleLanguageCommand}"/>
@@ -138,27 +138,27 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
 
                                             <!-- Instance Info -->
                                             <StackPanel Grid.Column="0">
-                                                <TextBlock Text="{Binding Name}" 
-                                                          FontSize="18" 
+                                                <TextBlock Text="{Binding Name}"
+                                                          FontSize="18"
                                                           FontWeight="Bold"/>
-                                                <TextBlock Text="{Binding Distribution}" 
+                                                <TextBlock Text="{Binding Distribution}"
                                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                           Margin="0,2,0,0"/>
                                                 <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
-                                                    <TextBlock Text="{lex:Loc InstanceStateLabel}" 
+                                                    <TextBlock Text="{lex:Loc InstanceStateLabel}"
                                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
-                                                    <TextBlock Text="{Binding State}" 
+                                                    <TextBlock Text="{Binding State}"
                                                               FontWeight="SemiBold"
                                                               Foreground="{Binding RawState, Converter={StaticResource InstanceStateToColorConverter}}"/>
-                                                    <TextBlock Text="{lex:Loc InstanceDiskLabel}" 
+                                                    <TextBlock Text="{lex:Loc InstanceDiskLabel}"
                                                               Margin="10,0,0,0"
                                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
-                                                    <TextBlock Text="{Binding DiskSizeDisplay}" 
+                                                    <TextBlock Text="{Binding DiskSizeDisplay}"
                                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
-                                                    <TextBlock Text=" | " 
+                                                    <TextBlock Text=" | "
                                                               Margin="10,0"
                                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
-                                                    <TextBlock Text="{Binding InstallPath}" 
+                                                    <TextBlock Text="{Binding InstallPath}"
                                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
                                                     <!-- Docker integration indicator (C-01-8) -->
                                                     <StackPanel Orientation="Horizontal" Margin="10,0,0,0"
@@ -207,20 +207,20 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                                             </StackPanel>
 
                                             <!-- Actions -->
-                                            <StackPanel Grid.Column="1" 
-                                                       Orientation="Horizontal" 
+                                            <StackPanel Grid.Column="1"
+                                                       Orientation="Horizontal"
                                                        VerticalAlignment="Center">
-                                                <ui:Button Content="{lex:Loc InstanceStart}" 
+                                                <ui:Button Content="{lex:Loc InstanceStart}"
                                                           Icon="{ui:SymbolIcon Symbol=Play20}"
                                                           Command="{Binding StartCommand}"
                                                           Margin="0,0,5,0"
                                                           Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}"/>
-                                                <ui:Button Content="{lex:Loc InstanceStop}" 
+                                                <ui:Button Content="{lex:Loc InstanceStop}"
                                                           Icon="{ui:SymbolIcon Symbol=Stop20}"
                                                           Command="{Binding StopCommand}"
                                                           Margin="0,0,5,0"
                                                           Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                                <ui:Button Content="{lex:Loc InstanceTerminal}" 
+                                                <ui:Button Content="{lex:Loc InstanceTerminal}"
                                                           Icon="{ui:SymbolIcon Symbol=WindowConsole20}"
                                                           Command="{Binding OpenTerminalCommand}"
                                                           Margin="0,0,5,0"/>
@@ -265,6 +265,11 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                                        Icon="{ui:SymbolIcon Symbol=DatabaseArrowDown20}"
                                        Command="{Binding CompactSelectedCommand}"
                                        Margin="0,0,12,0"/>
+                            <ui:Button Content="{lex:Loc ButtonCancel}"
+                                       Icon="{ui:SymbolIcon Symbol=Dismiss20}"
+                                       Command="{Binding CancelBulkCompactCommand}"
+                                       Margin="0,0,12,0"
+                                       Visibility="{Binding IsBulkCompacting, Converter={StaticResource BoolToVisibilityConverter}}"/>
                             <!-- Bulk progress (shown while compacting) -->
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
                                         Visibility="{Binding IsBulkCompacting, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -276,22 +281,22 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                 </Grid>
 
                 <!-- Empty State -->
-                <StackPanel VerticalAlignment="Center" 
+                <StackPanel VerticalAlignment="Center"
                             HorizontalAlignment="Center"
                             Visibility="{Binding Instances.Count, Converter={StaticResource IntToVisibilityConverter}}">
                     <ui:SymbolIcon Symbol="Apps48" FontSize="64" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                    <TextBlock Text="{lex:Loc NoInstancesTitle}" 
-                               FontSize="18" 
+                    <TextBlock Text="{lex:Loc NoInstancesTitle}"
+                               FontSize="18"
                                HorizontalAlignment="Center"
                                Margin="0,15,0,5"/>
-                    <TextBlock Text="{lex:Loc NoInstancesSubtitle}" 
+                    <TextBlock Text="{lex:Loc NoInstancesSubtitle}"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                HorizontalAlignment="Center"/>
                 </StackPanel>
             </Grid>
 
             <!-- Page Content Area -->
-            <Frame Grid.Column="0" Grid.Row="1" 
+            <Frame Grid.Column="0" Grid.Row="1"
                    Content="{Binding CurrentPage}"
                    NavigationUIVisibility="Hidden"
                    Visibility="{Binding IsOnDashboard, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}"/>
@@ -299,14 +304,14 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
         </Grid>
 
         <!-- Loading Overlay (Global) -->
-        <Grid Grid.Row="1" 
-              Background="#80000000" 
+        <Grid Grid.Row="1"
+              Background="#80000000"
               Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                 <ui:ProgressRing IsIndeterminate="True" Width="50" Height="50"/>
-                <TextBlock Text="{lex:Loc LoadingText}" 
-                          Foreground="White" 
-                          FontSize="16" 
+                <TextBlock Text="{lex:Loc LoadingText}"
+                          Foreground="White"
+                          FontSize="16"
                           Margin="0,10,0,0"
                           HorizontalAlignment="Center"/>
             </StackPanel>
@@ -317,7 +322,7 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
               Background="#80000000"
               Visibility="{Binding IsDownloadPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}"
               MouseDown="DownloadOverlay_MouseDown">
-            
+
             <!-- Download Panel (Floating Window) -->
             <Border Width="450"
                    MaxHeight="600"
@@ -334,7 +339,7 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-                    
+
                     <!-- Header -->
                     <Border Grid.Row="0" Padding="20" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
                         <Grid>
@@ -342,24 +347,24 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            
+
                             <StackPanel Grid.Column="0">
-                                <TextBlock Text="{lex:Loc DownloadPanelTitle}" 
-                                           FontSize="18" 
+                                <TextBlock Text="{lex:Loc DownloadPanelTitle}"
+                                           FontSize="18"
                                            FontWeight="SemiBold"
                                            Margin="0,0,0,5"/>
-                                <TextBlock Text="{Binding ActiveDownloadsDisplayText}" 
+                                <TextBlock Text="{Binding ActiveDownloadsDisplayText}"
                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                            FontSize="14"/>
                             </StackPanel>
-                            
-                            <ui:Button Grid.Column="1" 
+
+                            <ui:Button Grid.Column="1"
                                       Icon="{ui:SymbolIcon Symbol=Dismiss20}"
                                       Command="{Binding ToggleDownloadPanelCommand}"
                                       ToolTip="{lex:Loc CloseTooltip}"/>
                         </Grid>
                     </Border>
-                    
+
                     <!-- Download List -->
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="20">
                         <ItemsControl ItemsSource="{Binding DownloadTasks}">
@@ -376,21 +381,21 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-                                            
+
                                             <!-- Package Info -->
                                             <TextBlock Grid.Row="0" Grid.Column="0"
                                                       Text="{Binding PackageName}"
                                                       FontWeight="SemiBold"
                                                       TextTrimming="CharacterEllipsis"/>
-                                            
+
                                             <TextBlock Grid.Row="1" Grid.Column="0"
                                                       Text="{Binding Status}"
                                                       Foreground="{Binding Status, Converter={StaticResource DownloadStatusToColorConverter}}"
                                                       FontSize="12"
                                                       Margin="0,2,0,0"/>
-                                            
+
                                             <!-- Progress (if downloading) -->
-                                            <Grid Grid.Row="2" Grid.Column="0" 
+                                            <Grid Grid.Row="2" Grid.Column="0"
                                                   Margin="0,5,0,0"
                                                   Visibility="{Binding Status, Converter={StaticResource DownloadingToVisibilityConverter}}">
                                                 <Grid.RowDefinitions>
@@ -399,7 +404,7 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                                                 </Grid.RowDefinitions>
 
                                                 <ProgressBar Grid.Row="0"
-                                                           Height="4" 
+                                                           Height="4"
                                                            Value="{Binding Progress}"
                                                            Maximum="100"
                                                            VerticalAlignment="Center"
@@ -424,9 +429,9 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                                                                Margin="10,0,0,0"/>
                                                 </Grid>
                                             </Grid>
-                                            
+
                                             <!-- Actions -->
-                                            <StackPanel Grid.Row="0" Grid.Column="1" 
+                                            <StackPanel Grid.Row="0" Grid.Column="1"
                                                        Grid.RowSpan="3"
                                                        Orientation="Horizontal"
                                                        VerticalAlignment="Top"
@@ -437,18 +442,18 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                                                           ToolTip="{lex:Loc CancelTooltip}"
                                                           Margin="0,0,5,0"
                                                           Visibility="{Binding Status, Converter={StaticResource DownloadStatusToActionVisibilityConverter}}"/>
-                                                
+
                                                 <ui:Button Icon="{ui:SymbolIcon Symbol=ArrowSync20}"
                                                           Command="{Binding DataContext.RetryDownloadCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                           CommandParameter="{Binding Id}"
-                                                          ToolTip="Retry"
+                                                          ToolTip="{lex:Loc RetryTooltip}"
                                                           Visibility="{Binding Status, Converter={StaticResource DownloadStatusToRetryVisibilityConverter}}"/>
                                             </StackPanel>
                                         </Grid>
                                     </ui:Card>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
-                            
+
                             <!-- Empty State -->
                             <ItemsControl.Style>
                                 <Style TargetType="ItemsControl">
@@ -458,14 +463,14 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                                                 <Setter.Value>
                                                     <ControlTemplate>
                                                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,50">
-                                                            <ui:SymbolIcon Symbol="ArrowDownload48" 
-                                                                         FontSize="48" 
+                                                            <ui:SymbolIcon Symbol="ArrowDownload48"
+                                                                         FontSize="48"
                                                                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                                                            <TextBlock Text="No download tasks" 
-                                                                       FontSize="16" 
+                                                            <TextBlock Text="{lex:Loc NoDownloadTasksTitle}"
+                                                                       FontSize="16"
                                                                        HorizontalAlignment="Center"
                                                                        Margin="0,15,0,5"/>
-                                                            <TextBlock Text="Downloads will appear here when started" 
+                                                            <TextBlock Text="{lex:Loc NoDownloadTasksSubtitle}"
                                                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                                        FontSize="14"
                                                                        HorizontalAlignment="Center"
@@ -480,7 +485,7 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                             </ItemsControl.Style>
                         </ItemsControl>
                     </ScrollViewer>
-                    
+
                     <!-- Footer -->
                     <Border Grid.Row="2"
                            Padding="15"
@@ -497,7 +502,7 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
         </Grid>
 
         <!-- Status Bar -->
-        <ui:InfoBar Grid.Row="2" 
+        <ui:InfoBar Grid.Row="2"
                     Title="{Binding StatusMessage}"
                     IsOpen="True"
                     Severity="Informational"
