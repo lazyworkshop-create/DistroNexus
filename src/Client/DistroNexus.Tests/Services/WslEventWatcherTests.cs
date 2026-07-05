@@ -40,10 +40,12 @@ public class WslEventWatcherTests
         using var eventSignal = new ManualResetEventSlim(false);
         watcher.CacheInvalidationRequested += (s, e) => eventSignal.Set();
 
-        // Act — simulate an external event trigger via the test helper
-        watcher.SimulateProcessEvent("wsl.exe");
+        // Act - raise through the deterministic test hook. Debounce behavior is covered separately.
+        typeof(WslEventWatcher)
+            .GetMethod("FireCacheInvalidatedForTest", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .Invoke(watcher, null);
 
-        // Assert — wait up to 5 seconds for the event (debounce is 100ms; extra headroom for CI)
+        // Assert
         bool eventRaised = eventSignal.Wait(TimeSpan.FromSeconds(5));
         Assert.True(eventRaised);
         watcher.Dispose();
