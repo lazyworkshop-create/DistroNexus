@@ -82,10 +82,10 @@
             Tags = @('WSL', 'Windows', 'Linux', 'Distro', 'Management')
 
             # A URL to the license for this module.
-            LicenseUri = 'https://github.com/LazyWorkshop-Create/DistroNexus/blob/main/LICENSE'
+            LicenseUri = 'https://github.com/LazyWorkshopCreate/DistroNexus/blob/main/LICENSE'
 
             # A URL to the main website for this project.
-            ProjectUri = 'https://github.com/LazyWorkshop-Create/DistroNexus'
+            ProjectUri = 'https://github.com/LazyWorkshopCreate/DistroNexus'
 
             # ReleaseNotes of this module
             ReleaseNotes = 'Version 2.2.0 - Deep instance management: VHDX compaction, Docker Desktop integration, backup scheduling, port visualization, tagging, and internal architecture improvements'

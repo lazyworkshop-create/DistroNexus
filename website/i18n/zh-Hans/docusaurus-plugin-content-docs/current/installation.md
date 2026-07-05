@@ -14,7 +14,7 @@ sidebar_position: 2
 
 ## 下载 DistroNexus
 
-1.  前往 [GitHub Releases](https://github.com/lazyworkshop-create/DistroNexus/releases) 页面。
+1.  前往 [GitHub Releases](https://github.com/LazyWorkshopCreate/DistroNexus/releases) 页面。
 2.  选择以下任一 v2.2.1 发布资产：
     *   安装版：`DistroNexus-2.2.1-Setup.exe`
     *   便携版：`DistroNexus-v2.2.1-Release.zip`

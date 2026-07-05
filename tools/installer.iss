@@ -7,7 +7,7 @@
   #define MyAppVersion "2.2.0"
 #endif
 #define MyAppPublisher "LazyWorkshop"
-#define MyAppURL "https://github.com/lazyworkshop-create/DistroNexus"
+#define MyAppURL "https://github.com/LazyWorkshopCreate/DistroNexus"
 #define MyAppExeName "DistroNexus.Desktop.exe"
 #define MyAppDescription "WSL Distribution Manager"
 
@@ -104,7 +104,7 @@ begin
     '  "DefaultInstallPath": "C:\\WSL",' + #13#10 +
     '  "DefaultWslVersion": 2,' + #13#10 +
     '  "DefaultUsername": "root",' + #13#10 +
-    '  "CatalogUrl": "https://raw.githubusercontent.com/lazyworkshop-create/DistroNexus/master/config/catalog.json",' + #13#10 +
+    '  "CatalogUrl": "https://raw.githubusercontent.com/LazyWorkshopCreate/DistroNexus/master/config/catalog.json",' + #13#10 +
     '  "Theme": "Auto",' + #13#10 +
     '  "EnableLogging": true' + #13#10 +
     '}';

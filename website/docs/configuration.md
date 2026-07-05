@@ -17,7 +17,7 @@ Global settings are stored in `%APPDATA%\\DistroNexus\\settings.json`.
     "DefaultUsername": "root",
     "DefaultDistributionId": "Ubuntu-24.04",
     "EnableLogging": true,
-    "CatalogUrl": "https://raw.githubusercontent.com/lazyworkshop-create/DistroNexus/master/config/catalog.json",
+    "CatalogUrl": "https://raw.githubusercontent.com/LazyWorkshopCreate/DistroNexus/master/config/catalog.json",
     "Theme": "Auto"
 }
 ```
@@ -33,7 +33,7 @@ Global settings are stored in `%APPDATA%\\DistroNexus\\settings.json`.
 | `DefaultUsername` | Default username applied during new instance setup. | `root` |
 | `DefaultDistributionId` | Default distribution identifier used for quick install defaults. | `Ubuntu-24.04` |
 | `EnableLogging` | Enables logging and diagnostics output. | `true` |
-| `CatalogUrl` | Distribution catalog source URL. | `https://raw.githubusercontent.com/lazyworkshop-create/DistroNexus/master/config/catalog.json` |
+| `CatalogUrl` | Distribution catalog source URL. | `https://raw.githubusercontent.com/LazyWorkshopCreate/DistroNexus/master/config/catalog.json` |
 | `Theme` | UI theme preference (`Light`, `Dark`, `Auto`). | `Auto` |
 
 ## Notes

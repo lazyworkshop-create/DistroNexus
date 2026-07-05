@@ -124,7 +124,7 @@ After `release.yml` completes:
 After merging to `master`:
 
 1.  Confirm the `deploy-site.yml` workflow completes successfully in GitHub Actions.
-2.  Open [https://lazyworkshop-create.github.io/DistroNexus/](https://lazyworkshop-create.github.io/DistroNexus/) and verify:
+2.  Open [https://lazyworkshopcreate.github.io/DistroNexus/](https://lazyworkshopcreate.github.io/DistroNexus/) and verify:
     - The new blog post appears in the blog listing (both English and Chinese).
     - The installation page shows the updated version and correct asset filenames.
     - Any updated documentation pages reflect the release changes.

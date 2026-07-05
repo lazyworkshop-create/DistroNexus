@@ -80,7 +80,7 @@ v2.0.1 不只是"发了版本"，配套文档和工具链也已同步到位：
 - **Portable（便携版）**：`DistroNexus-v2.0.1-Release.zip` — 解压即用，需已安装 .NET 10 Desktop Runtime。
 - **Self-contained（独立版）**：`DistroNexus-v2.0.1-Release-selfcontained.zip` — 内置运行时，适合未安装 .NET Runtime 的机器，解压即用。
 
-**下载地址**：<https://github.com/lazyworkshop-create/DistroNexus/releases/tag/v2.0.1>
+**下载地址**：<https://github.com/LazyWorkshopCreate/DistroNexus/releases/tag/v2.0.1>
 
 系统要求：Windows 10 2004+ 或 Windows 11，启用 WSL2。
 
@@ -88,10 +88,10 @@ v2.0.1 不只是"发了版本"，配套文档和工具链也已同步到位：
 
 ## 相关链接
 
-- GitHub：<https://github.com/lazyworkshop-create/DistroNexus>
-- 文档站：<https://lazyworkshop-create.github.io/DistroNexus/>
-- 发布日志（中文）：[v2.0.1.zh-CN.md](https://github.com/lazyworkshop-create/DistroNexus/blob/main/docs/release_notes/v2.0.1.zh-CN.md)
-- 发布日志（英文）：[v2.0.1.md](https://github.com/lazyworkshop-create/DistroNexus/blob/main/docs/release_notes/v2.0.1.md)
+- GitHub：<https://github.com/LazyWorkshopCreate/DistroNexus>
+- 文档站：<https://lazyworkshopcreate.github.io/DistroNexus/>
+- 发布日志（中文）：[v2.0.1.zh-CN.md](https://github.com/LazyWorkshopCreate/DistroNexus/blob/main/docs/release_notes/v2.0.1.zh-CN.md)
+- 发布日志（英文）：[v2.0.1.md](https://github.com/LazyWorkshopCreate/DistroNexus/blob/main/docs/release_notes/v2.0.1.md)
 
 ---
 
@@ -117,7 +117,7 @@ v2.0.1 不只是"发了版本"，配套文档和工具链也已同步到位：
 - **Copilot 指令协议**：通过 `.github/copilot-instructions.md` 定义编码规范和计划规则，作为人类与 AI 的"对齐协议"；
 - **一天完成技术栈重写骨架**：1 月 27 日，AI 在一天内完成了 PowerShell 模块 → .NET 解决方案 → Core 层 → WPF 层的核心骨架搭建。
 
-我们发布了一篇完整的 AI 协同编程复盘文章，详细分析了 25 天、207 次提交的全流程实践 👉 [查看完整复盘](https://lazyworkshop-create.github.io/DistroNexus/blog/ai-collaborative-development)
+我们发布了一篇完整的 AI 协同编程复盘文章，详细分析了 25 天、207 次提交的全流程实践 👉 [查看完整复盘](https://lazyworkshopcreate.github.io/DistroNexus/blog/ai-collaborative-development)
 
 ---
 

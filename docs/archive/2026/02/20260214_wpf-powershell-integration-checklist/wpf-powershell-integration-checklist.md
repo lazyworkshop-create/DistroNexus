@@ -704,5 +704,5 @@ Invoke-Terminal -InstanceName "Ubuntu"    # 应打开终端
 
 **文档维护**: 本文档应随实施进度实时更新，每完成一个todo项目在对应章节标记✅。
 
-**联系方式**: https://github.com/LazyWorkshop-Create/DistroNexus  
+**联系方式**: https://github.com/LazyWorkshopCreate/DistroNexus  
 **许可证**: MIT License

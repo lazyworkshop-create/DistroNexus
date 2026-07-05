@@ -30,9 +30,9 @@ DistroNexus 是一款用于管理 Windows Subsystem for Linux（WSL）的 Window
 - 改进打包场景下配置/模板/PowerShell 模块路径兼容性。
 
 ## 支持信息
-- 支持 URL：https://github.com/lazyworkshop-create/DistroNexus/issues
+- 支持 URL：https://github.com/LazyWorkshopCreate/DistroNexus/issues
 - 支持邮箱：lazyworkshop.deron@gmail.com
-- 隐私政策 URL：https://lazyworkshop-create.github.io/DistroNexus/docs/privacy-policy
+- 隐私政策 URL：https://lazyworkshopcreate.github.io/DistroNexus/docs/privacy-policy
 
 ## 商店素材（可直接复制，Partner Center）
 
@@ -58,7 +58,7 @@ DistroNexus 是一款用于管理 Windows Subsystem for Linux（WSL）的 Window
 7. Keywords（关键词）
    - WSL；Windows Linux 子系统；Linux 发行版管理；开发者工具；模板自动化；本地开发环境；Windows 实用工具
 8. Privacy policy URL（隐私政策链接）
-   - https://lazyworkshop-create.github.io/DistroNexus/docs/privacy-policy
+   - https://lazyworkshopcreate.github.io/DistroNexus/docs/privacy-policy
 9. Support email（支持邮箱）
    - lazyworkshop.deron@gmail.com
 
@@ -116,9 +116,9 @@ DistroNexus 是一款用于管理 Windows Subsystem for Linux（WSL）的 Window
 17. Developed by（开发者）
    - LazyWorkshop Create
 18. Privacy policy URL（隐私政策链接）
-   - https://lazyworkshop-create.github.io/DistroNexus/docs/privacy-policy
+   - https://lazyworkshopcreate.github.io/DistroNexus/docs/privacy-policy
 19. Support URL（支持链接）
-   - https://github.com/lazyworkshop-create/DistroNexus/issues
+   - https://github.com/LazyWorkshopCreate/DistroNexus/issues
 20. Support email（支持邮箱）
    - lazyworkshop.deron@gmail.com
 

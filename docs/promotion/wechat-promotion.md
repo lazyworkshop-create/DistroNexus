@@ -69,4 +69,4 @@ DistroNexus 就像是 WSL 的“超级管家”。它不仅降低了 WSL 的使�
 
 如果你也是 WSL 的重度用户，强烈建议试一试这款工具！
 
-🔗 **项目地址**：https://github.com/lazyworkshop-create/DistroNexus (欢迎 Star ⭐)
+🔗 **项目地址**：https://github.com/LazyWorkshopCreate/DistroNexus (欢迎 Star ⭐)

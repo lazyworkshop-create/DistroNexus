@@ -205,9 +205,9 @@ DistroNexus 需要调用底层 PowerShell 和 WSL 进程，必须申请 `runFull
 ## 相关链接
 
 - **商店地址**：[Microsoft Store - DistroNexus](https://apps.microsoft.com/detail/9mtk4br3v436?hl=zh-CN&gl=CN)
-- **GitHub**：[github.com/lazyworkshop-create/DistroNexus](https://github.com/lazyworkshop-create/DistroNexus)
-- **文档站**：[lazyworkshop-create.github.io/DistroNexus](https://lazyworkshop-create.github.io/DistroNexus/)
-- **隐私政策**：[Privacy Policy](https://lazyworkshop-create.github.io/DistroNexus/docs/privacy-policy)
+- **GitHub**：[github.com/LazyWorkshopCreate/DistroNexus](https://github.com/LazyWorkshopCreate/DistroNexus)
+- **文档站**：[lazyworkshopcreate.github.io/DistroNexus](https://lazyworkshopcreate.github.io/DistroNexus/)
+- **隐私政策**：[Privacy Policy](https://lazyworkshopcreate.github.io/DistroNexus/docs/privacy-policy)
 
 ---
 
@@ -217,6 +217,6 @@ DistroNexus 需要调用底层 PowerShell 和 WSL 进程，必须申请 `runFull
 
 如果你正在做 Windows 桌面应用，考虑上架商店是值得的——不是因为商店流量有多大，而是因为它给用户提供了一个**可信的、低门槛的获取途径**。
 
-欢迎下载体验 DistroNexus，也欢迎通过 [GitHub Issues](https://github.com/lazyworkshop-create/DistroNexus/issues) 告诉我们你的想法。
+欢迎下载体验 DistroNexus，也欢迎通过 [GitHub Issues](https://github.com/LazyWorkshopCreate/DistroNexus/issues) 告诉我们你的想法。
 
 如果这篇文章对你有帮助，欢迎转发给同样在折腾 Windows 开发工具分发的朋友。🙏

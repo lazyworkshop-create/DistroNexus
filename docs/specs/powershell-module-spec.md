@@ -429,6 +429,6 @@ wsl --list --verbose
 
 ## Related Resources
 
-- [DistroNexus Documentation](https://lazyworkshop-create.github.io/DistroNexus/)
+- [DistroNexus Documentation](https://lazyworkshopcreate.github.io/DistroNexus/)
 - [WSL Documentation](https://docs.microsoft.com/windows/wsl/)
 - [PowerShell Documentation](https://docs.microsoft.com/powershell/)

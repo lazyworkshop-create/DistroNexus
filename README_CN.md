@@ -11,7 +11,7 @@
 ## 📘 官方文档
 
 完整的文档、使用指南和发布日志请访问我们的官方网站：
-👉 **[https://lazyworkshop-create.github.io/DistroNexus/zh-Hans/](https://lazyworkshop-create.github.io/DistroNexus/zh-Hans/)**
+👉 **[https://lazyworkshopcreate.github.io/DistroNexus/zh-Hans/](https://lazyworkshopcreate.github.io/DistroNexus/zh-Hans/)**
 
 ## ✨ 功能特性
 
@@ -52,7 +52,7 @@
 ### 安装
 
 #### 选项 1：安装程序（推荐）
-1. 从 [Releases](https://github.com/lazyworkshop-create/DistroNexus/releases) 下载 `DistroNexus-2.0.1-Setup.exe`
+1. 从 [Releases](https://github.com/LazyWorkshopCreate/DistroNexus/releases) 下载 `DistroNexus-2.0.1-Setup.exe`
 2. 运行安装程序
 3. 从开始菜单启动
 
@@ -160,7 +160,7 @@ Invoke-DistroNexusTemplateAutomation -Mode AllTemplates -Distro "Ubuntu-22.04"
     "DefaultInstallPath": "C:\\WSL",
     "DefaultWslVersion": 2,
     "DefaultUsername": "root",
-    "CatalogUrl": "https://raw.githubusercontent.com/lazyworkshop-create/DistroNexus/master/config/catalog.json",
+    "CatalogUrl": "https://raw.githubusercontent.com/LazyWorkshopCreate/DistroNexus/master/config/catalog.json",
     "Theme": "Auto",
     "EnableLogging": true
 }
@@ -179,7 +179,7 @@ Invoke-DistroNexusTemplateAutomation -Mode AllTemplates -Distro "Ubuntu-22.04"
 
 ```powershell
 # 克隆仓库
-git clone https://github.com/lazyworkshop-create/DistroNexus.git
+git clone https://github.com/LazyWorkshopCreate/DistroNexus.git
 cd DistroNexus
 
 # 使用提供的脚本构建
@@ -290,9 +290,9 @@ Get-Module DistroNexus
 
 ## 📞 支持
 
-- 📖 [文档](https://lazyworkshop-create.github.io/DistroNexus/)
-- 🐛 [问题反馈](https://github.com/lazyworkshop-create/DistroNexus/issues)
-- 💬 [讨论区](https://github.com/lazyworkshop-create/DistroNexus/discussions)
+- 📖 [文档](https://lazyworkshopcreate.github.io/DistroNexus/)
+- 🐛 [问题反馈](https://github.com/LazyWorkshopCreate/DistroNexus/issues)
+- 💬 [讨论区](https://github.com/LazyWorkshopCreate/DistroNexus/discussions)
 
 ---
 

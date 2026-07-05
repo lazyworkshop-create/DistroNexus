@@ -330,9 +330,9 @@ Normalize-LintReportConfigPath -ReportPath $lintFailPath
 $bundleOutputPath = Join-Path $evidenceRoot ("{0}-evidence-bundle.json" -f $phaseLower)
 $bundleResult = New-DistroNexusReleaseEvidenceBundle `
     -ReleaseVersion 'v2.1.1' `
-    -WorkflowRuns @('https://github.com/LazyWorkshop-Create/DistroNexus/actions/runs/100001') `
-    -TestArtifacts @('https://github.com/LazyWorkshop-Create/DistroNexus/actions/runs/100001/artifacts/200001') `
-    -ReleaseLinks @('https://github.com/LazyWorkshop-Create/DistroNexus/releases/tag/v2.1.1') `
+    -WorkflowRuns @('https://github.com/LazyWorkshopCreate/DistroNexus/actions/runs/100001') `
+    -TestArtifacts @('https://github.com/LazyWorkshopCreate/DistroNexus/actions/runs/100001/artifacts/200001') `
+    -ReleaseLinks @('https://github.com/LazyWorkshopCreate/DistroNexus/releases/tag/v2.1.1') `
     -ManualOverrides @([pscustomobject]@{ Section = 'ReleaseChecklist'; Title = 'P2 Test Evidence Pack'; Link = $null; PendingReason = 'Local artifacts collected and attached in markdown proof.' }) `
     -OutputPath $bundleOutputPath
 

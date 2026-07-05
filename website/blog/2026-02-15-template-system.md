@@ -42,24 +42,24 @@ This design keeps template behavior transparent, extensible, and easier to valid
 
 All complete template documents are available from the module page:
 
-- [Template System Module](https://lazyworkshop-create.github.io/DistroNexus/template-system)
+- [Template System Module](https://lazyworkshopcreate.github.io/DistroNexus/template-system)
 
 The module includes links to:
 
-1. [Comprehensive guide](https://lazyworkshop-create.github.io/DistroNexus/template-system/comprehensive-guide)
-2. [Requirements analysis](https://lazyworkshop-create.github.io/DistroNexus/template-system/requirements-analysis)
-3. [System design](https://lazyworkshop-create.github.io/DistroNexus/template-system/system-design)
-4. [User manual](https://lazyworkshop-create.github.io/DistroNexus/template-system/user-manual)
-5. [Template development manual](https://lazyworkshop-create.github.io/DistroNexus/template-system/template-development-manual)
-6. [Template automation test suite manual](https://lazyworkshop-create.github.io/DistroNexus/template-system/automation-test-suite-manual)
+1. [Comprehensive guide](https://lazyworkshopcreate.github.io/DistroNexus/template-system/comprehensive-guide)
+2. [Requirements analysis](https://lazyworkshopcreate.github.io/DistroNexus/template-system/requirements-analysis)
+3. [System design](https://lazyworkshopcreate.github.io/DistroNexus/template-system/system-design)
+4. [User manual](https://lazyworkshopcreate.github.io/DistroNexus/template-system/user-manual)
+5. [Template development manual](https://lazyworkshopcreate.github.io/DistroNexus/template-system/template-development-manual)
+6. [Template automation test suite manual](https://lazyworkshopcreate.github.io/DistroNexus/template-system/automation-test-suite-manual)
 
 ## Documentation links
 
-- Comprehensive guide: https://lazyworkshop-create.github.io/DistroNexus/template-system/comprehensive-guide
-- Requirements analysis: https://lazyworkshop-create.github.io/DistroNexus/template-system/requirements-analysis
-- System design: https://lazyworkshop-create.github.io/DistroNexus/template-system/system-design
-- User manual: https://lazyworkshop-create.github.io/DistroNexus/template-system/user-manual
-- Template development manual: https://lazyworkshop-create.github.io/DistroNexus/template-system/template-development-manual
-- Template automation test suite manual: https://lazyworkshop-create.github.io/DistroNexus/template-system/automation-test-suite-manual
+- Comprehensive guide: https://lazyworkshopcreate.github.io/DistroNexus/template-system/comprehensive-guide
+- Requirements analysis: https://lazyworkshopcreate.github.io/DistroNexus/template-system/requirements-analysis
+- System design: https://lazyworkshopcreate.github.io/DistroNexus/template-system/system-design
+- User manual: https://lazyworkshopcreate.github.io/DistroNexus/template-system/user-manual
+- Template development manual: https://lazyworkshopcreate.github.io/DistroNexus/template-system/template-development-manual
+- Template automation test suite manual: https://lazyworkshopcreate.github.io/DistroNexus/template-system/automation-test-suite-manual
 
 If you are starting from scratch, open the module page first and follow the documents in order.

@@ -12,14 +12,14 @@ const config = {
   favicon: 'img/logo.png',
 
   // Set the production url of your site here
-  url: 'https://lazyworkshop-create.github.io',
+  url: 'https://lazyworkshopcreate.github.io',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub Pages deployment, it is often '/<projectName>/'
   baseUrl: '/DistroNexus/',
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
-  organizationName: 'lazyworkshop-create', // Usually your GitHub org/user name.
+  organizationName: 'LazyWorkshopCreate', // Usually your GitHub org/user name.
   projectName: 'DistroNexus', // Usually your repo name.
 
   onBrokenLinks: 'throw',
@@ -42,13 +42,13 @@ const config = {
           sidebarPath: require.resolve('./sidebars.js'),
           // Please change this to your repo.
           editUrl:
-            'https://github.com/lazyworkshop-create/DistroNexus/tree/main/website/',
+            'https://github.com/LazyWorkshopCreate/DistroNexus/tree/main/website/',
         },
         blog: {
           showReadingTime: true,
           // Please change this to your repo.
           editUrl:
-            'https://github.com/lazyworkshop-create/DistroNexus/tree/main/website/',
+            'https://github.com/LazyWorkshopCreate/DistroNexus/tree/main/website/',
         },
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
@@ -66,7 +66,7 @@ const config = {
         routeBasePath: 'template-system',
         sidebarPath: require.resolve('./sidebars-template-system.js'),
         editUrl:
-          'https://github.com/lazyworkshop-create/DistroNexus/tree/main/website/',
+          'https://github.com/LazyWorkshopCreate/DistroNexus/tree/main/website/',
       },
     ],
   ],
@@ -102,7 +102,7 @@ const config = {
             position: 'right',
           },
           {
-            href: 'https://github.com/lazyworkshop-create/DistroNexus',
+            href: 'https://github.com/LazyWorkshopCreate/DistroNexus',
             label: 'GitHub',
             position: 'right',
           },
@@ -133,7 +133,7 @@ const config = {
               },
               {
                 label: 'GitHub',
-                href: 'https://github.com/lazyworkshop-create/DistroNexus',
+                href: 'https://github.com/LazyWorkshopCreate/DistroNexus',
               },
             ],
           },

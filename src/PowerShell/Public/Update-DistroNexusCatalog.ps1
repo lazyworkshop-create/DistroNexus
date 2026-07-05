@@ -40,7 +40,7 @@ function Update-DistroNexusCatalog {
                 $SourceUrl = $config.Settings.CatalogUrl
                 
                 if (-not $SourceUrl) {
-                    $SourceUrl = "https://raw.githubusercontent.com/LazyWorkshop-Create/DistroNexus/master/config/catalog.json"
+                    $SourceUrl = "https://raw.githubusercontent.com/LazyWorkshopCreate/DistroNexus/master/config/catalog.json"
                 }
             }
             

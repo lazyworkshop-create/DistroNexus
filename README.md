@@ -11,7 +11,7 @@
 ## 📘 Documentation
 
 Full documentation and user guides are hosted on our official website:
-👉 **[https://lazyworkshop-create.github.io/DistroNexus/](https://lazyworkshop-create.github.io/DistroNexus/)**
+👉 **[https://lazyworkshopcreate.github.io/DistroNexus/](https://lazyworkshopcreate.github.io/DistroNexus/)**
 
 ## ✨ Features
 
@@ -52,7 +52,7 @@ Full documentation and user guides are hosted on our official website:
 ### Installation
 
 #### Option 1: Installer (Recommended)
-1. Download `DistroNexus-2.0.1-Setup.exe` from [Releases](https://github.com/lazyworkshop-create/DistroNexus/releases)
+1. Download `DistroNexus-2.0.1-Setup.exe` from [Releases](https://github.com/LazyWorkshopCreate/DistroNexus/releases)
 2. Run the installer
 3. Launch from Start Menu
 
@@ -168,7 +168,7 @@ Settings are stored at `%APPDATA%\DistroNexus\settings.json`:
     "DefaultInstallPath": "C:\\WSL",
     "DefaultWslVersion": 2,
     "DefaultUsername": "root",
-    "CatalogUrl": "https://raw.githubusercontent.com/lazyworkshop-create/DistroNexus/master/config/catalog.json",
+    "CatalogUrl": "https://raw.githubusercontent.com/LazyWorkshopCreate/DistroNexus/master/config/catalog.json",
     "Theme": "Auto",
     "EnableLogging": true
 }
@@ -187,7 +187,7 @@ Configure via Settings page in the application or edit JSON directly.
 
 ```powershell
 # Clone the repository
-git clone https://github.com/lazyworkshop-create/DistroNexus.git
+git clone https://github.com/LazyWorkshopCreate/DistroNexus.git
 cd DistroNexus
 
 # Build with the provided script
@@ -300,9 +300,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- 📖 [Documentation](https://lazyworkshop-create.github.io/DistroNexus/)
-- 🐛 [Issue Tracker](https://github.com/lazyworkshop-create/DistroNexus/issues)
-- 💬 [Discussions](https://github.com/lazyworkshop-create/DistroNexus/discussions)
+- 📖 [Documentation](https://lazyworkshopcreate.github.io/DistroNexus/)
+- 🐛 [Issue Tracker](https://github.com/LazyWorkshopCreate/DistroNexus/issues)
+- 💬 [Discussions](https://github.com/LazyWorkshopCreate/DistroNexus/discussions)
 
 ---
 

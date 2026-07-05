@@ -67,7 +67,7 @@ Source Requirements: `docs/specs/website-v2-0-1-update-requirements.md` (v1.3)
 - [x] No Fyne wording remains in homepage localized keys.
 
 ### AC-8: Site config consistency
-- [x] `organizationName` is `lazyworkshop-create`.
+- [x] `organizationName` is `LazyWorkshopCreate`.
 - [x] `projectName` remains valid (`DistroNexus`).
 - [x] Navbar/footer GitHub links use canonical repository URL.
 - [x] docs/blog `editUrl` use canonical repository URL.

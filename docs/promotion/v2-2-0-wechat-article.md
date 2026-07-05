@@ -149,7 +149,7 @@ Get-DistroNexusCache
 
 ### GitHub Releases
 
-前往 [GitHub Releases](https://github.com/lazyworkshop-create/DistroNexus/releases/tag/v2.2.0) 下载，提供三种打包方式：
+前往 [GitHub Releases](https://github.com/LazyWorkshopCreate/DistroNexus/releases/tag/v2.2.0) 下载，提供三种打包方式：
 
 - **安装版**：`DistroNexus-2.2.0-Setup.exe`（自动处理 .NET 运行时）
 - **便携版**：`DistroNexus-v2.2.0-Release.zip`
@@ -159,7 +159,7 @@ Get-DistroNexusCache
 
 ## 完整变更记录
 
-详细技术说明请参阅 [v2.2.0 发行说明](https://github.com/lazyworkshop-create/DistroNexus/blob/master/docs/release_notes/v2.2.0.zh-CN.md) 和 [CHANGELOG](https://github.com/lazyworkshop-create/DistroNexus/blob/master/CHANGELOG.md)。
+详细技术说明请参阅 [v2.2.0 发行说明](https://github.com/LazyWorkshopCreate/DistroNexus/blob/master/docs/release_notes/v2.2.0.zh-CN.md) 和 [CHANGELOG](https://github.com/LazyWorkshopCreate/DistroNexus/blob/master/CHANGELOG.md)。
 
 ---
 
@@ -167,8 +167,8 @@ Get-DistroNexusCache
 
 如果你在使用中遇到问题或有功能建议，欢迎：
 
-- 提交 Issue：[GitHub Issues](https://github.com/lazyworkshop-create/DistroNexus/issues)
-- 加入讨论：[GitHub Discussions](https://github.com/lazyworkshop-create/DistroNexus/discussions)
+- 提交 Issue：[GitHub Issues](https://github.com/LazyWorkshopCreate/DistroNexus/issues)
+- 加入讨论：[GitHub Discussions](https://github.com/LazyWorkshopCreate/DistroNexus/discussions)
 
 感谢所有使用 DistroNexus 的朋友。
 

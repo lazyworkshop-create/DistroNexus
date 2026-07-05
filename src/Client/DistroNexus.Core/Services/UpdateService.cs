@@ -15,8 +15,8 @@ public class UpdateService : IUpdateService
     private readonly HttpClient _httpClient;
     private readonly ILogger<UpdateService> _logger;
     private readonly IStoreComplianceModeService _storeComplianceModeService;
-    private const string GitHubReleasesApiUrl = "https://api.github.com/repos/lazyworkshop-create/DistroNexus/releases/latest";
-    private const string GitHubReleasesPageUrl = "https://github.com/lazyworkshop-create/DistroNexus/releases";
+    private const string GitHubReleasesApiUrl = "https://api.github.com/repos/LazyWorkshopCreate/DistroNexus/releases/latest";
+    private const string GitHubReleasesPageUrl = "https://github.com/LazyWorkshopCreate/DistroNexus/releases";
 
     public UpdateService(HttpClient httpClient, ILogger<UpdateService> logger, IStoreComplianceModeService storeComplianceModeService)
     {

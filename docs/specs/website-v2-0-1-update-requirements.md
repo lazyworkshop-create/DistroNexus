@@ -100,13 +100,13 @@ Ensure all updated English docs have corresponding zh-Hans updates for parity:
 Allow minor language-level phrasing differences, but feature coverage must match.
 
 ### FR-8 Repository and Edit Links Consistency
-Update `website/docusaurus.config.js` links to canonical repository owner (`lazyworkshop-create/DistroNexus`) for:
+Update `website/docusaurus.config.js` links to canonical repository owner (`LazyWorkshopCreate/DistroNexus`) for:
 - Navbar GitHub link
 - Docs/blog `editUrl`
 - Any additional repository references in site config
 
 Also align GitHub Pages ownership metadata to the same owner namespace where applicable:
-- `organizationName` must be `lazyworkshop-create`
+- `organizationName` must be `LazyWorkshopCreate`
 - `projectName` (validate existing value remains correct)
 
 ### FR-9 Navigation Integrity

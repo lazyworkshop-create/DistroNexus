@@ -17,7 +17,7 @@ sidebar_position: 4
     "DefaultUsername": "root",
     "DefaultDistributionId": "Ubuntu-24.04",
     "EnableLogging": true,
-    "CatalogUrl": "https://raw.githubusercontent.com/lazyworkshop-create/DistroNexus/master/config/catalog.json",
+    "CatalogUrl": "https://raw.githubusercontent.com/LazyWorkshopCreate/DistroNexus/master/config/catalog.json",
     "Theme": "Auto"
 }
 ```
@@ -33,7 +33,7 @@ sidebar_position: 4
 | `DefaultUsername` | 新实例初始化时使用的默认用户名。 | `root` |
 | `DefaultDistributionId` | 快速安装默认使用的发行版标识符。 | `Ubuntu-24.04` |
 | `EnableLogging` | 是否启用日志与诊断输出。 | `true` |
-| `CatalogUrl` | 发行版目录源地址。 | `https://raw.githubusercontent.com/lazyworkshop-create/DistroNexus/master/config/catalog.json` |
+| `CatalogUrl` | 发行版目录源地址。 | `https://raw.githubusercontent.com/LazyWorkshopCreate/DistroNexus/master/config/catalog.json` |
 | `Theme` | 主题偏好（`Light`、`Dark`、`Auto`）。 | `Auto` |
 
 ## 说明

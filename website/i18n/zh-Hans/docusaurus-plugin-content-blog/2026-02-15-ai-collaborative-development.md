@@ -137,4 +137,4 @@ Git 日志揭示了典型的 AI 调试模式：90 分钟内 6 个连续 CI 修�
 
 *本分析基于 207 次 Git 提交和 100 份项目文档，由 AI 生成。*
 
-**完整详细复盘**：[English](https://github.com/lazyworkshop-create/DistroNexus/blob/main/docs/promotion/ai-collaborative-development-summary-en.md) ｜ [中文](https://github.com/lazyworkshop-create/DistroNexus/blob/main/docs/ai-collaborative-development-summary.md)
+**完整详细复盘**：[English](https://github.com/LazyWorkshopCreate/DistroNexus/blob/main/docs/promotion/ai-collaborative-development-summary-en.md) ｜ [中文](https://github.com/LazyWorkshopCreate/DistroNexus/blob/main/docs/ai-collaborative-development-summary.md)

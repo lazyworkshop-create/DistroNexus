@@ -30,9 +30,9 @@ Windows desktop WSL manager for installing distros and applying reusable develop
 - Improved packaged path compatibility for config/templates/PowerShell module resolution.
 
 ## Support Information
-- Support URL: https://github.com/lazyworkshop-create/DistroNexus/issues
+- Support URL: https://github.com/LazyWorkshopCreate/DistroNexus/issues
 - Support Email: lazyworkshop.deron@gmail.com
-- Privacy Policy URL: https://lazyworkshop-create.github.io/DistroNexus/docs/privacy-policy
+- Privacy Policy URL: https://lazyworkshopcreate.github.io/DistroNexus/docs/privacy-policy
 
 ## Store Listing Assets (Copy-Ready, Partner Center)
 
@@ -58,7 +58,7 @@ Use this block for the fastest valid submission path.
 7. Keywords
   - WSL; Windows Subsystem for Linux; Linux distro manager; developer tools; template automation; local dev environment; Windows utilities
 8. Privacy policy URL
-  - https://lazyworkshop-create.github.io/DistroNexus/docs/privacy-policy
+  - https://lazyworkshopcreate.github.io/DistroNexus/docs/privacy-policy
 9. Support email
   - lazyworkshop.deron@gmail.com
 
@@ -116,9 +116,9 @@ Use this block on **Store listing - English (United States)** from top to bottom
 17. Developed by
   - LazyWorkshop Create
 18. Privacy policy URL
-  - https://lazyworkshop-create.github.io/DistroNexus/docs/privacy-policy
+  - https://lazyworkshopcreate.github.io/DistroNexus/docs/privacy-policy
 19. Support URL
-  - https://github.com/lazyworkshop-create/DistroNexus/issues
+  - https://github.com/LazyWorkshopCreate/DistroNexus/issues
 20. Support email
   - lazyworkshop.deron@gmail.com
 

@@ -42,24 +42,24 @@ date: 2026-02-15
 
 所有模板系统完整文档已在模块页集中提供：
 
-- [Template System 模块](https://lazyworkshop-create.github.io/DistroNexus/template-system)
+- [Template System 模块](https://lazyworkshopcreate.github.io/DistroNexus/template-system)
 
 模块包含以下文档链接：
 
-1. [综合文档](https://lazyworkshop-create.github.io/DistroNexus/zh-Hans/template-system/comprehensive-guide)
-2. [需求分析](https://lazyworkshop-create.github.io/DistroNexus/zh-Hans/template-system/requirements-analysis)
-3. [系统设计](https://lazyworkshop-create.github.io/DistroNexus/zh-Hans/template-system/system-design)
-4. [用户手册](https://lazyworkshop-create.github.io/DistroNexus/zh-Hans/template-system/user-manual)
-5. [模板开发手册](https://lazyworkshop-create.github.io/DistroNexus/zh-Hans/template-system/template-development-manual)
-6. [模板自动化测试套件手册](https://lazyworkshop-create.github.io/DistroNexus/zh-Hans/template-system/automation-test-suite-manual)
+1. [综合文档](https://lazyworkshopcreate.github.io/DistroNexus/zh-Hans/template-system/comprehensive-guide)
+2. [需求分析](https://lazyworkshopcreate.github.io/DistroNexus/zh-Hans/template-system/requirements-analysis)
+3. [系统设计](https://lazyworkshopcreate.github.io/DistroNexus/zh-Hans/template-system/system-design)
+4. [用户手册](https://lazyworkshopcreate.github.io/DistroNexus/zh-Hans/template-system/user-manual)
+5. [模板开发手册](https://lazyworkshopcreate.github.io/DistroNexus/zh-Hans/template-system/template-development-manual)
+6. [模板自动化测试套件手册](https://lazyworkshopcreate.github.io/DistroNexus/zh-Hans/template-system/automation-test-suite-manual)
 
 ## 文档链接
 
-- 综合文档：https://lazyworkshop-create.github.io/DistroNexus/zh-Hans/template-system/comprehensive-guide
-- 需求分析：https://lazyworkshop-create.github.io/DistroNexus/zh-Hans/template-system/requirements-analysis
-- 系统设计：https://lazyworkshop-create.github.io/DistroNexus/zh-Hans/template-system/system-design
-- 用户手册：https://lazyworkshop-create.github.io/DistroNexus/zh-Hans/template-system/user-manual
-- 模板开发手册：https://lazyworkshop-create.github.io/DistroNexus/zh-Hans/template-system/template-development-manual
-- 模板自动化测试套件手册：https://lazyworkshop-create.github.io/DistroNexus/zh-Hans/template-system/automation-test-suite-manual
+- 综合文档：https://lazyworkshopcreate.github.io/DistroNexus/zh-Hans/template-system/comprehensive-guide
+- 需求分析：https://lazyworkshopcreate.github.io/DistroNexus/zh-Hans/template-system/requirements-analysis
+- 系统设计：https://lazyworkshopcreate.github.io/DistroNexus/zh-Hans/template-system/system-design
+- 用户手册：https://lazyworkshopcreate.github.io/DistroNexus/zh-Hans/template-system/user-manual
+- 模板开发手册：https://lazyworkshopcreate.github.io/DistroNexus/zh-Hans/template-system/template-development-manual
+- 模板自动化测试套件手册：https://lazyworkshopcreate.github.io/DistroNexus/zh-Hans/template-system/automation-test-suite-manual
 
 如果你是首次接触模板系统，建议从模块页开始并按顺序阅读。

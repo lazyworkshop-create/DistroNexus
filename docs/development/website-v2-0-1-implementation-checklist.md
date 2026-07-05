@@ -16,12 +16,12 @@ Files:
 - `website/docusaurus.config.js`
 
 Tasks:
-- [x] Replace all repository links from `https://github.com/DistroNexus/DistroNexus` to `https://github.com/lazyworkshop-create/DistroNexus`.
+- [x] Replace all repository links from `https://github.com/DistroNexus/DistroNexus` to `https://github.com/LazyWorkshopCreate/DistroNexus`.
 - [x] Update docs `editUrl` to canonical repository.
 - [x] Update blog `editUrl` to canonical repository.
 - [x] Update navbar GitHub URL to canonical repository.
 - [x] Update footer GitHub URL to canonical repository.
-- [x] Set `organizationName` to `lazyworkshop-create`.
+- [x] Set `organizationName` to `LazyWorkshopCreate`.
 - [x] Validate `projectName` remains `DistroNexus`.
 
 Definition of Done:
