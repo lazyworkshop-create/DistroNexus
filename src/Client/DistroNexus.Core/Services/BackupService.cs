@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -77,14 +78,22 @@ public class BackupService : IBackupService
     public async Task RemoveScheduleAsync(string instanceName, CancellationToken cancellationToken = default)
     {
         if (instanceName is null) throw new ArgumentNullException(nameof(instanceName));
-        if (string.IsNullOrWhiteSpace(instanceName)) throw new ArgumentException("Instance name must not be empty.", nameof(instanceName));
+        if (string.IsNullOrWhiteSpace(instanceName))
+            throw new WslOperationFailedException(
+                "Instance name must not be empty.",
+                DistroNexusErrorCode.InstanceNotFound,
+                operation: "RemoveBackupSchedule");
 
         var schedules = await GetSchedulesAsync(cancellationToken);
         var existing  = schedules.FirstOrDefault(s =>
             string.Equals(s.Name, instanceName, StringComparison.OrdinalIgnoreCase));
 
         if (existing is null)
-            throw new InvalidOperationException($"No backup schedule found for instance '{instanceName}'.");
+            throw new WslOperationFailedException(
+                $"No backup schedule found for instance '{instanceName}'.",
+                DistroNexusErrorCode.ScheduleNotFound,
+                operation: "RemoveBackupSchedule",
+                instanceName: instanceName);
 
         schedules.Remove(existing);
         await WriteSchedulesAsync(schedules, cancellationToken);
@@ -99,7 +108,12 @@ public class BackupService : IBackupService
         CancellationToken cancellationToken = default)
     {
         if (instanceName is null) throw new ArgumentNullException(nameof(instanceName));
-        if (string.IsNullOrWhiteSpace(destination)) throw new ArgumentException("Destination must not be empty.", nameof(destination));
+        if (string.IsNullOrWhiteSpace(destination))
+            throw new WslOperationFailedException(
+                "Backup destination must not be empty.",
+                DistroNexusErrorCode.BackupDestinationFull,
+                operation: "InvokeBackup",
+                instanceName: instanceName);
 
         var parameters = new Dictionary<string, object>
         {
@@ -115,8 +129,11 @@ public class BackupService : IBackupService
             cancellationToken);
 
         if (result.ExitCode != 0)
-            throw new InvalidOperationException(
-                $"Backup failed for '{instanceName}': {result.Error}");
+            throw new WslOperationFailedException(
+                $"Backup failed for '{instanceName}': {result.Error}",
+                DistroNexusErrorCode.BackupFailed,
+                operation: "InvokeBackup",
+                instanceName: instanceName);
 
         _logger.LogInformation("Backup completed for instance '{Name}' -> '{Destination}'", instanceName, destination);
     }

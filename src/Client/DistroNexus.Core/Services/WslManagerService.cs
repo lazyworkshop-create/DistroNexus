@@ -20,8 +20,6 @@ public partial class WslManagerService : IWslManagerService
     private readonly bool _useModuleFallback = true;
     private readonly IWslCliRunner? _wslCliRunner;
 
-    private const string LxssRegistryPath = @"HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss";
-
     // Timeout constants for various operations
     /// <summary>Quick operations (list, get): 10 seconds</summary>
     private const int QuickOperationTimeoutSeconds = 10;
@@ -78,7 +76,7 @@ public partial class WslManagerService : IWslManagerService
 
         if (moduleResult == null)
         {
-            throw new WslOperationFailedException("PowerShell module execution returned no result.", DistroNexusErrorCode.UnknownError, operation: "GetInstances");
+            throw new WslOperationFailedException("PowerShell module execution returned no result.", DistroNexusErrorCode.PowerShellModuleUnavailable, operation: "GetInstances");
         }
 
         // Check if module call succeeded
@@ -89,7 +87,7 @@ public partial class WslManagerService : IWslManagerService
                 : "Failed to retrieve WSL instances using PowerShell module.";
 
             _logger.LogError(moduleResult.Exception, "Module call failed for Get-DistroNexusInstance");
-            throw new WslOperationFailedException(errorMessage, moduleResult.Exception, DistroNexusErrorCode.UnknownError, operation: "GetInstances");
+            throw new WslOperationFailedException(errorMessage, moduleResult.Exception, DistroNexusErrorCode.PowerShellModuleUnavailable, operation: "GetInstances");
         }
 
         if (!moduleResult.UsedModule)
@@ -97,7 +95,7 @@ public partial class WslManagerService : IWslManagerService
             _logger.LogError("PowerShell module was not used for Get-DistroNexusInstance");
             throw new WslOperationFailedException(
                 "DistroNexus PowerShell module is not available. Please ensure the module is properly installed.",
-                DistroNexusErrorCode.UnknownError, operation: "GetInstances");
+                DistroNexusErrorCode.PowerShellModuleUnavailable, operation: "GetInstances");
         }
 
         if (moduleResult.ParsedObjects == null || moduleResult.ParsedObjects.Count == 0)
@@ -271,6 +269,31 @@ public partial class WslManagerService : IWslManagerService
         return instances;
     }
 
+    /// <summary>
+    /// Looks up the installation base path for a WSL instance via the Windows registry (LXSS).
+    /// Returns null if the instance is not found or on any access failure.
+    /// </summary>
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    private static string? GetInstallPathFromRegistry(string instanceName)
+    {
+        try
+        {
+            using var hive = Microsoft.Win32.RegistryKey.OpenBaseKey(
+                Microsoft.Win32.RegistryHive.CurrentUser,
+                Microsoft.Win32.RegistryView.Registry64);
+            using var lxss = hive.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Lxss");
+            if (lxss == null) return null;
+            foreach (var subKeyName in lxss.GetSubKeyNames())
+            {
+                using var sub = lxss.OpenSubKey(subKeyName);
+                if (sub?.GetValue("DistributionName") is string name && name == instanceName)
+                    return sub.GetValue("BasePath") as string;
+            }
+        }
+        catch { /* registry access failure */ }
+        return null;
+    }
+
     private async Task<List<WslInstance>> GetInstancesInlineAsync(CancellationToken cancellationToken)
     {
         try
@@ -413,10 +436,17 @@ public partial class WslManagerService : IWslManagerService
         ArgumentNullException.ThrowIfNull(options);
 
         if (string.IsNullOrWhiteSpace(options.InstanceName))
-            throw new ArgumentException("Instance name is required", nameof(options));
+            throw new WslOperationFailedException(
+                "Instance name is required.",
+                DistroNexusErrorCode.InstallFailed,
+                operation: "InstallInstance");
 
         if (string.IsNullOrWhiteSpace(options.InstallPath))
-            throw new ArgumentException("Install path is required", nameof(options));
+            throw new WslOperationFailedException(
+                "Install path is required.",
+                DistroNexusErrorCode.InstallFailed,
+                operation: "InstallInstance",
+                instanceName: options.InstanceName);
 
         try
         {
@@ -548,7 +578,12 @@ public partial class WslManagerService : IWslManagerService
                         ? moduleResult.Error
                         : "PowerShell module reported installation failure.";
 
-                    throw new InvalidOperationException(installFailureMessage, moduleResult.Exception);
+                    throw new WslOperationFailedException(
+                        installFailureMessage,
+                        moduleResult.Exception,
+                        DistroNexusErrorCode.InstallFailed,
+                        operation: "InstallInstance",
+                        instanceName: options.InstanceName);
                 }
 
                 if (moduleInstallSucceeded == null)
@@ -570,11 +605,20 @@ public partial class WslManagerService : IWslManagerService
             _logger.LogError("Output: {Output}", moduleResult.Output ?? "<empty>");
             _logger.LogError("Used Module: {UsedModule}", moduleResult.UsedModule);
 
-            var errorMsg = !string.IsNullOrWhiteSpace(moduleResult.Error) 
-                ? moduleResult.Error 
+            var errorMsg = !string.IsNullOrWhiteSpace(moduleResult.Error)
+                ? ExtractUserFriendlyError(moduleResult.Error)
                 : "Failed to install WSL distribution using PowerShell module. Please check the error logs and try again.";
 
-            throw new InvalidOperationException(errorMsg, moduleResult.Exception);
+            throw new WslOperationFailedException(
+                errorMsg,
+                moduleResult.Exception,
+                DistroNexusErrorCode.InstallFailed,
+                operation: "InstallInstance",
+                instanceName: options.InstanceName);
+        }
+        catch (WslOperationException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -591,7 +635,12 @@ public partial class WslManagerService : IWslManagerService
 
             // Extract user-friendly error message
             var friendlyMessage = ExtractUserFriendlyError(ex.Message);
-            throw new InvalidOperationException(friendlyMessage, ex);
+            throw new WslOperationFailedException(
+                friendlyMessage,
+                ex,
+                DistroNexusErrorCode.InstallFailed,
+                operation: "InstallInstance",
+                instanceName: options.InstanceName);
         }
     }
 
@@ -771,7 +820,11 @@ public partial class WslManagerService : IWslManagerService
             var keepAliveProcess = Process.Start(processStartInfo);
             if (keepAliveProcess == null)
             {
-                throw new InvalidOperationException($"Failed to start keep-alive process for instance '{instanceName}'");
+                throw new WslOperationFailedException(
+                    $"Failed to start keep-alive process for instance '{instanceName}'.",
+                    DistroNexusErrorCode.PowerShellModuleUnavailable,
+                    operation: "StartInstanceWithKeepAlive",
+                    instanceName: instanceName);
             }
 
             _logger.LogDebug("Keep-alive process started with PID {ProcessId}", keepAliveProcess.Id);
@@ -1011,25 +1064,30 @@ public partial class WslManagerService : IWslManagerService
 
             // Fallback to inline script if module failed
             _logger.LogWarning("Module execution failed for RenameInstanceAsync, falling back to inline script");
+
+            // Phase 3 (E-08): resolve install path using C# registry — no PS registry calls.
+            var installPath = GetInstallPathFromRegistry(oldName);
+            if (installPath == null)
+                throw new WslOperationFailedException(
+                    $"Instance '{oldName}' not found in registry.",
+                    DistroNexusErrorCode.InstanceNotFound,
+                    operation: "RenameInstance");
+
             var escapedOldName = EscapePowerShellString(oldName);
             var escapedNewName = EscapePowerShellString(newName);
+            var escapedInstallPath = EscapePowerShellString(installPath);
             var tempExportPath = EscapePowerShellString(Path.Combine(Path.GetTempPath(), $"{oldName}_rename.tar"));
-            
-            // First get the install path from registry, then export/unregister/import
-            // Note: WSL outputs UTF-16 text, so we clean null characters
-            var script = 
-                "$lxssPath = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Lxss'; " +
-                "$installPath = $null; " +
-                $"Get-ChildItem -Path $lxssPath | ForEach-Object {{ $props = Get-ItemProperty -Path $_.PSPath; if ($props.DistributionName -eq {escapedOldName}) {{ $installPath = $props.BasePath }} }}; " +
-                $"if (-not $installPath) {{ throw 'Instance not found: {oldName}' }}; " +
+
+            // Install path already resolved in C# — script does not access the registry.
+            var script =
                 $"$result = wsl --export {escapedOldName} {tempExportPath} 2>&1; " +
-                $"$exitCode = $LASTEXITCODE; " +
+                "$exitCode = $LASTEXITCODE; " +
                 $"if ($exitCode -ne 0) {{ throw \"Export failed: $result\" }}; " +
                 $"$result = wsl --unregister {escapedOldName} 2>&1; " +
-                $"$exitCode = $LASTEXITCODE; " +
+                "$exitCode = $LASTEXITCODE; " +
                 $"if ($exitCode -ne 0) {{ Remove-Item {tempExportPath} -Force -ErrorAction SilentlyContinue; throw \"Unregister failed: $result\" }}; " +
-                $"$result = wsl --import {escapedNewName} $installPath {tempExportPath} 2>&1; " +
-                $"$exitCode = $LASTEXITCODE; " +
+                $"$result = wsl --import {escapedNewName} {escapedInstallPath} {tempExportPath} 2>&1; " +
+                "$exitCode = $LASTEXITCODE; " +
                 $"Remove-Item {tempExportPath} -Force -ErrorAction SilentlyContinue; " +
                 $"if ($exitCode -ne 0) {{ throw \"Import failed: $result\" }}; " +
                 "'success'";
@@ -1117,7 +1175,11 @@ public partial class WslManagerService : IWslManagerService
     {
         var downloadUrl = options.Package?.DownloadUrl ?? string.Empty;
         if (string.IsNullOrEmpty(downloadUrl))
-            throw new ArgumentException("Download URL is required when UseLocalCache is false or no cached package is available.");
+            throw new WslOperationFailedException(
+                "Download URL is required when UseLocalCache is false or no cached package is available.",
+                DistroNexusErrorCode.InstallFailed,
+                operation: "DownloadPackage",
+                instanceName: options.InstanceName);
 
         var tempFile = Path.Combine(Path.GetTempPath(), $"{options.InstanceName}_{Guid.NewGuid():N}.tar.gz");
         var escapedTempFile = EscapePowerShellString(tempFile);
@@ -1147,9 +1209,13 @@ public partial class WslManagerService : IWslManagerService
             // Check if it was cancelled
             cancellationToken.ThrowIfCancellationRequested();
             
-            throw new InvalidOperationException(
+            throw new WslOperationFailedException(
                 $"Failed to download distribution package from {options.Package?.Name}. " +
-                $"Please check your internet connection and try again.", ex);
+                $"Please check your internet connection and try again.",
+                ex,
+                DistroNexusErrorCode.InstallFailed,
+                operation: "DownloadPackage",
+                instanceName: options.InstanceName);
         }
     }
 
@@ -1350,7 +1416,10 @@ public partial class WslManagerService : IWslManagerService
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(instanceName))
-            throw new ArgumentException("Instance name must not be null or empty.", nameof(instanceName));
+            throw new WslOperationFailedException(
+                "Instance name must not be null or empty.",
+                DistroNexusErrorCode.InstanceNotFound,
+                operation: "CompactInstance");
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -1400,7 +1469,7 @@ public partial class WslManagerService : IWslManagerService
     {
         if (name is null) throw new ArgumentNullException(nameof(name));
         if (string.IsNullOrWhiteSpace(destination))
-            throw new ArgumentException("Destination must not be empty.", nameof(destination));
+            throw new WslExportFailedException("Export destination must not be empty.", null, name);
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -1444,9 +1513,9 @@ public partial class WslManagerService : IWslManagerService
     {
         if (name is null) throw new ArgumentNullException(nameof(name));
         if (string.IsNullOrWhiteSpace(source))
-            throw new ArgumentException("Source must not be empty.", nameof(source));
+            throw new WslImportFailedException("Import source must not be empty.", null, name);
         if (string.IsNullOrWhiteSpace(installPath))
-            throw new ArgumentException("InstallPath must not be empty.", nameof(installPath));
+            throw new WslImportFailedException("Import install path must not be empty.", null, name);
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -1549,4 +1618,26 @@ public partial class WslManagerService : IWslManagerService
 
         _logger.LogInformation("Sparse mode set to {Enabled} for {Name}", enabled, name);
     }
+    /// <inheritdoc/>
+    public async Task ShutdownWslAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Shutting down WSL");
+        if (_wslCliRunner != null)
+        {
+            var result = await _wslCliRunner.RunAsync("--shutdown", cancellationToken);
+            if (result.ExitCode != 0)
+                _logger.LogWarning("wsl --shutdown returned non-zero exit code: {Code}", result.ExitCode);
+            return;
+        }
+
+        var psResult = await _powerShellService.ExecuteModuleCmdletAsync(
+            "Stop-DistroNexusAllInstances",
+            parameters: new Dictionary<string, object>(),
+            options: new ModuleCallOptions { TimeoutSeconds = NormalOperationTimeoutSeconds, ParseAsJson = false, UseModuleFallback = false },
+            cancellationToken: cancellationToken);
+
+        if (psResult == null || !psResult.Success)
+            _logger.LogWarning("WSL shutdown via PowerShell may have failed: {Error}", psResult?.Error);
+    }
 }
+

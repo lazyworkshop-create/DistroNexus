@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
 using Microsoft.Extensions.Logging;
 
@@ -53,7 +54,11 @@ public class TagService : ITagService
 
         var tagList = tags.Select(t => t.ToLowerInvariant().Trim()).Distinct().ToList();
         if (tagList.Count > 10)
-            throw new ArgumentException($"Maximum 10 tags allowed per instance. Got {tagList.Count}.", nameof(tags));
+            throw new WslOperationFailedException(
+                $"Maximum 10 tags allowed per instance. Got {tagList.Count}.",
+                DistroNexusErrorCode.TooManyTags,
+                operation: "SetTags",
+                instanceName: instanceName);
 
         var map = await ReadTagMapAsync(ct);
         map[instanceName] = tagList;
@@ -68,7 +73,11 @@ public class TagService : ITagService
         ArgumentNullException.ThrowIfNull(tag);
 
         if (tag.Length > 32)
-            throw new ArgumentException($"Tag must not exceed 32 characters. Provided: {tag.Length}.", nameof(tag));
+            throw new WslOperationFailedException(
+                $"Tag must not exceed 32 characters. Provided: {tag.Length}.",
+                DistroNexusErrorCode.TooManyTags,
+                operation: "AddTag",
+                instanceName: instanceName);
 
         var normalised = tag.ToLowerInvariant().Trim();
         var map        = await ReadTagMapAsync(ct);
@@ -77,8 +86,11 @@ public class TagService : ITagService
             existing = [];
 
         if (existing.Count >= 10)
-            throw new InvalidOperationException(
-                $"Instance '{instanceName}' already has 10 tags (maximum). Remove a tag before adding a new one.");
+            throw new WslOperationFailedException(
+                $"Instance '{instanceName}' already has 10 tags (maximum). Remove a tag before adding a new one.",
+                DistroNexusErrorCode.TooManyTags,
+                operation: "AddTag",
+                instanceName: instanceName);
 
         if (!existing.Contains(normalised, StringComparer.OrdinalIgnoreCase))
         {

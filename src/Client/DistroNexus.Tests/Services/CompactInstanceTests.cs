@@ -70,7 +70,7 @@ public class CompactInstanceTests
         // Arrange
         const string instanceName = "Debian";
         var progressReports = new List<(double Percentage, string Message)>();
-        var progress = new Progress<(double, string)>(p => progressReports.Add(p));
+        var progress = new TestProgress<(double Percentage, string Message)>(p => progressReports.Add(p));
 
         _mockPowerShellService
             .Setup(x => x.ExecuteModuleCmdletAsync(
@@ -156,7 +156,13 @@ public class CompactInstanceTests
     [InlineData(null)]
     public async Task CompactInstanceAsync_WhenNameIsNullOrEmpty_ThrowsArgumentException(string? name)
     {
-        await Assert.ThrowsAnyAsync<ArgumentException>(
+        var ex = await Assert.ThrowsAsync<WslOperationFailedException>(
             () => _service.CompactInstanceAsync(name!));
+        Assert.Equal(DistroNexusErrorCode.InstanceNotFound, ex.Code);
+    }
+
+    private sealed class TestProgress<T>(Action<T> onReport) : IProgress<T>
+    {
+        public void Report(T value) => onReport(value);
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using DistroNexus.Core.Services;
@@ -362,7 +363,8 @@ public class WslManagerServiceIntegrationTests
             .ReturnsAsync(listResult)
             .ReturnsAsync(installResult);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _service.InstallInstanceAsync(options));
+        var exception = await Assert.ThrowsAsync<WslOperationFailedException>(() => _service.InstallInstanceAsync(options));
+        Assert.Equal(DistroNexusErrorCode.InstallFailed, exception.Code);
     }
 
     [Fact]
@@ -406,7 +408,8 @@ public class WslManagerServiceIntegrationTests
             .ReturnsAsync(listResult)
             .ReturnsAsync(installResult);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.InstallInstanceAsync(options));
+        var exception = await Assert.ThrowsAsync<WslOperationFailedException>(() => _service.InstallInstanceAsync(options));
+        Assert.Equal(DistroNexusErrorCode.InstallFailed, exception.Code);
         Assert.Equal("The selected distribution package was not found in the current catalog. Please refresh sources and try again.", exception.Message);
     }
 
@@ -451,7 +454,8 @@ public class WslManagerServiceIntegrationTests
             .ReturnsAsync(listResult)
             .ReturnsAsync(installResult);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.InstallInstanceAsync(options));
+        var exception = await Assert.ThrowsAsync<WslOperationFailedException>(() => _service.InstallInstanceAsync(options));
+        Assert.Equal(DistroNexusErrorCode.InstallFailed, exception.Code);
         Assert.Equal("The package download metadata did not produce a usable local file. Please refresh sources and retry the installation.", exception.Message);
         Assert.DoesNotContain("internet connection", exception.Message, StringComparison.OrdinalIgnoreCase);
     }

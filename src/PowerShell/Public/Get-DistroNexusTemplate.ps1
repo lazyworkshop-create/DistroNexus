@@ -43,7 +43,8 @@ function Get-DistroNexusTemplate {
             }
         }
         catch {
-            Write-Error "Failed to load DistroNexus templates: $_"
+            Write-Error "Failed to load DistroNexus templates: $_" `
+                -ErrorId "DistroNexus.TemplateNotFound"
         }
     }
 }

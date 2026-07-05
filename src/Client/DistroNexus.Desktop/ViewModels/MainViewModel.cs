@@ -1,14 +1,19 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using DistroNexus.Desktop.Wizard;
 using DistroNexus.Desktop.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Windows;
+using System.Windows.Data;
 using WPFLocalizeExtension.Engine;
 using System.Globalization;
 using System.Threading;
@@ -28,9 +33,22 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<MainViewModel> _logger;
     private readonly IWslEventWatcher _wslEventWatcher;
+    private readonly ITagService _tagService;
+    private readonly IBackupService _backupService;
+    private readonly IDockerIntegrationService _dockerIntegrationService;
+    private readonly IDialogService _dialogService;
 
     [ObservableProperty]
     private ObservableCollection<WslInstanceViewModel> _instances = new();
+
+    /// <summary>Filterable/groupable view over <see cref="Instances"/>.</summary>
+    public ICollectionView InstancesView { get; private set; }
+
+    /// <summary>All tags across all instances, used by the filter bar.</summary>
+    public ObservableCollection<TagFilterViewModel> AvailableTags { get; } = [];
+
+    [ObservableProperty]
+    private bool _isGroupByTag;
 
     [ObservableProperty]
     private WslInstanceViewModel? _selectedInstance;
@@ -60,6 +78,19 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(ActiveDownloadsDisplayText))]
     private int _activeDownloadsCount;
 
+    // ── Multi-select mode (P1-8) ──────────────────────────────────────────
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectedCount))]
+    private bool _isMultiSelectMode;
+
+    public int SelectedCount => Instances.Count(i => i.IsSelected);
+
+    // ── Auto-refresh indicator (P1-9) ────────────────────────────────────
+
+    [ObservableProperty]
+    private bool _isAutoRefreshing;
+
     public string ActiveDownloadsDisplayText => 
         string.Format(Properties.Resources.ActiveDownloadsFormat, ActiveDownloadsCount);
 
@@ -76,7 +107,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
         IDownloadTaskManager downloadTaskManager,
         IServiceProvider serviceProvider,
         ILogger<MainViewModel> logger,
-        IWslEventWatcher wslEventWatcher)
+        IWslEventWatcher wslEventWatcher,
+        ITagService tagService,
+        IBackupService backupService,
+        IDockerIntegrationService dockerIntegrationService,
+        IDialogService dialogService)
     {
         _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
@@ -86,6 +121,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _wslEventWatcher = wslEventWatcher ?? throw new ArgumentNullException(nameof(wslEventWatcher));
+        _tagService = tagService ?? throw new ArgumentNullException(nameof(tagService));
+        _backupService = backupService ?? throw new ArgumentNullException(nameof(backupService));
+        _dockerIntegrationService = dockerIntegrationService ?? throw new ArgumentNullException(nameof(dockerIntegrationService));
+        _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
+
+        // ICollectionView for filtering/grouping (Design Review #4)
+        InstancesView = CollectionViewSource.GetDefaultView(_instances);
 
         // Subscribe to download task status changes
         _downloadTaskManager.TaskStatusChanged += OnDownloadTaskStatusChanged;
@@ -134,7 +176,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             {
                 var msg = n.TryGetProperty("message", out var msgEl) ? msgEl.GetString() : "Unknown error";
                 var inst = n.TryGetProperty("instance", out var instEl) ? instEl.GetString() : "Unknown instance";
-                await ShowAlert("Backup Failure", $"Backup failed for '{inst}': {msg}");
+                await ShowAlert(Properties.Resources.TitleBackupFailure, string.Format(Properties.Resources.ErrorBackupFailedForInstance, inst, msg));
             }
         }
         catch (Exception ex)
@@ -173,12 +215,45 @@ public partial class MainViewModel : ObservableObject, IDisposable
         return Task.CompletedTask;
     }
 
+    private static readonly System.Text.RegularExpressions.Regex _errorCodePattern =
+        new(@"\[DN-(\d+)\]", System.Text.RegularExpressions.RegexOptions.Compiled);
+
     private async Task ShowAlert(string title, string message)
     {
+        var match = _errorCodePattern.Match(message);
+
+        object content;
+        if (match.Success)
+        {
+            var code = match.Value;
+            var panel = new System.Windows.Controls.StackPanel();
+            panel.Children.Add(new System.Windows.Controls.TextBlock
+            {
+                Text = message,
+                TextWrapping = System.Windows.TextWrapping.Wrap
+            });
+            var link = new System.Windows.Documents.Hyperlink(
+                new System.Windows.Documents.Run(
+                    string.Format(Properties.Resources.ErrorCopyCode ?? "Copy error code {0}", code)));
+            link.Click += (_, _) =>
+                System.Windows.Clipboard.SetText(code);
+            var linkBlock = new System.Windows.Controls.TextBlock
+            {
+                Margin = new System.Windows.Thickness(0, 8, 0, 0)
+            };
+            linkBlock.Inlines.Add(link);
+            panel.Children.Add(linkBlock);
+            content = panel;
+        }
+        else
+        {
+            content = message;
+        }
+
         var uiMessageBox = new Wpf.Ui.Controls.MessageBox
         {
             Title = title,
-            Content = message,
+            Content = content,
             CloseButtonText = Properties.Resources.ButtonClose ?? "Close"
         };
         await uiMessageBox.ShowDialogAsync();
@@ -212,10 +287,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 Instances.Clear();
                 foreach (var instance in instances)
                 {
-                    var tagService = _serviceProvider.GetRequiredService<ITagService>();
-                    var backupService = _serviceProvider.GetRequiredService<IBackupService>();
-                    var vm = new WslInstanceViewModel(instance, _wslManager, _terminalService, _settingsService, _logger, tagService, backupService);
+                    var vm = new WslInstanceViewModel(instance, _wslManager, _terminalService, _settingsService, _logger, _tagService, _backupService, _serviceProvider);
                     vm.RefreshRequested += (s, e) => _ = RefreshAsync();
+                    vm.TagsChanged += (s, e) => _ = RefreshAvailableTagsAsync();
                     Instances.Add(vm);
                 }
 
@@ -235,6 +309,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
             });
 
             _logger.LogInformation("Loaded {Count} WSL instances", Instances.Count);
+
+            // Load tags per instance in background (P6-1)
+            _ = LoadTagsForInstancesAsync(Instances.ToList(), cancellationToken);
+
+            // Load Docker integration status in the background (C-01-8)
+            _ = LoadDockerStatusAsync(Instances.ToList(), cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -247,6 +327,167 @@ public partial class MainViewModel : ObservableObject, IDisposable
             await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.LoadInstancesError, MainViewModel.FormatAlertMessage(ex)));
         }
         // Note: Don't set IsLoading = false here as it's controlled by MainWindow
+    }
+
+    /// <summary>
+    /// Loads tags for each instance and populates <see cref="WslInstanceViewModel.Tags"/>,
+    /// then refreshes <see cref="AvailableTags"/>.
+    /// </summary>
+    private async Task LoadTagsForInstancesAsync(List<WslInstanceViewModel> snapshot, CancellationToken ct)
+    {
+        try
+        {
+            foreach (var vm in snapshot)
+            {
+                if (ct.IsCancellationRequested) return;
+                try
+                {
+                    var tags = await _tagService.GetTagsAsync(vm.Name);
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        vm.Tags.Clear();
+                        foreach (var t in tags) vm.Tags.Add(t);
+                    });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to load tags for instance {Name}", vm.Name);
+                }
+            }
+            await RefreshAvailableTagsAsync();
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Tag background load failed");
+        }
+    }
+
+    /// <summary>
+    /// Rebuilds <see cref="AvailableTags"/> from all loaded instance tags,
+    /// preserving existing selection state.
+    /// </summary>
+    internal async Task RefreshAvailableTagsAsync()
+    {
+        try
+        {
+            var allTags = await _tagService.GetAllTagsAsync();
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                // Preserve selection of currently selected tags
+                var selected = new HashSet<string>(
+                    AvailableTags.Where(t => t.IsSelected).Select(t => t.Name),
+                    StringComparer.OrdinalIgnoreCase);
+
+                AvailableTags.Clear();
+                foreach (var tag in allTags)
+                {
+                    var tfvm = new TagFilterViewModel { Name = tag, IsSelected = selected.Contains(tag) };
+                    tfvm.PropertyChanged += (s, e) =>
+                    {
+                        if (e.PropertyName == nameof(TagFilterViewModel.IsSelected))
+                            ApplyTagFilter();
+                    };
+                    AvailableTags.Add(tfvm);
+                }
+                ApplyTagFilter();
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to refresh available tags");
+        }
+    }
+
+    /// <summary>
+    /// Applies (or removes) the tag filter predicate on <see cref="InstancesView"/>.
+    /// </summary>
+    private void ApplyTagFilter()
+    {
+        var activeFilters = AvailableTags.Where(t => t.IsSelected).Select(t => t.Name).ToList();
+        InstancesView.Filter = activeFilters.Count > 0
+            ? o => o is WslInstanceViewModel vm && activeFilters.All(f => vm.Tags.Contains(f, StringComparer.OrdinalIgnoreCase))
+            : null;
+        InstancesView.Refresh();
+    }
+
+    /// <summary>Clears all selected tag filters.</summary>
+    [RelayCommand]
+    private void ClearTagFilters()
+    {
+        foreach (var tag in AvailableTags)
+            tag.IsSelected = false;
+        ApplyTagFilter();
+    }
+
+    /// <summary>Toggles a single tag filter pill.</summary>
+    [RelayCommand]
+    private void ToggleTagFilter(TagFilterViewModel? tag)
+    {
+        if (tag == null) return;
+        tag.IsSelected = !tag.IsSelected;
+        ApplyTagFilter();
+    }
+
+    /// <summary>Deselects a specific tag filter pill (called from × button).</summary>
+    [RelayCommand]
+    private void ClearSingleTagFilter(TagFilterViewModel? tag)
+    {
+        if (tag == null) return;
+        tag.IsSelected = false;
+        ApplyTagFilter();
+    }
+
+    /// <summary>Toggles Group by Tag grouping on <see cref="InstancesView"/>.</summary>
+    [RelayCommand]
+    private void ToggleGroupByTag()
+    {
+        IsGroupByTag = !IsGroupByTag;
+        InstancesView.GroupDescriptions.Clear();
+        if (IsGroupByTag)
+        {
+            // Group by primary tag (first tag); ungrouped instances go to empty group
+            InstancesView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(WslInstanceViewModel.PrimaryTag)));
+        }
+        InstancesView.Refresh();
+    }
+
+    /// <summary>
+    /// Loads Docker integration status for each eligible instance and updates
+    /// <see cref="WslInstanceViewModel.DockerIntegrationEnabled"/> asynchronously.
+    /// Skips docker-desktop/docker-desktop-data and WSL v1 instances (C-01-8).
+    /// </summary>
+    private async Task LoadDockerStatusAsync(List<WslInstanceViewModel> snapshot, CancellationToken ct)
+    {
+        try
+        {
+            bool isInstalled = await _dockerIntegrationService.IsDockerDesktopInstalledAsync(ct);
+            if (!isInstalled) return;
+
+            foreach (var vm in snapshot)
+            {
+                if (ct.IsCancellationRequested) return;
+                var name = vm.Name;
+                if (!vm.IsWslV2) continue;
+                if (name.Equals("docker-desktop", StringComparison.OrdinalIgnoreCase) ||
+                    name.Equals("docker-desktop-data", StringComparison.OrdinalIgnoreCase)) continue;
+
+                try
+                {
+                    var status = await _dockerIntegrationService.GetIntegrationStatusAsync(name, ct);
+                    vm.DockerIntegrationEnabled = status == Core.Services.DockerIntegrationStatus.Enabled;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Could not get Docker status for instance {Name}", name);
+                }
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Docker status background load failed");
+        }
     }
 
     [RelayCommand]
@@ -358,8 +599,18 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// </summary>
     private void OnCacheInvalidated(object? sender, EventArgs e)
     {
-        _ = Application.Current.Dispatcher.InvokeAsync(
-            async () => await LoadInstancesAsync(CancellationToken.None));
+        _ = Application.Current.Dispatcher.InvokeAsync(async () =>
+        {
+            IsAutoRefreshing = true;
+            try
+            {
+                await LoadInstancesAsync(CancellationToken.None);
+            }
+            finally
+            {
+                IsAutoRefreshing = false;
+            }
+        });
     }
 
     private void OnDownloadTaskStatusChanged(object? sender, DownloadTask task)
@@ -415,7 +666,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void ShowTemplates()
     {
-        StatusMessage = "Templates";
+        StatusMessage = Properties.Resources.TemplatesTitle;
         var page = _serviceProvider.GetRequiredService<TemplatesPage>();
         CurrentPage = page;
         IsOnDashboard = false;
@@ -550,13 +801,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
             };
             window.ShowDialog();
 
-            StatusMessage = "Ready";
+            StatusMessage = Properties.Resources.StatusReady;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to generate diagnostics");
             await ShowAlert(Properties.Resources.ErrorApplicationTitle, string.Format(Properties.Resources.ErrorGenerateDiagnostics, MainViewModel.FormatAlertMessage(ex)));
-            StatusMessage = "Failed to generate diagnostics";
+            StatusMessage = string.Format(Properties.Resources.ErrorGenerateDiagnostics, MainViewModel.FormatAlertMessage(ex));
         }
     }
 
@@ -564,606 +815,144 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _wslEventWatcher.CacheInvalidationRequested -= OnCacheInvalidated;
+        _wslEventWatcher.Stop();
     }
-}
-
-/// <summary>
-/// View model for a single WSL instance.
-/// </summary>
-public partial class WslInstanceViewModel : ObservableObject
-{
-    private readonly IWslManagerService _wslManager;
-    private readonly ITerminalService _terminalService;
-    private readonly ISettingsService _settingsService;
-    private readonly ILogger _logger;
-    private readonly ITagService _tagService;
-    private readonly IBackupService _backupService;
 
     /// <summary>
-    /// Event raised when the instance requests a refresh of the main list (e.g. after deletion).
+    /// Starts the WSL event watcher after the initial instance load completes.
+    /// Called from MainWindow.LoadDataInBackgroundAsync to avoid race conditions (Design Review #1).
     /// </summary>
-    public event EventHandler? RefreshRequested;
+    public void StartEventWatcherAfterLoad()
+    {
+        try
+        {
+            _wslEventWatcher.Start();
+            _logger.LogInformation("WSL event watcher started after initial load");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to start WSL event watcher; proactive cache invalidation unavailable");
+        }
+    }
+
+    // ── Multi-select commands (P1-8) ─────────────────────────────────────
+
+    [RelayCommand]
+    private void ToggleMultiSelect()
+    {
+        IsMultiSelectMode = !IsMultiSelectMode;
+        if (!IsMultiSelectMode)
+        {
+            foreach (var vm in Instances)
+                vm.IsSelected = false;
+        }
+        OnPropertyChanged(nameof(SelectedCount));
+    }
 
     [ObservableProperty]
-    private WslInstance _instance;
+    private string _bulkCompactProgressText = string.Empty;
 
     [ObservableProperty]
-    private bool _isLoadingDiskSize;
+    private bool _isBulkCompacting;
 
-    [ObservableProperty]
-    private bool _isForceRefreshing;
+    private CancellationTokenSource? _bulkCompactCts;
 
-    [ObservableProperty]
-    private bool _isBusy;
-
-    public string Name => Instance.Name;
-    public string State => Instance.State == "Running" ? Properties.Resources.StateRunning : 
-                          (Instance.State == "Stopped" ? Properties.Resources.StateStopped : Instance.State);
-    public string RawState => Instance.State;
-    public bool IsRunning => Instance.IsRunning;
-    public string InstallPath => WslInstance.NormalizeWindowsPath(Instance.InstallPath);
-    public string Distribution => Instance.Distribution;
-    public long DiskSize => Instance.Size;
-    
-    /// <summary>
-    /// Gets the disk size formatted for display.
-    /// Shows "Click to load" if size is unknown and instance is running.
-    /// </summary>
-    public string DiskSizeDisplay
-    {
-        get
-        {
-            if (IsForceRefreshing)
-                return Properties.Resources.StatusForceRefreshing;
-            
-            if (IsLoadingDiskSize)
-                return Properties.Resources.StatusLoading;
-            
-            if (DiskSize <= 0 && IsRunning)
-                return Properties.Resources.StatusClickToLoad;
-            
-            if (DiskSize <= 0)
-                return Properties.Resources.StatusUnknown;
-            
-            return FormatFileSize(DiskSize);
-        }
-    }
-
-    public WslInstanceViewModel(
-        WslInstance instance,
-        IWslManagerService wslManager,
-        ITerminalService terminalService,
-        ISettingsService settingsService,
-        ILogger logger,
-        ITagService tagService,
-        IBackupService backupService)
-    {
-        _instance = instance;
-        _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
-        _terminalService = terminalService ?? throw new ArgumentNullException(nameof(terminalService));
-        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _tagService = tagService ?? throw new ArgumentNullException(nameof(tagService));
-        _backupService = backupService ?? throw new ArgumentNullException(nameof(backupService));
-    }
-
-    private static string FormatFileSize(long bytes)
-    {
-        if (bytes <= 0) return Properties.Resources.StatusUnknown;
-        string[] sizes = { "B", "KB", "MB", "GB", "TB" };
-        int order = 0;
-        double size = bytes;
-        while (size >= 1024 && order < sizes.Length - 1)
-        {
-            order++;
-            size /= 1024;
-        }
-        return $"{size:0.##} {sizes[order]}";
-    }
-
-    private async Task ShowAlert(string title, string message)
-    {
-        var uiMessageBox = new Wpf.Ui.Controls.MessageBox
-        {
-            Title = title,
-            Content = message,
-            CloseButtonText = "OK",
-            MaxWidth = 400
-        };
-
-        await uiMessageBox.ShowDialogAsync();
-    }
-
-    /// <summary>
-    /// Forces a complete refresh of this instance, starting it and loading full information.
-    /// Shows a confirmation dialog before proceeding.
-    /// </summary>
     [RelayCommand]
-    private async Task ForceRefreshAsync()
+    private async Task CompactSelectedAsync(CancellationToken ct)
     {
-        if (IsForceRefreshing)
-            return;
+        var selected = Instances.Where(i => i.IsSelected && i.IsWslV2).ToList();
+        if (selected.Count == 0) return;
+
+        var confirmed = await _dialogService.ShowConfirmAsync(
+            Properties.Resources.BulkCompact_ConfirmTitle,
+            string.Format(Properties.Resources.BulkCompact_ConfirmMessage, selected.Count));
+        if (!confirmed) return;
+
+        IsBulkCompacting = true;
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        _bulkCompactCts = cts;
 
         try
         {
-            // Show confirmation dialog
-            var confirmed = DistroNexus.Desktop.Views.ConfirmDialog.Show(
-                Properties.Resources.ConfirmForceRefreshTitle,
-                Properties.Resources.ConfirmForceRefreshMessage,
-                "Force Refresh");
-
-            if (!confirmed)
-                return;
-
-            IsForceRefreshing = true;
-            OnPropertyChanged(nameof(DiskSizeDisplay));
-
-            _logger.LogInformation("Starting force refresh for instance {Name}", Name);
-
-            // Call force refresh method
-            var refreshedInstance = await _wslManager.ForceRefreshInstanceAsync(Name);
-
-            if (refreshedInstance != null)
+            for (int i = 0; i < selected.Count; i++)
             {
-                Instance = refreshedInstance;
-                OnPropertyChanged(nameof(State));
-                OnPropertyChanged(nameof(RawState));
-                OnPropertyChanged(nameof(IsRunning));
+                if (cts.IsCancellationRequested) break;
 
-                // Auto-load disk size
-                await LoadDiskSizeAsync();
+                var inst = selected[i];
+                BulkCompactProgressText = string.Format(
+                    Properties.Resources.BulkCompact_Counter, i + 1, selected.Count, inst.Name);
 
-                _logger.LogInformation("Force refresh completed for {Name}", Name);
+                var diskVm = new ViewModels.Tabs.DiskTabViewModel(inst, _wslManager, _dialogService);
+                await diskVm.RunCompactionAsync(cts.Token);
             }
-            else
-            {
-                await ShowAlert(Properties.Resources.ErrorTitle, Properties.Resources.ErrorForceRefreshNull);
-                _logger.LogError("Force refresh returned null for instance {Name}", Name);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Force refresh failed for instance {Name}", Name);
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorForceRefreshEx, MainViewModel.FormatAlertMessage(ex)));
         }
         finally
         {
-            IsForceRefreshing = false;
-            OnPropertyChanged(nameof(DiskSizeDisplay));
+            _bulkCompactCts = null;
+            IsBulkCompacting = false;
+            BulkCompactProgressText = string.Empty;
+            IsMultiSelectMode = false;
+            foreach (var vm in Instances) vm.IsSelected = false;
         }
     }
 
-    /// <summary>
-    /// Loads the disk size for this instance.
-    /// Only works reliably when the instance is running to avoid auto-starting stopped instances.
-    /// </summary>
     [RelayCommand]
-    public async Task LoadDiskSizeAsync()
+    private void CancelBulkCompact()
     {
-        if (IsLoadingDiskSize || DiskSize > 0)
-            return;
+        _bulkCompactCts?.Cancel();
+    }
 
+    [RelayCommand]
+    private async Task ImportInstanceAsync()
+    {
+        var existingNames = Instances.Select(i => i.Name).ToList();
+        var vm = new ImportInstanceViewModel(existingNames);
+        var dialog = new ImportInstanceDialog(vm) { Owner = Application.Current.MainWindow };
+        dialog.ShowDialog();
+
+        if (!vm.Confirmed) return;
+
+        IsLoading = true;
         try
         {
-            IsLoadingDiskSize = true;
-            OnPropertyChanged(nameof(DiskSizeDisplay));
-            
-            _logger.LogInformation("Loading disk size for instance {Name}", Name);
-            
-            var size = await _wslManager.GetInstanceDiskSizeAsync(Name);
-            
-            Instance.Size = size;
-            OnPropertyChanged(nameof(DiskSize));
-            OnPropertyChanged(nameof(DiskSizeDisplay));
-            
-            _logger.LogInformation("Loaded disk size for {Name}: {Size} bytes", Name, size);
+            await _wslManager.ImportInstanceAsync(
+                vm.InstanceName.Trim(),
+                vm.SourcePath.Trim(),
+                vm.InstallPath.Trim());
+
+            await LoadInstancesAsync();
+
+            var newVm = Instances.FirstOrDefault(i =>
+                string.Equals(i.Name, vm.InstanceName.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (newVm is not null)
+                SelectedInstance = newVm;
+
+            await _dialogService.ShowAlertAsync(
+                Properties.Resources.Import_CompleteTitle,
+                string.Format(Properties.Resources.Import_Complete, vm.InstanceName.Trim()));
+        }
+        catch (WslInstanceAlreadyExistsException ex)
+        {
+            await _dialogService.ShowAlertAsync(
+                Properties.Resources.ErrorTitle,
+                string.Format(Properties.Resources.Import_NameExists, ex.InstanceName ?? vm.InstanceName));
+        }
+        catch (WslOperationException ex)
+        {
+            _logger.LogError(ex, "Import failed. ErrorCode={ErrorCode}", (int)ex.Code);
+            await _dialogService.ShowAlertAsync(
+                Properties.Resources.ErrorTitle,
+                string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to load disk size for instance {Name}", Name);
+            await _dialogService.ShowAlertAsync(
+                Properties.Resources.ErrorTitle,
+                string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
         }
         finally
         {
-            IsLoadingDiskSize = false;
-            OnPropertyChanged(nameof(DiskSizeDisplay));
-        }
-    }
-
-    /// <summary>
-    /// Updates the instance state and notifies property changes.
-    /// </summary>
-    /// <param name="newState">The new state value.</param>
-    public void UpdateState(string newState)
-    {
-        Instance.State = newState;
-        OnPropertyChanged(nameof(State));
-        OnPropertyChanged(nameof(RawState));
-        OnPropertyChanged(nameof(IsRunning));
-        OnPropertyChanged(nameof(DiskSizeDisplay));
-    }
-
-    /// <summary>
-    /// Updates the disk size and notifies property changes.
-    /// </summary>
-    /// <param name="newSize">The new disk size in bytes.</param>
-    public void UpdateDiskSize(long newSize)
-    {
-        Instance.Size = newSize;
-        OnPropertyChanged(nameof(Instance));
-        OnPropertyChanged(nameof(DiskSize));
-        OnPropertyChanged(nameof(DiskSizeDisplay));
-    }
-
-    [RelayCommand]
-    private async Task StartAsync()
-    {
-        try
-        {
-            _logger.LogInformation("Starting instance {Name} with keep-alive task", Name);
-            
-            // Start instance with a background keep-alive process
-            var success = await _wslManager.StartInstanceWithKeepAliveAsync(Name);
-            
-            if (success)
-            {
-                Instance.State = "Running";
-                OnPropertyChanged(nameof(State));
-                OnPropertyChanged(nameof(RawState));
-                OnPropertyChanged(nameof(IsRunning));
-                _logger.LogInformation("Instance {Name} started with keep-alive task", Name);
-            }
-            else
-            {
-                await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorStartInstanceFailed, Name));
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to start instance {Name}", Name);
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorStartInstanceEx, MainViewModel.FormatAlertMessage(ex)));
-        }
-    }
-
-    [RelayCommand]
-    private async Task StopAsync()
-    {
-        try
-        {
-            var settings = _settingsService.LoadSettings();
-
-            if (settings.ShowConfirmationDialogs)
-            {
-                // Show custom confirmation dialog
-                var confirmed = DistroNexus.Desktop.Views.ConfirmDialog.Show(
-                    Properties.Resources.ConfirmStopTitle,
-                    string.Format(Properties.Resources.ConfirmStopMessage, Name),
-                    Properties.Resources.ButtonStop);
-
-                if (!confirmed)
-                {
-                    _logger.LogInformation("User canceled stop operation for instance {Name}", Name);
-                    return;
-                }
-            }
-
-            _logger.LogInformation("Stopping instance {Name}", Name);
-            
-            var success = await _wslManager.StopInstanceAsync(Name);
-            
-            if (success)
-            {
-                Instance.State = "Stopped";
-                OnPropertyChanged(nameof(State));
-                OnPropertyChanged(nameof(RawState));
-                OnPropertyChanged(nameof(IsRunning));
-            }
-            else
-            {
-                await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorStopInstanceFailed, Name));
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to stop instance {Name}", Name);
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorStopInstanceEx, MainViewModel.FormatAlertMessage(ex)));
-        }
-    }
-
-    [RelayCommand]
-    private async Task RemoveAsync()
-    {
-        if (IsBusy) return;
-
-        var settings = _settingsService.LoadSettings();
-
-        if (settings.ShowConfirmationDialogs)
-        {
-            // Use custom confirmation dialog
-            var confirmed = DistroNexus.Desktop.Views.ConfirmDialog.Show(
-                Properties.Resources.ConfirmRemoveTitle,
-                string.Format(Properties.Resources.ConfirmRemoveMessage, Name),
-                Properties.Resources.ButtonRemove);
-
-            if (!confirmed)
-                return;
-        }
-
-        var instanceName = Name;
-
-        // Check if a backup schedule exists and warn user (E-04-2)
-        try
-        {
-            var schedules = await _backupService.GetSchedulesAsync();
-            var hasSchedule = schedules.Any(s =>
-                string.Equals(s.Name, instanceName, StringComparison.OrdinalIgnoreCase));
-            if (hasSchedule)
-            {
-                var confirm = new Wpf.Ui.Controls.MessageBox
-                {
-                    Title = Properties.Resources.ConfirmRemoveTitle,
-                    Content = string.Format(Properties.Resources.ConfirmRemoveWithBackupMessage, instanceName),
-                    PrimaryButtonText = Properties.Resources.ButtonRemove,
-                    CloseButtonText = Properties.Resources.ButtonClose
-                };
-                var result = await confirm.ShowDialogAsync();
-                if (result != Wpf.Ui.Controls.MessageBoxResult.Primary)
-                {
-                    return;
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Could not check backup schedule for instance {Name}", instanceName);
-        }
-
-        try
-        {
-            IsBusy = true;
-            _logger.LogInformation("Removing instance {Name}", instanceName);
-
-            await _wslManager.RemoveInstanceAsync(instanceName);
-
-            try
-            {
-                await _tagService.DeleteInstanceTagsAsync(instanceName);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Tag cleanup failed for removed instance {Name}", instanceName);
-            }
-
-            await ShowAlert(Properties.Resources.SuccessTitle, string.Format(Properties.Resources.SuccessInstanceRemoved, instanceName));
-
-            RefreshRequested?.Invoke(this, EventArgs.Empty);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to remove instance {Name}", Name);
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorRemoveInstanceEx, MainViewModel.FormatAlertMessage(ex)));
-        }
-        finally
-        {
-            IsBusy = false;
-        }
-    }
-
-    [RelayCommand]
-    private async Task OpenTerminalAsync()
-    {
-        try
-        {
-            _logger.LogInformation("Opening terminal for instance {Name}", Name);
-            
-            var success = await _terminalService.OpenTerminalAsync(Name);
-            
-            if (success)
-            {
-                // If the terminal opened successfully, the instance is now running
-                if (!IsRunning)
-                {
-                    UpdateState("Running");
-                    
-                    // Also trigger disk size load since it might now be available
-                    _ = LoadDiskSizeAsync();
-                }
-            }
-            else
-            {
-                await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorOpenTerminalFailed, Name));
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to open terminal for instance {Name}", Name);
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorOpenTerminalEx, MainViewModel.FormatAlertMessage(ex)));
-        }
-    }
-
-    [RelayCommand]
-    private async Task MoveAsync()
-    {
-        if (IsBusy) return;
-
-        var dialog = new Microsoft.Win32.OpenFolderDialog
-        {
-            Title = string.Format(Properties.Resources.SelectMoveLocationTitle, Name)
-        };
-
-        if (dialog.ShowDialog() != true)
-            return;
-
-        var newPath = dialog.FolderName;
-
-        var confirmed = DistroNexus.Desktop.Views.ConfirmDialog.Show(
-            Properties.Resources.ConfirmMoveTitle,
-            string.Format(Properties.Resources.ConfirmMoveMessage, Name, newPath),
-            "Move");
-
-        if (!confirmed)
-            return;
-
-        try
-        {
-            IsBusy = true;
-            _logger.LogInformation("Moving instance {Name} to {NewPath}", Name, newPath);
-            
-            await _wslManager.MoveInstanceAsync(Name, newPath);
-            
-            Instance.InstallPath = newPath;
-            OnPropertyChanged(nameof(InstallPath));
-            
-            await ShowAlert(Properties.Resources.SuccessTitle, string.Format(Properties.Resources.SuccessInstanceMoved, Name));
-
-            RefreshRequested?.Invoke(this, EventArgs.Empty);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to move instance {Name}", Name);
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorMoveInstanceEx, MainViewModel.FormatAlertMessage(ex)));
-        }
-        finally
-        {
-            IsBusy = false;
-        }
-    }
-
-    [RelayCommand]
-    private async Task RenameAsync()
-    {
-        if (IsBusy) return;
-
-        var inputDialog = new Wpf.Ui.Controls.MessageBox
-        {
-            Title = Properties.Resources.RenameTitle,
-            Content = new System.Windows.Controls.TextBox
-            {
-                Text = Name,
-                MinWidth = 200
-            },
-            PrimaryButtonText = Properties.Resources.ButtonRename,
-            CloseButtonText = Properties.Resources.ButtonCancel
-        };
-
-        var result = await inputDialog.ShowDialogAsync();
-        
-        if (result != Wpf.Ui.Controls.MessageBoxResult.Primary)
-            return;
-
-        var textBox = inputDialog.Content as System.Windows.Controls.TextBox;
-        var newName = textBox?.Text?.Trim();
-
-        if (string.IsNullOrEmpty(newName) || newName == Name)
-            return;
-
-        try
-        {
-            var oldName = Name;
-            IsBusy = true;
-            _logger.LogInformation("Renaming instance {OldName} to {NewName}", oldName, newName);
-
-            await _wslManager.RenameInstanceAsync(oldName, newName);
-
-            Instance.Name = newName;
-            OnPropertyChanged(nameof(Name));
-
-            try
-            {
-                await _tagService.RenameInstanceTagsAsync(oldName, newName);
-            }
-            catch (Exception tagEx)
-            {
-                _logger.LogWarning(tagEx, "Tag migration failed for rename {OldName} -> {NewName}", oldName, newName);
-            }
-
-            await ShowAlert(Properties.Resources.SuccessTitle, string.Format(Properties.Resources.SuccessInstanceRenamed, newName));
-
-            RefreshRequested?.Invoke(this, EventArgs.Empty);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to rename instance {Name}", Name);
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorRenameInstanceEx, MainViewModel.FormatAlertMessage(ex)));
-        }
-        finally
-        {
-            IsBusy = false;
-        }
-    }
-
-    [RelayCommand]
-    private async Task SetCredentialsAsync()
-    {
-        if (IsBusy) return;
-
-        // Username Dialog
-        var userTextBox = new System.Windows.Controls.TextBox 
-        { 
-            Text = "root",
-            MinWidth = 200 
-        };
-        
-        var userDialog = new Wpf.Ui.Controls.MessageBox
-        {
-            Title = Properties.Resources.SetCredentialsTitle,
-            Content = new System.Windows.Controls.StackPanel
-            {
-                Children = 
-                {
-                    new System.Windows.Controls.TextBlock { Text = Properties.Resources.PromptEnterUsername, Margin = new Thickness(0,0,0,10) },
-                    userTextBox
-                }
-            },
-            PrimaryButtonText = "Next",
-            CloseButtonText = Properties.Resources.ButtonCancel
-        };
-
-        var userResult = await userDialog.ShowDialogAsync();
-        if (userResult != Wpf.Ui.Controls.MessageBoxResult.Primary) return;
-        
-        var username = userTextBox.Text;
-        if (string.IsNullOrEmpty(username)) return;
-
-        // Password Dialog
-        var passwordBox = new System.Windows.Controls.PasswordBox { MinWidth = 200 };
-        
-        var passDialog = new Wpf.Ui.Controls.MessageBox
-        {
-            Title = Properties.Resources.SetCredentialsTitle,
-            Content = new System.Windows.Controls.StackPanel
-            {
-                Children = 
-                {
-                    new System.Windows.Controls.TextBlock { Text = Properties.Resources.PromptEnterPassword, Margin = new Thickness(0,0,0,10) },
-                    passwordBox
-                }
-            },
-            PrimaryButtonText = "OK",
-            CloseButtonText = Properties.Resources.ButtonCancel
-        };
-
-        var passResult = await passDialog.ShowDialogAsync();
-        if (passResult != Wpf.Ui.Controls.MessageBoxResult.Primary) return;
-        
-        var password = passwordBox.Password;
-
-        try
-        {
-            IsBusy = true;
-            _logger.LogInformation("Setting credentials for instance {Name}", Name);
-            
-            await _wslManager.SetCredentialsAsync(Name, username, password);
-            
-            await ShowAlert(Properties.Resources.SuccessTitle, string.Format(Properties.Resources.SuccessCredentialsSet, Name));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to set credentials for instance {Name}", Name);
-            await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorSetCredentialsEx, MainViewModel.FormatAlertMessage(ex)));
-        }
-        finally
-        {
-            IsBusy = false;
+            IsLoading = false;
         }
     }
 }

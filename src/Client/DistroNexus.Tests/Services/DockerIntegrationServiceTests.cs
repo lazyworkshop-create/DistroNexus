@@ -43,8 +43,9 @@ public class DockerIntegrationServiceTests
     public async Task GetIntegrationStatusAsync_WithEmptyName_ThrowsArgumentException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(
+        var ex = await Assert.ThrowsAsync<WslOperationFailedException>(
             () => _service.GetIntegrationStatusAsync(string.Empty));
+        Assert.Equal(DistroNexusErrorCode.InstanceNotFound, ex.Code);
     }
 
     [Fact]
@@ -83,8 +84,9 @@ public class DockerIntegrationServiceTests
     [Fact]
     public async Task SetIntegrationAsync_WithEmptyName_ThrowsArgumentException()
     {
-        await Assert.ThrowsAsync<ArgumentException>(
+        var ex = await Assert.ThrowsAsync<WslOperationFailedException>(
             () => _service.SetIntegrationAsync(string.Empty, true));
+        Assert.Equal(DistroNexusErrorCode.InstanceNotFound, ex.Code);
     }
 
     [Theory]
@@ -92,8 +94,9 @@ public class DockerIntegrationServiceTests
     [InlineData("docker-desktop-data")]
     public async Task SetIntegrationAsync_WithReservedDistro_ThrowsArgumentException(string reservedName)
     {
-        await Assert.ThrowsAsync<ArgumentException>(
+        var ex = await Assert.ThrowsAsync<WslOperationFailedException>(
             () => _service.SetIntegrationAsync(reservedName, true));
+        Assert.Equal(DistroNexusErrorCode.DockerConfigWriteConflict, ex.Code);
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -68,8 +69,9 @@ public class TagServiceTests
     public async Task SetTagsAsync_ThrowsWhenMoreThan10Tags()
     {
         var tooMany = Enumerable.Range(1, 11).Select(i => $"tag{i}").ToList();
-        await Assert.ThrowsAsync<ArgumentException>(
+        var ex = await Assert.ThrowsAsync<WslOperationFailedException>(
             () => _service.SetTagsAsync("Ubuntu-22.04", tooMany));
+        Assert.Equal(DistroNexusErrorCode.TooManyTags, ex.Code);
     }
 
     [Fact]
@@ -126,16 +128,18 @@ public class TagServiceTests
     {
         var tenTags = Enumerable.Range(1, 10).Select(i => $"tag{i}").ToList();
         await _service.SetTagsAsync("Ubuntu-22.04", tenTags);
-        await Assert.ThrowsAsync<InvalidOperationException>(
+        var ex = await Assert.ThrowsAsync<WslOperationFailedException>(
             () => _service.AddTagAsync("Ubuntu-22.04", "overflow"));
+        Assert.Equal(DistroNexusErrorCode.TooManyTags, ex.Code);
     }
 
     [Fact]
     public async Task AddTagAsync_WhenTagExceeds32Chars_Throws_ArgumentException()
     {
         var longTag = new string('a', 33);
-        await Assert.ThrowsAsync<ArgumentException>(
+        var ex = await Assert.ThrowsAsync<WslOperationFailedException>(
             () => _service.AddTagAsync("Ubuntu", longTag, CancellationToken.None));
+        Assert.Equal(DistroNexusErrorCode.TooManyTags, ex.Code);
     }
 
     [Fact]

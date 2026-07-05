@@ -295,6 +295,9 @@
   <data name="ErrorTitle" xml:space="preserve">
     <value>错误</value>
   </data>
+  <data name="ErrorCopyCode" xml:space="preserve">
+    <value>复制错误代码 {0}</value>
+  </data>
   <data name="Cancel" xml:space="preserve">
     <value>取消</value>
   </data>
@@ -774,6 +777,9 @@
   <data name="ButtonCancel" xml:space="preserve">
     <value>取消</value>
   </data>
+  <data name="ButtonOK" xml:space="preserve">
+    <value>确定</value>
+  </data>
   <data name="StatusSourceMovedUp" xml:space="preserve">
     <value>源已上移</value>
   </data>
@@ -875,6 +881,18 @@
   </data>
   <data name="BadgeCustom" xml:space="preserve">
     <value>自定义</value>
+  </data>
+  <data name="ActionApply" xml:space="preserve">
+    <value>应用</value>
+  </data>
+  <data name="ActionExport" xml:space="preserve">
+    <value>导出</value>
+  </data>
+  <data name="ActionImport" xml:space="preserve">
+    <value>导入</value>
+  </data>
+  <data name="BadgeOfficial" xml:space="preserve">
+    <value>官方</value>
   </data>
   <data name="StepConnector" xml:space="preserve">
     <value> - </value>
@@ -1314,5 +1332,459 @@
   </data>
   <data name="TitleLoadError" xml:space="preserve">
     <value>加载错误</value>
+  </data>
+  <data name="MoreMenu_Details" xml:space="preserve">
+    <value>详情...</value>
+  </data>
+  <data name="MoreMenu_CompactDisk" xml:space="preserve">
+    <value>压缩磁盘</value>
+  </data>
+  <data name="MoreMenu_ExportInstance" xml:space="preserve">
+    <value>导出实例...</value>
+  </data>
+  <data name="Toolbar_ImportInstance" xml:space="preserve">
+    <value>导入实例</value>
+  </data>
+  <data name="Toolbar_SelectMode" xml:space="preserve">
+    <value>选择</value>
+  </data>
+  <data name="Toolbar_CompactSelected" xml:space="preserve">
+    <value>压缩已选</value>
+  </data>
+  <data name="InstanceDetail_Title" xml:space="preserve">
+    <value>实例详情</value>
+  </data>
+  <data name="InstanceDetail_Close" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="Tab_Disk" xml:space="preserve">
+    <value>磁盘</value>
+  </data>
+  <data name="Tab_Resources" xml:space="preserve">
+    <value>资源</value>
+  </data>
+  <data name="Tab_Integrations" xml:space="preserve">
+    <value>集成</value>
+  </data>
+  <data name="Tab_Network" xml:space="preserve">
+    <value>网络</value>
+  </data>
+  <data name="Tab_Backup" xml:space="preserve">
+    <value>备份</value>
+  </data>
+  <data name="ErrorGenericOperation" xml:space="preserve">
+    <value>操作失败：{0}</value>
+  </data>  <data name="DiskTab_VhdxPath" xml:space="preserve">
+    <value>VHDX 路径：</value>
+  </data>
+  <data name="DiskTab_CurrentSize" xml:space="preserve">
+    <value>当前大小：</value>
+  </data>
+  <data name="DiskTab_CompactDisk" xml:space="preserve">
+    <value>压缩磁盘...</value>
+  </data>
+  <data name="DiskTab_Estimating" xml:space="preserve">
+    <value>正在估算可回收空间...</value>
+  </data>
+  <data name="DiskTab_CompactConfirm" xml:space="preserve">
+    <value>此操作将停止实例、整理块并压缩 VHDX 文件，完成后实例将重新启动。继续？</value>
+  </data>
+  <data name="DiskTab_CompactConfirmEstimate" xml:space="preserve">
+    <value>预计可回收：{0}。此操作将停止实例、整理块并压缩 VHDX，完成后实例将重启。继续？</value>
+  </data>
+  <data name="DiskTab_PhaseStop" xml:space="preserve">
+    <value>正在停止实例...</value>
+  </data>
+  <data name="DiskTab_PhaseTrim" xml:space="preserve">
+    <value>正在整理块...</value>
+  </data>
+  <data name="DiskTab_PhaseCompact" xml:space="preserve">
+    <value>正在压缩 VHDX...</value>
+  </data>
+  <data name="DiskTab_PhaseRestart" xml:space="preserve">
+    <value>正在重启实例...</value>
+  </data>
+  <data name="DiskTab_ResultSaved" xml:space="preserve">
+    <value>压缩完成</value>
+  </data>
+  <data name="DiskTab_WslV1Message" xml:space="preserve">
+    <value>磁盘压缩需要 WSL v2。</value>
+  </data>
+  <data name="Export_StopPromptTitle" xml:space="preserve">
+    <value>停止实例</value>
+  </data>
+  <data name="Export_StopPrompt" xml:space="preserve">
+    <value>实例正在运行，导出前必须停止。现在停止？</value>
+  </data>
+  <data name="Export_SaveDialogTitle" xml:space="preserve">
+    <value>导出实例</value>
+  </data>
+  <data name="Export_CompleteTitle" xml:space="preserve">
+    <value>导出完成</value>
+  </data>
+  <data name="Export_Complete" xml:space="preserve">
+    <value>实例已导出至 {0}（{1}）。</value>
+  </data>
+  <data name="Export_ProgressTitle" xml:space="preserve">
+    <value>导出实例</value>
+  </data>
+  <data name="Export_ProgressMessage" xml:space="preserve">
+    <value>正在将“{0}”导出为 TAR 归档...</value>
+  </data>
+  <data name="Export_ProgressStatus" xml:space="preserve">
+    <value>已用时 {0} · 已写入 {1}</value>
+  </data>
+  <data name="Progress_Cancelling" xml:space="preserve">
+    <value>正在取消...</value>
+  </data>
+  <data name="Import_Title" xml:space="preserve">
+    <value>导入实例</value>
+  </data>
+  <data name="Import_NameLabel" xml:space="preserve">
+    <value>实例名称</value>
+  </data>
+  <data name="Import_PathLabel" xml:space="preserve">
+    <value>安装路径</value>
+  </data>
+  <data name="Import_SourceLabel" xml:space="preserve">
+    <value>源 TAR 文件</value>
+  </data>
+  <data name="Import_NameRequired" xml:space="preserve">
+    <value>实例名称不能为空。</value>
+  </data>
+  <data name="Import_NameExists" xml:space="preserve">
+    <value>名为"{0}"的实例已存在。</value>
+  </data>
+  <data name="Import_PathRequired" xml:space="preserve">
+    <value>安装路径不能为空。</value>
+  </data>
+  <data name="Import_SourceRequired" xml:space="preserve">
+    <value>源 TAR 文件不能为空。</value>
+  </data>
+  <data name="Import_SourceNotFound" xml:space="preserve">
+    <value>找不到源文件。</value>
+  </data>
+  <data name="Import_PathBrowseTitle" xml:space="preserve">
+    <value>选择安装路径</value>
+  </data>
+  <data name="Import_SourceBrowseTitle" xml:space="preserve">
+    <value>选择源 TAR 文件</value>
+  </data>
+  <data name="Import_CompleteTitle" xml:space="preserve">
+    <value>导入完成</value>
+  </data>
+  <data name="Import_Complete" xml:space="preserve">
+    <value>实例"{0}"导入成功。</value>
+  </data>
+  <data name="ResourcesTab_SparseMode" xml:space="preserve">
+    <value>稀疏模式</value>
+  </data>
+  <data name="ResourcesTab_SparseModeTooltip" xml:space="preserve">
+    <value>稀疏 VHDX 在释放空间时自动缩小磁盘文件。需要 WSL v2 和 Windows 11。</value>
+  </data>
+  <data name="ResourcesTab_SparseModeEnabled" xml:space="preserve">
+    <value>已启用</value>
+  </data>
+  <data name="ResourcesTab_SparseModeDisabled" xml:space="preserve">
+    <value>已禁用</value>
+  </data>
+  <data name="ResourcesTab_SparseModeUnknown" xml:space="preserve">
+    <value>未知</value>
+  </data>
+  <data name="ResourcesTab_GlobalLimits" xml:space="preserve">
+    <value>全局资源限制</value>
+  </data>
+  <data name="ResourcesTab_EditInWslConfig" xml:space="preserve">
+    <value>在 WSL 配置中编辑...</value>
+  </data>
+  <data name="ResourcesTab_WslV1Message" xml:space="preserve">
+    <value>资源配置需要 WSL v2。</value>
+  </data>
+  <data name="BulkCompact_Counter" xml:space="preserve">
+    <value>正在压缩 {0}/{1}：{2}</value>
+  </data>
+  <data name="BulkCompact_ConfirmTitle" xml:space="preserve">
+    <value>确认磁盘压缩</value>
+  </data>
+  <data name="BulkCompact_ConfirmMessage" xml:space="preserve">
+    <value>要按顺序压缩选中的 {0} 个 WSL v2 实例吗？每个实例可能会被临时停止。</value>
+  </data>
+  <data name="TemplatesTitle" xml:space="preserve">
+    <value>模板</value>
+  </data>
+  <data name="RetryTooltip" xml:space="preserve">
+    <value>重试</value>
+  </data>
+  <data name="NoDownloadTasksTitle" xml:space="preserve">
+    <value>暂无下载任务</value>
+  </data>
+  <data name="NoDownloadTasksSubtitle" xml:space="preserve">
+    <value>开始下载后任务会显示在这里</value>
+  </data>
+  <data name="WslConfig_SectionTitle" xml:space="preserve">
+    <value>WSL 全局配置</value>
+  </data>
+  <data name="WslConfig_HostInfo" xml:space="preserve">
+    <value>主机：{0} MB 内存，{1} 个 CPU</value>
+  </data>
+  <data name="WslConfig_Memory" xml:space="preserve">
+    <value>内存限制（如 4GB、512MB）</value>
+  </data>
+  <data name="WslConfig_Processors" xml:space="preserve">
+    <value>CPU 核心数</value>
+  </data>
+  <data name="WslConfig_Swap" xml:space="preserve">
+    <value>交换空间大小（0 = 禁用）</value>
+  </data>
+  <data name="WslConfig_SwapDisabled" xml:space="preserve">
+    <value>已禁用</value>
+  </data>
+  <data name="WslConfig_LocalhostForwarding" xml:space="preserve">
+    <value>本地主机转发</value>
+  </data>
+  <data name="WslConfig_NetworkingMode" xml:space="preserve">
+    <value>网络模式</value>
+  </data>
+  <data name="WslConfig_SaveAndRestart" xml:space="preserve">
+    <value>保存并重启 WSL</value>
+  </data>
+  <data name="WslConfig_OpenRawFile" xml:space="preserve">
+    <value>打开原始文件</value>
+  </data>
+  <data name="WslConfig_RestartConfirm" xml:space="preserve">
+    <value>立即运行 wsl --shutdown 以应用更改？所有运行中的 WSL 实例将被停止。</value>
+  </data>
+  <data name="WslConfig_MemoryWarning" xml:space="preserve">
+    <value>内存限制超过主机内存的 80%，可能导致系统不稳定。</value>
+  </data>
+  <data name="WslConfig_InvalidMemory" xml:space="preserve">
+    <value>无效的内存值，请使用带 GB 或 MB 后缀的数字（如 4GB）。</value>
+  </data>
+  <data name="WslConfig_InvalidProcessors" xml:space="preserve">
+    <value>CPU 核心数必须在 1 到主机 CPU 数量之间。</value>
+  </data>
+  <data name="WslConfig_InvalidSwap" xml:space="preserve">
+    <value>无效的交换空间值，使用 0 禁用，或带 GB/MB 后缀的数字。</value>
+  </data>
+  <data name="WslConfig_SaveComplete" xml:space="preserve">
+    <value>配置已成功保存。</value>
+  </data>
+  <data name="ManageTags_SectionTitle" xml:space="preserve">
+    <value>管理标签</value>
+  </data>
+  <data name="ManageTags_TagName" xml:space="preserve">
+    <value>标签名称</value>
+  </data>
+  <data name="ManageTags_UsedBy" xml:space="preserve">
+    <value>使用次数：</value>
+  </data>
+  <data name="ManageTags_Rename" xml:space="preserve">
+    <value>重命名</value>
+  </data>
+  <data name="ManageTags_Delete" xml:space="preserve">
+    <value>删除</value>
+  </data>
+  <data name="ManageTags_BulkDelete" xml:space="preserve">
+    <value>删除所选</value>
+  </data>
+  <data name="ManageTags_DeleteConfirmTitle" xml:space="preserve">
+    <value>删除标签</value>
+  </data>
+  <data name="ManageTags_DeleteConfirm" xml:space="preserve">
+    <value>从所有实例中删除标签"{0}"？</value>
+  </data>
+  <data name="ManageTags_BulkDeleteTitle" xml:space="preserve">
+    <value>删除所选标签</value>
+  </data>
+  <data name="ManageTags_BulkDeleteConfirm" xml:space="preserve">
+    <value>从所有实例中删除 {0} 个所选标签？</value>
+  </data>
+  <data name="ManageTags_RenamePrompt" xml:space="preserve">
+    <value>输入标签的新名称：</value>
+  </data>
+  <data name="ManageTags_NoTags" xml:space="preserve">
+    <value>尚未定义任何标签。</value>
+  </data>
+  <data name="IntegrationsTab_DockerTitle" xml:space="preserve">
+    <value>Docker Desktop 集成</value>
+  </data>
+  <data name="IntegrationsTab_DockerEnabled" xml:space="preserve">
+    <value>已启用</value>
+  </data>
+  <data name="IntegrationsTab_DockerDisabled" xml:space="preserve">
+    <value>已禁用</value>
+  </data>
+  <data name="IntegrationsTab_DockerUnavailable" xml:space="preserve">
+    <value>不可用</value>
+  </data>
+  <data name="IntegrationsTab_DockerInstallLink" xml:space="preserve">
+    <value>未安装 Docker Desktop，点击安装。</value>
+  </data>
+  <data name="IntegrationsTab_RestartBanner" xml:space="preserve">
+    <value>重启 Docker Desktop 以使更改生效。</value>
+  </data>
+  <data name="IntegrationsTab_Dismiss" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="IntegrationsTab_WslV1Message" xml:space="preserve">
+    <value>Docker 集成需要 WSL v2。</value>
+  </data>
+  <data name="NetworkTab_InstanceIP" xml:space="preserve">
+    <value>实例 IP：</value>
+  </data>
+  <data name="NetworkTab_Protocol" xml:space="preserve">
+    <value>协议</value>
+  </data>
+  <data name="NetworkTab_LocalAddress" xml:space="preserve">
+    <value>本地地址</value>
+  </data>
+  <data name="NetworkTab_Port" xml:space="preserve">
+    <value>端口</value>
+  </data>
+  <data name="NetworkTab_Process" xml:space="preserve">
+    <value>进程</value>
+  </data>
+  <data name="NetworkTab_WindowsProxy" xml:space="preserve">
+    <value>Windows 代理</value>
+  </data>
+  <data name="NetworkTab_Copy" xml:space="preserve">
+    <value>复制</value>
+  </data>
+  <data name="NetworkTab_Refresh" xml:space="preserve">
+    <value>刷新</value>
+  </data>
+  <data name="NetworkTab_StoppedPlaceholder" xml:space="preserve">
+    <value>启动实例以查看网络信息。</value>
+  </data>
+  <data name="BackupTab_ScheduleTitle" xml:space="preserve">
+    <value>备份计划</value>
+  </data>
+  <data name="BackupTab_Frequency" xml:space="preserve">
+    <value>频率</value>
+  </data>
+  <data name="BackupTab_FrequencyDaily" xml:space="preserve">
+    <value>每天</value>
+  </data>
+  <data name="BackupTab_FrequencyWeekly" xml:space="preserve">
+    <value>每周</value>
+  </data>
+  <data name="BackupTab_FrequencyMonthly" xml:space="preserve">
+    <value>每月</value>
+  </data>
+  <data name="BackupTab_DayOfWeek" xml:space="preserve">
+    <value>星期</value>
+  </data>
+  <data name="BackupTab_DayOfMonth" xml:space="preserve">
+    <value>日期</value>
+  </data>
+  <data name="BackupTab_TimeOfDay" xml:space="preserve">
+    <value>时间</value>
+  </data>
+  <data name="BackupTab_Destination" xml:space="preserve">
+    <value>目标文件夹</value>
+  </data>
+  <data name="BackupTab_Browse" xml:space="preserve">
+    <value>浏览...</value>
+  </data>
+  <data name="BackupTab_RetentionCount" xml:space="preserve">
+    <value>保留文件数</value>
+  </data>
+  <data name="BackupTab_SaveSchedule" xml:space="preserve">
+    <value>保存计划</value>
+  </data>
+  <data name="BackupTab_RemoveSchedule" xml:space="preserve">
+    <value>删除计划</value>
+  </data>
+  <data name="BackupTab_BackupNow" xml:space="preserve">
+    <value>立即备份</value>
+  </data>
+  <data name="BackupTab_RemoveConfirm" xml:space="preserve">
+    <value>确定要删除 '{0}' 的备份计划吗？</value>
+  </data>
+  <data name="BackupTab_BackingUp" xml:space="preserve">
+    <value>备份中...</value>
+  </data>
+  <data name="BackupTab_HistoryTitle" xml:space="preserve">
+    <value>备份历史</value>
+  </data>
+  <data name="BackupTab_Timestamp" xml:space="preserve">
+    <value>日期/时间</value>
+  </data>
+  <data name="BackupTab_FileName" xml:space="preserve">
+    <value>文件名</value>
+  </data>
+  <data name="BackupTab_Size" xml:space="preserve">
+    <value>大小</value>
+  </data>
+  <data name="BackupTab_Status" xml:space="preserve">
+    <value>状态</value>
+  </data>
+  <data name="BackupTab_StatusSuccess" xml:space="preserve">
+    <value>成功</value>
+  </data>
+  <data name="BackupTab_StatusFailed" xml:space="preserve">
+    <value>失败</value>
+  </data>
+  <data name="BackupTab_NoDestination" xml:space="preserve">
+    <value>请指定目标文件夹。</value>
+  </data>
+  <data name="BackupTab_SavedSchedule" xml:space="preserve">
+    <value>备份计划已成功保存。</value>
+  </data>
+  <data name="BackupTab_ScheduleRemoved" xml:space="preserve">
+    <value>备份计划已删除。</value>
+  </data>
+  <data name="BackupTab_BackupComplete" xml:space="preserve">
+    <value>备份已成功完成。</value>
+  </data>
+  <data name="BackupTab_NoHistory" xml:space="preserve">
+    <value>在目标文件夹中未找到备份文件。</value>
+  </data>
+  <data name="BackupTab_SelectDestinationTitle" xml:space="preserve">
+    <value>选择备份目标文件夹</value>
+  </data>
+  <data name="Remove_DeleteTask" xml:space="preserve">
+    <value>同时删除此备份计划对应的任务计划程序任务？</value>
+  </data>
+  <data name="Remove_DeleteFiles" xml:space="preserve">
+    <value>同时删除 '{0}' 中的备份文件？</value>
+  </data>
+  <data name="Tag_AddTag" xml:space="preserve">
+    <value>+ 标签</value>
+  </data>
+  <data name="Tag_RemoveTitle" xml:space="preserve">
+    <value>删除标签</value>
+  </data>
+  <data name="Tag_RemoveConfirm" xml:space="preserve">
+    <value>从此实例中删除标签 '{0}'？</value>
+  </data>
+  <data name="Tag_EditTags" xml:space="preserve">
+    <value>编辑标签</value>
+  </data>
+  <data name="TagFilter_Title" xml:space="preserve">
+    <value>筛选：</value>
+  </data>
+  <data name="TagFilter_ClearAll" xml:space="preserve">
+    <value>清除全部</value>
+  </data>
+  <data name="TagFilter_GroupByTag" xml:space="preserve">
+    <value>按标签分组</value>
+  </data>
+  <data name="TagFilter_NoTags" xml:space="preserve">
+    <value>尚未分配任何标签。</value>
+  </data>
+  <data name="TitleBackupFailure" xml:space="preserve">
+    <value>备份失败</value>
+  </data>
+  <data name="ErrorBackupFailedForInstance" xml:space="preserve">
+    <value>'{0}' 的备份失败：{1}</value>
+  </data>
+  <data name="TitleInvalidModulePath" xml:space="preserve">
+    <value>无效的模块路径</value>
+  </data>
+  <data name="ErrorInvalidModulePath" xml:space="preserve">
+    <value>所选目录不包含 'DistroNexus.psd1'。
+
+请选择包含 PowerShell 模块清单文件的目录。</value>
   </data>
 </root>

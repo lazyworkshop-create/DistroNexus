@@ -29,7 +29,8 @@ function Enable-DistroNexusDockerIntegration {
         # ErrorId = "DistroNexus.EnableDockerIntegration"
 
         if ($Name -eq "docker-desktop" -or $Name -eq "docker-desktop-data") {
-            Write-Error "Cannot enable Docker integration for reserved distro '$Name'."
+            Write-Error "Cannot enable Docker integration for reserved distro '$Name'." `
+                -ErrorId "DistroNexus.InstanceNotFound"
             return
         }
 

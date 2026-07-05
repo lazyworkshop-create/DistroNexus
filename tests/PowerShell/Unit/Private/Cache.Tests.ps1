@@ -341,6 +341,25 @@ Describe "Clear-InstanceCache" -Tag 'Unit', 'Cache' {
 }
 
 Describe "Cache TTL expiry" -Tag 'Unit', 'Cache' {
+    BeforeEach {
+        $script:originalAppData = $env:APPDATA
+        $script:ttlAppData = Join-Path $TestDrive "ttl-appdata"
+        New-Item -Path $script:ttlAppData -ItemType Directory -Force | Out-Null
+        $env:APPDATA = $script:ttlAppData
+
+        InModuleScope DistroNexus {
+            $script:__CacheState.CacheTimestamp = $null
+        }
+    }
+
+    AfterEach {
+        $env:APPDATA = $script:originalAppData
+
+        InModuleScope DistroNexus {
+            $script:__CacheState.CacheTimestamp = $null
+        }
+    }
+
     It "returns stale=true when cache is older than 10 minutes" {
         InModuleScope DistroNexus {
             Set-DistroNexusCache -Timestamp (Get-Date).AddMinutes(-11)
@@ -368,7 +387,6 @@ Describe "Cache TTL expiry" -Tag 'Unit', 'Cache' {
             # Simulate new session: no in-memory timestamp
             $script:__CacheState.CacheTimestamp = $null
 
-            # Write a fresh cache file to the real AppData path
             $cachePath = Join-Path $env:APPDATA "DistroNexus"
             if (-not (Test-Path $cachePath)) { New-Item -ItemType Directory -Path $cachePath -Force | Out-Null }
             $cacheFile = Join-Path $cachePath "instances.json"

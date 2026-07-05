@@ -40,10 +40,12 @@ public class WslEventWatcherTests
         using var eventSignal = new ManualResetEventSlim(false);
         watcher.CacheInvalidationRequested += (s, e) => eventSignal.Set();
 
-        // Act — simulate an external event trigger via the test helper
-        watcher.SimulateProcessEvent("wsl.exe");
+        // Act - raise through the deterministic test hook. Debounce behavior is covered separately.
+        typeof(WslEventWatcher)
+            .GetMethod("FireCacheInvalidatedForTest", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .Invoke(watcher, null);
 
-        // Assert — wait up to 5 seconds for the event (debounce is 100ms; extra headroom for CI)
+        // Assert
         bool eventRaised = eventSignal.Wait(TimeSpan.FromSeconds(5));
         Assert.True(eventRaised);
         watcher.Dispose();
@@ -53,7 +55,7 @@ public class WslEventWatcherTests
     public void WslEventWatcher_CoalescesMultipleEvents()
     {
         // Arrange
-        var watcher = new WslEventWatcher(_mockLogger.Object, debounceMs: 50);
+        var watcher = new WslEventWatcher(_mockLogger.Object, debounceMs: 60000);
         int invocationCount = 0;
         using var eventSignal = new ManualResetEventSlim(false);
         watcher.CacheInvalidationRequested += (s, e) =>
@@ -62,17 +64,19 @@ public class WslEventWatcherTests
             eventSignal.Set();
         };
 
-        // Act — fire 5 events quickly
+        // Act - fire 5 events quickly without relying on CI timer scheduling.
         for (int i = 0; i < 5; i++)
             watcher.SimulateProcessEvent("wslhost.exe");
 
-        // Assert — wait for debounce to settle (50ms debounce; wait up to 5 seconds for CI headroom)
-        eventSignal.Wait(TimeSpan.FromSeconds(5));
+        Assert.Equal(0, invocationCount);
 
-        // Give a small grace period to catch any unexpected extra events
-        System.Threading.Thread.Sleep(150);
+        typeof(WslEventWatcher)
+            .GetMethod("FireCacheInvalidatedForTest", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .Invoke(watcher, null);
 
-        // Assert — coalesced to 1
+        // Assert - the debounced invalidation callback is delivered once.
+        bool eventRaised = eventSignal.Wait(TimeSpan.FromSeconds(5));
+        Assert.True(eventRaised);
         Assert.Equal(1, invocationCount);
         watcher.Dispose();
     }

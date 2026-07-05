@@ -1,3 +1,4 @@
+using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using DistroNexus.Core.Services;
@@ -36,8 +37,9 @@ public class NetworkServiceTests
     [Fact]
     public async Task GetPortMappingsAsync_WithEmptyName_ThrowsArgumentException()
     {
-        await Assert.ThrowsAsync<ArgumentException>(
+        var ex = await Assert.ThrowsAsync<WslOperationFailedException>(
             () => _service.GetPortMappingsAsync(string.Empty));
+        Assert.Equal(DistroNexusErrorCode.InstanceNotFound, ex.Code);
     }
 
     [Fact]
@@ -113,8 +115,9 @@ public class NetworkServiceTests
                 UsedModule = true
             });
 
-        await Assert.ThrowsAsync<InvalidOperationException>(
+        var ex = await Assert.ThrowsAsync<WslOperationFailedException>(
             () => _service.GetPortMappingsAsync("Ubuntu-22.04"));
+        Assert.Equal(DistroNexusErrorCode.PowerShellModuleUnavailable, ex.Code);
     }
 
     // -----------------------------------------------------------------------

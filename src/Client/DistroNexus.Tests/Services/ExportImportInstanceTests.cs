@@ -101,8 +101,9 @@ public class ExportImportInstanceTests
     [Fact]
     public async Task ExportInstanceAsync_WithEmptyDestination_ThrowsArgumentException()
     {
-        await Assert.ThrowsAsync<ArgumentException>(
+        var ex = await Assert.ThrowsAsync<WslExportFailedException>(
             () => _service.ExportInstanceAsync("Ubuntu", string.Empty));
+        Assert.Equal(DistroNexusErrorCode.ExportFailed, ex.Code);
     }
 
     [Fact]

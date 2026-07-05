@@ -295,6 +295,9 @@
   <data name="ErrorTitle" xml:space="preserve">
     <value>Error</value>
   </data>
+  <data name="ErrorCopyCode" xml:space="preserve">
+    <value>Copy error code {0}</value>
+  </data>
   <data name="Cancel" xml:space="preserve">
     <value>Cancel</value>
   </data>
@@ -777,6 +780,9 @@ This may take a while depending on the instance size.</value>
   <data name="ButtonCancel" xml:space="preserve">
     <value>Cancel</value>
   </data>
+  <data name="ButtonOK" xml:space="preserve">
+    <value>OK</value>
+  </data>
   <data name="StatusSourceMovedUp" xml:space="preserve">
     <value>Source moved up</value>
   </data>
@@ -863,6 +869,18 @@ This may take a while depending on the instance size.</value>
   </data>
   <data name="ActionDeleteCache" xml:space="preserve">
     <value>Delete Cache</value>
+  </data>
+  <data name="ActionApply" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="ActionExport" xml:space="preserve">
+    <value>Export</value>
+  </data>
+  <data name="ActionImport" xml:space="preserve">
+    <value>Import</value>
+  </data>
+  <data name="BadgeOfficial" xml:space="preserve">
+    <value>Official</value>
   </data>
   <data name="CustomSourceUrlLabel" xml:space="preserve">
     <value>Custom Source URL:</value>
@@ -1320,5 +1338,459 @@ This will start the installation process.</value>
   </data>
   <data name="TooltipSparseModeEnabled" xml:space="preserve">
     <value>Sparse VHDX automatically shrinks the disk file when space is freed. Requires WSL v2 and Windows 11. Enabling or disabling requires the instance to restart.</value>
+  </data>
+  <data name="MoreMenu_Details" xml:space="preserve">
+    <value>Details...</value>
+  </data>
+  <data name="MoreMenu_CompactDisk" xml:space="preserve">
+    <value>Compact Disk</value>
+  </data>
+  <data name="MoreMenu_ExportInstance" xml:space="preserve">
+    <value>Export Instance...</value>
+  </data>
+  <data name="Toolbar_ImportInstance" xml:space="preserve">
+    <value>Import Instance</value>
+  </data>
+  <data name="Toolbar_SelectMode" xml:space="preserve">
+    <value>Select</value>
+  </data>
+  <data name="Toolbar_CompactSelected" xml:space="preserve">
+    <value>Compact Selected</value>
+  </data>
+  <data name="InstanceDetail_Title" xml:space="preserve">
+    <value>Instance Details</value>
+  </data>
+  <data name="InstanceDetail_Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Tab_Disk" xml:space="preserve">
+    <value>Disk</value>
+  </data>
+  <data name="Tab_Resources" xml:space="preserve">
+    <value>Resources</value>
+  </data>
+  <data name="Tab_Integrations" xml:space="preserve">
+    <value>Integrations</value>
+  </data>
+  <data name="Tab_Network" xml:space="preserve">
+    <value>Network</value>
+  </data>
+  <data name="Tab_Backup" xml:space="preserve">
+    <value>Backup</value>
+  </data>
+  <data name="ErrorGenericOperation" xml:space="preserve">
+    <value>Operation failed: {0}</value>
+  </data>  <data name="DiskTab_VhdxPath" xml:space="preserve">
+    <value>VHDX Path:</value>
+  </data>
+  <data name="DiskTab_CurrentSize" xml:space="preserve">
+    <value>Current Size:</value>
+  </data>
+  <data name="DiskTab_CompactDisk" xml:space="preserve">
+    <value>Compact Disk...</value>
+  </data>
+  <data name="DiskTab_Estimating" xml:space="preserve">
+    <value>Estimating reclaimable space...</value>
+  </data>
+  <data name="DiskTab_CompactConfirm" xml:space="preserve">
+    <value>This will stop the instance, trim unused blocks, and compact the VHDX file. The instance will be restarted afterward. Continue?</value>
+  </data>
+  <data name="DiskTab_CompactConfirmEstimate" xml:space="preserve">
+    <value>Estimated reclaimable: {0}. This will stop the instance, trim blocks, and compact the VHDX. The instance will restart. Continue?</value>
+  </data>
+  <data name="DiskTab_PhaseStop" xml:space="preserve">
+    <value>Stopping instance...</value>
+  </data>
+  <data name="DiskTab_PhaseTrim" xml:space="preserve">
+    <value>Trimming blocks...</value>
+  </data>
+  <data name="DiskTab_PhaseCompact" xml:space="preserve">
+    <value>Compacting VHDX...</value>
+  </data>
+  <data name="DiskTab_PhaseRestart" xml:space="preserve">
+    <value>Restarting instance...</value>
+  </data>
+  <data name="DiskTab_ResultSaved" xml:space="preserve">
+    <value>Compaction complete</value>
+  </data>
+  <data name="DiskTab_WslV1Message" xml:space="preserve">
+    <value>Disk compaction requires WSL v2.</value>
+  </data>
+  <data name="Export_StopPromptTitle" xml:space="preserve">
+    <value>Stop Instance</value>
+  </data>
+  <data name="Export_StopPrompt" xml:space="preserve">
+    <value>The instance is currently running. It must be stopped before exporting. Stop it now?</value>
+  </data>
+  <data name="Export_SaveDialogTitle" xml:space="preserve">
+    <value>Export Instance</value>
+  </data>
+  <data name="Export_CompleteTitle" xml:space="preserve">
+    <value>Export Complete</value>
+  </data>
+  <data name="Export_Complete" xml:space="preserve">
+    <value>Instance exported to {0} ({1}).</value>
+  </data>
+  <data name="Export_ProgressTitle" xml:space="preserve">
+    <value>Export Instance</value>
+  </data>
+  <data name="Export_ProgressMessage" xml:space="preserve">
+    <value>Exporting '{0}' to TAR archive...</value>
+  </data>
+  <data name="Export_ProgressStatus" xml:space="preserve">
+    <value>Elapsed {0} · {1} written</value>
+  </data>
+  <data name="Progress_Cancelling" xml:space="preserve">
+    <value>Cancelling...</value>
+  </data>
+  <data name="Import_Title" xml:space="preserve">
+    <value>Import Instance</value>
+  </data>
+  <data name="Import_NameLabel" xml:space="preserve">
+    <value>Instance Name</value>
+  </data>
+  <data name="Import_PathLabel" xml:space="preserve">
+    <value>Install Path</value>
+  </data>
+  <data name="Import_SourceLabel" xml:space="preserve">
+    <value>Source TAR File</value>
+  </data>
+  <data name="Import_NameRequired" xml:space="preserve">
+    <value>Instance name is required.</value>
+  </data>
+  <data name="Import_NameExists" xml:space="preserve">
+    <value>An instance named '{0}' already exists.</value>
+  </data>
+  <data name="Import_PathRequired" xml:space="preserve">
+    <value>Install path is required.</value>
+  </data>
+  <data name="Import_SourceRequired" xml:space="preserve">
+    <value>Source TAR file is required.</value>
+  </data>
+  <data name="Import_SourceNotFound" xml:space="preserve">
+    <value>Source file not found.</value>
+  </data>
+  <data name="Import_PathBrowseTitle" xml:space="preserve">
+    <value>Select Install Path</value>
+  </data>
+  <data name="Import_SourceBrowseTitle" xml:space="preserve">
+    <value>Select Source TAR File</value>
+  </data>
+  <data name="Import_CompleteTitle" xml:space="preserve">
+    <value>Import Complete</value>
+  </data>
+  <data name="Import_Complete" xml:space="preserve">
+    <value>Instance '{0}' imported successfully.</value>
+  </data>
+  <data name="ResourcesTab_SparseMode" xml:space="preserve">
+    <value>Sparse Mode</value>
+  </data>
+  <data name="ResourcesTab_SparseModeTooltip" xml:space="preserve">
+    <value>Sparse VHDX automatically shrinks the disk file when space is freed. Requires WSL v2 and Windows 11.</value>
+  </data>
+  <data name="ResourcesTab_SparseModeEnabled" xml:space="preserve">
+    <value>Enabled</value>
+  </data>
+  <data name="ResourcesTab_SparseModeDisabled" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
+  <data name="ResourcesTab_SparseModeUnknown" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
+  <data name="ResourcesTab_GlobalLimits" xml:space="preserve">
+    <value>Global Resource Limits</value>
+  </data>
+  <data name="ResourcesTab_EditInWslConfig" xml:space="preserve">
+    <value>Edit in WSL Config...</value>
+  </data>
+  <data name="ResourcesTab_WslV1Message" xml:space="preserve">
+    <value>Resource configuration requires WSL v2.</value>
+  </data>
+  <data name="BulkCompact_Counter" xml:space="preserve">
+    <value>Compacting {0} of {1}: {2}</value>
+  </data>
+  <data name="BulkCompact_ConfirmTitle" xml:space="preserve">
+    <value>Confirm Disk Compaction</value>
+  </data>
+  <data name="BulkCompact_ConfirmMessage" xml:space="preserve">
+    <value>Compact {0} selected WSL v2 instances sequentially? Each instance may be stopped temporarily.</value>
+  </data>
+  <data name="TemplatesTitle" xml:space="preserve">
+    <value>Templates</value>
+  </data>
+  <data name="RetryTooltip" xml:space="preserve">
+    <value>Retry</value>
+  </data>
+  <data name="NoDownloadTasksTitle" xml:space="preserve">
+    <value>No download tasks</value>
+  </data>
+  <data name="NoDownloadTasksSubtitle" xml:space="preserve">
+    <value>Downloads will appear here when started</value>
+  </data>
+  <data name="WslConfig_SectionTitle" xml:space="preserve">
+    <value>WSL Global Configuration</value>
+  </data>
+  <data name="WslConfig_HostInfo" xml:space="preserve">
+    <value>Host: {0} MB RAM, {1} CPUs</value>
+  </data>
+  <data name="WslConfig_Memory" xml:space="preserve">
+    <value>Memory Limit (e.g. 4GB, 512MB)</value>
+  </data>
+  <data name="WslConfig_Processors" xml:space="preserve">
+    <value>CPU Count</value>
+  </data>
+  <data name="WslConfig_Swap" xml:space="preserve">
+    <value>Swap Size (0 = disabled)</value>
+  </data>
+  <data name="WslConfig_SwapDisabled" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
+  <data name="WslConfig_LocalhostForwarding" xml:space="preserve">
+    <value>Localhost Forwarding</value>
+  </data>
+  <data name="WslConfig_NetworkingMode" xml:space="preserve">
+    <value>Networking Mode</value>
+  </data>
+  <data name="WslConfig_SaveAndRestart" xml:space="preserve">
+    <value>Save &amp; Restart WSL</value>
+  </data>
+  <data name="WslConfig_OpenRawFile" xml:space="preserve">
+    <value>Open Raw File</value>
+  </data>
+  <data name="WslConfig_RestartConfirm" xml:space="preserve">
+    <value>Run wsl --shutdown now to apply the changes? All running WSL instances will be stopped.</value>
+  </data>
+  <data name="WslConfig_MemoryWarning" xml:space="preserve">
+    <value>Memory limit exceeds 80% of host RAM. This may cause system instability.</value>
+  </data>
+  <data name="WslConfig_InvalidMemory" xml:space="preserve">
+    <value>Invalid memory value. Use a number with GB or MB suffix (e.g. 4GB).</value>
+  </data>
+  <data name="WslConfig_InvalidProcessors" xml:space="preserve">
+    <value>Processors must be a number between 1 and the host CPU count.</value>
+  </data>
+  <data name="WslConfig_InvalidSwap" xml:space="preserve">
+    <value>Invalid swap value. Use 0 to disable, or a number with GB/MB suffix.</value>
+  </data>
+  <data name="WslConfig_SaveComplete" xml:space="preserve">
+    <value>Configuration saved successfully.</value>
+  </data>
+  <data name="ManageTags_SectionTitle" xml:space="preserve">
+    <value>Manage Tags</value>
+  </data>
+  <data name="ManageTags_TagName" xml:space="preserve">
+    <value>Tag Name</value>
+  </data>
+  <data name="ManageTags_UsedBy" xml:space="preserve">
+    <value>Used by:</value>
+  </data>
+  <data name="ManageTags_Rename" xml:space="preserve">
+    <value>Rename</value>
+  </data>
+  <data name="ManageTags_Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="ManageTags_BulkDelete" xml:space="preserve">
+    <value>Delete Selected</value>
+  </data>
+  <data name="ManageTags_DeleteConfirmTitle" xml:space="preserve">
+    <value>Delete Tag</value>
+  </data>
+  <data name="ManageTags_DeleteConfirm" xml:space="preserve">
+    <value>Delete tag "{0}" from all instances?</value>
+  </data>
+  <data name="ManageTags_BulkDeleteTitle" xml:space="preserve">
+    <value>Delete Selected Tags</value>
+  </data>
+  <data name="ManageTags_BulkDeleteConfirm" xml:space="preserve">
+    <value>Delete {0} selected tag(s) from all instances?</value>
+  </data>
+  <data name="ManageTags_RenamePrompt" xml:space="preserve">
+    <value>Enter new name for tag:</value>
+  </data>
+  <data name="ManageTags_NoTags" xml:space="preserve">
+    <value>No tags defined yet.</value>
+  </data>
+  <data name="IntegrationsTab_DockerTitle" xml:space="preserve">
+    <value>Docker Desktop Integration</value>
+  </data>
+  <data name="IntegrationsTab_DockerEnabled" xml:space="preserve">
+    <value>Enabled</value>
+  </data>
+  <data name="IntegrationsTab_DockerDisabled" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
+  <data name="IntegrationsTab_DockerUnavailable" xml:space="preserve">
+    <value>Unavailable</value>
+  </data>
+  <data name="IntegrationsTab_DockerInstallLink" xml:space="preserve">
+    <value>Docker Desktop is not installed. Click to install.</value>
+  </data>
+  <data name="IntegrationsTab_RestartBanner" xml:space="preserve">
+    <value>Restart Docker Desktop for the change to take effect.</value>
+  </data>
+  <data name="IntegrationsTab_Dismiss" xml:space="preserve">
+    <value>Dismiss</value>
+  </data>
+  <data name="IntegrationsTab_WslV1Message" xml:space="preserve">
+    <value>Docker integration requires WSL v2.</value>
+  </data>
+  <data name="NetworkTab_InstanceIP" xml:space="preserve">
+    <value>Instance IP: </value>
+  </data>
+  <data name="NetworkTab_Protocol" xml:space="preserve">
+    <value>Protocol</value>
+  </data>
+  <data name="NetworkTab_LocalAddress" xml:space="preserve">
+    <value>Local Address</value>
+  </data>
+  <data name="NetworkTab_Port" xml:space="preserve">
+    <value>Port</value>
+  </data>
+  <data name="NetworkTab_Process" xml:space="preserve">
+    <value>Process</value>
+  </data>
+  <data name="NetworkTab_WindowsProxy" xml:space="preserve">
+    <value>Windows Proxy</value>
+  </data>
+  <data name="NetworkTab_Copy" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="NetworkTab_Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="NetworkTab_StoppedPlaceholder" xml:space="preserve">
+    <value>Start the instance to view network information.</value>
+  </data>
+  <data name="BackupTab_ScheduleTitle" xml:space="preserve">
+    <value>Backup Schedule</value>
+  </data>
+  <data name="BackupTab_Frequency" xml:space="preserve">
+    <value>Frequency</value>
+  </data>
+  <data name="BackupTab_FrequencyDaily" xml:space="preserve">
+    <value>Daily</value>
+  </data>
+  <data name="BackupTab_FrequencyWeekly" xml:space="preserve">
+    <value>Weekly</value>
+  </data>
+  <data name="BackupTab_FrequencyMonthly" xml:space="preserve">
+    <value>Monthly</value>
+  </data>
+  <data name="BackupTab_DayOfWeek" xml:space="preserve">
+    <value>Day of Week</value>
+  </data>
+  <data name="BackupTab_DayOfMonth" xml:space="preserve">
+    <value>Day of Month</value>
+  </data>
+  <data name="BackupTab_TimeOfDay" xml:space="preserve">
+    <value>Time</value>
+  </data>
+  <data name="BackupTab_Destination" xml:space="preserve">
+    <value>Destination Folder</value>
+  </data>
+  <data name="BackupTab_Browse" xml:space="preserve">
+    <value>Browse...</value>
+  </data>
+  <data name="BackupTab_RetentionCount" xml:space="preserve">
+    <value>Keep Last (files)</value>
+  </data>
+  <data name="BackupTab_SaveSchedule" xml:space="preserve">
+    <value>Save Schedule</value>
+  </data>
+  <data name="BackupTab_RemoveSchedule" xml:space="preserve">
+    <value>Remove Schedule</value>
+  </data>
+  <data name="BackupTab_BackupNow" xml:space="preserve">
+    <value>Backup Now</value>
+  </data>
+  <data name="BackupTab_RemoveConfirm" xml:space="preserve">
+    <value>Are you sure you want to remove the backup schedule for '{0}'?</value>
+  </data>
+  <data name="BackupTab_BackingUp" xml:space="preserve">
+    <value>Backup in progress...</value>
+  </data>
+  <data name="BackupTab_HistoryTitle" xml:space="preserve">
+    <value>Backup History</value>
+  </data>
+  <data name="BackupTab_Timestamp" xml:space="preserve">
+    <value>Date / Time</value>
+  </data>
+  <data name="BackupTab_FileName" xml:space="preserve">
+    <value>File Name</value>
+  </data>
+  <data name="BackupTab_Size" xml:space="preserve">
+    <value>Size</value>
+  </data>
+  <data name="BackupTab_Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="BackupTab_StatusSuccess" xml:space="preserve">
+    <value>Success</value>
+  </data>
+  <data name="BackupTab_StatusFailed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="BackupTab_NoDestination" xml:space="preserve">
+    <value>Please specify a destination folder.</value>
+  </data>
+  <data name="BackupTab_SavedSchedule" xml:space="preserve">
+    <value>Backup schedule saved successfully.</value>
+  </data>
+  <data name="BackupTab_ScheduleRemoved" xml:space="preserve">
+    <value>Backup schedule removed.</value>
+  </data>
+  <data name="BackupTab_BackupComplete" xml:space="preserve">
+    <value>Backup completed successfully.</value>
+  </data>
+  <data name="BackupTab_NoHistory" xml:space="preserve">
+    <value>No backup files found in the destination folder.</value>
+  </data>
+  <data name="BackupTab_SelectDestinationTitle" xml:space="preserve">
+    <value>Select Backup Destination Folder</value>
+  </data>
+  <data name="Remove_DeleteTask" xml:space="preserve">
+    <value>Also remove the associated Task Scheduler task for this backup schedule?</value>
+  </data>
+  <data name="Remove_DeleteFiles" xml:space="preserve">
+    <value>Also delete backup files in '{0}'?</value>
+  </data>
+  <data name="Tag_AddTag" xml:space="preserve">
+    <value>+ Tag</value>
+  </data>
+  <data name="Tag_RemoveTitle" xml:space="preserve">
+    <value>Remove Tag</value>
+  </data>
+  <data name="Tag_RemoveConfirm" xml:space="preserve">
+    <value>Remove tag '{0}' from this instance?</value>
+  </data>
+  <data name="Tag_EditTags" xml:space="preserve">
+    <value>Edit Tags</value>
+  </data>
+  <data name="TagFilter_Title" xml:space="preserve">
+    <value>Filter:</value>
+  </data>
+  <data name="TagFilter_ClearAll" xml:space="preserve">
+    <value>Clear All</value>
+  </data>
+  <data name="TagFilter_GroupByTag" xml:space="preserve">
+    <value>Group by Tag</value>
+  </data>
+  <data name="TagFilter_NoTags" xml:space="preserve">
+    <value>No tags assigned yet.</value>
+  </data>
+  <data name="TitleBackupFailure" xml:space="preserve">
+    <value>Backup Failure</value>
+  </data>
+  <data name="ErrorBackupFailedForInstance" xml:space="preserve">
+    <value>Backup failed for '{0}': {1}</value>
+  </data>
+  <data name="TitleInvalidModulePath" xml:space="preserve">
+    <value>Invalid Module Path</value>
+  </data>
+  <data name="ErrorInvalidModulePath" xml:space="preserve">
+    <value>The selected directory does not contain 'DistroNexus.psd1'.
+
+Please select the directory that contains the PowerShell module manifest file.</value>
   </data>
 </root>
