@@ -1,6 +1,7 @@
 using System.Text.Json;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
+using DistroNexus.Core.Exceptions;
 using Microsoft.Extensions.Logging;
 
 namespace DistroNexus.Core.Services;
@@ -13,8 +14,10 @@ public class SettingsService : ISettingsService
     private readonly ILogger<SettingsService> _logger;
     private readonly string _settingsPath;
     private GlobalSettings? _cachedSettings;
+    private long _revision;
+    private readonly VersionedJsonStore<GlobalSettings> _store;
 
-    public SettingsService(ILogger<SettingsService> logger)
+    public SettingsService(ILogger<SettingsService> logger, string? settingsPath = null)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
@@ -27,7 +30,9 @@ public class SettingsService : ISettingsService
             Directory.CreateDirectory(appFolder);
         }
 
-        _settingsPath = Path.Combine(appFolder, "settings.json");
+        _settingsPath = settingsPath ?? Path.Combine(appFolder, "settings.json");
+        _store = new VersionedJsonStore<GlobalSettings>(_settingsPath, legacyReader: node =>
+            node.Deserialize<GlobalSettings>() ?? new GlobalSettings());
         _logger.LogInformation("Settings path: {SettingsPath}", _settingsPath);
     }
 
@@ -57,19 +62,20 @@ public class SettingsService : ISettingsService
             }
 
             // Read and parse settings file
-            var json = File.ReadAllText(_settingsPath);
-
-            if (string.IsNullOrWhiteSpace(json))
-            {
-                _logger.LogWarning("Settings file is empty, using defaults");
-                _cachedSettings = new GlobalSettings();
-                return _cachedSettings;
-            }
-
-            _cachedSettings = JsonSerializer.Deserialize<GlobalSettings>(json) ?? new GlobalSettings();
+            var result = _store.ReadAsync().GetAwaiter().GetResult();
+            if (!result.Succeeded)
+                throw new WslOperationFailedException(result.Message ?? "Settings read failed.",
+                    result.Error == StoreErrorKind.NewerSchema ? DistroNexusErrorCode.StoreSchemaUnsupported : DistroNexusErrorCode.StoreDocumentInvalid,
+                    operation: "LoadSettings");
+            _revision = result.Value!.Revision;
+            _cachedSettings = result.Value.Value;
             _logger.LogInformation("Settings loaded successfully");
 
             return _cachedSettings;
+        }
+        catch (WslOperationFailedException)
+        {
+            throw;
         }
         catch (JsonException ex)
         {
@@ -107,13 +113,12 @@ public class SettingsService : ISettingsService
         {
             _logger.LogInformation("Saving settings to {SettingsPath}", _settingsPath);
 
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = true
-            };
-
-            var json = JsonSerializer.Serialize(settings, options);
-            File.WriteAllText(_settingsPath, json);
+            var result = _store.WriteAsync(settings, _revision).GetAwaiter().GetResult();
+            if (!result.Succeeded)
+                throw new WslOperationFailedException(result.Message ?? "Settings write failed.",
+                    result.Error == StoreErrorKind.RevisionConflict ? DistroNexusErrorCode.StoreRevisionConflict : DistroNexusErrorCode.StoreWriteFailed,
+                    operation: "SaveSettings");
+            _revision = result.Value!.Revision;
 
             _cachedSettings = settings;
             _logger.LogInformation("Settings saved successfully");

@@ -14,6 +14,7 @@ public class BackupService : IBackupService
     private readonly IPowerShellService _powerShellService;
     private readonly ILogger<BackupService> _logger;
     private readonly string _appDataDir;
+    private readonly VersionedJsonStore<List<BackupSchedule>> _scheduleStore;
 
     private const int VeryLongOperationTimeoutSeconds = 300;
 
@@ -34,6 +35,8 @@ public class BackupService : IBackupService
             ?? Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 "DistroNexus");
+        _scheduleStore = new VersionedJsonStore<List<BackupSchedule>>(SchedulesFilePath, legacyReader: node =>
+            node.Deserialize<List<BackupSchedule>>(_jsonOptions) ?? []);
     }
 
     private string SchedulesFilePath => Path.Combine(_appDataDir, "backup-schedules.json");
@@ -43,14 +46,19 @@ public class BackupService : IBackupService
     /// <inheritdoc/>
     public async Task<List<BackupSchedule>> GetSchedulesAsync(CancellationToken cancellationToken = default)
     {
-        if (!File.Exists(SchedulesFilePath))
-            return [];
-
         try
         {
-            var json = await File.ReadAllTextAsync(SchedulesFilePath, cancellationToken);
-            var list = JsonSerializer.Deserialize<List<BackupSchedule>>(json, _jsonOptions);
-            return list ?? [];
+            var result = await _scheduleStore.ReadAsync(cancellationToken);
+            if (result.Error == StoreErrorKind.NotFound) return [];
+            if (!result.Succeeded)
+                throw new WslOperationFailedException(result.Message ?? "Backup schedules read failed.",
+                    result.Error == StoreErrorKind.NewerSchema ? DistroNexusErrorCode.StoreSchemaUnsupported : DistroNexusErrorCode.StoreDocumentInvalid,
+                    operation: "GetBackupSchedules");
+            return result.Value!.Value;
+        }
+        catch (WslOperationFailedException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -64,13 +72,14 @@ public class BackupService : IBackupService
     {
         ArgumentNullException.ThrowIfNull(schedule);
 
-        var schedules = await GetSchedulesAsync(cancellationToken);
+        var document = await _scheduleStore.ReadAsync(cancellationToken);
+        var schedules = document.Error == StoreErrorKind.NotFound ? [] : document.Value?.Value ?? [];
 
         // Remove existing entry for same name (upsert)
         schedules.RemoveAll(s => string.Equals(s.Name, schedule.Name, StringComparison.OrdinalIgnoreCase));
         schedules.Add(schedule);
 
-        await WriteSchedulesAsync(schedules, cancellationToken);
+        await WriteSchedulesAsync(schedules, document.Value?.Revision ?? 0, cancellationToken);
         _logger.LogInformation("Saved backup schedule for instance '{Name}'", schedule.Name);
     }
 
@@ -84,7 +93,8 @@ public class BackupService : IBackupService
                 DistroNexusErrorCode.InstanceNotFound,
                 operation: "RemoveBackupSchedule");
 
-        var schedules = await GetSchedulesAsync(cancellationToken);
+        var document = await _scheduleStore.ReadAsync(cancellationToken);
+        var schedules = document.Error == StoreErrorKind.NotFound ? [] : document.Value?.Value ?? [];
         var existing  = schedules.FirstOrDefault(s =>
             string.Equals(s.Name, instanceName, StringComparison.OrdinalIgnoreCase));
 
@@ -96,7 +106,7 @@ public class BackupService : IBackupService
                 instanceName: instanceName);
 
         schedules.Remove(existing);
-        await WriteSchedulesAsync(schedules, cancellationToken);
+        await WriteSchedulesAsync(schedules, document.Value?.Revision ?? 0, cancellationToken);
         _logger.LogInformation("Removed backup schedule for instance '{Name}'", instanceName);
     }
 
@@ -140,10 +150,13 @@ public class BackupService : IBackupService
 
     // ── Private helpers ──────────────────────────────────────────────────────
 
-    private async Task WriteSchedulesAsync(List<BackupSchedule> schedules, CancellationToken ct)
+    private async Task WriteSchedulesAsync(List<BackupSchedule> schedules, long revision, CancellationToken ct)
     {
         Directory.CreateDirectory(_appDataDir);
-        var json = JsonSerializer.Serialize(schedules, _jsonOptions);
-        await File.WriteAllTextAsync(SchedulesFilePath, json, ct);
+        var result = await _scheduleStore.WriteAsync(schedules, revision, ct);
+        if (!result.Succeeded)
+            throw new WslOperationFailedException(result.Message ?? "Backup schedule write failed.",
+                result.Error == StoreErrorKind.RevisionConflict ? DistroNexusErrorCode.StoreRevisionConflict : DistroNexusErrorCode.StoreWriteFailed,
+                operation: "SaveBackupSchedule");
     }
 }

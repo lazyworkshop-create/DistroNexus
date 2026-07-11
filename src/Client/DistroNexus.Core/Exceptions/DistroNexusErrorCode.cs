@@ -57,5 +57,12 @@ public enum DistroNexusErrorCode
     WslVersionTooLow            = 9002,
     OperationTimeout            = 9003,
     PowerShellModuleUnavailable = 9004,
+    ProcessStartFailed           = 9101,
+    ProcessOutputLimitExceeded   = 9102,
+    StoreRevisionConflict        = 9201,
+    StoreSchemaUnsupported       = 9202,
+    StoreDocumentInvalid         = 9203,
+    StoreWriteFailed             = 9204,
+    ValidationFailed             = 9301,
     UnknownError                = 9999,
 }
