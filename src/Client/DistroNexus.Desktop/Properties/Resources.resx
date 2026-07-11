@@ -1793,4 +1793,59 @@ This will start the installation process.</value>
 
 Please select the directory that contains the PowerShell module manifest file.</value>
   </data>
+  <data name="Capability.Status.Supported" xml:space="preserve"><value>Available</value></data>
+  <data name="Capability.Status.Unsupported" xml:space="preserve"><value>Not supported</value></data>
+  <data name="Capability.Status.Unavailable" xml:space="preserve"><value>Prerequisite unavailable</value></data>
+  <data name="Capability.Status.RequiresUpdate" xml:space="preserve"><value>Update required</value></data>
+  <data name="Capability.Status.RequiresElevation" xml:space="preserve"><value>Administrator permission required</value></data>
+  <data name="Capability.Status.Unknown" xml:space="preserve"><value>Availability unknown</value></data>
+  <data name="Capability.State.Available" xml:space="preserve"><value>Available</value></data>
+  <data name="Capability.Action.None" xml:space="preserve"><value>No action required.</value></data>
+  <data name="Capability.Action.RunElevated" xml:space="preserve"><value>Retry the action with administrator approval.</value></data>
+  <data name="Capability.Action.UpdateWsl" xml:space="preserve"><value>Review and install an approved WSL update.</value></data>
+  <data name="Capability.Action.InstallPrerequisite" xml:space="preserve"><value>Install the named prerequisite, then refresh. DistroNexus will not install it automatically.</value></data>
+  <data name="Capability.Action.ReviewRequirements" xml:space="preserve"><value>Review the feature requirements for this host or distribution.</value></data>
+  <data name="Capability.Action.RetryProbe" xml:space="preserve"><value>Check the diagnostic details and retry the capability probe.</value></data>
+  <data name="Capability.Reason.Supported" xml:space="preserve"><value>The required capability is available.</value></data>
+  <data name="Capability.Reason.Unsupported" xml:space="preserve"><value>This host or distribution does not support the required capability.</value></data>
+  <data name="Capability.Reason.Unavailable" xml:space="preserve"><value>A required component or runtime is not available.</value></data>
+  <data name="Capability.Reason.RequiresUpdate" xml:space="preserve"><value>The detected component is older than the required version.</value></data>
+  <data name="Capability.Reason.RequiresElevation" xml:space="preserve"><value>The capability check or action requires administrator approval.</value></data>
+  <data name="Capability.Reason.Unknown" xml:space="preserve"><value>The capability could not be determined safely from the probe result.</value></data>
+  <data name="Capability.Dependency.NotInstalled" xml:space="preserve"><value>The optional dependency is not installed.</value></data>
+  <data name="Capability.Dependency.ProbeUnavailable" xml:space="preserve"><value>Dependency discovery is unavailable.</value></data>
+  <data name="Capability.Dependency.RequiresElevation" xml:space="preserve"><value>Dependency discovery requires administrator permission.</value></data>
+  <data name="Capability.Dependency.VersionDetected" xml:space="preserve"><value>The product and version were detected.</value></data>
+  <data name="Capability.Dependency.VersionMalformed" xml:space="preserve"><value>The product returned an unrecognized version.</value></data>
+  <data name="Capability.Dependency.VersionProbeFailed" xml:space="preserve"><value>The product version probe failed.</value></data>
+  <data name="Capability.Feature.CliSupported" xml:space="preserve"><value>The installed WSL CLI advertises this feature.</value></data>
+  <data name="Capability.Feature.MalformedHelp" xml:space="preserve"><value>WSL returned unrecognized help output.</value></data>
+  <data name="Capability.Feature.NotAdvertisedByCli" xml:space="preserve"><value>The installed WSL CLI does not advertise this feature.</value></data>
+  <data name="Capability.Feature.WslUnavailable" xml:space="preserve"><value>WSL is unavailable or requires attention.</value></data>
+  <data name="Capability.Gpu.RequiresRuntimeProbe" xml:space="preserve"><value>GPU support requires runtime validation.</value></data>
+  <data name="Capability.Instance.DistributionAbsent" xml:space="preserve"><value>The selected distribution was not found.</value></data>
+  <data name="Capability.Instance.IdentityDetected" xml:space="preserve"><value>The distribution identity was detected.</value></data>
+  <data name="Capability.Instance.SystemdDisabled" xml:space="preserve"><value>This distribution was not booted with systemd.</value></data>
+  <data name="Capability.Instance.SystemdMalformed" xml:space="preserve"><value>systemd returned an unrecognized empty state.</value></data>
+  <data name="Capability.Instance.SystemdNotRunning" xml:space="preserve"><value>systemd is available but is not currently running.</value></data>
+  <data name="Capability.Instance.SystemdPermissionDenied" xml:space="preserve"><value>The systemd probe requires additional permission.</value></data>
+  <data name="Capability.Instance.SystemdProbeFailed" xml:space="preserve"><value>The systemd state could not be determined safely.</value></data>
+  <data name="Capability.Instance.SystemdRunning" xml:space="preserve"><value>systemd is running.</value></data>
+  <data name="Capability.Instance.SystemdUnavailable" xml:space="preserve"><value>systemctl is unavailable in this distribution.</value></data>
+  <data name="Capability.Instance.VersionDetected" xml:space="preserve"><value>The instance WSL version was detected.</value></data>
+  <data name="Capability.Instance.VersionMalformed" xml:space="preserve"><value>The instance WSL version could not be parsed.</value></data>
+  <data name="Capability.MirroredNetworking.RequiresVersionMatrix" xml:space="preserve"><value>Mirrored networking requires supported-version validation.</value></data>
+  <data name="Capability.Probe.Cancelled" xml:space="preserve"><value>The capability probe was cancelled.</value></data>
+  <data name="Capability.Probe.ExecutableMissing" xml:space="preserve"><value>The required executable is unavailable.</value></data>
+  <data name="Capability.Probe.Failed" xml:space="preserve"><value>The capability probe failed.</value></data>
+  <data name="Capability.Probe.RequiresElevation" xml:space="preserve"><value>The capability probe requires administrator permission.</value></data>
+  <data name="Capability.Probe.Supported" xml:space="preserve"><value>The capability probe succeeded.</value></data>
+  <data name="Capability.Probe.TimedOut" xml:space="preserve"><value>The capability probe timed out.</value></data>
+  <data name="Capability.Probe.UnexpectedFailure" xml:space="preserve"><value>The capability probe encountered an unexpected failure.</value></data>
+  <data name="Capability.Systemd.RequiresInstanceProbe" xml:space="preserve"><value>systemd support must be checked per distribution.</value></data>
+  <data name="Capability.TaskScheduler.Available" xml:space="preserve"><value>Windows Task Scheduler is available.</value></data>
+  <data name="Capability.UsbIpd.VersionRequiresValidation" xml:space="preserve"><value>The usbipd version requires compatibility validation.</value></data>
+  <data name="Capability.Wsl.UpdateAvailable" xml:space="preserve"><value>The WSL CLI reports that an update is available.</value></data>
+  <data name="Capability.Wslg.NotReported" xml:space="preserve"><value>The WSL CLI did not report a WSLg version.</value></data>
+  <data name="Capability.Wslg.Supported" xml:space="preserve"><value>The WSL CLI reported a WSLg version.</value></data>
 </root>

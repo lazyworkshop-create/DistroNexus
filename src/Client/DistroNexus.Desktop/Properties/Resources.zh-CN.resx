@@ -1787,4 +1787,59 @@
 
 请选择包含 PowerShell 模块清单文件的目录。</value>
   </data>
+  <data name="Capability.Status.Supported" xml:space="preserve"><value>可用</value></data>
+  <data name="Capability.Status.Unsupported" xml:space="preserve"><value>不受支持</value></data>
+  <data name="Capability.Status.Unavailable" xml:space="preserve"><value>缺少前置条件</value></data>
+  <data name="Capability.Status.RequiresUpdate" xml:space="preserve"><value>需要更新</value></data>
+  <data name="Capability.Status.RequiresElevation" xml:space="preserve"><value>需要管理员权限</value></data>
+  <data name="Capability.Status.Unknown" xml:space="preserve"><value>可用性未知</value></data>
+  <data name="Capability.State.Available" xml:space="preserve"><value>可用</value></data>
+  <data name="Capability.Action.None" xml:space="preserve"><value>无需操作。</value></data>
+  <data name="Capability.Action.RunElevated" xml:space="preserve"><value>获得管理员批准后重试此操作。</value></data>
+  <data name="Capability.Action.UpdateWsl" xml:space="preserve"><value>检查并安装已批准的 WSL 更新。</value></data>
+  <data name="Capability.Action.InstallPrerequisite" xml:space="preserve"><value>安装所列前置软件后刷新；DistroNexus 不会自动安装。</value></data>
+  <data name="Capability.Action.ReviewRequirements" xml:space="preserve"><value>检查此主机或发行版的功能要求。</value></data>
+  <data name="Capability.Action.RetryProbe" xml:space="preserve"><value>检查诊断详情并重试能力探测。</value></data>
+  <data name="Capability.Reason.Supported" xml:space="preserve"><value>所需能力可用。</value></data>
+  <data name="Capability.Reason.Unsupported" xml:space="preserve"><value>此主机或发行版不支持所需能力。</value></data>
+  <data name="Capability.Reason.Unavailable" xml:space="preserve"><value>所需组件或运行时不可用。</value></data>
+  <data name="Capability.Reason.RequiresUpdate" xml:space="preserve"><value>检测到的组件版本低于所需版本。</value></data>
+  <data name="Capability.Reason.RequiresElevation" xml:space="preserve"><value>能力检查或操作需要管理员批准。</value></data>
+  <data name="Capability.Reason.Unknown" xml:space="preserve"><value>无法根据探测结果安全确定此能力。</value></data>
+  <data name="Capability.Dependency.NotInstalled" xml:space="preserve"><value>可选依赖未安装。</value></data>
+  <data name="Capability.Dependency.ProbeUnavailable" xml:space="preserve"><value>无法执行依赖探测。</value></data>
+  <data name="Capability.Dependency.RequiresElevation" xml:space="preserve"><value>依赖探测需要管理员权限。</value></data>
+  <data name="Capability.Dependency.VersionDetected" xml:space="preserve"><value>已检测到产品及其版本。</value></data>
+  <data name="Capability.Dependency.VersionMalformed" xml:space="preserve"><value>产品返回了无法识别的版本。</value></data>
+  <data name="Capability.Dependency.VersionProbeFailed" xml:space="preserve"><value>产品版本探测失败。</value></data>
+  <data name="Capability.Feature.CliSupported" xml:space="preserve"><value>已安装的 WSL CLI 声明支持此功能。</value></data>
+  <data name="Capability.Feature.MalformedHelp" xml:space="preserve"><value>WSL 返回了无法识别的帮助输出。</value></data>
+  <data name="Capability.Feature.NotAdvertisedByCli" xml:space="preserve"><value>已安装的 WSL CLI 未声明此功能。</value></data>
+  <data name="Capability.Feature.WslUnavailable" xml:space="preserve"><value>WSL 不可用或需要处理。</value></data>
+  <data name="Capability.Gpu.RequiresRuntimeProbe" xml:space="preserve"><value>GPU 支持需要运行时验证。</value></data>
+  <data name="Capability.Instance.DistributionAbsent" xml:space="preserve"><value>未找到所选发行版。</value></data>
+  <data name="Capability.Instance.IdentityDetected" xml:space="preserve"><value>已检测到发行版标识。</value></data>
+  <data name="Capability.Instance.SystemdDisabled" xml:space="preserve"><value>此发行版未使用 systemd 启动。</value></data>
+  <data name="Capability.Instance.SystemdMalformed" xml:space="preserve"><value>systemd 返回了无法识别的空状态。</value></data>
+  <data name="Capability.Instance.SystemdNotRunning" xml:space="preserve"><value>systemd 可用，但当前未运行。</value></data>
+  <data name="Capability.Instance.SystemdPermissionDenied" xml:space="preserve"><value>systemd 探测需要额外权限。</value></data>
+  <data name="Capability.Instance.SystemdProbeFailed" xml:space="preserve"><value>无法安全确定 systemd 状态。</value></data>
+  <data name="Capability.Instance.SystemdRunning" xml:space="preserve"><value>systemd 正在运行。</value></data>
+  <data name="Capability.Instance.SystemdUnavailable" xml:space="preserve"><value>此发行版中没有 systemctl。</value></data>
+  <data name="Capability.Instance.VersionDetected" xml:space="preserve"><value>已检测到实例的 WSL 版本。</value></data>
+  <data name="Capability.Instance.VersionMalformed" xml:space="preserve"><value>无法解析实例的 WSL 版本。</value></data>
+  <data name="Capability.MirroredNetworking.RequiresVersionMatrix" xml:space="preserve"><value>镜像网络需要受支持版本验证。</value></data>
+  <data name="Capability.Probe.Cancelled" xml:space="preserve"><value>能力探测已取消。</value></data>
+  <data name="Capability.Probe.ExecutableMissing" xml:space="preserve"><value>所需可执行文件不可用。</value></data>
+  <data name="Capability.Probe.Failed" xml:space="preserve"><value>能力探测失败。</value></data>
+  <data name="Capability.Probe.RequiresElevation" xml:space="preserve"><value>能力探测需要管理员权限。</value></data>
+  <data name="Capability.Probe.Supported" xml:space="preserve"><value>能力探测成功。</value></data>
+  <data name="Capability.Probe.TimedOut" xml:space="preserve"><value>能力探测超时。</value></data>
+  <data name="Capability.Probe.UnexpectedFailure" xml:space="preserve"><value>能力探测遇到意外错误。</value></data>
+  <data name="Capability.Systemd.RequiresInstanceProbe" xml:space="preserve"><value>必须按发行版检查 systemd 支持。</value></data>
+  <data name="Capability.TaskScheduler.Available" xml:space="preserve"><value>Windows 任务计划程序可用。</value></data>
+  <data name="Capability.UsbIpd.VersionRequiresValidation" xml:space="preserve"><value>usbipd 版本需要兼容性验证。</value></data>
+  <data name="Capability.Wsl.UpdateAvailable" xml:space="preserve"><value>WSL CLI 报告有可用更新。</value></data>
+  <data name="Capability.Wslg.NotReported" xml:space="preserve"><value>WSL CLI 未报告 WSLg 版本。</value></data>
+  <data name="Capability.Wslg.Supported" xml:space="preserve"><value>WSL CLI 已报告 WSLg 版本。</value></data>
 </root>

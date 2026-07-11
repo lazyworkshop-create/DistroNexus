@@ -111,6 +111,7 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<ITagService, TagService>();
                     services.AddSingleton<IWslEventWatcher, WslEventWatcher>();
                     services.AddSingleton<IWslCliRunner, WslCliRunner>();
+                    services.AddPlatformCapabilities();
                     services.AddSingleton<IDialogService, DialogService>();
 
                     // Register ViewModels
