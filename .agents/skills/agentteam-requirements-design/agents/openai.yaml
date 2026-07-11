@@ -1,0 +1,4 @@
+interface:
+  display_name: "AgentTeam Requirements and Design"
+  short_description: "Clarify requirements and create technical designs."
+  default_prompt: "Clarify this request from repository evidence, produce a coding-ready technical design, and prepare it for sliced delivery."

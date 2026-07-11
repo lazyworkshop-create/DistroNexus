@@ -1,0 +1,4 @@
+interface:
+  display_name: "AgentTeam Slice Delivery"
+  short_description: "Coordinate verifiable delivery slices."
+  default_prompt: "Coordinate this approved change as independently accepted, commit-ready delivery slices."

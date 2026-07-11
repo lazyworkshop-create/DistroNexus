@@ -1,0 +1,4 @@
+interface:
+  display_name: "AgentTeam Capability Delivery"
+  short_description: "Deliver one capability family safely."
+  default_prompt: "Deliver this capability family from evidence through design, implementation, tests, and verification."

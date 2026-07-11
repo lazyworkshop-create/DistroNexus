@@ -1,0 +1,4 @@
+interface:
+  display_name: "AgentTeam Release Readiness"
+  short_description: "Assess release readiness with evidence."
+  default_prompt: "Assess this release candidate, separate repository readiness from external release gates, and produce a go or no-go evidence record."
