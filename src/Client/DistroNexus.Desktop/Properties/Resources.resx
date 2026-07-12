@@ -1955,4 +1955,61 @@ Please select the directory that contains the PowerShell module manifest file.</
   <data name="Health_Error_DN7005" xml:space="preserve"><value>DN-7005: Health operation failed.</value></data>
   <data name="Health_Error_DN7006" xml:space="preserve"><value>DN-7006: The repair postcondition was not satisfied.</value></data>
   <data name="Health_Error_DN7007" xml:space="preserve"><value>DN-7007: The diagnostic export request is invalid.</value></data>
+  <data name="Tab_Services" xml:space="preserve"><value>Services</value></data>
+  <data name="ServicesTab_Refresh" xml:space="preserve"><value>Refresh</value></data>
+  <data name="ServicesTab_Name" xml:space="preserve"><value>Name</value></data>
+  <data name="ServicesTab_State" xml:space="preserve"><value>State</value></data>
+  <data name="ServicesTab_Description" xml:space="preserve"><value>Description</value></data>
+  <data name="ServicesTab_SubState" xml:space="preserve"><value>Substate</value></data>
+  <data name="ServicesTab_FailureState" xml:space="preserve"><value>Failure state</value></data>
+  <data name="ServicesTab_Enabled" xml:space="preserve"><value>Enabled</value></data>
+  <data name="ServicesTab_Actions" xml:space="preserve"><value>Actions</value></data>
+  <data name="ServicesTab_Start" xml:space="preserve"><value>Start</value></data>
+  <data name="ServicesTab_Stop" xml:space="preserve"><value>Stop</value></data>
+  <data name="ServicesTab_Restart" xml:space="preserve"><value>Restart</value></data>
+  <data name="ServicesTab_Running" xml:space="preserve"><value>Running</value></data>
+  <data name="ServicesTab_Stopped" xml:space="preserve"><value>Stopped</value></data>
+  <data name="ServicesTab_Failed" xml:space="preserve"><value>Failed</value></data>
+  <data name="ServicesTab_User" xml:space="preserve"><value>User</value></data>
+  <data name="ServicesTab_Enable" xml:space="preserve"><value>Enable</value></data>
+  <data name="ServicesTab_Disable" xml:space="preserve"><value>Disable</value></data>
+  <data name="ServicesTab_Reload" xml:space="preserve"><value>Reload</value></data>
+  <data name="ServicesTab_Details" xml:space="preserve"><value>Details</value></data>
+  <data name="ServicesTab_Journal" xml:space="preserve"><value>Journal</value></data>
+  <data name="ServicesTab_Severity" xml:space="preserve"><value>Severity</value></data>
+  <data name="ServicesTab_Message" xml:space="preserve"><value>Message</value></data>
+  <data name="ServicesTab_CopyJournal" xml:space="preserve"><value>Copy journal</value></data>
+  <data name="ServicesTab_ConfirmActionTitle" xml:space="preserve"><value>Confirm service action</value></data>
+  <data name="ServicesTab_ActionFailedTitle" xml:space="preserve"><value>Service action failed</value></data>
+  <data name="ServicesTab_JournalAll" xml:space="preserve"><value>All</value></data>
+  <data name="ServicesTab_JournalInfo" xml:space="preserve"><value>Info</value></data>
+  <data name="ServicesTab_JournalWarning" xml:space="preserve"><value>Warning</value></data>
+  <data name="ServicesTab_JournalError" xml:space="preserve"><value>Error</value></data>
+  <data name="Network_Mode" xml:space="preserve"><value>Networking mode</value></data>
+  <data name="Network_PreviewApply" xml:space="preserve"><value>Preview and apply</value></data>
+  <data name="Network_Settings" xml:space="preserve"><value>Network settings</value></data>
+  <data name="Network_DnsTunneling" xml:space="preserve"><value>DNS tunneling</value></data>
+  <data name="Network_BestEffortDnsParsing" xml:space="preserve"><value>Best-effort DNS parsing</value></data>
+  <data name="Network_AutoProxy" xml:space="preserve"><value>Auto proxy</value></data>
+  <data name="Network_Firewall" xml:space="preserve"><value>Firewall</value></data>
+  <data name="Network_HostAddressLoopback" xml:space="preserve"><value>Host address loopback</value></data>
+  <data name="Network_IgnoredPorts" xml:space="preserve"><value>Ignored ports</value></data>
+  <data name="Network_ConnectivityDiagnostic" xml:space="preserve"><value>Connectivity diagnostic</value></data>
+  <data name="Network_RunProbe" xml:space="preserve"><value>Run probe</value></data>
+  <data name="Network_FirewallPreview" xml:space="preserve"><value>Firewall preview</value></data>
+  <data name="Network_AddressFamily" xml:space="preserve"><value>Family</value></data>
+  <data name="Network_Collision" xml:space="preserve"><value>Collision</value></data>
+  <data name="Network_Open" xml:space="preserve"><value>Open</value></data>
+  <data name="Network_ConfirmModeTitle" xml:space="preserve"><value>Confirm networking mode</value></data>
+  <data name="Network_ConfirmSettingsTitle" xml:space="preserve"><value>Confirm network settings</value></data>
+  <data name="Network_ConfirmFirewallTitle" xml:space="preserve"><value>Confirm firewall preview</value></data>
+  <data name="Network_ConfirmFirewallRemovalTitle" xml:space="preserve"><value>Confirm firewall removal</value></data>
+  <data name="Network_OwnedFirewallRules" xml:space="preserve"><value>DistroNexus-owned firewall rules</value></data>
+  <data name="Network_PreviewRemoveFirewall" xml:space="preserve"><value>Preview removal</value></data>
+  <data name="Network_RestartRequired" xml:space="preserve"><value>WSL restart is required after this change.</value></data>
+  <data name="Network_NoRestartRequired" xml:space="preserve"><value>No WSL restart is required.</value></data>
+  <data name="Network_ModeApplied" xml:space="preserve"><value>Networking mode applied.</value></data>
+  <data name="Network_SettingsApplied" xml:space="preserve"><value>Network settings applied.</value></data>
+  <data name="Network_SettingsAppliedRestart" xml:space="preserve"><value>Network settings applied; restart WSL to finish.</value></data>
+  <data name="Network_ErrorUnsafeBrowserAddress" xml:space="preserve"><value>Only loopback HTTP(S) addresses can be opened in a browser.</value></data>
 </root>

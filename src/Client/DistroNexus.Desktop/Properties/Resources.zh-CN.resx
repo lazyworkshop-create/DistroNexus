@@ -1949,4 +1949,61 @@
   <data name="Health_Error_DN7005" xml:space="preserve"><value>DN-7005：健康操作失败。</value></data>
   <data name="Health_Error_DN7006" xml:space="preserve"><value>DN-7006：修复后置条件未满足。</value></data>
   <data name="Health_Error_DN7007" xml:space="preserve"><value>DN-7007：诊断导出请求无效。</value></data>
+  <data name="Tab_Services" xml:space="preserve"><value>服务</value></data>
+  <data name="ServicesTab_Refresh" xml:space="preserve"><value>刷新</value></data>
+  <data name="ServicesTab_Name" xml:space="preserve"><value>名称</value></data>
+  <data name="ServicesTab_State" xml:space="preserve"><value>状态</value></data>
+  <data name="ServicesTab_Description" xml:space="preserve"><value>描述</value></data>
+  <data name="ServicesTab_SubState" xml:space="preserve"><value>子状态</value></data>
+  <data name="ServicesTab_FailureState" xml:space="preserve"><value>失败状态</value></data>
+  <data name="ServicesTab_Enabled" xml:space="preserve"><value>已启用</value></data>
+  <data name="ServicesTab_Actions" xml:space="preserve"><value>操作</value></data>
+  <data name="ServicesTab_Start" xml:space="preserve"><value>启动</value></data>
+  <data name="ServicesTab_Stop" xml:space="preserve"><value>停止</value></data>
+  <data name="ServicesTab_Restart" xml:space="preserve"><value>重启</value></data>
+  <data name="ServicesTab_Running" xml:space="preserve"><value>运行中</value></data>
+  <data name="ServicesTab_Stopped" xml:space="preserve"><value>已停止</value></data>
+  <data name="ServicesTab_Failed" xml:space="preserve"><value>失败</value></data>
+  <data name="ServicesTab_User" xml:space="preserve"><value>用户</value></data>
+  <data name="ServicesTab_Enable" xml:space="preserve"><value>启用</value></data>
+  <data name="ServicesTab_Disable" xml:space="preserve"><value>禁用</value></data>
+  <data name="ServicesTab_Reload" xml:space="preserve"><value>重新加载</value></data>
+  <data name="ServicesTab_Details" xml:space="preserve"><value>详情</value></data>
+  <data name="ServicesTab_Journal" xml:space="preserve"><value>日志</value></data>
+  <data name="ServicesTab_Severity" xml:space="preserve"><value>严重程度</value></data>
+  <data name="ServicesTab_Message" xml:space="preserve"><value>消息</value></data>
+  <data name="ServicesTab_CopyJournal" xml:space="preserve"><value>复制日志</value></data>
+  <data name="ServicesTab_ConfirmActionTitle" xml:space="preserve"><value>确认服务操作</value></data>
+  <data name="ServicesTab_ActionFailedTitle" xml:space="preserve"><value>服务操作失败</value></data>
+  <data name="ServicesTab_JournalAll" xml:space="preserve"><value>全部</value></data>
+  <data name="ServicesTab_JournalInfo" xml:space="preserve"><value>信息</value></data>
+  <data name="ServicesTab_JournalWarning" xml:space="preserve"><value>警告</value></data>
+  <data name="ServicesTab_JournalError" xml:space="preserve"><value>错误</value></data>
+  <data name="Network_Mode" xml:space="preserve"><value>网络模式</value></data>
+  <data name="Network_PreviewApply" xml:space="preserve"><value>预览并应用</value></data>
+  <data name="Network_Settings" xml:space="preserve"><value>网络设置</value></data>
+  <data name="Network_DnsTunneling" xml:space="preserve"><value>DNS 隧道</value></data>
+  <data name="Network_BestEffortDnsParsing" xml:space="preserve"><value>尽力解析 DNS</value></data>
+  <data name="Network_AutoProxy" xml:space="preserve"><value>自动代理</value></data>
+  <data name="Network_Firewall" xml:space="preserve"><value>防火墙</value></data>
+  <data name="Network_HostAddressLoopback" xml:space="preserve"><value>主机地址回环</value></data>
+  <data name="Network_IgnoredPorts" xml:space="preserve"><value>忽略的端口</value></data>
+  <data name="Network_ConnectivityDiagnostic" xml:space="preserve"><value>连接诊断</value></data>
+  <data name="Network_RunProbe" xml:space="preserve"><value>运行探测</value></data>
+  <data name="Network_FirewallPreview" xml:space="preserve"><value>防火墙预览</value></data>
+  <data name="Network_AddressFamily" xml:space="preserve"><value>地址族</value></data>
+  <data name="Network_Collision" xml:space="preserve"><value>冲突</value></data>
+  <data name="Network_Open" xml:space="preserve"><value>打开</value></data>
+  <data name="Network_ConfirmModeTitle" xml:space="preserve"><value>确认网络模式</value></data>
+  <data name="Network_ConfirmSettingsTitle" xml:space="preserve"><value>确认网络设置</value></data>
+  <data name="Network_ConfirmFirewallTitle" xml:space="preserve"><value>确认防火墙预览</value></data>
+  <data name="Network_ConfirmFirewallRemovalTitle" xml:space="preserve"><value>确认移除防火墙规则</value></data>
+  <data name="Network_OwnedFirewallRules" xml:space="preserve"><value>DistroNexus 拥有的防火墙规则</value></data>
+  <data name="Network_PreviewRemoveFirewall" xml:space="preserve"><value>预览移除</value></data>
+  <data name="Network_RestartRequired" xml:space="preserve"><value>此更改后需要重启 WSL。</value></data>
+  <data name="Network_NoRestartRequired" xml:space="preserve"><value>无需重启 WSL。</value></data>
+  <data name="Network_ModeApplied" xml:space="preserve"><value>已应用网络模式。</value></data>
+  <data name="Network_SettingsApplied" xml:space="preserve"><value>已应用网络设置。</value></data>
+  <data name="Network_SettingsAppliedRestart" xml:space="preserve"><value>已应用网络设置；请重启 WSL 以完成。</value></data>
+  <data name="Network_ErrorUnsafeBrowserAddress" xml:space="preserve"><value>只能在浏览器中打开本机回环 HTTP(S) 地址。</value></data>
 </root>

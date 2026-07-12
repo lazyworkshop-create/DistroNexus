@@ -61,6 +61,13 @@ public enum DistroNexusErrorCode
     HealthRepairPostconditionFailed = 7006,
     DiagnosticExportInvalid = 7007,
 
+    // ── systemd / networking / firewall ─────────────────────────────────
+    SystemdUnavailable = 8001,
+    LinuxPrivilegeRequired = 8002,
+    FirewallElevationRequired = 8003,
+    NetworkProbeFailed = 8004,
+    FirewallOwnershipDenied = 8005,
+
     // ── System / Unknown ──────────────────────────────────────────────────
     WslNotInstalled             = 9001,
     WslVersionTooLow            = 9002,

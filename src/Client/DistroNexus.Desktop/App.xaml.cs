@@ -111,6 +111,13 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<IDistributionConfigurationService, DistributionConfigurationService>();
                     services.AddSingleton<IBackupService, BackupService>();
                     services.AddSingleton<INetworkService, NetworkService>();
+                    services.AddSingleton<ISystemdService, SystemdService>();
+                    services.AddSingleton<IWslNetworkDiagnosticsAdapter, WslNetworkDiagnosticsAdapter>();
+                    services.AddSingleton<INetworkDiagnosticsService, NetworkDiagnosticsService>();
+                    services.AddSingleton<INetworkConfigurationService, NetworkConfigurationService>();
+                    services.AddSingleton<INetworkStatusAdapter, WindowsNetworkStatusAdapter>();
+                    services.AddSingleton<IFirewallOperationBroker, GuardedFirewallOperationBroker>();
+                    services.AddSingleton<IBrowserLauncher, BrowserLauncher>();
                     services.AddSingleton<ITagService, TagService>();
                     services.AddSingleton<IWslEventWatcher, WslEventWatcher>();
                     services.AddSingleton<IWslCliRunner, WslCliRunner>();

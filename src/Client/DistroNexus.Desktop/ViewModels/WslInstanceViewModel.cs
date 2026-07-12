@@ -4,6 +4,7 @@ using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using DistroNexus.Desktop.Controls;
+using DistroNexus.Desktop.Services;
 using DistroNexus.Desktop.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -709,8 +710,14 @@ public partial class WslInstanceViewModel : ObservableObject
         var dialogSvc = _serviceProvider.GetRequiredService<IDialogService>();
         var distributionConfigSvc = _serviceProvider.GetRequiredService<IDistributionConfigurationService>();
         var platformCapabilitySvc = _serviceProvider.GetRequiredService<IPlatformCapabilityService>();
+        var systemdService = _serviceProvider.GetRequiredService<ISystemdService>();
+        var networkDiagnostics = _serviceProvider.GetRequiredService<INetworkDiagnosticsService>();
+        var firewallOperationBroker = _serviceProvider.GetRequiredService<IFirewallOperationBroker>();
+        var networkConfigurationService = _serviceProvider.GetRequiredService<INetworkConfigurationService>();
+        var networkStatusAdapter = _serviceProvider.GetRequiredService<INetworkStatusAdapter>();
+        var browserLauncher = _serviceProvider.GetRequiredService<IBrowserLauncher>();
 
-        var vm = new InstanceDetailViewModel(this, wslManager, dockerSvc, networkSvc, backupSvc, wslConfigSvc, tagSvc, dialogSvc, distributionConfigSvc, platformCapabilitySvc);
+        var vm = new InstanceDetailViewModel(this, wslManager, dockerSvc, networkSvc, backupSvc, wslConfigSvc, tagSvc, dialogSvc, distributionConfigSvc, platformCapabilitySvc, systemdService, networkDiagnostics, firewallOperationBroker, networkConfigurationService, networkStatusAdapter, browserLauncher);
         var dialog = new InstanceDetailDialog(vm)
         {
             Owner = Application.Current.MainWindow

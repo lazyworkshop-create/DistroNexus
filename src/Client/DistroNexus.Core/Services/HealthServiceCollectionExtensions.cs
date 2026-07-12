@@ -9,6 +9,12 @@ public static class HealthServiceCollectionExtensions
     public static IServiceCollection AddHealthCenter(this IServiceCollection services)
     {
         services.AddSingleton<IHealthRuntimeAdapter, HealthRuntimeAdapter>();
+        services.AddSingleton<ISystemdService, SystemdService>();
+        services.AddSingleton<IWslNetworkDiagnosticsAdapter, WslNetworkDiagnosticsAdapter>();
+        services.AddSingleton<INetworkDiagnosticsService, NetworkDiagnosticsService>();
+        services.AddSingleton<INetworkConfigurationService, NetworkConfigurationService>();
+        services.AddSingleton<INetworkStatusAdapter, WindowsNetworkStatusAdapter>();
+        services.AddSingleton<IFirewallOperationBroker, GuardedFirewallOperationBroker>();
         // Health checks only replay the deliberately restricted, read-only runtime
         // contracts persisted with a template application record.
         services.AddSingleton<ITemplateRuntimePreflightEvaluator, TemplateRuntimePreflightEvaluator>();
