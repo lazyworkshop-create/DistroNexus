@@ -117,6 +117,9 @@
             <TabItem Header="{lex:Loc Tab_Backup}">
                 <tabs:BackupTabView DataContext="{Binding BackupTab}"/>
             </TabItem>
+            <TabItem Header="{lex:Loc Tab_Configuration}">
+                <tabs:ConfigurationTabView DataContext="{Binding ConfigurationTab}"/>
+            </TabItem>
         </TabControl>
 
         <!-- Footer -->

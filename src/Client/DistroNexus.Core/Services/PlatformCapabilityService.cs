@@ -154,8 +154,16 @@ public sealed partial class PlatformCapabilityService : IPlatformCapabilityServi
         capabilities[CapabilityId.ImportInPlace] = FeatureFromHelp(CapabilityId.ImportInPlace, wsl, helpResult, "--import-in-place", now);
         capabilities[CapabilityId.MirroredNetworking] = Result(CapabilityId.MirroredNetworking, CapabilityStatus.Unknown,
             "Capability.MirroredNetworking.RequiresVersionMatrix", CapabilitySource.WslCli, now, versions.Wsl);
-        capabilities[CapabilityId.Systemd] = Result(CapabilityId.Systemd, CapabilityStatus.Unknown,
-            "Capability.Systemd.RequiresInstanceProbe", CapabilitySource.WslCli, now, versions.Wsl);
+        // The WSL CLI version is the authoritative host contract for whether wsl.conf may
+        // enable systemd.  This is deliberately separate from the volatile systemctl probe:
+        // a supported WSL 2 distribution can be configured while systemd is currently off.
+        capabilities[CapabilityId.Systemd] = SystemdEnablementFromWsl(wsl, versions.Wsl, now);
+        // These settings have no stable CLI feature token.  Keep their state explicitly Unknown until
+        // a version matrix or runtime probe is available; consumers must not infer support from WSL itself.
+        foreach (var id in new[] { CapabilityId.ConfigDnsTunneling, CapabilityId.ConfigFirewall, CapabilityId.ConfigAutoProxy,
+                     CapabilityId.ConfigHostAddressLoopback, CapabilityId.ConfigIgnoredPorts, CapabilityId.ConfigBestEffortDnsParsing,
+                     CapabilityId.ConfigProxyTimeout, CapabilityId.ConfigAutoMemoryReclaim })
+            capabilities[id] = Result(id, CapabilityStatus.Unknown, "Capability.Configuration.RequiresVersionMatrix", CapabilitySource.WslCli, now, versions.Wsl);
         capabilities[CapabilityId.Wslg] = versions.Wslg is not null
             ? Result(CapabilityId.Wslg, CapabilityStatus.Supported, "Capability.Wslg.Supported", CapabilitySource.WslCli, now, versions.Wslg)
             : Result(CapabilityId.Wslg, wsl.Status == CapabilityStatus.Supported ? CapabilityStatus.Unavailable : wsl.Status, "Capability.Wslg.NotReported", CapabilitySource.WslCli, now);
@@ -268,6 +276,18 @@ public sealed partial class PlatformCapabilityService : IPlatformCapabilityServi
             help.StandardOutput.Contains("--install", StringComparison.OrdinalIgnoreCase);
         return Result(id, recognizableHelp ? CapabilityStatus.Unsupported : CapabilityStatus.Unknown,
             recognizableHelp ? "Capability.Feature.NotAdvertisedByCli" : "Capability.Feature.MalformedHelp", CapabilitySource.WslCli, now);
+    }
+
+    private static CapabilityResult SystemdEnablementFromWsl(CapabilityResult wsl, Version? version, DateTimeOffset now)
+    {
+        var minimum = new Version(0, 67, 6);
+        if (wsl.Status != CapabilityStatus.Supported)
+            return Result(CapabilityId.Systemd, wsl.Status, "Capability.Systemd.WslUnavailable", CapabilitySource.WslCli, now, version, minimum);
+        if (version is null)
+            return Result(CapabilityId.Systemd, CapabilityStatus.Unknown, "Capability.Systemd.VersionUnknown", CapabilitySource.WslCli, now, null, minimum);
+        return version >= minimum
+            ? Result(CapabilityId.Systemd, CapabilityStatus.Supported, "Capability.Systemd.EnablementSupported", CapabilitySource.WslCli, now, version, minimum)
+            : Result(CapabilityId.Systemd, CapabilityStatus.Unsupported, "Capability.Systemd.VersionTooLow", CapabilitySource.WslCli, now, version, minimum);
     }
 
     private static CapabilityResult Result(CapabilityId id, CapabilityStatus status, string reason, CapabilitySource source,

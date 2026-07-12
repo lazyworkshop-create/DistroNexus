@@ -1,0 +1,27 @@
+<UserControl x:Class="DistroNexus.Desktop.Controls.Tabs.ConfigurationTabView"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:lex="http://wpflocalizeextension.codeplex.com" lex:ResxLocalizationProvider.DefaultAssembly="DistroNexus.Desktop" lex:ResxLocalizationProvider.DefaultDictionary="Properties.Resources">
+ <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="16">
+  <TextBlock Text="{Binding RestartImpact}" FontWeight="SemiBold" Margin="0,0,0,8"/>
+  <TextBlock Text="{Binding Diagnostics}" Foreground="OrangeRed" TextWrapping="Wrap" Margin="0,0,0,8"/>
+  <GroupBox Header="{lex:Loc ConfigurationTab_BootUser}" Margin="0,0,0,8"><StackPanel Margin="8">
+   <CheckBox Content="{lex:Loc ConfigurationTab_Systemd}" IsChecked="{Binding Systemd}" IsThreeState="True" IsEnabled="{Binding IsSystemdSupported}"/>
+   <TextBlock Text="{Binding SystemdUnavailableReason}" Foreground="DarkOrange"/>
+   <TextBlock Text="{lex:Loc ConfigurationTab_BootCommand}"/><TextBox Text="{Binding BootCommand, UpdateSourceTrigger=PropertyChanged}"/>
+   <TextBlock Text="{lex:Loc ConfigurationTab_DefaultUser}"/><TextBox Text="{Binding DefaultUser, UpdateSourceTrigger=PropertyChanged}"/>
+  </StackPanel></GroupBox>
+  <GroupBox Header="{lex:Loc ConfigurationTab_Automount}" Margin="0,0,0,8"><StackPanel Margin="8">
+   <CheckBox Content="{lex:Loc ConfigurationTab_Enabled}" IsChecked="{Binding AutomountEnabled}" IsThreeState="True"/><CheckBox Content="{lex:Loc ConfigurationTab_Fstab}" IsChecked="{Binding MountFsTab}" IsThreeState="True"/>
+   <TextBlock Text="{lex:Loc ConfigurationTab_Root}"/><TextBox Text="{Binding AutomountRoot}"/><TextBlock Text="{lex:Loc ConfigurationTab_Options}"/><TextBox Text="{Binding AutomountOptions}"/>
+   <CheckBox Content="{lex:Loc ConfigurationTab_Metadata}" IsChecked="{Binding Metadata}" IsThreeState="True"/>
+   <TextBlock Text="{lex:Loc ConfigurationTab_Umask}"/><TextBox Text="{Binding Umask}"/>
+   <TextBlock Text="{lex:Loc ConfigurationTab_Case}"/><TextBox Text="{Binding CaseSensitivity}"/>
+  </StackPanel></GroupBox>
+  <GroupBox Header="{lex:Loc ConfigurationTab_InteropNetwork}" Margin="0,0,0,8"><StackPanel Margin="8">
+   <CheckBox Content="{lex:Loc ConfigurationTab_Interop}" IsChecked="{Binding InteropEnabled}" IsThreeState="True"/><CheckBox Content="{lex:Loc ConfigurationTab_WindowsPath}" IsChecked="{Binding AppendWindowsPath}" IsThreeState="True"/>
+   <TextBlock Text="{lex:Loc ConfigurationTab_Hostname}"/><TextBox Text="{Binding Hostname}"/><CheckBox Content="{lex:Loc ConfigurationTab_GenerateHosts}" IsChecked="{Binding GenerateHosts}" IsThreeState="True"/><CheckBox Content="{lex:Loc ConfigurationTab_GenerateResolv}" IsChecked="{Binding GenerateResolvConf}" IsThreeState="True"/>
+  </StackPanel></GroupBox>
+  <TextBlock Text="{lex:Loc ConfigurationTab_RawPreview}" FontWeight="SemiBold"/><TextBox Text="{Binding RawPreview}" IsReadOnly="True" FontFamily="Consolas" AcceptsReturn="True" MinHeight="140"/>
+  <TextBlock Text="{lex:Loc Configuration_DesiredRaw}" FontWeight="SemiBold"/><TextBox Text="{Binding DesiredRawPreview}" IsReadOnly="True" FontFamily="Consolas" AcceptsReturn="True" MinHeight="140"/>
+  <Button Content="{lex:Loc ConfigurationTab_Save}" Command="{Binding SaveCommand}" HorizontalAlignment="Left" Margin="0,8,0,0"/>
+ </StackPanel></ScrollViewer>
+</UserControl>

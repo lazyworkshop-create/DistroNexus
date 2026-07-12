@@ -707,8 +707,10 @@ public partial class WslInstanceViewModel : ObservableObject
         var wslConfigSvc = _serviceProvider.GetRequiredService<IWslConfigService>();
         var tagSvc = _serviceProvider.GetRequiredService<ITagService>();
         var dialogSvc = _serviceProvider.GetRequiredService<IDialogService>();
+        var distributionConfigSvc = _serviceProvider.GetRequiredService<IDistributionConfigurationService>();
+        var platformCapabilitySvc = _serviceProvider.GetRequiredService<IPlatformCapabilityService>();
 
-        var vm = new InstanceDetailViewModel(this, wslManager, dockerSvc, networkSvc, backupSvc, wslConfigSvc, tagSvc, dialogSvc);
+        var vm = new InstanceDetailViewModel(this, wslManager, dockerSvc, networkSvc, backupSvc, wslConfigSvc, tagSvc, dialogSvc, distributionConfigSvc, platformCapabilitySvc);
         var dialog = new InstanceDetailDialog(vm)
         {
             Owner = Application.Current.MainWindow

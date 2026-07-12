@@ -105,7 +105,10 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<ITerminalService, TerminalService>();
                     services.AddSingleton<IDownloadTaskManager, DownloadTaskManager>();
                     services.AddSingleton<IDockerIntegrationService, DockerIntegrationService>();
-                    services.AddSingleton<IWslConfigService, WslConfigService>();
+                    services.AddSingleton<WslConfigService>();
+                    services.AddSingleton<IWslConfigService>(sp => sp.GetRequiredService<WslConfigService>());
+                    services.AddSingleton<IWslConfigurationService>(sp => sp.GetRequiredService<WslConfigService>());
+                    services.AddSingleton<IDistributionConfigurationService, DistributionConfigurationService>();
                     services.AddSingleton<IBackupService, BackupService>();
                     services.AddSingleton<INetworkService, NetworkService>();
                     services.AddSingleton<ITagService, TagService>();

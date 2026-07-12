@@ -132,14 +132,16 @@ public partial class SettingsViewModel : ObservableObject
         IWslConfigService wslConfigService,
         IWslManagerService wslManagerService,
         ITagService tagService,
-        IDialogService dialogService)
+        IDialogService dialogService,
+        IWslConfigurationService configurationService,
+        IPlatformCapabilityService capabilityService)
     {
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
         _terminalService = terminalService ?? throw new ArgumentNullException(nameof(terminalService));
         _storeComplianceModeService = storeComplianceModeService ?? throw new ArgumentNullException(nameof(storeComplianceModeService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        WslConfigSection = new WslConfigSectionViewModel(wslConfigService, wslManagerService, dialogService);
+        WslConfigSection = new WslConfigSectionViewModel(wslConfigService, wslManagerService, dialogService, configurationService, capabilityService);
         ManageTags = new ManageTagsViewModel(tagService, wslManagerService, dialogService);
         
         // Initialize auto-save timer

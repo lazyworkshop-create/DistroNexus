@@ -24,6 +24,7 @@ public partial class InstanceDetailViewModel : ObservableObject
     public IntegrationsTabViewModel IntegrationsTab { get; }
     public NetworkTabViewModel NetworkTab { get; }
     public BackupTabViewModel BackupTab { get; }
+    public ConfigurationTabViewModel ConfigurationTab { get; }
 
     /// <summary>Raised when the dialog should be closed.</summary>
     public event EventHandler? CloseRequested;
@@ -36,7 +37,9 @@ public partial class InstanceDetailViewModel : ObservableObject
         IBackupService backupService,
         IWslConfigService wslConfigService,
         ITagService tagService,
-        IDialogService dialogService)
+        IDialogService dialogService,
+        IDistributionConfigurationService distributionConfigurationService,
+        IPlatformCapabilityService platformCapabilityService)
     {
         _instance = instance ?? throw new ArgumentNullException(nameof(instance));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
@@ -46,6 +49,7 @@ public partial class InstanceDetailViewModel : ObservableObject
         IntegrationsTab = new IntegrationsTabViewModel(instance, dockerIntegrationService, dialogService);
         NetworkTab = new NetworkTabViewModel(instance, networkService, dialogService);
         BackupTab = new BackupTabViewModel(instance, backupService, dialogService);
+        ConfigurationTab = new ConfigurationTabViewModel(instance, distributionConfigurationService, platformCapabilityService, dialogService);
     }
 
     partial void OnSelectedTabIndexChanged(int value)
@@ -64,6 +68,7 @@ public partial class InstanceDetailViewModel : ObservableObject
                 case 2: await IntegrationsTab.InitializeAsync(); break;
                 case 3: await NetworkTab.InitializeAsync(); break;
                 case 4: await BackupTab.InitializeAsync(); break;
+                case 5: await ConfigurationTab.InitializeAsync(); break;
             }
         }
         catch (Exception ex)

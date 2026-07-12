@@ -1546,13 +1546,16 @@
     <value>网络模式</value>
   </data>
   <data name="WslConfig_SaveAndRestart" xml:space="preserve">
-    <value>保存并重启 WSL</value>
+    <value>保存并标记 WSL 重启待执行</value>
+  </data>
+  <data name="WslConfig_SaveAndMarkPendingRestart" xml:space="preserve">
+    <value>保存并标记 WSL 重启待执行</value>
   </data>
   <data name="WslConfig_OpenRawFile" xml:space="preserve">
     <value>打开原始文件</value>
   </data>
   <data name="WslConfig_RestartConfirm" xml:space="preserve">
-    <value>立即运行 wsl --shutdown 以应用更改？所有运行中的 WSL 实例将被停止。</value>
+    <value>更改已保存，但需要完全关闭 WSL 后才会生效。运行中的 WSL 实例将继续运行。</value>
   </data>
   <data name="WslConfig_MemoryWarning" xml:space="preserve">
     <value>内存限制超过主机内存的 80%，可能导致系统不稳定。</value>
@@ -1567,7 +1570,10 @@
     <value>无效的交换空间值，使用 0 禁用，或带 GB/MB 后缀的数字。</value>
   </data>
   <data name="WslConfig_SaveComplete" xml:space="preserve">
-    <value>配置已成功保存。</value>
+    <value>配置已保存，WSL 重启待执行。</value>
+  </data>
+  <data name="WslConfig_SavePendingRestartComplete" xml:space="preserve">
+    <value>配置已保存。需要完全关闭 WSL 后更改才会生效。</value>
   </data>
   <data name="ManageTags_SectionTitle" xml:space="preserve">
     <value>管理标签</value>
@@ -1837,9 +1843,50 @@
   <data name="Capability.Probe.TimedOut" xml:space="preserve"><value>能力探测超时。</value></data>
   <data name="Capability.Probe.UnexpectedFailure" xml:space="preserve"><value>能力探测遇到意外错误。</value></data>
   <data name="Capability.Systemd.RequiresInstanceProbe" xml:space="preserve"><value>必须按发行版检查 systemd 支持。</value></data>
+  <data name="Capability.Systemd.EnablementSupported" xml:space="preserve"><value>此 WSL 版本支持启用 systemd。</value></data>
+  <data name="Capability.Systemd.VersionTooLow" xml:space="preserve"><value>此 WSL 版本过低，无法启用 systemd。</value></data>
+  <data name="Capability.Systemd.VersionUnknown" xml:space="preserve"><value>无法确定 WSL 版本，因此无法启用 systemd。</value></data>
+  <data name="Capability.Systemd.WslUnavailable" xml:space="preserve"><value>WSL 不可用，因此无法启用 systemd。</value></data>
   <data name="Capability.TaskScheduler.Available" xml:space="preserve"><value>Windows 任务计划程序可用。</value></data>
   <data name="Capability.UsbIpd.VersionRequiresValidation" xml:space="preserve"><value>usbipd 版本需要兼容性验证。</value></data>
   <data name="Capability.Wsl.UpdateAvailable" xml:space="preserve"><value>WSL CLI 报告有可用更新。</value></data>
   <data name="Capability.Wslg.NotReported" xml:space="preserve"><value>WSL CLI 未报告 WSLg 版本。</value></data>
   <data name="Capability.Wslg.Supported" xml:space="preserve"><value>WSL CLI 已报告 WSLg 版本。</value></data>
+  <data name="Tab_Configuration" xml:space="preserve"><value>配置</value></data>
+  <data name="ConfigurationTab_BootUser" xml:space="preserve"><value>启动和用户</value></data>
+  <data name="ConfigurationTab_Systemd" xml:space="preserve"><value>启用 systemd</value></data>
+  <data name="ConfigurationTab_BootCommand" xml:space="preserve"><value>启动命令</value></data>
+  <data name="ConfigurationTab_DefaultUser" xml:space="preserve"><value>默认用户</value></data>
+  <data name="ConfigurationTab_Automount" xml:space="preserve"><value>自动挂载</value></data>
+  <data name="ConfigurationTab_Enabled" xml:space="preserve"><value>启用</value></data>
+  <data name="ConfigurationTab_Fstab" xml:space="preserve"><value>处理 fstab</value></data>
+  <data name="ConfigurationTab_Root" xml:space="preserve"><value>根目录</value></data>
+  <data name="ConfigurationTab_Options" xml:space="preserve"><value>选项</value></data>
+  <data name="ConfigurationTab_InteropNetwork" xml:space="preserve"><value>Windows 互操作和网络</value></data>
+  <data name="ConfigurationTab_Interop" xml:space="preserve"><value>启用互操作</value></data>
+  <data name="ConfigurationTab_WindowsPath" xml:space="preserve"><value>附加 Windows PATH</value></data>
+  <data name="ConfigurationTab_Hostname" xml:space="preserve"><value>主机名</value></data>
+  <data name="ConfigurationTab_GenerateHosts" xml:space="preserve"><value>生成 hosts</value></data>
+  <data name="ConfigurationTab_GenerateResolv" xml:space="preserve"><value>生成 resolv.conf</value></data>
+  <data name="ConfigurationTab_RawPreview" xml:space="preserve"><value>原始预览（只读）</value></data>
+  <data name="ConfigurationTab_Save" xml:space="preserve"><value>保存配置</value></data>
+  <data name="Configuration_PendingWslRestart" xml:space="preserve"><value>更改需要完全关闭 WSL。</value></data>
+  <data name="Configuration_UnsupportedReason" xml:space="preserve"><value>检测到的 WSL 能力不支持此设置。</value></data>
+  <data name="Configuration_SavePreview" xml:space="preserve"><value>更改的设置：{0}&#xA;受影响的运行中发行版：{1}&#xA;&#xA;目标文件：&#xA;{2}</value></data>
+  <data name="Configuration_NoRunningInstances" xml:space="preserve"><value>无</value></data>
+  <data name="Configuration_CurrentRaw" xml:space="preserve"><value>当前原始配置</value></data>
+  <data name="Configuration_DesiredRaw" xml:space="preserve"><value>目标原始配置</value></data>
+  <data name="ConfigurationTab_Metadata" xml:space="preserve"><value>启用元数据</value></data>
+  <data name="ConfigurationTab_Umask" xml:space="preserve"><value>umask</value></data>
+  <data name="ConfigurationTab_Case" xml:space="preserve"><value>大小写敏感性（off、dir、force）</value></data>
+  <data name="Configuration_InstanceRestart" xml:space="preserve"><value>终止此发行版后应用更改。</value></data>
+  <data name="Configuration_LineDiagnostic" xml:space="preserve"><value>第 {0} 行：{1}</value></data>
+  <data name="Configuration_SaveCompleteWithBackup" xml:space="preserve"><value>已保存，备份为 {0}。{1}</value></data>
+  <data name="Configuration_Conflict" xml:space="preserve"><value>配置冲突</value></data>
+  <data name="Configuration_Experimental" xml:space="preserve"><value>实验性</value></data>
+  <data name="Configuration_InvalidValue" xml:space="preserve"><value>设置值无效。</value></data>
+  <data name="Configuration_Malformed" xml:space="preserve"><value>配置包含无效行。</value></data>
+  <data name="Configuration_InvalidUser" xml:space="preserve"><value>默认 Linux 用户名无效。</value></data>
+  <data name="Configuration_UserNotFound" xml:space="preserve"><value>默认 Linux 用户不存在于此发行版中。</value></data>
+  <data name="Configuration_TransportError" xml:space="preserve"><value>无法更新发行版配置：{0}</value></data>
 </root>

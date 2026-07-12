@@ -33,6 +33,14 @@ public enum CapabilityId
     DistributionIdentity,
     InstanceWslVersion,
     InstanceSystemd
+    ,ConfigDnsTunneling
+    ,ConfigFirewall
+    ,ConfigAutoProxy
+    ,ConfigHostAddressLoopback
+    ,ConfigIgnoredPorts
+    ,ConfigBestEffortDnsParsing
+    ,ConfigProxyTimeout
+    ,ConfigAutoMemoryReclaim
 }
 
 public enum CapabilitySource

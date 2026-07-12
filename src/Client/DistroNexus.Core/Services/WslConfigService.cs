@@ -2,14 +2,17 @@ using System.Runtime.InteropServices;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
+using System.Text;
 
 namespace DistroNexus.Core.Services;
 
 /// <summary>
 /// Line-based INI reader/writer for ~/.wslconfig.
 /// </summary>
-public class WslConfigService : IWslConfigService
+public class WslConfigService : IWslConfigService, IWslConfigurationService
 {
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> FileLocks = new(StringComparer.OrdinalIgnoreCase);
     private readonly ILogger<WslConfigService> _logger;
     private readonly string _userProfileDir;
 
@@ -27,119 +30,136 @@ public class WslConfigService : IWslConfigService
     /// <inheritdoc/>
     public async Task<WslConfig> GetWslConfigAsync(CancellationToken ct = default)
     {
-        var config = new WslConfig();
-
-        if (!File.Exists(WslConfigPath))
-            return config;
-
-        var lines = await File.ReadAllLinesAsync(WslConfigPath, ct);
-        bool inWsl2Section = false;
-
-        foreach (var raw in lines)
+        var document = await ReadAsync(ct);
+        var values = document.Settings.Values;
+        return new WslConfig
         {
-            var line = raw.Trim();
-
-            if (line.StartsWith('['))
-            {
-                inWsl2Section = line.Equals("[wsl2]", StringComparison.OrdinalIgnoreCase);
-                continue;
-            }
-
-            if (!inWsl2Section) continue;
-            if (line.StartsWith('#') || line.StartsWith(';') || !line.Contains('=')) continue;
-
-            var idx = line.IndexOf('=');
-            var key = line[..idx].Trim().ToLowerInvariant();
-            var val = line[(idx + 1)..].Trim();
-
-            switch (key)
-            {
-                case "memory":             config.Memory = val; break;
-                case "processors":
-                    if (int.TryParse(val, out var p)) config.Processors = p;
-                    break;
-                case "swap":               config.Swap = val; break;
-                case "localhostforwarding":
-                    if (bool.TryParse(val, out var lf)) config.LocalhostForwarding = lf;
-                    break;
-                case "networkingmode":     config.NetworkingMode = val; break;
-            }
-        }
-
-        return config;
+            Memory = Get(values, "wsl2", "memory"),
+            Processors = int.TryParse(Get(values, "wsl2", "processors"), out var p) ? p : null,
+            Swap = Get(values, "wsl2", "swap"),
+            LocalhostForwarding = bool.TryParse(Get(values, "wsl2", "localhostForwarding"), out var lf) ? lf : null,
+            NetworkingMode = Get(values, "wsl2", "networkingMode")
+        };
     }
 
     /// <inheritdoc/>
     public async Task SetWslConfigAsync(WslConfig config, CancellationToken ct = default)
     {
-        // Read existing lines (or start fresh)
-        List<string> lines = File.Exists(WslConfigPath)
-            ? [.. await File.ReadAllLinesAsync(WslConfigPath, ct)]
-            : [];
-
-        // Ensure [wsl2] section exists
-        int sectionIndex = lines.FindIndex(l =>
-            l.Trim().Equals("[wsl2]", StringComparison.OrdinalIgnoreCase));
-
-        if (sectionIndex < 0)
-        {
-            if (lines.Count > 0 && !string.IsNullOrWhiteSpace(lines[^1]))
-                lines.Add(string.Empty);
-            lines.Add("[wsl2]");
-            sectionIndex = lines.Count - 1;
-        }
-
-        // Build map of keys to update
-        var updates = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        if (config.Memory is not null) updates["memory"] = config.Memory;
-        if (config.Processors.HasValue) updates["processors"] = config.Processors.Value.ToString();
-        if (config.Swap is not null) updates["swap"] = config.Swap;
-        if (config.LocalhostForwarding.HasValue) updates["localhostForwarding"] = config.LocalhostForwarding.Value.ToString().ToLowerInvariant();
-        if (config.NetworkingMode is not null) updates["networkingMode"] = config.NetworkingMode;
-
-        var applied = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        bool inWsl2 = false;
-        int wsl2EndIndex = lines.Count; // where to insert new keys
-
-        for (int i = 0; i < lines.Count; i++)
-        {
-            var line = lines[i].Trim();
-
-            if (line.StartsWith('['))
-            {
-                if (inWsl2)
-                {
-                    // We've left the [wsl2] section
-                    wsl2EndIndex = i;
-                    break;
-                }
-                inWsl2 = line.Equals("[wsl2]", StringComparison.OrdinalIgnoreCase);
-                continue;
-            }
-
-            if (!inWsl2) continue;
-            if (line.StartsWith('#') || line.StartsWith(';') || !line.Contains('=')) continue;
-
-            var idx = line.IndexOf('=');
-            var key = line[..idx].Trim();
-
-            if (updates.TryGetValue(key, out var newVal))
-            {
-                lines[i] = $"{key}={newVal}";
-                applied.Add(key);
-            }
-        }
-
-        // Append keys that weren't found yet
-        foreach (var kv in updates)
-        {
-            if (!applied.Contains(kv.Key))
-                lines.Insert(wsl2EndIndex++, $"{kv.Key}={kv.Value}");
-        }
-
-        await File.WriteAllLinesAsync(WslConfigPath, lines, ct);
-        _logger.LogInformation("Updated .wslconfig at {Path}", WslConfigPath);
+        var updates = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        if (config.Memory is not null) updates["wsl2.memory"] = config.Memory;
+        if (config.Processors.HasValue) updates["wsl2.processors"] = config.Processors.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        if (config.Swap is not null) updates["wsl2.swap"] = config.Swap;
+        if (config.LocalhostForwarding.HasValue) updates["wsl2.localhostForwarding"] = config.LocalhostForwarding.Value.ToString().ToLowerInvariant();
+        if (config.NetworkingMode is not null) updates["wsl2.networkingMode"] = config.NetworkingMode;
+        var current = await ReadAsync(ct);
+        await SaveAsync(updates, current.Fingerprint, null, ct);
     }
+
+    public async Task<ConfigurationDocument<WslConfigurationSettings>> ReadAsync(CancellationToken cancellationToken = default)
+    {
+        var bytes = File.Exists(WslConfigPath) ? await File.ReadAllBytesAsync(WslConfigPath, cancellationToken) : [];
+        var source = LosslessIniDocument.Parse(bytes);
+        var values = Project(source);
+        var known = WslConfigurationSchema.Global.Select(d => Id(d.Section, d.Key)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var unknown = source.Tokens.Count(t => t.Kind == ConfigurationTokenKind.KeyValue && !known.Contains(Id(t.Section!, t.Key!)));
+        var diagnostics = WslConfigurationSchema.Validate(source, WslConfigurationSchema.Global);
+        return new(new(values), source, diagnostics, unknown, Fingerprint(bytes), RestartScope.Wsl, source.ToString());
+    }
+
+    public async Task<ConfigurationSaveResult> SaveAsync(IReadOnlyDictionary<string, string?> values,
+        string expectedFingerprint, IReadOnlySet<string>? availableCapabilities = null,
+        CancellationToken cancellationToken = default)
+    {
+        var gate = FileLocks.GetOrAdd(Path.GetFullPath(WslConfigPath), _ => new(1, 1));
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+        var original = File.Exists(WslConfigPath) ? await File.ReadAllBytesAsync(WslConfigPath, cancellationToken) : [];
+        if (!string.Equals(Fingerprint(original), expectedFingerprint, StringComparison.Ordinal))
+            throw new ConfigurationConflictException(".wslconfig changed after it was loaded; reload before saving.");
+        if (values.Count == 0) return new(expectedFingerprint, null, RestartScope.None);
+        var edited = LosslessIniDocument.Parse(original);
+        foreach (var (id, value) in values)
+        {
+            var split = id.IndexOf('.');
+            if (split <= 0) throw new ArgumentException($"Setting id '{id}' must be section.key.", nameof(values));
+            var section = id[..split]; var key = id[(split + 1)..];
+            var definition = WslConfigurationSchema.Global.LastOrDefault(d =>
+                string.Equals(d.Section, section, StringComparison.OrdinalIgnoreCase) && string.Equals(d.Key, key, StringComparison.OrdinalIgnoreCase));
+            if (definition is null) throw new ConfigurationValidationException([new(0, "config.unsupported", $"Unsupported setting {id}.")]);
+            if (definition.RequiredCapability is not null && (availableCapabilities is null || !availableCapabilities.Contains(definition.RequiredCapability)))
+                throw new ConfigurationValidationException([new(0, "config.unsupported", $"{id} is not supported by this WSL version.")]);
+            if (id.Equals("wsl2.networkingMode", StringComparison.OrdinalIgnoreCase) && value?.Equals("mirrored", StringComparison.OrdinalIgnoreCase) == true &&
+                (availableCapabilities is null || !availableCapabilities.Contains("wsl.config.mirroredNetworking")))
+                throw new ConfigurationValidationException([new(0, "config.unsupported", "Mirrored networking is not supported by this WSL version.")]);
+            edited = value is null ? edited.WithoutValue(section, key) : edited.WithValue(section, key, value);
+        }
+        var diagnostics = WslConfigurationSchema.Validate(edited, WslConfigurationSchema.Global);
+        if (diagnostics.Any(d => d.Severity == ConfigurationDiagnosticSeverity.Error)) throw new ConfigurationValidationException(diagnostics);
+        var bytes = edited.ToBytes();
+        var backup = original.Length == 0 ? null : WslConfigPath + ".bak." + DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfffffff") + "." + Guid.NewGuid().ToString("N");
+        if (backup is not null) await File.WriteAllBytesAsync(backup, original, cancellationToken);
+        var temp = WslConfigPath + ".tmp." + Guid.NewGuid().ToString("N");
+        try
+        {
+            await using (var stream = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096,
+                FileOptions.Asynchronous | FileOptions.WriteThrough))
+            { await stream.WriteAsync(bytes, cancellationToken); await stream.FlushAsync(cancellationToken); stream.Flush(true); }
+            var immediatelyCurrent = File.Exists(WslConfigPath) ? await File.ReadAllBytesAsync(WslConfigPath, cancellationToken) : [];
+            if (!string.Equals(Fingerprint(immediatelyCurrent), expectedFingerprint, StringComparison.Ordinal))
+                throw new ConfigurationConflictException(".wslconfig changed immediately before replacement; reload before saving.");
+            File.Move(temp, WslConfigPath, true);
+        }
+        finally { if (File.Exists(temp)) File.Delete(temp); }
+        _logger.LogInformation("Updated .wslconfig at {Path}; backup {BackupPath}", WslConfigPath, backup);
+        return new(Fingerprint(bytes), backup, RestartScope.Wsl);
+        }
+        finally { gate.Release(); }
+    }
+
+    public async Task<ConfigurationPreview> PreviewAsync(IReadOnlyDictionary<string, string?> values,
+        string expectedFingerprint, IReadOnlySet<string> availableCapabilities, CancellationToken cancellationToken = default)
+    {
+        var bytes = File.Exists(WslConfigPath) ? await File.ReadAllBytesAsync(WslConfigPath, cancellationToken) : [];
+        if (!string.Equals(Fingerprint(bytes), expectedFingerprint, StringComparison.Ordinal))
+            throw new ConfigurationConflictException(".wslconfig changed after it was loaded; reload before saving.");
+        var edited = Apply(LosslessIniDocument.Parse(bytes), values, availableCapabilities);
+        return new(Encoding.UTF8.GetString(bytes.AsSpan(bytes.AsSpan().StartsWith(Encoding.UTF8.Preamble) ? 3 : 0)), edited.ToString(), values.Keys.ToArray(), RestartScope.Wsl);
+    }
+
+    private static LosslessIniDocument Apply(LosslessIniDocument edited, IReadOnlyDictionary<string, string?> values,
+        IReadOnlySet<string> availableCapabilities)
+    {
+        foreach (var (id, value) in values)
+        {
+            var split = id.IndexOf('.');
+            if (split <= 0) throw new ArgumentException($"Setting id '{id}' must be section.key.", nameof(values));
+            var section = id[..split]; var key = id[(split + 1)..];
+            var definition = WslConfigurationSchema.Global.LastOrDefault(d => string.Equals(d.Section, section, StringComparison.OrdinalIgnoreCase) && string.Equals(d.Key, key, StringComparison.OrdinalIgnoreCase));
+            if (definition is null || definition.RequiredCapability is not null && !availableCapabilities.Contains(definition.RequiredCapability))
+                throw new ConfigurationValidationException([new(0, "config.unsupported", $"Unsupported setting {id}.")]);
+            if (id.Equals("wsl2.networkingMode", StringComparison.OrdinalIgnoreCase) &&
+                value?.Equals("mirrored", StringComparison.OrdinalIgnoreCase) == true &&
+                !availableCapabilities.Contains("wsl.config.mirroredNetworking"))
+                throw new ConfigurationValidationException([new(0, "config.unsupported", "Mirrored networking is not supported by this WSL version.")]);
+            edited = value is null ? edited.WithoutValue(section, key) : edited.WithValue(section, key, value);
+        }
+        var diagnostics = WslConfigurationSchema.Validate(edited, WslConfigurationSchema.Global);
+        if (diagnostics.Any(d => d.Severity == ConfigurationDiagnosticSeverity.Error)) throw new ConfigurationValidationException(diagnostics);
+        return edited;
+    }
+
+    private static Dictionary<string, string> Project(LosslessIniDocument source)
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var token in source.Tokens.Where(t => t.Kind == ConfigurationTokenKind.KeyValue))
+            result[Id(token.Section!, token.Key!)] = token.Value!;
+        return result;
+    }
+    private static string? Get(IReadOnlyDictionary<string, string> values, string section, string key) =>
+        values.TryGetValue(Id(section, key), out var value) ? value : null;
+    private static string Id(string section, string key) => $"{section}.{key}";
+    internal static string Fingerprint(byte[] bytes) => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));
 
     /// <inheritdoc/>
     public Task<(long TotalRamMb, int CpuCount)> GetHostSpecsAsync(CancellationToken ct = default)

@@ -1552,13 +1552,16 @@ This will start the installation process.</value>
     <value>Networking Mode</value>
   </data>
   <data name="WslConfig_SaveAndRestart" xml:space="preserve">
-    <value>Save &amp; Restart WSL</value>
+    <value>Save &amp; Mark WSL Restart Pending</value>
+  </data>
+  <data name="WslConfig_SaveAndMarkPendingRestart" xml:space="preserve">
+    <value>Save &amp; Mark WSL Restart Pending</value>
   </data>
   <data name="WslConfig_OpenRawFile" xml:space="preserve">
     <value>Open Raw File</value>
   </data>
   <data name="WslConfig_RestartConfirm" xml:space="preserve">
-    <value>Run wsl --shutdown now to apply the changes? All running WSL instances will be stopped.</value>
+    <value>Changes are saved, but a full WSL shutdown is required before they take effect. Running WSL instances remain running.</value>
   </data>
   <data name="WslConfig_MemoryWarning" xml:space="preserve">
     <value>Memory limit exceeds 80% of host RAM. This may cause system instability.</value>
@@ -1573,7 +1576,10 @@ This will start the installation process.</value>
     <value>Invalid swap value. Use 0 to disable, or a number with GB/MB suffix.</value>
   </data>
   <data name="WslConfig_SaveComplete" xml:space="preserve">
-    <value>Configuration saved successfully.</value>
+    <value>Configuration saved. A WSL restart is pending.</value>
+  </data>
+  <data name="WslConfig_SavePendingRestartComplete" xml:space="preserve">
+    <value>Configuration saved. A full WSL shutdown is pending before the changes take effect.</value>
   </data>
   <data name="ManageTags_SectionTitle" xml:space="preserve">
     <value>Manage Tags</value>
@@ -1843,9 +1849,50 @@ Please select the directory that contains the PowerShell module manifest file.</
   <data name="Capability.Probe.TimedOut" xml:space="preserve"><value>The capability probe timed out.</value></data>
   <data name="Capability.Probe.UnexpectedFailure" xml:space="preserve"><value>The capability probe encountered an unexpected failure.</value></data>
   <data name="Capability.Systemd.RequiresInstanceProbe" xml:space="preserve"><value>systemd support must be checked per distribution.</value></data>
+  <data name="Capability.Systemd.EnablementSupported" xml:space="preserve"><value>This WSL version supports enabling systemd.</value></data>
+  <data name="Capability.Systemd.VersionTooLow" xml:space="preserve"><value>This WSL version is too old to enable systemd.</value></data>
+  <data name="Capability.Systemd.VersionUnknown" xml:space="preserve"><value>The WSL version could not be determined, so systemd enablement is unavailable.</value></data>
+  <data name="Capability.Systemd.WslUnavailable" xml:space="preserve"><value>WSL is unavailable, so systemd enablement is unavailable.</value></data>
   <data name="Capability.TaskScheduler.Available" xml:space="preserve"><value>Windows Task Scheduler is available.</value></data>
   <data name="Capability.UsbIpd.VersionRequiresValidation" xml:space="preserve"><value>The usbipd version requires compatibility validation.</value></data>
   <data name="Capability.Wsl.UpdateAvailable" xml:space="preserve"><value>The WSL CLI reports that an update is available.</value></data>
   <data name="Capability.Wslg.NotReported" xml:space="preserve"><value>The WSL CLI did not report a WSLg version.</value></data>
   <data name="Capability.Wslg.Supported" xml:space="preserve"><value>The WSL CLI reported a WSLg version.</value></data>
+  <data name="Tab_Configuration" xml:space="preserve"><value>Configuration</value></data>
+  <data name="ConfigurationTab_BootUser" xml:space="preserve"><value>Boot and user</value></data>
+  <data name="ConfigurationTab_Systemd" xml:space="preserve"><value>Enable systemd</value></data>
+  <data name="ConfigurationTab_BootCommand" xml:space="preserve"><value>Boot command</value></data>
+  <data name="ConfigurationTab_DefaultUser" xml:space="preserve"><value>Default user</value></data>
+  <data name="ConfigurationTab_Automount" xml:space="preserve"><value>Automount</value></data>
+  <data name="ConfigurationTab_Enabled" xml:space="preserve"><value>Enabled</value></data>
+  <data name="ConfigurationTab_Fstab" xml:space="preserve"><value>Process fstab</value></data>
+  <data name="ConfigurationTab_Root" xml:space="preserve"><value>Root</value></data>
+  <data name="ConfigurationTab_Options" xml:space="preserve"><value>Options</value></data>
+  <data name="ConfigurationTab_InteropNetwork" xml:space="preserve"><value>Windows interoperability and network</value></data>
+  <data name="ConfigurationTab_Interop" xml:space="preserve"><value>Enable interoperability</value></data>
+  <data name="ConfigurationTab_WindowsPath" xml:space="preserve"><value>Append Windows PATH</value></data>
+  <data name="ConfigurationTab_Hostname" xml:space="preserve"><value>Hostname</value></data>
+  <data name="ConfigurationTab_GenerateHosts" xml:space="preserve"><value>Generate hosts</value></data>
+  <data name="ConfigurationTab_GenerateResolv" xml:space="preserve"><value>Generate resolv.conf</value></data>
+  <data name="ConfigurationTab_RawPreview" xml:space="preserve"><value>Raw preview (read only)</value></data>
+  <data name="ConfigurationTab_Save" xml:space="preserve"><value>Save configuration</value></data>
+  <data name="Configuration_PendingWslRestart" xml:space="preserve"><value>Changes require a full WSL shutdown.</value></data>
+  <data name="Configuration_UnsupportedReason" xml:space="preserve"><value>Unavailable with the detected WSL capabilities.</value></data>
+  <data name="Configuration_SavePreview" xml:space="preserve"><value>Changed settings: {0}&#xA;Affected running distributions: {1}&#xA;&#xA;Desired file:&#xA;{2}</value></data>
+  <data name="Configuration_NoRunningInstances" xml:space="preserve"><value>None</value></data>
+  <data name="Configuration_CurrentRaw" xml:space="preserve"><value>Current raw configuration</value></data>
+  <data name="Configuration_DesiredRaw" xml:space="preserve"><value>Desired raw configuration</value></data>
+  <data name="ConfigurationTab_Metadata" xml:space="preserve"><value>Enable metadata</value></data>
+  <data name="ConfigurationTab_Umask" xml:space="preserve"><value>umask</value></data>
+  <data name="ConfigurationTab_Case" xml:space="preserve"><value>Case sensitivity (off, dir, force)</value></data>
+  <data name="Configuration_InstanceRestart" xml:space="preserve"><value>Terminate this distribution to apply changes.</value></data>
+  <data name="Configuration_LineDiagnostic" xml:space="preserve"><value>Line {0}: {1}</value></data>
+  <data name="Configuration_SaveCompleteWithBackup" xml:space="preserve"><value>Saved with backup {0}. {1}</value></data>
+  <data name="Configuration_Conflict" xml:space="preserve"><value>Configuration conflict</value></data>
+  <data name="Configuration_Experimental" xml:space="preserve"><value>Experimental</value></data>
+  <data name="Configuration_InvalidValue" xml:space="preserve"><value>The setting value is invalid.</value></data>
+  <data name="Configuration_Malformed" xml:space="preserve"><value>The configuration contains an invalid line.</value></data>
+  <data name="Configuration_InvalidUser" xml:space="preserve"><value>The default Linux user name is invalid.</value></data>
+  <data name="Configuration_UserNotFound" xml:space="preserve"><value>The default Linux user does not exist in this distribution.</value></data>
+  <data name="Configuration_TransportError" xml:space="preserve"><value>Could not update the distribution configuration: {0}</value></data>
 </root>
