@@ -1889,4 +1889,64 @@
   <data name="Configuration_InvalidUser" xml:space="preserve"><value>默认 Linux 用户名无效。</value></data>
   <data name="Configuration_UserNotFound" xml:space="preserve"><value>默认 Linux 用户不存在于此发行版中。</value></data>
   <data name="Configuration_TransportError" xml:space="preserve"><value>无法更新发行版配置：{0}</value></data>
+  <data name="Health_Title" xml:space="preserve"><value>健康中心</value></data>
+  <data name="Health_Rescan" xml:space="preserve"><value>重新扫描</value></data>
+  <data name="Health_Cancel" xml:space="preserve"><value>取消</value></data>
+  <data name="Health_DiagnosticPreview" xml:space="preserve"><value>诊断预览</value></data>
+  <data name="Health_Severity" xml:space="preserve"><value>严重程度：</value></data>
+  <data name="Health_Repair" xml:space="preserve"><value>修复</value></data>
+  <data name="Health_Ready" xml:space="preserve"><value>就绪</value></data>
+  <data name="Health_Scanning" xml:space="preserve"><value>正在扫描…</value></data>
+  <data name="Health_Cancelled" xml:space="preserve"><value>扫描已取消</value></data>
+  <data name="Health_Complete" xml:space="preserve"><value>扫描完成：{0} 项发现</value></data>
+  <data name="Health_RepairPreviewUnavailable" xml:space="preserve"><value>修复预览不可用。</value></data>
+  <data name="Health_RepairFailed" xml:space="preserve"><value>修复失败</value></data>
+  <data name="Health_DiagnosticGenerated" xml:space="preserve"><value>已生成诊断预览（{0} 个字符，已脱敏）。</value></data>
+  <data name="Health_SaveDiagnostic" xml:space="preserve"><value>保存诊断报告</value></data>
+  <data name="Health_IncludeLogs" xml:space="preserve"><value>包含可用的应用程序日志：</value></data>
+  <data name="Health_RedactDiagnostic" xml:space="preserve"><value>在诊断报告中脱敏路径和用户名</value></data>
+  <data name="Health_CopyCode" xml:space="preserve"><value>复制代码</value></data>
+  <data name="Health_CancelReport" xml:space="preserve"><value>取消报告</value></data>
+  <data name="Health_CheckingCapabilities" xml:space="preserve"><value>正在检查健康中心前提条件…</value></data>
+  <data name="Health_PrerequisiteUnavailable" xml:space="preserve"><value>健康扫描不可用：{0}</value></data>
+  <data name="Health_WslNotDetected" xml:space="preserve"><value>未检测到 WSL。</value></data>
+  <data name="Health_ScanPhase" xml:space="preserve"><value>正在运行健康检查…</value></data>
+  <data name="Health_ScanFindingPhase" xml:space="preserve"><value>正在评估：{0}</value></data>
+  <data name="Health_ReportPreviewPhase" xml:space="preserve"><value>正在准备脱敏诊断预览…</value></data>
+  <data name="Health_ReportExportPhase" xml:space="preserve"><value>正在保存脱敏诊断报告…</value></data>
+  <data name="Health_ReportCancelled" xml:space="preserve"><value>诊断报告操作已取消。</value></data>
+  <data name="Health_DiagnosticSaved" xml:space="preserve"><value>诊断报告已保存：{0}</value></data>
+  <data name="Health_DiagnosticDetail" xml:space="preserve"><value>诊断详情</value></data>
+  <data name="Health_CopyDetail" xml:space="preserve"><value>复制脱敏详情</value></data>
+  <data name="Health_FindingWslTitle" xml:space="preserve"><value>WSL 版本</value></data>
+  <data name="Health_FindingWslDetail" xml:space="preserve"><value>已评估 WSL 运行时版本和更新状态。</value></data>
+  <data name="Health_FindingKernelTitle" xml:space="preserve"><value>WSL 内核</value></data>
+  <data name="Health_FindingKernelDetail" xml:space="preserve"><value>已评估 WSL 内核版本和可用性。</value></data>
+  <data name="Health_FindingWslgTitle" xml:space="preserve"><value>WSLg 版本</value></data>
+  <data name="Health_FindingWslgDetail" xml:space="preserve"><value>已评估 WSLg 可用性和版本。</value></data>
+  <data name="Health_FindingNetworkTitle" xml:space="preserve"><value>WSL 网络</value></data>
+  <data name="Health_FindingNetworkDetail" xml:space="preserve"><value>已评估网络模式和 WSL 连通性。</value></data>
+  <data name="Health_FindingProxyTitle" xml:space="preserve"><value>代理配置</value></data>
+  <data name="Health_FindingProxyDetail" xml:space="preserve"><value>已评估代理配置，且不会导出凭据。</value></data>
+  <data name="Health_FindingVpnTitle" xml:space="preserve"><value>VPN 连通性</value></data>
+  <data name="Health_FindingVpnDetail" xml:space="preserve"><value>已评估 VPN 相关路由和连通性。</value></data>
+  <data name="Health_FindingTemplateTitle" xml:space="preserve"><value>模板健康</value></data>
+  <data name="Health_FindingTemplateDetail" xml:space="preserve"><value>已评估已记录的模板声明和安装后检查。</value></data>
+  <data name="Health_FindingWindowsTitle" xml:space="preserve"><value>Windows 先决条件</value></data>
+  <data name="Health_FindingWindowsDetail" xml:space="preserve"><value>已评估 Windows 可选功能和虚拟化先决条件。</value></data>
+  <data name="Health_FindingConfigurationTitle" xml:space="preserve"><value>WSL 配置</value></data>
+  <data name="Health_FindingConfigurationDetail" xml:space="preserve"><value>已评估受管理的 WSL 配置值。</value></data>
+  <data name="Health_FindingUnknownTitle" xml:space="preserve"><value>健康发现</value></data>
+  <data name="Health_FindingUnknownDetail" xml:space="preserve"><value>没有可用的其他诊断详情。</value></data>
+  <data name="Health_ScopeHost" xml:space="preserve"><value>主机</value></data>
+  <data name="Health_ScopeInstance" xml:space="preserve"><value>实例：{0}</value></data>
+  <data name="Health_RepairPostconditionUnverified" xml:space="preserve"><value>修复已完成，但无法自动验证其后置条件。请重新扫描健康中心。</value></data>
+  <data name="Health_ErrorFallback" xml:space="preserve"><value>DN-7005：健康操作失败。</value></data>
+  <data name="Health_Error_DN7001" xml:space="preserve"><value>DN-7001：此健康操作不可用。</value></data>
+  <data name="Health_Error_DN7002" xml:space="preserve"><value>DN-7002：修复预览已失效。请重新生成预览。</value></data>
+  <data name="Health_Error_DN7003" xml:space="preserve"><value>DN-7003：需要明确确认修复操作。</value></data>
+  <data name="Health_Error_DN7004" xml:space="preserve"><value>DN-7004：此修复需要提升权限确认。</value></data>
+  <data name="Health_Error_DN7005" xml:space="preserve"><value>DN-7005：健康操作失败。</value></data>
+  <data name="Health_Error_DN7006" xml:space="preserve"><value>DN-7006：修复后置条件未满足。</value></data>
+  <data name="Health_Error_DN7007" xml:space="preserve"><value>DN-7007：诊断导出请求无效。</value></data>
 </root>

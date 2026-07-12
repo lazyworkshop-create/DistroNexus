@@ -15,6 +15,7 @@ public class BackupService : IBackupService
     private readonly ILogger<BackupService> _logger;
     private readonly string _appDataDir;
     private readonly VersionedJsonStore<List<BackupSchedule>> _scheduleStore;
+    private readonly VersionedJsonStore<List<BackupHealthRecord>> _healthStore;
 
     private const int VeryLongOperationTimeoutSeconds = 300;
 
@@ -37,6 +38,7 @@ public class BackupService : IBackupService
                 "DistroNexus");
         _scheduleStore = new VersionedJsonStore<List<BackupSchedule>>(SchedulesFilePath, legacyReader: node =>
             node.Deserialize<List<BackupSchedule>>(_jsonOptions) ?? []);
+        _healthStore = new VersionedJsonStore<List<BackupHealthRecord>>(Path.Combine(_appDataDir, "backup-health.json"), legacyReader: node => node.Deserialize<List<BackupHealthRecord>>(_jsonOptions) ?? []);
     }
 
     private string SchedulesFilePath => Path.Combine(_appDataDir, "backup-schedules.json");
@@ -139,14 +141,28 @@ public class BackupService : IBackupService
             cancellationToken);
 
         if (result.ExitCode != 0)
+        {
+            await RecordHealthAsync(new BackupHealthRecord(instanceName, DateTimeOffset.UtcNow, false, "DN-4006", result.Error), cancellationToken);
             throw new WslOperationFailedException(
                 $"Backup failed for '{instanceName}': {result.Error}",
                 DistroNexusErrorCode.BackupFailed,
                 operation: "InvokeBackup",
                 instanceName: instanceName);
+        }
 
+        await RecordHealthAsync(new BackupHealthRecord(instanceName, DateTimeOffset.UtcNow, true), cancellationToken);
         _logger.LogInformation("Backup completed for instance '{Name}' -> '{Destination}'", instanceName, destination);
     }
+
+    public async Task<IReadOnlyList<BackupHealthRecord>> GetHealthHistoryAsync(CancellationToken cancellationToken = default)
+    {
+        var read = await _healthStore.ReadAsync(cancellationToken);
+        return read.Succeeded ? read.Value!.Value.Where(x => x.CompletedAt >= DateTimeOffset.UtcNow.AddDays(-30)).OrderByDescending(x => x.CompletedAt).ToArray() : [];
+    }
+
+    /// <inheritdoc/>
+    public Task RecordHealthAsync(BackupHealthRecord record, CancellationToken cancellationToken = default) =>
+        AppendHealthRecordAsync(record, cancellationToken);
 
     // ── Private helpers ──────────────────────────────────────────────────────
 
@@ -158,5 +174,19 @@ public class BackupService : IBackupService
             throw new WslOperationFailedException(result.Message ?? "Backup schedule write failed.",
                 result.Error == StoreErrorKind.RevisionConflict ? DistroNexusErrorCode.StoreRevisionConflict : DistroNexusErrorCode.StoreWriteFailed,
                 operation: "SaveBackupSchedule");
+    }
+    private async Task AppendHealthRecordAsync(BackupHealthRecord record, CancellationToken ct)
+    {
+        var read = await _healthStore.ReadAsync(ct); var all = read.Succeeded ? read.Value!.Value : [];
+        if (read.Error is not (StoreErrorKind.None or StoreErrorKind.NotFound))
+            throw new WslOperationFailedException(read.Message ?? "Backup health history read failed.",
+                read.Error == StoreErrorKind.NewerSchema ? DistroNexusErrorCode.StoreSchemaUnsupported : DistroNexusErrorCode.StoreDocumentInvalid,
+                operation: "RecordBackupHealth");
+        all = all.Where(x => x.CompletedAt >= DateTimeOffset.UtcNow.AddDays(-30)).Append(record with { Detail = SensitiveDataRedactor.Redact(record.Detail) }).ToList();
+        var write = await _healthStore.WriteAsync(all, read.Value?.Revision ?? 0, ct);
+        if (!write.Succeeded)
+            throw new WslOperationFailedException(write.Message ?? "Backup health history write failed.",
+                write.Error == StoreErrorKind.RevisionConflict ? DistroNexusErrorCode.StoreRevisionConflict : DistroNexusErrorCode.StoreWriteFailed,
+                operation: "RecordBackupHealth");
     }
 }

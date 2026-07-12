@@ -181,6 +181,24 @@ public class TemplateService : ITemplateService
             LogFilePath = _applicationHistoryPath
         };
 
+        // Preserve declaration/preflight evidence with the install record. Do not persist raw
+        // preflight commands: they can contain user data and are not needed to establish the
+        // declared contract later.
+        var declaration = await ValidateTemplateAsync(template, instanceName).ConfigureAwait(false);
+        var preflightErrors = template.PreflightChecks.Where(x => x.Required && (string.IsNullOrWhiteSpace(x.Id) || string.IsNullOrWhiteSpace(x.Command)))
+            .Select(x => "Required preflight declaration is incomplete: " + (string.IsNullOrWhiteSpace(x.Id) ? "<missing id>" : x.Id)).ToArray();
+        instanceHistoryRecord.DeclaredHealthSnapshot = new TemplateDeclaredHealthSnapshot(
+            declaration.IsValid && preflightErrors.Length == 0,
+            declaration.Errors.Concat(preflightErrors).Select(SensitiveDataRedactor.Redact).ToArray(),
+            template.PreflightChecks.Where(x => x.Required).Select(x => x.Id).Order(StringComparer.Ordinal).ToArray(),
+            template.PreflightChecks.Select(x => x.Id).Order(StringComparer.Ordinal).ToArray(),
+            template.Version,
+            template.Scripts.OrderBy(x => x.Order).Select(x => x.Name).ToArray(),
+            RuntimePreflightContracts: template.PreflightChecks
+                .Where(IsRuntimeHealthSafePreflight)
+                .Select(x => new TemplateRuntimePreflightContract(x.Id, x.Required, x.Command.Trim()))
+                .OrderBy(x => x.Id, StringComparer.Ordinal).ToArray());
+
         _logger.LogInformation(
             "Applying template {TemplateId} ({TemplateName}) to instance {InstanceName}; Origin={Origin}",
             template.Id,
@@ -301,6 +319,10 @@ public class TemplateService : ITemplateService
             instanceHistoryRecord.ExecutedScripts = result.ExecutedScripts;
             instanceHistoryRecord.Errors = result.Errors;
             instanceHistoryRecord.Duration = result.Duration;
+            // This is install-time evidence, not a later catalog validation. A successful
+            // install whose declared scripts did not actually run is a durable drift finding.
+            if (instanceHistoryRecord.DeclaredHealthSnapshot is { } persistedDeclaration)
+                instanceHistoryRecord.DeclaredHealthSnapshot = persistedDeclaration with { AppliedScriptIds = result.ExecutedScripts.Order(StringComparer.Ordinal).ToArray() };
 
             await AppendApplicationHistoryAsync(instanceHistoryRecord, cancellationToken);
         }
@@ -320,6 +342,11 @@ public class TemplateService : ITemplateService
              });
         }
     }
+
+    // Health Center may only replay fixed existence checks.  Everything else is evaluated only
+    // during the user-authorized template application, never during a background health scan.
+    private static bool IsRuntimeHealthSafePreflight(TemplatePreflightCheck check) =>
+        check.Type == TemplateScriptType.Bash && TemplateRuntimePreflightEvaluator.IsSafeCommand(check.Command);
 
     public Task RefreshTemplatesAsync(CancellationToken cancellationToken = default)
     {

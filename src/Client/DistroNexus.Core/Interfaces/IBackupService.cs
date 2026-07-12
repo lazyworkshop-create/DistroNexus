@@ -32,4 +32,15 @@ public interface IBackupService
     /// <param name="destination">Destination directory for the backup TAR.</param>
     /// <param name="retentionCount">Maximum number of backup files to retain.</param>
     Task InvokeBackupAsync(string instanceName, string destination, int retentionCount, CancellationToken cancellationToken = default);
+
+    /// <summary>Typed bounded execution history used by Health Center. Existing implementations remain compatible.</summary>
+    Task<IReadOnlyList<BackupHealthRecord>> GetHealthHistoryAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<BackupHealthRecord>>([]);
+
+    /// <summary>
+    /// Records a bounded, redacted backup outcome in the same persistent history returned by
+    /// <see cref="GetHealthHistoryAsync"/>. Implementations must report persistence failures.
+    /// </summary>
+    Task RecordHealthAsync(BackupHealthRecord record, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("The configured backup service does not persist Health Center history.");
 }

@@ -52,6 +52,15 @@ public enum DistroNexusErrorCode
     TemplateNotFound       = 6001,
     TemplateScriptFailed   = 6002,
 
+    // ── Capability / Health / Monitoring ─────────────────────────────────
+    HealthCheckUnavailable = 7001,
+    HealthRepairPreviewInvalid = 7002,
+    HealthRepairConfirmationRequired = 7003,
+    HealthRepairElevationRequired = 7004,
+    HealthRepairFailed = 7005,
+    HealthRepairPostconditionFailed = 7006,
+    DiagnosticExportInvalid = 7007,
+
     // ── System / Unknown ──────────────────────────────────────────────────
     WslNotInstalled             = 9001,
     WslVersionTooLow            = 9002,

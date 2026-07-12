@@ -105,4 +105,12 @@ public class GlobalSettings
     /// If not set, the service will auto-detect the module path.
     /// </summary>
     public string? PowerShellModulePath { get; set; }
+
+    /// <summary>
+    /// Gets or sets an optional application-owned loopback endpoint (for example
+    /// <c>127.0.0.1:8080</c>) used solely by the Health Center to verify WSL localhost
+    /// forwarding. Empty means no application endpoint is opted in and no port is probed.
+    /// Only localhost, 127.0.0.1, and ::1 are accepted by the consumer.
+    /// </summary>
+    public string LocalhostForwardingHealthEndpoint { get; set; } = string.Empty;
 }

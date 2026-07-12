@@ -115,6 +115,10 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<IWslEventWatcher, WslEventWatcher>();
                     services.AddSingleton<IWslCliRunner, WslCliRunner>();
                     services.AddPlatformCapabilities();
+                    services.AddHealthCenter();
+                    // Override the Core null navigation sink with the concrete shell bridge.
+                    services.AddSingleton<DesktopHealthNavigationBroker>();
+                    services.AddSingleton<IHealthNavigationBroker>(sp => sp.GetRequiredService<DesktopHealthNavigationBroker>());
                     services.AddSingleton<IDialogService, DialogService>();
 
                     // Register ViewModels
@@ -124,6 +128,7 @@ public partial class App : System.Windows.Application
                     services.AddTransient<TemplatesViewModel>();
                     services.AddTransient<InstallWizardViewModel>();
                     services.AddTransient<SourceManagerViewModel>();
+                    services.AddTransient<HealthCenterViewModel>();
                     services.AddTransient<Wizard.InstallWizardWorkflowViewModel>();
 
                     // Register Views/Pages
@@ -131,6 +136,7 @@ public partial class App : System.Windows.Application
                     services.AddTransient<SettingsPage>();
                     services.AddTransient<PackageManagerPage>();
                     services.AddTransient<TemplatesPage>();
+                    services.AddTransient<HealthCenterPage>();
                     services.AddTransient<InstallWizardDialog>();
                     services.AddTransient<InstallWizardDialogNew>();
 

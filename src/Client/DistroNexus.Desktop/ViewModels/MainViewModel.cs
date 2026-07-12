@@ -5,6 +5,7 @@ using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using DistroNexus.Desktop.Wizard;
 using DistroNexus.Desktop.Views;
+using DistroNexus.Desktop.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
@@ -140,6 +141,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         // Update active downloads count initially
         UpdateActiveDownloadsCount();
+
+        // The Core Health Center requests navigation through an abstraction.  Attach it to the
+        // actual shell while it is alive rather than leaving repairs at a no-op sink.
+        if (_serviceProvider.GetService<DesktopHealthNavigationBroker>() is { } healthNavigation)
+            healthNavigation.RequestHandler = (_, _) => ShowSettings();
     }
 
     /// <summary>
@@ -545,6 +551,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
         CurrentPage = settingsPage;
         IsOnDashboard = false;
         _logger.LogInformation("Navigated to settings");
+    }
+
+    [RelayCommand]
+    private void ShowHealth()
+    {
+        CurrentPage = _serviceProvider.GetRequiredService<HealthCenterPage>();
+        IsOnDashboard = false;
     }
 
     /// <summary>

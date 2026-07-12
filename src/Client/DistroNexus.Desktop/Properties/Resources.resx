@@ -1895,4 +1895,64 @@ Please select the directory that contains the PowerShell module manifest file.</
   <data name="Configuration_InvalidUser" xml:space="preserve"><value>The default Linux user name is invalid.</value></data>
   <data name="Configuration_UserNotFound" xml:space="preserve"><value>The default Linux user does not exist in this distribution.</value></data>
   <data name="Configuration_TransportError" xml:space="preserve"><value>Could not update the distribution configuration: {0}</value></data>
+  <data name="Health_Title" xml:space="preserve"><value>Health</value></data>
+  <data name="Health_Rescan" xml:space="preserve"><value>Rescan</value></data>
+  <data name="Health_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Health_DiagnosticPreview" xml:space="preserve"><value>Diagnostic preview</value></data>
+  <data name="Health_Severity" xml:space="preserve"><value>Severity:</value></data>
+  <data name="Health_Repair" xml:space="preserve"><value>Repair</value></data>
+  <data name="Health_Ready" xml:space="preserve"><value>Ready</value></data>
+  <data name="Health_Scanning" xml:space="preserve"><value>Scanning…</value></data>
+  <data name="Health_Cancelled" xml:space="preserve"><value>Scan cancelled</value></data>
+  <data name="Health_Complete" xml:space="preserve"><value>Scan complete: {0} findings</value></data>
+  <data name="Health_RepairPreviewUnavailable" xml:space="preserve"><value>Repair preview was unavailable.</value></data>
+  <data name="Health_RepairFailed" xml:space="preserve"><value>Repair failed</value></data>
+  <data name="Health_DiagnosticGenerated" xml:space="preserve"><value>Diagnostic preview generated ({0} characters, redacted).</value></data>
+  <data name="Health_SaveDiagnostic" xml:space="preserve"><value>Save diagnostic report</value></data>
+  <data name="Health_IncludeLogs" xml:space="preserve"><value>Include available application logs:</value></data>
+  <data name="Health_RedactDiagnostic" xml:space="preserve"><value>Redact paths and user names in the diagnostic report</value></data>
+  <data name="Health_CopyCode" xml:space="preserve"><value>Copy code</value></data>
+  <data name="Health_CancelReport" xml:space="preserve"><value>Cancel report</value></data>
+  <data name="Health_CheckingCapabilities" xml:space="preserve"><value>Checking Health prerequisites…</value></data>
+  <data name="Health_PrerequisiteUnavailable" xml:space="preserve"><value>Health scanning is unavailable: {0}</value></data>
+  <data name="Health_WslNotDetected" xml:space="preserve"><value>WSL was not detected.</value></data>
+  <data name="Health_ScanPhase" xml:space="preserve"><value>Running health checks…</value></data>
+  <data name="Health_ScanFindingPhase" xml:space="preserve"><value>Evaluating: {0}</value></data>
+  <data name="Health_ReportPreviewPhase" xml:space="preserve"><value>Preparing redacted diagnostic preview…</value></data>
+  <data name="Health_ReportExportPhase" xml:space="preserve"><value>Saving redacted diagnostic report…</value></data>
+  <data name="Health_ReportCancelled" xml:space="preserve"><value>Diagnostic report operation cancelled.</value></data>
+  <data name="Health_DiagnosticSaved" xml:space="preserve"><value>Diagnostic report saved: {0}</value></data>
+  <data name="Health_DiagnosticDetail" xml:space="preserve"><value>Diagnostic detail</value></data>
+  <data name="Health_CopyDetail" xml:space="preserve"><value>Copy redacted detail</value></data>
+  <data name="Health_FindingWslTitle" xml:space="preserve"><value>WSL version</value></data>
+  <data name="Health_FindingWslDetail" xml:space="preserve"><value>WSL runtime version and update status were evaluated.</value></data>
+  <data name="Health_FindingKernelTitle" xml:space="preserve"><value>WSL kernel</value></data>
+  <data name="Health_FindingKernelDetail" xml:space="preserve"><value>WSL kernel version and availability were evaluated.</value></data>
+  <data name="Health_FindingWslgTitle" xml:space="preserve"><value>WSLg version</value></data>
+  <data name="Health_FindingWslgDetail" xml:space="preserve"><value>WSLg availability and version were evaluated.</value></data>
+  <data name="Health_FindingNetworkTitle" xml:space="preserve"><value>WSL networking</value></data>
+  <data name="Health_FindingNetworkDetail" xml:space="preserve"><value>Network mode and WSL connectivity were evaluated.</value></data>
+  <data name="Health_FindingProxyTitle" xml:space="preserve"><value>Proxy configuration</value></data>
+  <data name="Health_FindingProxyDetail" xml:space="preserve"><value>Proxy configuration was evaluated without exporting credentials.</value></data>
+  <data name="Health_FindingVpnTitle" xml:space="preserve"><value>VPN connectivity</value></data>
+  <data name="Health_FindingVpnDetail" xml:space="preserve"><value>VPN-related routing and connectivity were evaluated.</value></data>
+  <data name="Health_FindingTemplateTitle" xml:space="preserve"><value>Template health</value></data>
+  <data name="Health_FindingTemplateDetail" xml:space="preserve"><value>Recorded template declarations and post-install checks were evaluated.</value></data>
+  <data name="Health_FindingWindowsTitle" xml:space="preserve"><value>Windows prerequisites</value></data>
+  <data name="Health_FindingWindowsDetail" xml:space="preserve"><value>Windows optional features and virtualization prerequisites were evaluated.</value></data>
+  <data name="Health_FindingConfigurationTitle" xml:space="preserve"><value>WSL configuration</value></data>
+  <data name="Health_FindingConfigurationDetail" xml:space="preserve"><value>Managed WSL configuration values were evaluated.</value></data>
+  <data name="Health_FindingUnknownTitle" xml:space="preserve"><value>Health finding</value></data>
+  <data name="Health_FindingUnknownDetail" xml:space="preserve"><value>No additional diagnostic detail is available.</value></data>
+  <data name="Health_ScopeHost" xml:space="preserve"><value>Host</value></data>
+  <data name="Health_ScopeInstance" xml:space="preserve"><value>Instance: {0}</value></data>
+  <data name="Health_RepairPostconditionUnverified" xml:space="preserve"><value>Repair completed, but its postcondition could not be verified automatically. Rescan Health Center.</value></data>
+  <data name="Health_ErrorFallback" xml:space="preserve"><value>DN-7005: Health operation failed.</value></data>
+  <data name="Health_Error_DN7001" xml:space="preserve"><value>DN-7001: This Health operation is unavailable.</value></data>
+  <data name="Health_Error_DN7002" xml:space="preserve"><value>DN-7002: The repair preview is no longer valid. Generate a new preview.</value></data>
+  <data name="Health_Error_DN7003" xml:space="preserve"><value>DN-7003: Explicit repair confirmation is required.</value></data>
+  <data name="Health_Error_DN7004" xml:space="preserve"><value>DN-7004: Elevation consent is required for this repair.</value></data>
+  <data name="Health_Error_DN7005" xml:space="preserve"><value>DN-7005: Health operation failed.</value></data>
+  <data name="Health_Error_DN7006" xml:space="preserve"><value>DN-7006: The repair postcondition was not satisfied.</value></data>
+  <data name="Health_Error_DN7007" xml:space="preserve"><value>DN-7007: The diagnostic export request is invalid.</value></data>
 </root>
