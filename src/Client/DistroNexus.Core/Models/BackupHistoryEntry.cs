@@ -5,6 +5,7 @@ namespace DistroNexus.Core.Models;
 /// </summary>
 public class BackupHistoryEntry
 {
+    public string Kind { get; set; } = "ScheduledBackup";
     /// <summary>File creation timestamp.</summary>
     public DateTimeOffset Timestamp { get; set; }
 

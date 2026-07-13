@@ -77,6 +77,8 @@ public partial class ConfigurationTabViewModel(WslInstanceViewModel instance, ID
             var preview = await service.PreviewAsync(instance.Name, values, _fingerprint!); DesiredRawPreview = preview.DesiredRaw;
             var affected = instance.IsRunning ? instance.Name : L("Configuration_NoRunningInstances");
             if (!await dialogs.ShowConfirmAsync(L("Tab_Configuration"), string.Format(L("Configuration_SavePreview"), string.Join(", ", values.Keys), affected, preview.DesiredRaw))) return;
+            var recoveryOffer = await service.GetRecoveryOfferAsync(instance.Name);
+            if (recoveryOffer?.IsAvailable == true && !await dialogs.ShowConfirmAsync(L("Tab_Configuration"), L("Recovery_OfferConfiguration"))) return;
             var result = await service.SaveAsync(instance.Name, values, _fingerprint!); _fingerprint = result.Fingerprint; RawPreview = DesiredRawPreview;
             _current = CurrentDesired();
             await dialogs.ShowAlertAsync(L("Tab_Configuration"), string.Format(L("Configuration_SaveCompleteWithBackup"), result.BackupPath, RestartImpact));

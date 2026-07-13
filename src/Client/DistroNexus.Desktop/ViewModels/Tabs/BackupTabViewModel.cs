@@ -4,8 +4,9 @@ using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
-using System.Text.Json;
+using DistroNexus.Core.Exceptions;
 
 namespace DistroNexus.Desktop.ViewModels.Tabs;
 
@@ -13,6 +14,7 @@ namespace DistroNexus.Desktop.ViewModels.Tabs;
 /// Backup frequency options for the schedule editor.
 /// </summary>
 public enum BackupFrequency { Daily, Weekly, Monthly }
+public enum BackupHistoryFilter { All, Scheduled, RecoveryPoints, Failures }
 
 /// <summary>
 /// ViewModel for the Backup tab of InstanceDetailDialog.
@@ -23,6 +25,7 @@ public partial class BackupTabViewModel : ObservableObject
     private readonly WslInstanceViewModel _instance;
     private readonly IBackupService _backupService;
     private readonly IDialogService _dialogService;
+    private readonly IRecoveryPointService _recoveryService;
 
     private bool _initialized;
 
@@ -36,6 +39,8 @@ public partial class BackupTabViewModel : ObservableObject
 
     public static IReadOnlyList<int> DaysOfMonth { get; } =
         [.. Enumerable.Range(1, 31)];
+    public static IReadOnlyList<BackupHistoryFilter> HistoryFilters { get; } = [BackupHistoryFilter.All, BackupHistoryFilter.Scheduled, BackupHistoryFilter.RecoveryPoints, BackupHistoryFilter.Failures];
+    public ObservableCollection<RecoveryPointFormat> RecoveryFormats { get; } = [RecoveryPointFormat.Tar];
 
     // ── Observable form fields ─────────────────────────────────────────────────
 
@@ -73,12 +78,45 @@ public partial class BackupTabViewModel : ObservableObject
 
     [ObservableProperty]
     private ObservableCollection<BackupHistoryEntry> _backupHistory = [];
+    [ObservableProperty] private BackupHistoryFilter _selectedHistoryFilter;
+
+    [ObservableProperty] private ObservableCollection<RecoveryPointSummary> _recoveryPoints = [];
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanImportInPlace))]
+    [NotifyPropertyChangedFor(nameof(CanRestoreSelectedRecoveryPoint))]
+    private RecoveryPointSummary? _selectedRecoveryPoint;
+    [ObservableProperty] private string _recoveryName = Properties.Resources.ResourceManager.GetString("Recovery_DefaultName") ?? string.Empty;
+    [ObservableProperty] private string _recoveryDescription = string.Empty;
+    [ObservableProperty] private string _recoveryTags = string.Empty;
+    [ObservableProperty] private string _recoveryTargetInstance = string.Empty;
+    [ObservableProperty] private string _recoveryTargetDirectory = string.Empty;
+    [ObservableProperty] private RecoveryPointFormat _recoveryFormat = RecoveryPointFormat.Tar;
+    [ObservableProperty] private bool _stopAndRestartForRecovery;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanImportInPlace))]
+    [NotifyPropertyChangedFor(nameof(CanManageTargetDirectory))]
+    private bool _recoveryImportInPlace;
+    [ObservableProperty] private bool _recoveryPinned;
+    [ObservableProperty] private int _recoveryRetention = 7;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanImportInPlace))]
+    [NotifyPropertyChangedFor(nameof(CanRestoreSelectedRecoveryPoint))]
+    private bool _canUseVhdx;
+    [ObservableProperty] private bool _isRecovering;
+    [ObservableProperty] private string _recoveryOperationStatus = string.Empty;
+    [ObservableProperty] private string _recoveryDiagnosticDetails = string.Empty;
+    private CancellationTokenSource? _recoveryOperationCts;
 
     // ── Computed ───────────────────────────────────────────────────────────────
 
     public bool ShowDayOfWeekPicker => Frequency == BackupFrequency.Weekly;
     public bool ShowDayOfMonthPicker => Frequency == BackupFrequency.Monthly;
     public bool IsFormEnabled => !IsLoading && !IsBackingUp;
+    public bool CanImportInPlace => CanUseVhdx && SelectedRecoveryPoint?.Manifest.Format == RecoveryPointFormat.Vhdx;
+    /// <summary>Import-in-place intentionally lets WSL own the registration location.</summary>
+    public bool CanManageTargetDirectory => !RecoveryImportInPlace;
+    /// <summary>VHDX restore and clone require the same capability preflight as VHDX creation.</summary>
+    public bool CanRestoreSelectedRecoveryPoint => SelectedRecoveryPoint?.Manifest.Format != RecoveryPointFormat.Vhdx || CanUseVhdx;
 
     public WslInstanceViewModel Instance => _instance;
 
@@ -87,11 +125,12 @@ public partial class BackupTabViewModel : ObservableObject
     public BackupTabViewModel(
         WslInstanceViewModel instance,
         IBackupService backupService,
-        IDialogService dialogService)
+        IDialogService dialogService, IRecoveryPointService recoveryService)
     {
         _instance = instance ?? throw new ArgumentNullException(nameof(instance));
         _backupService = backupService ?? throw new ArgumentNullException(nameof(backupService));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
+        _recoveryService = recoveryService ?? throw new ArgumentNullException(nameof(recoveryService));
     }
 
     // ── Initialization ─────────────────────────────────────────────────────────
@@ -117,8 +156,13 @@ public partial class BackupTabViewModel : ObservableObject
                 DestinationPath = schedule.Destination;
                 RetentionCount = schedule.RetentionCount;
 
-                await LoadBackupHistoryAsync();
             }
+            // History and recovery records are independent of an optional schedule or its
+            // destination. A removed schedule must not hide manual recovery evidence.
+            await LoadBackupHistoryAsync();
+            await LoadRecoveryPointsAsync();
+            RecoveryRetention = await _recoveryService.GetRetentionAsync(_instance.Name) ?? RecoveryRetention;
+            await RefreshVhdxCapabilityAsync();
         }
         catch (Exception ex)
         {
@@ -258,6 +302,132 @@ public partial class BackupTabViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task CreateRecoveryPointAsync()
+    {
+        if (string.IsNullOrWhiteSpace(DestinationPath)) { await _dialogService.ShowAlertAsync(Properties.Resources.ErrorTitle, Properties.Resources.BackupTab_NoDestination); return; }
+        using var operation = BeginRecoveryOperation("Recovery_CreatePreparing");
+        try
+        {
+            var request = new RecoveryPointCreateRequest(_instance.Name, RecoveryName, DestinationPath, RecoveryFormat, RecoveryDescription, ParseTags(), StopAndRestartForRecovery);
+            var preview = await _recoveryService.PreviewCreateAsync(request, operation.Token);
+            var warning = preview.Warnings.Count == 0 ? "" : "\n\n" + string.Join("\n", preview.Warnings);
+            if (!await _dialogService.ShowConfirmAsync(L("Recovery_CreateTitle"), L("Recovery_CreateConfirm") + warning)) return;
+            await _recoveryService.CreateAsync(request, preview.Token, operation.Token, RecoveryProgress());
+            await LoadRecoveryPointsAsync(); await LoadBackupHistoryAsync();
+        }
+        catch (Exception ex) { await ShowRecoveryErrorAsync(ex); }
+        finally { CompleteRecoveryOperation(operation); }
+    }
+
+    [RelayCommand]
+    private async Task VerifyRecoveryPointAsync()
+    {
+        if (SelectedRecoveryPoint is null) return;
+        var result = await _recoveryService.VerifyAsync(SelectedRecoveryPoint.Manifest.Id);
+        await _dialogService.ShowAlertAsync(L("Recovery_VerifyTitle"), result.ToString());
+        await LoadRecoveryPointsAsync();
+    }
+
+    [RelayCommand]
+    private async Task DeleteRecoveryPointAsync()
+    {
+        if (SelectedRecoveryPoint is null || !await _dialogService.ShowConfirmAsync(L("Recovery_DeleteTitle"), L("Recovery_DeleteConfirm"))) return;
+        await _recoveryService.DeleteAsync(SelectedRecoveryPoint.Manifest.Id, confirmed: true); await LoadRecoveryPointsAsync(); await LoadBackupHistoryAsync();
+    }
+
+    [RelayCommand]
+    private async Task RestoreRecoveryPointAsync()
+    {
+        if (SelectedRecoveryPoint is null || string.IsNullOrWhiteSpace(RecoveryTargetInstance)
+            || (!RecoveryImportInPlace && string.IsNullOrWhiteSpace(RecoveryTargetDirectory))) return;
+        using var operation = BeginRecoveryOperation("Recovery_RestorePreparing");
+        try
+        {
+            var request = new RecoveryRestoreRequest(SelectedRecoveryPoint.Manifest.Id, RecoveryTargetInstance.Trim(), RecoveryImportInPlace ? "" : RecoveryTargetDirectory.Trim(), true, RecoveryImportInPlace);
+            var preview = await _recoveryService.PreviewRestoreAsync(request, operation.Token);
+            if (!await _dialogService.ShowConfirmAsync(L("Recovery_RestoreTitle"), string.Join("\n", preview.Warnings))) return;
+            await _recoveryService.RestoreAsync(request, preview.Token, operation.Token, RecoveryProgress());
+            await _dialogService.ShowAlertAsync(Properties.Resources.SuccessTitle, L("Recovery_RestoreComplete"));
+        }
+        catch (Exception ex) { await ShowRecoveryErrorAsync(ex); }
+        finally { CompleteRecoveryOperation(operation); }
+    }
+
+    [RelayCommand]
+    private async Task CloneRecoveryPointAsync()
+    {
+        if (string.IsNullOrWhiteSpace(DestinationPath) || string.IsNullOrWhiteSpace(RecoveryTargetInstance)
+            || (!RecoveryImportInPlace && string.IsNullOrWhiteSpace(RecoveryTargetDirectory))) return;
+        using var operation = BeginRecoveryOperation("Recovery_ClonePreparing");
+        try
+        {
+            var request = new RecoveryCloneRequest(new(_instance.Name, RecoveryName, DestinationPath, RecoveryFormat, RecoveryDescription, ParseTags(), StopAndRestartForRecovery), RecoveryTargetInstance.Trim(), RecoveryImportInPlace ? "" : RecoveryTargetDirectory.Trim(), RecoveryImportInPlace);
+            var preview = await _recoveryService.PreviewCloneAsync(request, operation.Token);
+            if (!await _dialogService.ShowConfirmAsync(L("Recovery_CloneTitle"), string.Join("\n", preview.Warnings))) return;
+            await _recoveryService.RestoreCloneAsync(request, preview.Token, operation.Token, RecoveryProgress());
+            await LoadRecoveryPointsAsync(); await LoadBackupHistoryAsync();
+        }
+        catch (Exception ex) { await ShowRecoveryErrorAsync(ex); }
+        finally { CompleteRecoveryOperation(operation); }
+    }
+
+    [RelayCommand]
+    private async Task SaveRecoveryNotesAsync()
+    {
+        if (SelectedRecoveryPoint is null) return;
+        await _recoveryService.UpdateNotesAsync(SelectedRecoveryPoint.Manifest.Id, RecoveryDescription, ParseTags(), RecoveryPinned);
+        await LoadRecoveryPointsAsync();
+    }
+
+    [RelayCommand]
+    private async Task ApplyRecoveryRetentionAsync()
+    {
+        if (RecoveryRetention < 1) RecoveryRetention = 1;
+        await _recoveryService.ApplyRetentionAsync(_instance.Name, RecoveryRetention);
+        await LoadRecoveryPointsAsync(); await LoadBackupHistoryAsync();
+    }
+
+    partial void OnSelectedRecoveryPointChanged(RecoveryPointSummary? value)
+    {
+        if (value is not null)
+        {
+            RecoveryDescription = value.Manifest.Description;
+            RecoveryTags = string.Join(", ", value.Manifest.Tags);
+            RecoveryPinned = value.Manifest.Pinned;
+        }
+        if (value?.Manifest.Format != RecoveryPointFormat.Vhdx) RecoveryImportInPlace = false;
+        OnPropertyChanged(nameof(CanImportInPlace));
+    }
+    partial void OnRecoveryImportInPlaceChanged(bool value)
+    {
+        if (value) RecoveryTargetDirectory = string.Empty;
+        OnPropertyChanged(nameof(CanManageTargetDirectory));
+    }
+    partial void OnDestinationPathChanged(string value) => _ = RefreshVhdxCapabilityAsync();
+    partial void OnRecoveryFormatChanged(RecoveryPointFormat value)
+    {
+        if (value == RecoveryPointFormat.Vhdx && !CanUseVhdx) RecoveryFormat = RecoveryPointFormat.Tar;
+    }
+    partial void OnCanUseVhdxChanged(bool value)
+    {
+        if (value && !RecoveryFormats.Contains(RecoveryPointFormat.Vhdx)) RecoveryFormats.Add(RecoveryPointFormat.Vhdx);
+        if (!value)
+        {
+            RecoveryFormats.Remove(RecoveryPointFormat.Vhdx);
+            RecoveryFormat = RecoveryPointFormat.Tar;
+            RecoveryImportInPlace = false;
+        }
+        OnPropertyChanged(nameof(CanImportInPlace));
+    }
+
+    [RelayCommand]
+    private void RevealRecoveryPoint()
+    {
+        if (SelectedRecoveryPoint is null || !Directory.Exists(SelectedRecoveryPoint.DirectoryPath)) return;
+        Process.Start(new ProcessStartInfo { FileName = "explorer.exe", UseShellExecute = true, ArgumentList = { SelectedRecoveryPoint.DirectoryPath } });
+    }
+
+    [RelayCommand]
     private void BrowseDestination()
     {
         var dialog = new OpenFolderDialog
@@ -298,30 +468,58 @@ public partial class BackupTabViewModel : ObservableObject
         BackupFrequency.Monthly => $"Monthly:{SelectedDayOfMonth}",
         _                       => "Daily"
     };
+    private IReadOnlyList<string> ParseTags() => RecoveryTags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    private static string L(string key) => Properties.Resources.ResourceManager.GetString(key) ?? key;
+    private CancellationTokenSource BeginRecoveryOperation(string initialStatus)
+    {
+        _recoveryOperationCts?.Cancel(); _recoveryOperationCts?.Dispose();
+        _recoveryOperationCts = new CancellationTokenSource();
+        IsRecovering = true; RecoveryOperationStatus = L(initialStatus); RecoveryDiagnosticDetails = string.Empty;
+        return _recoveryOperationCts;
+    }
+    private IProgress<RecoveryOperationProgress> RecoveryProgress() => new Progress<RecoveryOperationProgress>(p => RecoveryOperationStatus = L($"Recovery_Status_{p.Stage}"));
+    private void CompleteRecoveryOperation(CancellationTokenSource operation)
+    {
+        if (ReferenceEquals(_recoveryOperationCts, operation)) { _recoveryOperationCts = null; IsRecovering = false; }
+    }
+    private async Task ShowRecoveryErrorAsync(Exception ex)
+    {
+        // Recovery adapters can surface filesystem/process exceptions.  Keep the UI's
+        // diagnostic contract stable even when their implementation-specific text varies.
+        RecoveryDiagnosticDetails = ex is WslOperationException
+            ? MainViewModel.FormatAlertMessage(ex)
+            : $"[DN-{(int)DistroNexusErrorCode.RecoveryOperationFailed:D4}] {MainViewModel.FormatAlertMessage(ex)}";
+        RecoveryOperationStatus = ex is WslOperationException { Code: DistroNexusErrorCode.RecoveryManualRecoveryRequired }
+            ? L("Recovery_ManualRecoveryRequired")
+            : ex is OperationCanceledException ? L("Recovery_Cancelled") : L("Recovery_Failed");
+        await _dialogService.ShowAlertAsync(Properties.Resources.ErrorTitle, RecoveryDiagnosticDetails);
+    }
+    [RelayCommand]
+    private void CancelRecoveryOperation() => _recoveryOperationCts?.Cancel();
+    [RelayCommand]
+    private void CopyRecoveryDiagnostic()
+    {
+        if (!string.IsNullOrWhiteSpace(RecoveryDiagnosticDetails)) System.Windows.Clipboard.SetText(RecoveryDiagnosticDetails);
+    }
+    partial void OnIsRecoveringChanged(bool value) { if (!value) RecoveryOperationStatus = string.Empty; }
 
     internal async Task LoadBackupHistoryAsync()
     {
-        var entries = new List<BackupHistoryEntry>();
-
         try
         {
-            if (!string.IsNullOrWhiteSpace(DestinationPath) && Directory.Exists(DestinationPath))
-            {
-                entries.AddRange(Directory
-                    .EnumerateFiles(DestinationPath)
-                    .Where(f => f.EndsWith(".tar", StringComparison.OrdinalIgnoreCase)
-                             || f.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase))
-                    .Select(f => new FileInfo(f))
-                    .Select(fi => new BackupHistoryEntry
-                    {
-                        Timestamp    = new DateTimeOffset(fi.CreationTimeUtc),
-                        FileSizeBytes = fi.Length,
-                        FilePath     = fi.FullName,
-                        IsSuccess    = true
-                    }));
-            }
+            var entries = (await _recoveryService.GetHistoryAsync())
+                .Where(x => string.Equals(x.InstanceName, _instance.Name, StringComparison.OrdinalIgnoreCase))
+                .Select(x => new BackupHistoryEntry { Timestamp = x.CreatedAt, FilePath = x.Location ?? string.Empty,
+                    ErrorMessage = x.Kind == "RecoveryPoint" ? L("Recovery_HistoryPoint") : x.Kind == "ScheduledBackup" ? L("Recovery_HistoryScheduled") : x.Status == "Failed" ? L("BackupTab_StatusFailed") : string.Empty,
+                    IsSuccess = x.Status != "Failed", Kind = x.Kind }).ToList();
 
-            entries.AddRange(await LoadFailureHistoryAsync());
+            entries = SelectedHistoryFilter switch
+            {
+                BackupHistoryFilter.Scheduled => entries.Where(x => x.Kind == "ScheduledBackup").ToList(),
+                BackupHistoryFilter.RecoveryPoints => entries.Where(x => x.Kind == "RecoveryPoint").ToList(),
+                BackupHistoryFilter.Failures => entries.Where(x => !x.IsSuccess).ToList(),
+                _ => entries
+            };
 
             BackupHistory = new ObservableCollection<BackupHistoryEntry>(
                 entries
@@ -334,53 +532,30 @@ public partial class BackupTabViewModel : ObservableObject
         }
     }
 
-    private async Task<IEnumerable<BackupHistoryEntry>> LoadFailureHistoryAsync()
-    {
-        var notifPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "DistroNexus", "pending-notifications.json");
-        if (!File.Exists(notifPath))
-            return [];
+    partial void OnSelectedHistoryFilterChanged(BackupHistoryFilter value) => _ = LoadBackupHistoryAsync();
 
+    private async Task LoadRecoveryPointsAsync()
+    {
+        RecoveryPoints = new ObservableCollection<RecoveryPointSummary>((await _recoveryService.ListAsync()).Where(x => string.Equals(x.Manifest.SourceInstance, _instance.Name, StringComparison.OrdinalIgnoreCase)));
+    }
+    private async Task RefreshVhdxCapabilityAsync()
+    {
+        if (string.IsNullOrWhiteSpace(DestinationPath)) { DisableVhdxRecoveryOptions(); return; }
         try
         {
-            var json = await File.ReadAllTextAsync(notifPath);
-            using var doc = JsonDocument.Parse(json);
-            if (!doc.RootElement.TryGetProperty("notifications", out var notifications))
-                return [];
-
-            return notifications
-                .EnumerateArray()
-                .Where(n => string.Equals(
-                    n.TryGetProperty("type", out var type) ? type.GetString() : null,
-                    "BackupFailure",
-                    StringComparison.OrdinalIgnoreCase))
-                .Where(n => string.Equals(
-                    n.TryGetProperty("instance", out var inst) ? inst.GetString() : null,
-                    _instance.Name,
-                    StringComparison.OrdinalIgnoreCase))
-                .Select(n =>
-                {
-                    var message = n.TryGetProperty("message", out var messageEl)
-                        ? messageEl.GetString()
-                        : Properties.Resources.BackupTab_StatusFailed;
-                    var timestamp = n.TryGetProperty("time", out var timeEl)
-                        && DateTimeOffset.TryParse(timeEl.GetString(), out var parsed)
-                            ? parsed
-                            : DateTimeOffset.Now;
-
-                    return new BackupHistoryEntry
-                    {
-                        Timestamp = timestamp,
-                        ErrorMessage = message ?? Properties.Resources.BackupTab_StatusFailed,
-                        IsSuccess = false
-                    };
-                })
-                .ToList();
+            await _recoveryService.PreviewCreateAsync(new RecoveryPointCreateRequest(_instance.Name, "capability-probe", DestinationPath, RecoveryPointFormat.Vhdx));
+            CanUseVhdx = true;
         }
-        catch
-        {
-            return [];
-        }
+        catch { DisableVhdxRecoveryOptions(); }
     }
+
+    private void DisableVhdxRecoveryOptions()
+    {
+        CanUseVhdx = false;
+        // The capability value can already be false while the user changes the checkbox;
+        // do not rely on its generated changed hook to clear an unsafe stale selection.
+        RecoveryImportInPlace = false;
+        if (RecoveryFormat == RecoveryPointFormat.Vhdx) RecoveryFormat = RecoveryPointFormat.Tar;
+    }
+
 }

@@ -37,6 +37,7 @@ public partial class InstanceDetailViewModel : ObservableObject
         IDockerIntegrationService dockerIntegrationService,
         INetworkService networkService,
         IBackupService backupService,
+        IRecoveryPointService recoveryPointService,
         IWslConfigService wslConfigService,
         ITagService tagService,
         IDialogService dialogService,
@@ -56,7 +57,7 @@ public partial class InstanceDetailViewModel : ObservableObject
         ResourcesTab = new ResourcesTabViewModel(instance, wslManager, wslConfigService, dialogService);
         IntegrationsTab = new IntegrationsTabViewModel(instance, dockerIntegrationService, dialogService);
         NetworkTab = new NetworkTabViewModel(instance, networkService, dialogService, networkDiagnostics, firewallOperationBroker, networkConfigurationService, networkStatusAdapter, browserLauncher);
-        BackupTab = new BackupTabViewModel(instance, backupService, dialogService);
+        BackupTab = new BackupTabViewModel(instance, backupService, dialogService, recoveryPointService);
         ConfigurationTab = new ConfigurationTabViewModel(instance, distributionConfigurationService, platformCapabilityService, dialogService);
         ServicesTab = new ServicesTabViewModel(instance, systemdService, dialogService);
     }

@@ -15,15 +15,20 @@ public class WslConfigService : IWslConfigService, IWslConfigurationService
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> FileLocks = new(StringComparer.OrdinalIgnoreCase);
     private readonly ILogger<WslConfigService> _logger;
     private readonly string _userProfileDir;
+    private readonly IRecoveryOfferService? _recoveryOffers;
 
-    public WslConfigService(ILogger<WslConfigService> logger, string? userProfileDir = null)
+    public WslConfigService(ILogger<WslConfigService> logger, string? userProfileDir = null, IRecoveryOfferService? recoveryOffers = null)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _userProfileDir = userProfileDir
             ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        _recoveryOffers = recoveryOffers;
     }
 
     private string WslConfigPath => Path.Combine(_userProfileDir, ".wslconfig");
+
+    public Task<RecoveryOffer> GetRecoveryOfferAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(new RecoveryOffer(false, "", RecoveryOfferReason.MajorConfigurationChange, "RecoveryOffer.HostConfigurationRequiresInstance"));
 
     // ── IWslConfigService ─────────────────────────────────────────────────────
 

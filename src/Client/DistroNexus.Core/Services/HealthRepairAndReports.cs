@@ -8,9 +8,18 @@ namespace DistroNexus.Core.Services;
 public sealed class HealthRepairService : IHealthRepairService
 {
     private readonly IReadOnlyDictionary<string, IRepairAction> _actions;
+    private readonly IRecoveryOfferService? _recoveryOffers;
     private readonly Dictionary<string, (HealthFinding Finding, RepairPreview Preview)> _previews = new(StringComparer.Ordinal);
     private readonly object _sync = new();
-    public HealthRepairService(IEnumerable<IRepairAction> actions) => _actions = actions.ToDictionary(x => x.Id, StringComparer.Ordinal);
+    public HealthRepairService(IEnumerable<IRepairAction> actions, IRecoveryOfferService? recoveryOffers = null) { _actions = actions.ToDictionary(x => x.Id, StringComparer.Ordinal); _recoveryOffers = recoveryOffers; }
+
+    public async Task<RecoveryOffer> GetRecoveryOfferAsync(HealthFinding finding, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(finding.InstanceName)) return new(false, "", RecoveryOfferReason.DestructiveRepair, "RecoveryOffer.InstanceRequired");
+        var preview = await PreviewAsync(finding, cancellationToken);
+        if (preview.Safety == RepairSafety.Safe) return new(false, finding.InstanceName, RecoveryOfferReason.DestructiveRepair, "RecoveryOffer.NotRequired");
+        return _recoveryOffers is null ? new(false, finding.InstanceName, RecoveryOfferReason.DestructiveRepair, "RecoveryOffer.Unavailable") : await _recoveryOffers.GetOfferAsync(finding.InstanceName, RecoveryOfferReason.DestructiveRepair, cancellationToken);
+    }
     public async Task<RepairPreview> PreviewAsync(HealthFinding finding, CancellationToken cancellationToken = default)
     {
         var preview = await Action(finding).PreviewAsync(finding, cancellationToken).ConfigureAwait(false);

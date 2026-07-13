@@ -127,6 +127,9 @@ public partial class TemplateApplyStep : WizardStepBase
 
         try
         {
+            var recoveryOffer = await _templateService.GetRecoveryOfferAsync(Context.InstanceName, _applyCts.Token);
+            if (recoveryOffer.IsAvailable && !ConfirmRecoveryDecline())
+                throw new OperationCanceledException("Template application was paused so the user can create a recovery point.");
             if (Context.SelectedTemplate != null && Context.SelectedTemplate.IsCustom && !ConfirmCustomTemplateApplication(Context.SelectedTemplate.Name))
             {
                 throw new OperationCanceledException("Custom template application was cancelled by user confirmation.");
@@ -207,6 +210,10 @@ public partial class TemplateApplyStep : WizardStepBase
         HasTemplateOutput = true;
         RebuildFilteredOutput();
     }
+
+    private static bool ConfirmRecoveryDecline() => MessageBox.Show(
+        DistroNexus.Desktop.Properties.Resources.ResourceManager.GetString("Recovery_OfferTemplate") ?? "Recovery point available.",
+        DistroNexus.Desktop.Properties.Resources.ResourceManager.GetString("Recovery_OfferTitle") ?? "Optional recovery point", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes;
 
     private static TemplateOutputSeverity ClassifyOutputSeverity(string message, bool fromStandardError)
     {

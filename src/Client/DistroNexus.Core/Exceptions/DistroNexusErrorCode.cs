@@ -42,6 +42,10 @@ public enum DistroNexusErrorCode
     BackupFailed           = 4006,
     InvalidFrequency       = 4007,
     InstallFailed          = 4008,
+    RecoveryPointInvalid   = 4009,
+    RecoveryTargetReserved = 4010,
+    RecoveryOperationFailed = 4011,
+    RecoveryManualRecoveryRequired = 4012,
 
     // ── Configuration ─────────────────────────────────────────────────────
     WslConfigReadFailed   = 5001,

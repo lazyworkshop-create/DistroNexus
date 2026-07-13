@@ -1749,6 +1749,57 @@
   <data name="BackupTab_SelectDestinationTitle" xml:space="preserve">
     <value>选择备份目标文件夹</value>
   </data>
+  <data name="Recovery_Title" xml:space="preserve"><value>恢复点</value></data>
+  <data name="Recovery_Create" xml:space="preserve"><value>创建恢复点</value></data>
+  <data name="Recovery_Tags" xml:space="preserve"><value>标签（以逗号分隔）</value></data>
+  <data name="Recovery_StopAndRestart" xml:space="preserve"><value>停止实例以获得一致导出，然后重启</value></data>
+  <data name="Recovery_Verify" xml:space="preserve"><value>验证</value></data>
+  <data name="Recovery_Reveal" xml:space="preserve"><value>在资源管理器中显示</value></data>
+  <data name="Recovery_Delete" xml:space="preserve"><value>删除</value></data>
+  <data name="Recovery_TargetInstance" xml:space="preserve"><value>新实例名称</value></data>
+  <data name="Recovery_TargetLocation" xml:space="preserve"><value>新实例位置</value></data>
+  <data name="Recovery_Restore" xml:space="preserve"><value>恢复</value></data>
+  <data name="Recovery_ImportInPlace" xml:space="preserve"><value>支持时使用 VHDX 就地导入</value></data>
+  <data name="Recovery_ImportInPlaceUnmanaged" xml:space="preserve"><value>就地导入由 WSL 管理注册位置，不会使用新实例位置字段。</value></data>
+  <data name="Recovery_OfferConfiguration" xml:space="preserve"><value>此配置变更前可创建恢复点。DistroNexus 不会自动创建；请在“备份”选项卡创建后重新执行，或继续而不创建恢复点。</value></data>
+  <data name="Recovery_OfferTemplate" xml:space="preserve"><value>应用模板前可创建恢复点。DistroNexus 不会自动创建；请在“备份”选项卡创建后重新执行，或继续而不创建恢复点。</value></data>
+  <data name="Recovery_OfferRepair" xml:space="preserve"><value>此修复前可创建恢复点。DistroNexus 不会自动创建；请在“备份”选项卡创建后重新运行修复，或选择“取消”停止。</value></data>
+  <data name="Recovery_OfferTitle" xml:space="preserve"><value>可选恢复点</value></data>
+  <data name="Recovery_Pin" xml:space="preserve"><value>固定所选恢复点</value></data>
+  <data name="Recovery_SaveNotes" xml:space="preserve"><value>保存备注</value></data>
+  <data name="Recovery_Clone" xml:space="preserve"><value>克隆</value></data>
+  <data name="Recovery_CreateTitle" xml:space="preserve"><value>创建恢复点</value></data>
+  <data name="Recovery_CreateConfirm" xml:space="preserve"><value>使用所选选项创建恢复点？</value></data>
+  <data name="Recovery_VerifyTitle" xml:space="preserve"><value>恢复点验证</value></data>
+  <data name="Recovery_DeleteTitle" xml:space="preserve"><value>删除恢复点</value></data>
+  <data name="Recovery_DeleteConfirm" xml:space="preserve"><value>删除所选恢复点及其数据？此操作无法撤销。</value></data>
+  <data name="Recovery_RestoreTitle" xml:space="preserve"><value>恢复恢复点</value></data>
+  <data name="Recovery_RestoreComplete" xml:space="preserve"><value>新实例已恢复并通过启动检查。</value></data>
+  <data name="Recovery_CloneTitle" xml:space="preserve"><value>克隆实例</value></data>
+  <data name="Recovery_Retention" xml:space="preserve"><value>保留数量</value></data>
+  <data name="Recovery_ApplyRetention" xml:space="preserve"><value>应用保留策略</value></data>
+  <data name="Recovery_VhdxUnavailable" xml:space="preserve"><value>VHDX 恢复点需要受支持的 WSL 2 导出/导入功能。</value></data>
+  <data name="Recovery_ColumnName" xml:space="preserve"><value>名称</value></data>
+  <data name="Recovery_ColumnCreated" xml:space="preserve"><value>创建时间</value></data>
+  <data name="Recovery_ColumnVerification" xml:space="preserve"><value>验证状态</value></data>
+  <data name="Recovery_Cancel" xml:space="preserve"><value>取消</value></data>
+  <data name="Recovery_CreatePreparing" xml:space="preserve"><value>正在准备创建恢复点…</value></data>
+  <data name="Recovery_RestorePreparing" xml:space="preserve"><value>正在准备恢复…</value></data>
+  <data name="Recovery_ClonePreparing" xml:space="preserve"><value>正在准备克隆实例…</value></data>
+  <data name="Recovery_Status_Validating" xml:space="preserve"><value>正在验证恢复操作…</value></data>
+  <data name="Recovery_Status_Exporting" xml:space="preserve"><value>正在导出恢复数据…</value></data>
+  <data name="Recovery_Status_Verifying" xml:space="preserve"><value>正在验证恢复数据…</value></data>
+  <data name="Recovery_Status_ReservingTarget" xml:space="preserve"><value>正在预留恢复目标…</value></data>
+  <data name="Recovery_Status_Importing" xml:space="preserve"><value>正在导入恢复数据…</value></data>
+  <data name="Recovery_Status_Completed" xml:space="preserve"><value>恢复操作已完成。</value></data>
+  <data name="Recovery_Status_CreatingPayload" xml:space="preserve"><value>正在创建克隆数据…</value></data>
+  <data name="Recovery_Cancelled" xml:space="preserve"><value>恢复操作已取消。若导入已开始，系统会保留诊断证据供手动核对。</value></data>
+  <data name="Recovery_Failed" xml:space="preserve"><value>恢复操作失败。下方显示诊断代码。</value></data>
+  <data name="Recovery_ManualRecoveryRequired" xml:space="preserve"><value>恢复操作可能遗留已注册的实例。系统未尝试自动清理；请使用诊断证据进行手动核对。</value></data>
+  <data name="Recovery_CopyDiagnostic" xml:space="preserve"><value>复制诊断信息</value></data>
+  <data name="Recovery_DefaultName" xml:space="preserve"><value>手动恢复点</value></data>
+  <data name="Recovery_HistoryPoint" xml:space="preserve"><value>恢复点</value></data>
+  <data name="Recovery_HistoryScheduled" xml:space="preserve"><value>计划备份</value></data>
   <data name="Remove_DeleteTask" xml:space="preserve">
     <value>同时删除此备份计划对应的任务计划程序任务？</value>
   </data>

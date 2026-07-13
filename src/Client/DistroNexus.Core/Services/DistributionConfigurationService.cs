@@ -7,10 +7,14 @@ using DistroNexus.Core.Models;
 namespace DistroNexus.Core.Services;
 
 /// <summary>Reads and writes the fixed /etc/wsl.conf boundary without interpolating distribution or values into commands.</summary>
-public sealed partial class DistributionConfigurationService(IProcessRunner runner) : IDistributionConfigurationService
+public sealed partial class DistributionConfigurationService(IProcessRunner runner, IRecoveryOfferService? recoveryOffers = null) : IDistributionConfigurationService
 {
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> InstanceLocks = new(StringComparer.OrdinalIgnoreCase);
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
+
+    public Task<RecoveryOffer> GetRecoveryOfferAsync(string distribution, CancellationToken cancellationToken = default) =>
+        recoveryOffers?.GetOfferAsync(distribution, RecoveryOfferReason.MajorConfigurationChange, cancellationToken)
+        ?? Task.FromResult(new RecoveryOffer(false, distribution, RecoveryOfferReason.MajorConfigurationChange, "RecoveryOffer.Unavailable"));
 
     public async Task<ConfigurationDocument<DistributionConfigurationSettings>> ReadAsync(string distribution,
         CancellationToken cancellationToken = default)

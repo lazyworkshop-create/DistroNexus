@@ -82,6 +82,8 @@ public class BackupService : IBackupService
         schedules.Add(schedule);
 
         await WriteSchedulesAsync(schedules, document.Value?.Revision ?? 0, cancellationToken);
+        await RecordHealthAsync(new BackupHealthRecord(schedule.Name, DateTimeOffset.UtcNow, true,
+            Destination: schedule.Destination, Kind: "ScheduledBackup"), cancellationToken);
         _logger.LogInformation("Saved backup schedule for instance '{Name}'", schedule.Name);
     }
 
@@ -142,7 +144,7 @@ public class BackupService : IBackupService
 
         if (result.ExitCode != 0)
         {
-            await RecordHealthAsync(new BackupHealthRecord(instanceName, DateTimeOffset.UtcNow, false, "DN-4006", result.Error), cancellationToken);
+            await RecordHealthAsync(new BackupHealthRecord(instanceName, DateTimeOffset.UtcNow, false, "DN-4006", result.Error, destination), cancellationToken);
             throw new WslOperationFailedException(
                 $"Backup failed for '{instanceName}': {result.Error}",
                 DistroNexusErrorCode.BackupFailed,
@@ -150,7 +152,7 @@ public class BackupService : IBackupService
                 instanceName: instanceName);
         }
 
-        await RecordHealthAsync(new BackupHealthRecord(instanceName, DateTimeOffset.UtcNow, true), cancellationToken);
+        await RecordHealthAsync(new BackupHealthRecord(instanceName, DateTimeOffset.UtcNow, true, Destination: destination), cancellationToken);
         _logger.LogInformation("Backup completed for instance '{Name}' -> '{Destination}'", instanceName, destination);
     }
 

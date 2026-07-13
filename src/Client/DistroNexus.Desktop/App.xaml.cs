@@ -110,6 +110,9 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<IWslConfigurationService>(sp => sp.GetRequiredService<WslConfigService>());
                     services.AddSingleton<IDistributionConfigurationService, DistributionConfigurationService>();
                     services.AddSingleton<IBackupService, BackupService>();
+                    services.AddSingleton<IRecoveryPointRuntime, WslRecoveryPointRuntime>();
+                    services.AddSingleton<IRecoveryPointService>(sp => new RecoveryPointService(sp.GetRequiredService<IRecoveryPointRuntime>(), sp.GetRequiredService<IBackupService>()));
+                    services.AddSingleton<IRecoveryOfferService, RecoveryOfferService>();
                     services.AddSingleton<INetworkService, NetworkService>();
                     services.AddSingleton<ISystemdService, SystemdService>();
                     services.AddSingleton<IWslNetworkDiagnosticsAdapter, WslNetworkDiagnosticsAdapter>();

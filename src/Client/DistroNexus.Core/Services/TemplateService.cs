@@ -27,6 +27,7 @@ public class TemplateService : ITemplateService
     private readonly ISettingsService _settingsService;
     private readonly IPowerShellService _powerShellService;
     private readonly HttpClient _httpClient;
+    private readonly IRecoveryOfferService? _recoveryOfferService;
     private List<Template>? _cachedTemplates;
     private readonly string _templatesCachePath;
     private readonly string _userTemplatesDirectory;
@@ -37,12 +38,14 @@ public class TemplateService : ITemplateService
         ILogger<TemplateService> logger,
         ISettingsService settingsService,
         IPowerShellService powerShellService,
-        HttpClient httpClient)
+        HttpClient httpClient,
+        IRecoveryOfferService? recoveryOfferService = null)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _powerShellService = powerShellService ?? throw new ArgumentNullException(nameof(powerShellService));
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        _recoveryOfferService = recoveryOfferService;
 
         var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         var appFolder = Path.Combine(appDataPath, "DistroNexus");
@@ -342,6 +345,10 @@ public class TemplateService : ITemplateService
              });
         }
     }
+
+    public Task<RecoveryOffer> GetRecoveryOfferAsync(string instanceName, CancellationToken cancellationToken = default) =>
+        _recoveryOfferService?.GetOfferAsync(instanceName, RecoveryOfferReason.TemplateApplication, cancellationToken)
+        ?? Task.FromResult(new RecoveryOffer(false, instanceName, RecoveryOfferReason.TemplateApplication, "RecoveryOffer.Unavailable"));
 
     // Health Center may only replay fixed existence checks.  Everything else is evaluated only
     // during the user-authorized template application, never during a background health scan.

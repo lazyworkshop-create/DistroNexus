@@ -157,6 +157,9 @@ public partial class HealthCenterViewModel : ObservableObject, IDisposable
             var preview = await _repairs.PreviewAsync(finding.Finding, _repairCts.Token);
             if (string.IsNullOrWhiteSpace(preview.PreviewToken)) { Status = "DN-7002: " + L("Health_RepairPreviewUnavailable", "Repair preview was unavailable."); return; }
             RepairDetails = Describe(preview);
+            var recoveryOffer = await _repairs.GetRecoveryOfferAsync(finding.Finding, _repairCts.Token);
+            if (recoveryOffer?.IsAvailable == true && MessageBox.Show(L("Recovery_OfferRepair", "A recovery point is available before this repair."), L("Recovery_OfferTitle", "Optional recovery point"), MessageBoxButton.OKCancel, MessageBoxImage.Warning) != MessageBoxResult.OK)
+            { Status = L("Health_RepairCancelled", "Repair cancelled."); return; }
             var confirmed = preview.Safety == RepairSafety.Safe || MessageBox.Show(RepairDetails, preview.Title, MessageBoxButton.OKCancel, MessageBoxImage.Warning) == MessageBoxResult.OK;
             if (!confirmed) { Status = L("Health_RepairCancelled", "Repair cancelled."); return; }
             OperationPhase = L("Health_RepairExecutingPhase", "Applying repair…");

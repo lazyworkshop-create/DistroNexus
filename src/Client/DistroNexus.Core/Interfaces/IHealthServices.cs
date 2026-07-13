@@ -85,6 +85,7 @@ public interface IRepairAction
 
 public interface IHealthRepairService
 {
+    Task<RecoveryOffer> GetRecoveryOfferAsync(HealthFinding finding, CancellationToken cancellationToken = default) => Task.FromResult(new RecoveryOffer(false, finding.InstanceName ?? "", RecoveryOfferReason.DestructiveRepair, "RecoveryOffer.Unavailable"));
     Task<RepairPreview> PreviewAsync(HealthFinding finding, CancellationToken cancellationToken = default);
     Task<RepairResult> ExecuteAsync(HealthFinding finding, RepairExecutionRequest request, CancellationToken cancellationToken = default);
 }

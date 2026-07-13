@@ -21,7 +21,9 @@ public sealed record HealthProbeState(string State, string Detail, IReadOnlyDict
 public sealed record WindowsOptionalFeatureState(string FeatureName, bool? Enabled, string Detail);
 public sealed record WindowsPrerequisiteSnapshot(IReadOnlyList<WindowsOptionalFeatureState> OptionalFeatures, bool? VirtualizationEnabled, string VirtualizationDetail);
 public sealed record BackupHealthState(bool DestinationExists, long? FreeBytes, int ConsecutiveFailures, string Detail, long? WarningThresholdBytes = null);
-public sealed record BackupHealthRecord(string InstanceName, DateTimeOffset CompletedAt, bool Succeeded, string? ErrorCode = null, string? Detail = null);
+/// <summary>Durable, redacted backup outcome with its historical source and destination.</summary>
+public sealed record BackupHealthRecord(string InstanceName, DateTimeOffset CompletedAt, bool Succeeded,
+    string? ErrorCode = null, string? Detail = null, string? Destination = null, string Kind = "Backup");
 public sealed record StructuredErrorRecord(DateTimeOffset OccurredAt, string Code, string Operation, string Message);
 public sealed record TemplateHealthState(string DeclaredState, string Detail);
 public sealed record StorageHealthState(long? HostFreeBytes, long? HostTotalBytes, long? VhdxBytes, long? LinuxFilesystemFreeBytes, long? ReclaimableBytes, string Detail);

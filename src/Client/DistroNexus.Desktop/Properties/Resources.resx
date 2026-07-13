@@ -1755,6 +1755,57 @@ This will start the installation process.</value>
   <data name="BackupTab_SelectDestinationTitle" xml:space="preserve">
     <value>Select Backup Destination Folder</value>
   </data>
+  <data name="Recovery_Title" xml:space="preserve"><value>Recovery Points</value></data>
+  <data name="Recovery_Create" xml:space="preserve"><value>Create Recovery Point</value></data>
+  <data name="Recovery_Tags" xml:space="preserve"><value>Tags (comma-separated)</value></data>
+  <data name="Recovery_StopAndRestart" xml:space="preserve"><value>Stop for a consistent export, then restart</value></data>
+  <data name="Recovery_Verify" xml:space="preserve"><value>Verify</value></data>
+  <data name="Recovery_Reveal" xml:space="preserve"><value>Reveal</value></data>
+  <data name="Recovery_Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="Recovery_TargetInstance" xml:space="preserve"><value>New instance name</value></data>
+  <data name="Recovery_TargetLocation" xml:space="preserve"><value>New instance location</value></data>
+  <data name="Recovery_Restore" xml:space="preserve"><value>Restore</value></data>
+  <data name="Recovery_ImportInPlace" xml:space="preserve"><value>Use VHDX import-in-place when supported</value></data>
+  <data name="Recovery_ImportInPlaceUnmanaged" xml:space="preserve"><value>Import-in-place lets WSL manage the registration location. The target location field is not used.</value></data>
+  <data name="Recovery_OfferConfiguration" xml:space="preserve"><value>A recovery point is available before this configuration change. DistroNexus will not create one automatically. Create it from the Backups tab and restart this operation, or continue without a recovery point.</value></data>
+  <data name="Recovery_OfferTemplate" xml:space="preserve"><value>A recovery point is available before template application. DistroNexus will not create one automatically. Create it from the Backups tab and restart this operation, or continue without a recovery point.</value></data>
+  <data name="Recovery_OfferRepair" xml:space="preserve"><value>A recovery point is available before this repair. DistroNexus will not create one automatically. Create it from the Backups tab and rerun the repair, or choose Cancel to stop.</value></data>
+  <data name="Recovery_OfferTitle" xml:space="preserve"><value>Optional recovery point</value></data>
+  <data name="Recovery_Pin" xml:space="preserve"><value>Pin selected point</value></data>
+  <data name="Recovery_SaveNotes" xml:space="preserve"><value>Save notes</value></data>
+  <data name="Recovery_Clone" xml:space="preserve"><value>Clone</value></data>
+  <data name="Recovery_CreateTitle" xml:space="preserve"><value>Create recovery point</value></data>
+  <data name="Recovery_CreateConfirm" xml:space="preserve"><value>Create the recovery point with the selected options?</value></data>
+  <data name="Recovery_VerifyTitle" xml:space="preserve"><value>Recovery point verification</value></data>
+  <data name="Recovery_DeleteTitle" xml:space="preserve"><value>Delete recovery point</value></data>
+  <data name="Recovery_DeleteConfirm" xml:space="preserve"><value>Delete the selected recovery point and its payload? This cannot be undone.</value></data>
+  <data name="Recovery_RestoreTitle" xml:space="preserve"><value>Restore recovery point</value></data>
+  <data name="Recovery_RestoreComplete" xml:space="preserve"><value>The new instance was restored and passed its boot check.</value></data>
+  <data name="Recovery_CloneTitle" xml:space="preserve"><value>Clone instance</value></data>
+  <data name="Recovery_Retention" xml:space="preserve"><value>Retention</value></data>
+  <data name="Recovery_ApplyRetention" xml:space="preserve"><value>Apply retention</value></data>
+  <data name="Recovery_VhdxUnavailable" xml:space="preserve"><value>VHDX recovery requires supported WSL 2 export/import capabilities.</value></data>
+  <data name="Recovery_ColumnName" xml:space="preserve"><value>Name</value></data>
+  <data name="Recovery_ColumnCreated" xml:space="preserve"><value>Created</value></data>
+  <data name="Recovery_ColumnVerification" xml:space="preserve"><value>Verification</value></data>
+  <data name="Recovery_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Recovery_CreatePreparing" xml:space="preserve"><value>Preparing recovery point creation…</value></data>
+  <data name="Recovery_RestorePreparing" xml:space="preserve"><value>Preparing recovery restore…</value></data>
+  <data name="Recovery_ClonePreparing" xml:space="preserve"><value>Preparing instance clone…</value></data>
+  <data name="Recovery_Status_Validating" xml:space="preserve"><value>Validating recovery operation…</value></data>
+  <data name="Recovery_Status_Exporting" xml:space="preserve"><value>Exporting recovery payload…</value></data>
+  <data name="Recovery_Status_Verifying" xml:space="preserve"><value>Verifying recovery payload…</value></data>
+  <data name="Recovery_Status_ReservingTarget" xml:space="preserve"><value>Reserving restore target…</value></data>
+  <data name="Recovery_Status_Importing" xml:space="preserve"><value>Importing recovery payload…</value></data>
+  <data name="Recovery_Status_Completed" xml:space="preserve"><value>Recovery operation completed.</value></data>
+  <data name="Recovery_Status_CreatingPayload" xml:space="preserve"><value>Creating clone payload…</value></data>
+  <data name="Recovery_Cancelled" xml:space="preserve"><value>Recovery operation cancelled. If an import began, diagnostic evidence was retained for manual reconciliation.</value></data>
+  <data name="Recovery_Failed" xml:space="preserve"><value>Recovery operation failed. The diagnostic code is shown below.</value></data>
+  <data name="Recovery_ManualRecoveryRequired" xml:space="preserve"><value>Recovery may have left a registered instance. Automatic cleanup was not attempted; use the diagnostic evidence to reconcile it manually.</value></data>
+  <data name="Recovery_CopyDiagnostic" xml:space="preserve"><value>Copy diagnostic</value></data>
+  <data name="Recovery_DefaultName" xml:space="preserve"><value>Manual recovery point</value></data>
+  <data name="Recovery_HistoryPoint" xml:space="preserve"><value>Recovery point</value></data>
+  <data name="Recovery_HistoryScheduled" xml:space="preserve"><value>Scheduled backup</value></data>
   <data name="Remove_DeleteTask" xml:space="preserve">
     <value>Also remove the associated Task Scheduler task for this backup schedule?</value>
   </data>
