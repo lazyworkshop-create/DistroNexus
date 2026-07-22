@@ -41,6 +41,7 @@ public static class HealthServiceCollectionExtensions
         services.AddSingleton<IHealthCheck, SystemdHealthCheck>();
         services.AddSingleton<IHealthCheck, TemplateHealthCheck>();
         services.AddSingleton<IHealthCheck, MonitoringHealthCheck>();
+        services.AddSingleton<IHealthCheck, WslgHealthCheck>();
         services.AddSingleton<IHealthOrchestrator, HealthOrchestrator>();
         services.AddSingleton<IHealthNavigationBroker, NullHealthNavigationBroker>();
         services.AddSingleton<IWindowsFeatureRepairBroker, ElevatedWindowsFeatureRepairBroker>();

@@ -24,6 +24,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
     <!-- Removed System.Management.Automation - using process-based PowerShell execution instead -->
     <PackageReference Include="System.Management" Version="9.0.0" />
+    <PackageReference Include="System.Drawing.Common" Version="9.0.10" />
   </ItemGroup>
 
 </Project>

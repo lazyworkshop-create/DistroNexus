@@ -86,10 +86,17 @@ d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
                               Icon="{ui:SymbolIcon Symbol=UsbPlug20}"
                               Command="{Binding ShowDevicesCommand}"
                               Margin="0,0,10,0"/>
-                    <ui:Button Content="{lex:Loc Workspace_Title}"
+                      <ui:Button Content="{lex:Loc Workspace_Title}"
                               Icon="{ui:SymbolIcon Symbol=Code20}"
                               Command="{Binding ShowWorkspacesCommand}"
-                              Margin="0,0,10,0"/>
+                                Margin="0,0,10,0"/>
+                      <ui:Button Content="{lex:Loc Applications_Title}"
+                                Icon="{ui:SymbolIcon Symbol=Apps20}"
+                                Command="{Binding ShowApplicationsCommand}"
+                                IsEnabled="{Binding IsApplicationsNavigationAvailable}"
+                                ToolTip="{Binding ApplicationsNavigationReason}"
+                                AutomationProperties.Name="{lex:Loc Applications_Title}"
+                                Margin="0,0,10,0"/>
                     <ToggleButton Content="{lex:Loc Toolbar_SelectMode}"
                                   IsChecked="{Binding IsMultiSelectMode}"
                                   Command="{Binding ToggleMultiSelectCommand}"/>

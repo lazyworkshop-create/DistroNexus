@@ -133,6 +133,7 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<IUsbDeviceService, UsbDeviceService>();
                     services.AddTransient<IUsbDeviceChangeWatcher, UsbDeviceChangeWatcher>();
                     services.AddSingleton<IProcessRunner, ProcessRunner>();
+                    services.AddWslgApplications();
                     services.AddSingleton<IWorkspaceRuntime, WorkspaceRuntime>();
                     services.AddSingleton<IWorkspaceTemplatePrerequisiteChecker, UnavailableWorkspaceTemplatePrerequisiteChecker>();
                     services.AddSingleton<IWorkspaceActionCapabilityGate, WorkspaceActionCapabilityGate>();
@@ -168,6 +169,7 @@ public partial class App : System.Windows.Application
                     services.AddTransient<HealthCenterViewModel>();
                     services.AddTransient<UsbDevicesViewModel>();
                     services.AddTransient<WorkspacesViewModel>();
+                    services.AddTransient<ApplicationsViewModel>();
                     services.AddTransient<Wizard.InstallWizardWorkflowViewModel>();
 
                     // Register Views/Pages
@@ -178,6 +180,7 @@ public partial class App : System.Windows.Application
                     services.AddTransient<HealthCenterPage>();
                     services.AddTransient<UsbDevicesPage>();
                     services.AddTransient<WorkspacesPage>();
+                    services.AddTransient<ApplicationsPage>();
                     services.AddTransient<InstallWizardDialog>();
                     services.AddTransient<InstallWizardDialogNew>();
 

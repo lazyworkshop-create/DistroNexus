@@ -66,6 +66,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private bool _isOnDashboard = true;
 
+    [ObservableProperty] private bool _isApplicationsNavigationAvailable;
+    [ObservableProperty] private string _applicationsNavigationReason = "Checking WSLg availability...";
+
     [ObservableProperty]
     private string _currentTheme = "Dark";
 
@@ -572,6 +575,35 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         CurrentPage = _serviceProvider.GetRequiredService<WorkspacesPage>();
         IsOnDashboard = false;
+    }
+
+    [RelayCommand]
+    private async Task ShowApplicationsAsync()
+    {
+        var capabilities = _serviceProvider.GetService<IPlatformCapabilityService>();
+        if (capabilities is not null)
+        {
+            var snapshot = await capabilities.GetHostSnapshotAsync();
+            if (!snapshot.Capabilities.TryGetValue(CapabilityId.Wslg, out var wslg) || !wslg.IsSupported)
+            {
+                IsApplicationsNavigationAvailable = false;
+                ApplicationsNavigationReason = Properties.Resources.ResourceManager.GetString("Applications_Unavailable") ?? "WSLg is unavailable.";
+                StatusMessage = ApplicationsNavigationReason;
+                return;
+            }
+        }
+        IsApplicationsNavigationAvailable = true; ApplicationsNavigationReason = string.Empty;
+        CurrentPage = _serviceProvider.GetRequiredService<ApplicationsPage>();
+        IsOnDashboard = false;
+    }
+
+    public async Task RefreshApplicationsNavigationAsync()
+    {
+        var capabilities = _serviceProvider.GetService<IPlatformCapabilityService>();
+        if (capabilities is null) { IsApplicationsNavigationAvailable = true; ApplicationsNavigationReason = string.Empty; return; }
+        var snapshot = await capabilities.GetHostSnapshotAsync();
+        IsApplicationsNavigationAvailable = snapshot.Capabilities.TryGetValue(CapabilityId.Wslg, out var wslg) && wslg.IsSupported;
+        ApplicationsNavigationReason = IsApplicationsNavigationAvailable ? string.Empty : Properties.Resources.ResourceManager.GetString("Applications_Unavailable") ?? "WSLg is unavailable.";
     }
 
     /// <summary>

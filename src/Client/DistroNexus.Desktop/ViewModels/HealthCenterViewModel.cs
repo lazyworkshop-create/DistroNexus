@@ -220,8 +220,8 @@ public partial class HealthCenterViewModel : ObservableObject, IDisposable
 
 internal static class HealthFindingText
 {
-    public static string Title(HealthFinding finding) => R(Category(finding) + "Title", finding.Title);
-    public static string Detail(HealthFinding finding) => R(Category(finding) + "Detail", finding.Detail);
+    public static string Title(HealthFinding finding) => R(Specific(finding) + "Title", R(Category(finding) + "Title", finding.Title));
+    public static string Detail(HealthFinding finding) => R(Specific(finding) + "Detail", R(Category(finding) + "Detail", finding.Detail));
     public static string Scope(HealthFinding finding) => finding.Scope == HealthScope.Instance
         ? string.Format(R("Health_ScopeInstance", "Instance: {0}"), finding.InstanceName ?? R("Health_ScopeInstanceUnknown", "unknown"))
         : R("Health_ScopeHost", "Host");
@@ -238,6 +238,7 @@ internal static class HealthFindingText
         var id when id.StartsWith("host.wsl.", StringComparison.Ordinal) => "Health_FindingWsl",
         var id when id.StartsWith("host.kernel.", StringComparison.Ordinal) => "Health_FindingKernel",
         var id when id.StartsWith("host.wslg.", StringComparison.Ordinal) => "Health_FindingWslg",
+        var id when id.StartsWith("wslg.", StringComparison.Ordinal) => "Health_FindingWslg",
         var id when id.StartsWith("network.", StringComparison.Ordinal) => "Health_FindingNetwork",
         var id when id.StartsWith("proxy.", StringComparison.Ordinal) => "Health_FindingProxy",
         var id when id.StartsWith("vpn.", StringComparison.Ordinal) => "Health_FindingVpn",
@@ -246,5 +247,6 @@ internal static class HealthFindingText
         var id when id.StartsWith("wslconfig.", StringComparison.Ordinal) || id.StartsWith("wslconf.", StringComparison.Ordinal) => "Health_FindingConfiguration",
         _ => "Health_FindingUnknown"
     };
+    private static string Specific(HealthFinding finding) => finding.Id.EndsWith(".wayland",StringComparison.Ordinal) ? "Health_WslgWayland" : finding.Id.EndsWith(".display",StringComparison.Ordinal) ? "Health_WslgDisplay" : finding.Id.EndsWith(".audio",StringComparison.Ordinal) ? "Health_WslgAudio" : finding.Id.EndsWith(".stale-shortcut",StringComparison.Ordinal) ? "Health_WslgStaleShortcut" : "Health_NoSpecific";
     private static string R(string key, string fallback) => Properties.Resources.ResourceManager.GetString(key) ?? fallback;
 }
