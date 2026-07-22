@@ -22,6 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\DistroNexus.Core\DistroNexus.Core.csproj" />
     <ProjectReference Include="..\DistroNexus.Desktop\DistroNexus.Desktop.csproj" />
+    <ProjectReference Include="..\DistroNexus.UsbElevatedHelper\DistroNexus.UsbElevatedHelper.csproj" />
   </ItemGroup>
 
   <ItemGroup>

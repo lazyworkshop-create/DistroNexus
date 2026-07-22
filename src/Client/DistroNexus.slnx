@@ -13,5 +13,6 @@
   </Folder>
   <Project Path="DistroNexus.Core/DistroNexus.Core.csproj" />
   <Project Path="DistroNexus.Desktop/DistroNexus.Desktop.csproj" />
+  <Project Path="DistroNexus.UsbElevatedHelper/DistroNexus.UsbElevatedHelper.csproj" />
   <Project Path="DistroNexus.Tests/DistroNexus.Tests.csproj" />
 </Solution>

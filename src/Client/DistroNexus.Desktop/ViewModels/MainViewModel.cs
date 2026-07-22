@@ -560,6 +560,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
         IsOnDashboard = false;
     }
 
+    [RelayCommand]
+    private void ShowDevices()
+    {
+        CurrentPage = _serviceProvider.GetRequiredService<UsbDevicesPage>();
+        IsOnDashboard = false;
+    }
+
     /// <summary>
     /// Toggles the download panel visibility.
     /// </summary>

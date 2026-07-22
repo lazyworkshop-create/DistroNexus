@@ -7,6 +7,17 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!-- Release packaging supplies the SHA-1 Authenticode signer thumbprint; an empty development value fails closed. -->
+  <PropertyGroup>
+    <UsbElevatedHelperPublisherThumbprint Condition="'$(UsbElevatedHelperPublisherThumbprint)' == ''"></UsbElevatedHelperPublisherThumbprint>
+    <!-- Release packaging also pins usbipd-win's Authenticode signer. An empty value intentionally disables elevated launch. -->
+    <UsbIpdPublisherThumbprint Condition="'$(UsbIpdPublisherThumbprint)' == ''"></UsbIpdPublisherThumbprint>
+  </PropertyGroup>
+  <ItemGroup>
+    <AssemblyMetadata Include="DistroNexus.UsbElevatedHelperPublisherThumbprint" Value="$(UsbElevatedHelperPublisherThumbprint)" />
+    <AssemblyMetadata Include="DistroNexus.UsbIpdPublisherThumbprint" Value="$(UsbIpdPublisherThumbprint)" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.2" />

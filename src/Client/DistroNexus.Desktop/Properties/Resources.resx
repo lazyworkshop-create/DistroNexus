@@ -2096,4 +2096,31 @@ Please select the directory that contains the PowerShell module manifest file.</
   <data name="MonitorTab_Address" xml:space="preserve"><value>Listening address</value></data>
   <data name="MonitorTab_Port" xml:space="preserve"><value>Port</value></data>
   <data name="MonitorTab_ListenPorts" xml:space="preserve"><value>Listening ports</value></data>
+  <data name="Devices_Title" xml:space="preserve"><value>Devices</value></data>
+  <data name="Devices_Refresh" xml:space="preserve"><value>Refresh</value></data>
+  <data name="Devices_Bind" xml:space="preserve"><value>Bind</value></data>
+  <data name="Devices_Unbind" xml:space="preserve"><value>Unbind</value></data>
+  <data name="Devices_Attach" xml:space="preserve"><value>Attach to WSL</value></data>
+  <data name="Devices_Detach" xml:space="preserve"><value>Detach</value></data>
+  <data name="Devices_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Devices_Ready" xml:space="preserve"><value>{0} USB device(s) discovered.</value></data>
+  <data name="Devices_Cancelled" xml:space="preserve"><value>Operation cancelled.</value></data>
+  <data name="Devices_ConfirmTitle" xml:space="preserve"><value>Confirm USB operation</value></data>
+  <data name="Devices_Succeeded" xml:space="preserve"><value>USB operation completed.</value></data>
+  <data name="Devices_DistributionToolTip" xml:space="preserve"><value>WSL distribution used only for the attach operation.</value></data>
+  <data name="Devices_BusIdHeader" xml:space="preserve"><value>Bus ID</value></data>
+  <data name="Devices_HardwareHeader" xml:space="preserve"><value>Hardware ID</value></data>
+  <data name="Devices_DescriptionHeader" xml:space="preserve"><value>Description</value></data>
+  <data name="Devices_StateHeader" xml:space="preserve"><value>State</value></data>
+  <data name="Devices_AttachmentHeader" xml:space="preserve"><value>WSL VM attachment</value></data>
+  <data name="Devices_CopyDiagnostic" xml:space="preserve"><value>Copy diagnostic</value></data>
+  <data name="Devices_Unavailable" xml:space="preserve"><value>usbipd-win is unavailable. Install or repair it before managing USB devices.</value></data>
+  <data name="Devices_ServiceStopped" xml:space="preserve"><value>The usbipd service is stopped. Start its Windows service, then refresh.</value></data>
+  <data name="Devices_VersionMalformed" xml:space="preserve"><value>usbipd-win reported an unrecognized version. Discovery may be shown, but device operations are disabled.</value></data>
+  <data name="Devices_UnsupportedVersion" xml:space="preserve"><value>This usbipd-win version is not approved for device operations.</value></data>
+  <data name="Devices_GuidanceSerial" xml:space="preserve"><value>Serial devices may need Linux group permissions. DistroNexus does not change udev rules; follow your distribution's documented serial-device guidance.</value></data>
+  <data name="Devices_GuidanceArduino" xml:space="preserve"><value>Arduino access may require serial group permissions in the selected distribution. DistroNexus does not install packages or modify udev rules.</value></data>
+  <data name="Devices_GuidanceAndroid" xml:space="preserve"><value>For Android debugging, run adb in the selected distribution after attaching. DistroNexus does not install platform tools or configure device rules.</value></data>
+  <data name="Devices_GuidanceSmartcard" xml:space="preserve"><value>Smart-card middleware and access policy remain your responsibility. Do not attach a token to an untrusted distribution.</value></data>
+  <data name="Devices_GuidanceStorage" xml:space="preserve"><value>This device appears to be USB storage. Attaching it exposes the device to the WSL VM; confirm backups and ownership before proceeding. DistroNexus does not mount, format, or modify storage.</value></data>
 </root>

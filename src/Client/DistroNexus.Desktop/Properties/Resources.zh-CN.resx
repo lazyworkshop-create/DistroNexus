@@ -2090,4 +2090,31 @@
   <data name="MonitorTab_Address" xml:space="preserve"><value>监听地址</value></data>
   <data name="MonitorTab_Port" xml:space="preserve"><value>端口</value></data>
   <data name="MonitorTab_ListenPorts" xml:space="preserve"><value>监听端口</value></data>
+  <data name="Devices_Title" xml:space="preserve"><value>设备</value></data>
+  <data name="Devices_Refresh" xml:space="preserve"><value>刷新</value></data>
+  <data name="Devices_Bind" xml:space="preserve"><value>绑定</value></data>
+  <data name="Devices_Unbind" xml:space="preserve"><value>解绑</value></data>
+  <data name="Devices_Attach" xml:space="preserve"><value>连接到 WSL</value></data>
+  <data name="Devices_Detach" xml:space="preserve"><value>断开连接</value></data>
+  <data name="Devices_Cancel" xml:space="preserve"><value>取消</value></data>
+  <data name="Devices_Ready" xml:space="preserve"><value>发现 {0} 个 USB 设备。</value></data>
+  <data name="Devices_Cancelled" xml:space="preserve"><value>操作已取消。</value></data>
+  <data name="Devices_ConfirmTitle" xml:space="preserve"><value>确认 USB 操作</value></data>
+  <data name="Devices_Succeeded" xml:space="preserve"><value>USB 操作已完成。</value></data>
+  <data name="Devices_DistributionToolTip" xml:space="preserve"><value>仅用于连接操作的 WSL 发行版。</value></data>
+  <data name="Devices_BusIdHeader" xml:space="preserve"><value>总线 ID</value></data>
+  <data name="Devices_HardwareHeader" xml:space="preserve"><value>硬件 ID</value></data>
+  <data name="Devices_DescriptionHeader" xml:space="preserve"><value>说明</value></data>
+  <data name="Devices_StateHeader" xml:space="preserve"><value>状态</value></data>
+  <data name="Devices_AttachmentHeader" xml:space="preserve"><value>WSL 虚拟机连接</value></data>
+  <data name="Devices_CopyDiagnostic" xml:space="preserve"><value>复制诊断信息</value></data>
+  <data name="Devices_Unavailable" xml:space="preserve"><value>usbipd-win 不可用。请安装或修复后再管理 USB 设备。</value></data>
+  <data name="Devices_ServiceStopped" xml:space="preserve"><value>usbipd 服务未运行。请启动 Windows 服务后刷新。</value></data>
+  <data name="Devices_VersionMalformed" xml:space="preserve"><value>usbipd-win 报告了无法识别的版本。可显示设备发现，但已禁用设备操作。</value></data>
+  <data name="Devices_UnsupportedVersion" xml:space="preserve"><value>此 usbipd-win 版本未经批准，不能执行设备操作。</value></data>
+  <data name="Devices_GuidanceSerial" xml:space="preserve"><value>串口设备可能需要 Linux 用户组权限。DistroNexus 不会修改 udev 规则；请遵循发行版的串口设备文档。</value></data>
+  <data name="Devices_GuidanceArduino" xml:space="preserve"><value>Arduino 在所选发行版中可能需要串口用户组权限。DistroNexus 不会安装软件包或修改 udev 规则。</value></data>
+  <data name="Devices_GuidanceAndroid" xml:space="preserve"><value>连接 Android 调试设备后，请在所选发行版中运行 adb。DistroNexus 不会安装 platform tools 或配置设备规则。</value></data>
+  <data name="Devices_GuidanceSmartcard" xml:space="preserve"><value>智能卡中间件和访问策略仍由您负责。请勿将令牌连接到不受信任的发行版。</value></data>
+  <data name="Devices_GuidanceStorage" xml:space="preserve"><value>该设备看起来是 USB 存储设备。连接后设备会暴露给 WSL 虚拟机；继续前请确认备份和所有权。DistroNexus 不会挂载、格式化或修改存储设备。</value></data>
 </root>
