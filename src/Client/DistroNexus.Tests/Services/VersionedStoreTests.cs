@@ -107,6 +107,18 @@ public sealed class VersionedStoreTests : IDisposable
         Assert.Equal("abc", result.Value!.Value.Name);
     }
 
+    [Fact]
+    public async Task ReadAsync_PreservesLegacyNumericEnumDocumentsByDefault()
+    {
+        Directory.CreateDirectory(_directory);
+        await File.WriteAllTextAsync(PathName, """{"schemaVersion":1,"revision":1,"updatedAt":"2026-01-01T00:00:00Z","value":{"Mode":1}}""");
+        var result = await new VersionedJsonStore<EnumState>(PathName).ReadAsync();
+        Assert.True(result.Succeeded);
+        Assert.Equal(TestMode.Second, result.Value!.Value.Mode);
+    }
+
     public void Dispose() { if (Directory.Exists(_directory)) Directory.Delete(_directory, true); }
     private sealed record State(string Name);
+    private sealed record EnumState(TestMode Mode);
+    private enum TestMode { First, Second }
 }

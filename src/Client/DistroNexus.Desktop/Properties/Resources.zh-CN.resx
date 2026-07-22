@@ -2117,4 +2117,44 @@
   <data name="Devices_GuidanceAndroid" xml:space="preserve"><value>连接 Android 调试设备后，请在所选发行版中运行 adb。DistroNexus 不会安装 platform tools 或配置设备规则。</value></data>
   <data name="Devices_GuidanceSmartcard" xml:space="preserve"><value>智能卡中间件和访问策略仍由您负责。请勿将令牌连接到不受信任的发行版。</value></data>
   <data name="Devices_GuidanceStorage" xml:space="preserve"><value>该设备看起来是 USB 存储设备。连接后设备会暴露给 WSL 虚拟机；继续前请确认备份和所有权。DistroNexus 不会挂载、格式化或修改存储设备。</value></data>
+  <data name="Workspace_Create" xml:space="preserve"><value>创建</value></data>
+  <data name="Workspace_Duplicate" xml:space="preserve"><value>复制</value></data>
+  <data name="Workspace_Remove" xml:space="preserve"><value>删除</value></data>
+  <data name="Workspace_Refresh" xml:space="preserve"><value>刷新</value></data>
+  <data name="Workspace_Preview" xml:space="preserve"><value>预览</value></data>
+  <data name="Workspace_ApproveTrust" xml:space="preserve"><value>批准信任</value></data>
+  <data name="Workspace_Launch" xml:space="preserve"><value>启动</value></data>
+  <data name="Workspace_Close" xml:space="preserve"><value>关闭</value></data>
+  <data name="Workspace_Shortcut" xml:space="preserve"><value>创建快捷方式</value></data>
+  <data name="Workspace_Export" xml:space="preserve"><value>导出</value></data>
+  <data name="Workspace_Import" xml:space="preserve"><value>导入</value></data>
+  <data name="Workspace_Save" xml:space="preserve"><value>保存</value></data>
+  <data name="Workspace_Retry" xml:space="preserve"><value>重试失败操作</value></data>
+  <data name="Workspace_Name" xml:space="preserve"><value>名称</value></data>
+  <data name="Workspace_Instance" xml:space="preserve"><value>实例</value></data>
+  <data name="Workspace_Trust" xml:space="preserve"><value>信任</value></data>
+  <data name="Workspace_Title" xml:space="preserve"><value>工作区</value></data>
+  <data name="Workspace_Cancel" xml:space="preserve"><value>取消</value></data>
+  <data name="Workspace_EditDefinition" xml:space="preserve"><value>编辑完整定义</value></data>
+  <data name="Workspace_SaveDefinition" xml:space="preserve"><value>保存完整定义</value></data>
+  <data name="Workspace_StructuredEditor" xml:space="preserve"><value>工作区编辑器</value></data>
+  <data name="Workspace_StatusEditorLoaded" xml:space="preserve"><value>工作区定义已载入编辑器。</value></data>
+  <data name="Workspace_StatusSaved" xml:space="preserve"><value>工作区定义已保存。</value></data>
+  <data name="Workspace_StatusNotFound" xml:space="preserve"><value>未找到请求的工作区。</value></data>
+  <data name="Workspace_StatusTrustApproved" xml:space="preserve"><value>已批准工作区信任。</value></data>
+  <data name="Workspace_StatusCreated" xml:space="preserve"><value>已创建工作区。</value></data>
+  <data name="Workspace_StatusDuplicated" xml:space="preserve"><value>已复制工作区。</value></data>
+  <data name="Workspace_StatusRemoved" xml:space="preserve"><value>已删除工作区。</value></data>
+  <data name="Workspace_StatusTrustRequired" xml:space="preserve"><value>此工作区运行命令前需要显式信任。</value></data>
+  <data name="Workspace_StatusPreviewReady" xml:space="preserve"><value>启动预览已就绪。</value></data>
+  <data name="Workspace_StatusExportReady" xml:space="preserve"><value>导出内容已就绪，可供审阅和保存。</value></data>
+  <data name="Workspace_StatusImportPreview" xml:space="preserve"><value>导入预览已就绪；导入命令仍不受信任。</value></data>
+  <data name="Workspace_StatusImported" xml:space="preserve"><value>工作区已作为不受信任内容导入。</value></data>
+  <data name="Workspace_ConfirmClose" xml:space="preserve"><value>确认关闭工作区</value></data>
+  <data name="Workspace_StatusClosed" xml:space="preserve"><value>工作区关闭策略已完成。</value></data>
+  <data name="Workspace_StatusShortcut" xml:space="preserve"><value>已创建快捷方式：{0}</value></data>
+  <data name="Workspace_ConfirmRetry" xml:space="preserve"><value>确认重试工作区</value></data><data name="Workspace_ConfirmLaunch" xml:space="preserve"><value>确认启动工作区</value></data><data name="Workspace_StatusLaunchNotConfirmed" xml:space="preserve"><value>未确认启动工作区。</value></data><data name="Workspace_ProgressAction" xml:space="preserve"><value>{0}: {1}</value></data><data name="Workspace_StatusLaunchCompleted" xml:space="preserve"><value>工作区启动完成。</value></data><data name="Workspace_StatusLaunchCancelled" xml:space="preserve"><value>工作区启动已取消。</value></data><data name="Workspace_StatusLaunchFailed" xml:space="preserve"><value>一个或多个工作区操作失败。</value></data>
+  <data name="Workspace_Add" xml:space="preserve"><value>添加</value></data><data name="Workspace_RemoveItem" xml:space="preserve"><value>移除</value></data><data name="Workspace_MoveUp" xml:space="preserve"><value>上移</value></data><data name="Workspace_Parallel" xml:space="preserve"><value>并行</value></data><data name="Workspace_Apply" xml:space="preserve"><value>应用</value></data><data name="Workspace_Required" xml:space="preserve"><value>必填</value></data><data name="Workspace_AddPreflight" xml:space="preserve"><value>添加预检</value></data>
+  <data name="Workspace_Status" xml:space="preserve"><value>状态</value></data><data name="Workspace_Progress" xml:space="preserve"><value>进度</value></data><data name="Workspace_Validation" xml:space="preserve"><value>验证错误</value></data><data name="Workspace_ImportContent" xml:space="preserve"><value>要导入的工作区定义</value></data><data name="Workspace_Groups" xml:space="preserve"><value>操作组</value></data><data name="Workspace_Actions" xml:space="preserve"><value>操作</value></data><data name="Workspace_ActionName" xml:space="preserve"><value>操作名称</value></data><data name="Workspace_ActionType" xml:space="preserve"><value>操作类型</value></data><data name="Workspace_ActionArguments" xml:space="preserve"><value>参数（用 | 分隔）</value></data><data name="Workspace_ActionDependencies" xml:space="preserve"><value>依赖项（操作 ID，用逗号分隔）</value></data><data name="Workspace_ActionTimeout" xml:space="preserve"><value>超时（秒）</value></data><data name="Workspace_ActionFailurePolicy" xml:space="preserve"><value>失败策略</value></data><data name="Workspace_ProjectPath" xml:space="preserve"><value>项目路径</value></data><data name="Workspace_MissingRemediation" xml:space="preserve"><value>缺失实例处理方式</value></data><data name="Workspace_CloseMode" xml:space="preserve"><value>关闭模式</value></data><data name="Workspace_CloseServices" xml:space="preserve"><value>要停止的服务（用逗号分隔）</value></data><data name="Workspace_PreflightKind" xml:space="preserve"><value>预检类型</value></data><data name="Workspace_PreflightValue" xml:space="preserve"><value>预检值</value></data><data name="Workspace_Preflights" xml:space="preserve"><value>预检检查</value></data>
+  <data name="Workspace_FullDefinition" xml:space="preserve"><value>完整工作区定义（JSON）</value></data><data name="Workspace_ConfirmRemove" xml:space="preserve"><value>确认删除工作区</value></data><data name="Workspace_RemovePreview" xml:space="preserve"><value>删除工作区“{0}”。此操作无法撤销。</value></data>
 </root>

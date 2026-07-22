@@ -2123,4 +2123,44 @@ Please select the directory that contains the PowerShell module manifest file.</
   <data name="Devices_GuidanceAndroid" xml:space="preserve"><value>For Android debugging, run adb in the selected distribution after attaching. DistroNexus does not install platform tools or configure device rules.</value></data>
   <data name="Devices_GuidanceSmartcard" xml:space="preserve"><value>Smart-card middleware and access policy remain your responsibility. Do not attach a token to an untrusted distribution.</value></data>
   <data name="Devices_GuidanceStorage" xml:space="preserve"><value>This device appears to be USB storage. Attaching it exposes the device to the WSL VM; confirm backups and ownership before proceeding. DistroNexus does not mount, format, or modify storage.</value></data>
+  <data name="Workspace_Create" xml:space="preserve"><value>Create</value></data>
+  <data name="Workspace_Duplicate" xml:space="preserve"><value>Duplicate</value></data>
+  <data name="Workspace_Remove" xml:space="preserve"><value>Remove</value></data>
+  <data name="Workspace_Refresh" xml:space="preserve"><value>Refresh</value></data>
+  <data name="Workspace_Preview" xml:space="preserve"><value>Preview</value></data>
+  <data name="Workspace_ApproveTrust" xml:space="preserve"><value>Approve trust</value></data>
+  <data name="Workspace_Launch" xml:space="preserve"><value>Launch</value></data>
+  <data name="Workspace_Close" xml:space="preserve"><value>Close</value></data>
+  <data name="Workspace_Shortcut" xml:space="preserve"><value>Create shortcut</value></data>
+  <data name="Workspace_Export" xml:space="preserve"><value>Export</value></data>
+  <data name="Workspace_Import" xml:space="preserve"><value>Import</value></data>
+  <data name="Workspace_Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Workspace_Retry" xml:space="preserve"><value>Retry failed action</value></data>
+  <data name="Workspace_Name" xml:space="preserve"><value>Name</value></data>
+  <data name="Workspace_Instance" xml:space="preserve"><value>Instance</value></data>
+  <data name="Workspace_Trust" xml:space="preserve"><value>Trust</value></data>
+  <data name="Workspace_Title" xml:space="preserve"><value>Workspaces</value></data>
+  <data name="Workspace_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Workspace_EditDefinition" xml:space="preserve"><value>Edit full definition</value></data>
+  <data name="Workspace_SaveDefinition" xml:space="preserve"><value>Save full definition</value></data>
+  <data name="Workspace_StructuredEditor" xml:space="preserve"><value>Workspace editor</value></data>
+  <data name="Workspace_StatusEditorLoaded" xml:space="preserve"><value>Workspace definition loaded for editing.</value></data>
+  <data name="Workspace_StatusSaved" xml:space="preserve"><value>Workspace definition saved.</value></data>
+  <data name="Workspace_StatusNotFound" xml:space="preserve"><value>Requested workspace was not found.</value></data>
+  <data name="Workspace_StatusTrustApproved" xml:space="preserve"><value>Workspace trust approved.</value></data>
+  <data name="Workspace_StatusCreated" xml:space="preserve"><value>Workspace created.</value></data>
+  <data name="Workspace_StatusDuplicated" xml:space="preserve"><value>Workspace duplicated.</value></data>
+  <data name="Workspace_StatusRemoved" xml:space="preserve"><value>Workspace removed.</value></data>
+  <data name="Workspace_StatusTrustRequired" xml:space="preserve"><value>Explicit trust is required before this workspace can run commands.</value></data>
+  <data name="Workspace_StatusPreviewReady" xml:space="preserve"><value>Launch preview ready.</value></data>
+  <data name="Workspace_StatusExportReady" xml:space="preserve"><value>Export content ready for review and saving.</value></data>
+  <data name="Workspace_StatusImportPreview" xml:space="preserve"><value>Import preview ready; imported commands remain untrusted.</value></data>
+  <data name="Workspace_StatusImported" xml:space="preserve"><value>Workspace imported as untrusted.</value></data>
+  <data name="Workspace_ConfirmClose" xml:space="preserve"><value>Confirm workspace close</value></data>
+  <data name="Workspace_StatusClosed" xml:space="preserve"><value>Workspace close policy completed.</value></data>
+  <data name="Workspace_StatusShortcut" xml:space="preserve"><value>Shortcut created: {0}</value></data>
+  <data name="Workspace_ConfirmRetry" xml:space="preserve"><value>Confirm workspace retry</value></data><data name="Workspace_ConfirmLaunch" xml:space="preserve"><value>Confirm workspace launch</value></data><data name="Workspace_StatusLaunchNotConfirmed" xml:space="preserve"><value>Workspace launch was not confirmed.</value></data><data name="Workspace_ProgressAction" xml:space="preserve"><value>{0}: {1}</value></data><data name="Workspace_StatusLaunchCompleted" xml:space="preserve"><value>Workspace launch completed.</value></data><data name="Workspace_StatusLaunchCancelled" xml:space="preserve"><value>Workspace launch cancelled.</value></data><data name="Workspace_StatusLaunchFailed" xml:space="preserve"><value>One or more workspace actions failed.</value></data>
+  <data name="Workspace_Add" xml:space="preserve"><value>Add</value></data><data name="Workspace_RemoveItem" xml:space="preserve"><value>Remove</value></data><data name="Workspace_MoveUp" xml:space="preserve"><value>Move up</value></data><data name="Workspace_Parallel" xml:space="preserve"><value>Parallel</value></data><data name="Workspace_Apply" xml:space="preserve"><value>Apply</value></data><data name="Workspace_Required" xml:space="preserve"><value>Required</value></data><data name="Workspace_AddPreflight" xml:space="preserve"><value>Add preflight</value></data>
+  <data name="Workspace_Status" xml:space="preserve"><value>Status</value></data><data name="Workspace_Progress" xml:space="preserve"><value>Progress</value></data><data name="Workspace_Validation" xml:space="preserve"><value>Validation error</value></data><data name="Workspace_ImportContent" xml:space="preserve"><value>Workspace definition to import</value></data><data name="Workspace_Groups" xml:space="preserve"><value>Action groups</value></data><data name="Workspace_Actions" xml:space="preserve"><value>Actions</value></data><data name="Workspace_ActionName" xml:space="preserve"><value>Action name</value></data><data name="Workspace_ActionType" xml:space="preserve"><value>Action type</value></data><data name="Workspace_ActionArguments" xml:space="preserve"><value>Arguments (separate with |)</value></data><data name="Workspace_ActionDependencies" xml:space="preserve"><value>Dependencies (action IDs, separate with commas)</value></data><data name="Workspace_ActionTimeout" xml:space="preserve"><value>Timeout (seconds)</value></data><data name="Workspace_ActionFailurePolicy" xml:space="preserve"><value>Failure policy</value></data><data name="Workspace_ProjectPath" xml:space="preserve"><value>Project path</value></data><data name="Workspace_MissingRemediation" xml:space="preserve"><value>Missing instance remediation</value></data><data name="Workspace_CloseMode" xml:space="preserve"><value>Close mode</value></data><data name="Workspace_CloseServices" xml:space="preserve"><value>Services to stop (separate with commas)</value></data><data name="Workspace_PreflightKind" xml:space="preserve"><value>Preflight kind</value></data><data name="Workspace_PreflightValue" xml:space="preserve"><value>Preflight value</value></data><data name="Workspace_Preflights" xml:space="preserve"><value>Preflight checks</value></data>
+  <data name="Workspace_FullDefinition" xml:space="preserve"><value>Full workspace definition (JSON)</value></data><data name="Workspace_ConfirmRemove" xml:space="preserve"><value>Confirm workspace removal</value></data><data name="Workspace_RemovePreview" xml:space="preserve"><value>Remove workspace '{0}'. This cannot be undone.</value></data>
 </root>

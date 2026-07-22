@@ -241,7 +241,7 @@ if ($Clean) {
     finally {
         Pop-Location
     }
-    
+
     Write-Host "Clean complete." -ForegroundColor Green
     Write-Host ""
 }
@@ -309,6 +309,12 @@ if ($Publish) {
     $moduleDestination = Join-Path $PublishDir 'PowerShell'
     
     Copy-Item -Path $PowerShellDir -Destination $moduleDestination -Recurse -Force
+
+    # Publish the local Core workspace bridge beside the PowerShell module.
+    $bridgeDestination = Join-Path $moduleDestination 'WorkspaceBridge'
+    Write-Host "📁 Publishing workspace bridge..." -ForegroundColor Yellow
+    & dotnet publish (Join-Path $ClientDir 'DistroNexus.WorkspaceBridge\DistroNexus.WorkspaceBridge.csproj') --configuration $Configuration --output $bridgeDestination --self-contained false --verbosity minimal
+    if ($LASTEXITCODE -ne 0) { throw "Workspace bridge publish failed with exit code $LASTEXITCODE" }
     
     # Remove any .git or test files from module
     Get-ChildItem $moduleDestination -Recurse -Include '.git*', '*.Tests.ps1' -Force | Remove-Item -Force -ErrorAction SilentlyContinue

@@ -567,6 +567,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
         IsOnDashboard = false;
     }
 
+    [RelayCommand]
+    private void ShowWorkspaces()
+    {
+        CurrentPage = _serviceProvider.GetRequiredService<WorkspacesPage>();
+        IsOnDashboard = false;
+    }
+
     /// <summary>
     /// Toggles the download panel visibility.
     /// </summary>

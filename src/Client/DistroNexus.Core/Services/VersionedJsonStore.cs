@@ -13,20 +13,45 @@ public sealed class VersionedJsonStore<T> : IVersionedJsonStore<T>
     private readonly int _schemaVersion;
     private readonly Func<JsonNode, T>? _legacyReader;
     private readonly IReadOnlyDictionary<int, Func<T, T>> _migrations;
-    private readonly JsonSerializerOptions _options = new() { WriteIndented = true, PropertyNameCaseInsensitive = true };
+    // This is shared by every persisted feature.  Keep the historical numeric-enum
+    // compatibility here; stricter schema rules belong to the owning feature.
+    private readonly JsonSerializerOptions _options;
     private SemaphoreSlim Gate => Gates.GetOrAdd(_path, _ => new SemaphoreSlim(1, 1));
 
     public VersionedJsonStore(string path, int schemaVersion = 1, Func<JsonNode, T>? legacyReader = null,
-        IReadOnlyDictionary<int, Func<T, T>>? migrations = null)
+        IReadOnlyDictionary<int, Func<T, T>>? migrations = null, JsonSerializerOptions? serializerOptions = null)
     {
         _path = Path.GetFullPath(path ?? throw new ArgumentNullException(nameof(path)));
         _schemaVersion = schemaVersion > 0 ? schemaVersion : throw new ArgumentOutOfRangeException(nameof(schemaVersion));
         _legacyReader = legacyReader;
         _migrations = migrations ?? new Dictionary<int, Func<T, T>>();
+        _options = serializerOptions is null
+            ? new JsonSerializerOptions { WriteIndented = true, PropertyNameCaseInsensitive = true }
+            : new JsonSerializerOptions(serializerOptions) { WriteIndented = true, PropertyNameCaseInsensitive = true };
     }
 
     public async Task<StoreResult<VersionedDocument<T>>> ReadAsync(CancellationToken ct = default)
     { await Gate.WaitAsync(ct); try { return await ReadCoreAsync(ct); } finally { Gate.Release(); } }
+
+    /// <summary>
+    /// Reads a document and applies a projection while the store gate is held. This is
+    /// intended for non-mutating operations that perform feature-owned validation and
+    /// entity-level revision checks without a read/validation race against another
+    /// in-process store writer.
+    /// </summary>
+    public async Task<StoreResult<TResult>> ReadLockedAsync<TResult>(Func<VersionedDocument<T>, TResult> projection, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(projection);
+        await Gate.WaitAsync(ct);
+        try
+        {
+            var current = await ReadCoreAsync(ct);
+            if (!current.Succeeded || current.Value is null)
+                return StoreResult<TResult>.Failure(current.Error, current.Message ?? "Unable to read document.");
+            return StoreResult<TResult>.Success(projection(current.Value));
+        }
+        finally { Gate.Release(); }
+    }
 
     public async Task<StoreResult<VersionedDocument<T>>> WriteAsync(T value, long expectedRevision, CancellationToken ct = default)
     {

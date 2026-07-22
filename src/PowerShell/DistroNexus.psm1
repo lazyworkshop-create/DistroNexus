@@ -30,6 +30,11 @@ foreach ($import in $privateFunctions) {
     }
 }
 
+# Workspace cmdlets are intentionally Core-owned. Resolve their bridge at import time so a
+# partially packaged module cannot silently fall back to a separate JSON implementation.
+$script:WorkspaceBridgePath = Resolve-DistroNexusWorkspaceBridge
+$ExecutionContext.SessionState.Module.OnRemove = { Stop-DistroNexusWorkspaceBridge }
+
 # Import public cmdlet functions
 $publicFunctions = @(Get-ChildItem -Path "$PSScriptRoot\Public\*.ps1" -ErrorAction SilentlyContinue)
 foreach ($import in $publicFunctions) {
@@ -44,3 +49,4 @@ foreach ($import in $publicFunctions) {
 
 # Export public functions
 Export-ModuleMember -Function $publicFunctions.BaseName
+Export-ModuleMember -Function @('Get-DistroNexusWorkspace','Export-DistroNexusWorkspace','New-DistroNexusWorkspace','Set-DistroNexusWorkspace','Copy-DistroNexusWorkspace','Remove-DistroNexusWorkspace','Get-DistroNexusWorkspaceImportPreview','Import-DistroNexusWorkspace','Get-DistroNexusWorkspaceLaunchPreview','Approve-DistroNexusWorkspaceTrust','Invoke-DistroNexusWorkspace','Get-DistroNexusWorkspaceActionRetryPreview','Retry-DistroNexusWorkspaceAction')

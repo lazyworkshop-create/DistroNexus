@@ -132,6 +132,22 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<IUsbElevatedOperationBroker, SignedUsbElevatedOperationBroker>();
                     services.AddSingleton<IUsbDeviceService, UsbDeviceService>();
                     services.AddTransient<IUsbDeviceChangeWatcher, UsbDeviceChangeWatcher>();
+                    services.AddSingleton<IProcessRunner, ProcessRunner>();
+                    services.AddSingleton<IWorkspaceRuntime, WorkspaceRuntime>();
+                    services.AddSingleton<IWorkspaceTemplatePrerequisiteChecker, UnavailableWorkspaceTemplatePrerequisiteChecker>();
+                    services.AddSingleton<IWorkspaceActionCapabilityGate, WorkspaceActionCapabilityGate>();
+                    services.AddSingleton<WorkspaceStartupRequest>();
+                    services.AddSingleton<IWorkspaceActionHandler>(sp => new WorkspaceActionHandler(WorkspaceActionType.Terminal, sp.GetRequiredService<IWorkspaceRuntime>(), sp.GetRequiredService<IWorkspaceActionCapabilityGate>()));
+                    services.AddSingleton<IWorkspaceActionHandler>(sp => new WorkspaceActionHandler(WorkspaceActionType.VisualStudioCode, sp.GetRequiredService<IWorkspaceRuntime>(), sp.GetRequiredService<IWorkspaceActionCapabilityGate>()));
+                    services.AddSingleton<IWorkspaceActionHandler>(sp => new WorkspaceActionHandler(WorkspaceActionType.Explorer, sp.GetRequiredService<IWorkspaceRuntime>(), sp.GetRequiredService<IWorkspaceActionCapabilityGate>()));
+                    services.AddSingleton<IWorkspaceActionHandler>(sp => new WorkspaceActionHandler(WorkspaceActionType.Browser, sp.GetRequiredService<IWorkspaceRuntime>(), sp.GetRequiredService<IWorkspaceActionCapabilityGate>()));
+                    services.AddSingleton<IWorkspaceActionHandler>(sp => new WorkspaceActionHandler(WorkspaceActionType.LinuxCommand, sp.GetRequiredService<IWorkspaceRuntime>(), sp.GetRequiredService<IWorkspaceActionCapabilityGate>()));
+                    services.AddSingleton<IWorkspaceActionHandler>(sp => new WorkspaceActionHandler(WorkspaceActionType.ShellScript, sp.GetRequiredService<IWorkspaceRuntime>(), sp.GetRequiredService<IWorkspaceActionCapabilityGate>()));
+                    services.AddSingleton<IWorkspaceActionHandler>(sp => new WorkspaceActionHandler(WorkspaceActionType.Systemd, sp.GetRequiredService<IWorkspaceRuntime>(), sp.GetRequiredService<IWorkspaceActionCapabilityGate>()));
+                    services.AddSingleton<IWorkspaceActionHandler>(sp => new WorkspaceActionHandler(WorkspaceActionType.DockerCompose, sp.GetRequiredService<IWorkspaceRuntime>(), sp.GetRequiredService<IWorkspaceActionCapabilityGate>()));
+                    services.AddSingleton<IWorkspaceActionHandler>(sp => new WorkspaceActionHandler(WorkspaceActionType.PodmanCompose, sp.GetRequiredService<IWorkspaceRuntime>(), sp.GetRequiredService<IWorkspaceActionCapabilityGate>()));
+                    services.AddSingleton<IWorkspaceService, WorkspaceService>();
+                    services.AddSingleton<IWorkspaceShortcutWriter, WorkspaceShortcutWriter>();
                     services.AddSingleton<ITagService, TagService>();
                     services.AddSingleton<IWslEventWatcher, WslEventWatcher>();
                     services.AddSingleton<IWslCliRunner, WslCliRunner>();
@@ -151,6 +167,7 @@ public partial class App : System.Windows.Application
                     services.AddTransient<SourceManagerViewModel>();
                     services.AddTransient<HealthCenterViewModel>();
                     services.AddTransient<UsbDevicesViewModel>();
+                    services.AddTransient<WorkspacesViewModel>();
                     services.AddTransient<Wizard.InstallWizardWorkflowViewModel>();
 
                     // Register Views/Pages
@@ -160,6 +177,7 @@ public partial class App : System.Windows.Application
                     services.AddTransient<TemplatesPage>();
                     services.AddTransient<HealthCenterPage>();
                     services.AddTransient<UsbDevicesPage>();
+                    services.AddTransient<WorkspacesPage>();
                     services.AddTransient<InstallWizardDialog>();
                     services.AddTransient<InstallWizardDialogNew>();
 
@@ -178,6 +196,8 @@ public partial class App : System.Windows.Application
             // Get logger after DI is configured
             _logger = _host.Services.GetRequiredService<ILogger<App>>();
             _logger.LogInformation("DistroNexus application starting");
+            if (WorkspaceStartupRoute.TryParse(e.Args, out var workspaceId))
+                _host.Services.GetRequiredService<WorkspaceStartupRequest>().WorkspaceId = workspaceId;
             System.Diagnostics.Debug.WriteLine("Logger initialized");
 
             // PRIORITY: Show main window IMMEDIATELY
@@ -186,6 +206,10 @@ public partial class App : System.Windows.Application
             var mainWindow = _host.Services.GetRequiredService<MainWindow>();
             System.Diagnostics.Debug.WriteLine("Main window created, showing...");
             mainWindow.Show();
+
+            // A shortcut only routes to the Workspace page and its preview. It never authorizes execution.
+            if (_host.Services.GetRequiredService<WorkspaceStartupRequest>().WorkspaceId is not null && mainWindow.DataContext is MainViewModel shell)
+                shell.ShowWorkspacesCommand.Execute(null);
 
             _logger.LogInformation("Main window displayed successfully");
             System.Diagnostics.Debug.WriteLine("=== Main Window Shown - UI is now visible ===");
