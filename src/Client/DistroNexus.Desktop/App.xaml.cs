@@ -133,6 +133,11 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<IUsbDeviceService, UsbDeviceService>();
                     services.AddTransient<IUsbDeviceChangeWatcher, UsbDeviceChangeWatcher>();
                     services.AddSingleton<IProcessRunner, ProcessRunner>();
+                    services.AddSingleton<IPodmanDesktopInstallationDetector, WindowsPodmanDesktopInstallationDetector>();
+                    services.AddSingleton<IContainerRuntimeAdapter, DockerDesktopRuntimeAdapter>();
+                    services.AddSingleton<IContainerRuntimeAdapter, PodmanWslRuntimeAdapter>();
+                    services.AddSingleton<IContainerRuntimeAdapter>(sp => new PodmanDesktopRuntimeAdapter(sp.GetRequiredService<IProcessRunner>(), sp.GetRequiredService<IPodmanDesktopInstallationDetector>()));
+                    services.AddSingleton<IContainerRuntimeService, ContainerRuntimeService>();
                     services.AddWslgApplications();
                     services.AddSingleton<IWorkspaceRuntime, WorkspaceRuntime>();
                     services.AddSingleton<IWorkspaceTemplatePrerequisiteChecker, UnavailableWorkspaceTemplatePrerequisiteChecker>();

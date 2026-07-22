@@ -2172,4 +2172,43 @@
   <data name="Health_WslgDisplayTitle" xml:space="preserve"><value>WSLg 显示</value></data><data name="Health_WslgDisplayDetail" xml:space="preserve"><value>已检查该实例的显示环境。</value></data>
   <data name="Health_WslgAudioTitle" xml:space="preserve"><value>WSLg 音频</value></data><data name="Health_WslgAudioDetail" xml:space="preserve"><value>已检查该实例的音频环境。</value></data>
   <data name="Health_WslgStaleShortcutTitle" xml:space="preserve"><value>可能过期的 WSLg 快捷方式</value></data><data name="Health_WslgStaleShortcutDetail" xml:space="preserve"><value>发行版状态可能使现有 WSLg 快捷方式不可用。</value></data>
+  <data name="IntegrationsTab_ContainerTitle" xml:space="preserve"><value>容器运行时</value></data>
+  <data name="IntegrationsTab_ContainerReadOnly" xml:space="preserve"><value>容器、映像和 Compose 诊断为只读。Podman 服务和套接字控制需要单独预览并确认。</value></data>
+  <data name="IntegrationsTab_StartSocket" xml:space="preserve"><value>启动套接字</value></data><data name="IntegrationsTab_StopSocket" xml:space="preserve"><value>停止套接字</value></data><data name="IntegrationsTab_StartService" xml:space="preserve"><value>启动服务</value></data><data name="IntegrationsTab_StopService" xml:space="preserve"><value>停止服务</value></data>
+  <data name="IntegrationsTab_ConfigureConnection" xml:space="preserve"><value>配置连接</value></data><data name="IntegrationsTab_ConfirmConnection" xml:space="preserve"><value>确认 Podman 连接</value></data>
+  <data name="IntegrationsTab_ConfirmPodmanAction" xml:space="preserve"><value>确认 Podman 操作</value></data>
+  <data name="IntegrationsTab_RuntimeSummary" xml:space="preserve"><value>{0}: {1}（{2}）</value></data>
+  <data name="IntegrationsTab_RuntimeFailure" xml:space="preserve"><value>{0}: {1}</value></data>
+  <data name="IntegrationsTab_RuntimeInventorySummary" xml:space="preserve"><value>{0}: {1} 个容器，{2} 个映像，{3} 个 Compose 项目</value></data>
+  <data name="IntegrationsTab_ContainerRow" xml:space="preserve"><value>  容器 {0}: {1}（{2}）</value></data>
+  <data name="IntegrationsTab_ImageRow" xml:space="preserve"><value>  映像 {0}:{1}</value></data>
+  <data name="IntegrationsTab_ComposeRow" xml:space="preserve"><value>  Compose {0}: {1}（{2}）</value></data>
+  <data name="IntegrationsTab_ContainerSummaryAutomationName" xml:space="preserve"><value>容器运行时诊断摘要</value></data>
+  <data name="IntegrationsTab_ConnectionNameAutomationName" xml:space="preserve"><value>Podman 连接名称</value></data>
+  <data name="IntegrationsTab_ConnectionEndpointAutomationName" xml:space="preserve"><value>Podman 连接终结点</value></data>
+  <data name="IntegrationsTab_Runtime_DockerDesktop" xml:space="preserve"><value>Docker Desktop</value></data>
+  <data name="IntegrationsTab_Runtime_PodmanWsl" xml:space="preserve"><value>WSL 中的 Podman</value></data>
+  <data name="IntegrationsTab_Runtime_PodmanDesktop" xml:space="preserve"><value>Podman Desktop</value></data>
+  <data name="IntegrationsTab_Availability_Available" xml:space="preserve"><value>可用</value></data>
+  <data name="IntegrationsTab_Availability_Unavailable" xml:space="preserve"><value>不可用</value></data>
+  <data name="IntegrationsTab_Availability_Degraded" xml:space="preserve"><value>降级</value></data>
+  <data name="IntegrationsTab_Health_healthy" xml:space="preserve"><value>正常</value></data>
+  <data name="IntegrationsTab_Health_degraded" xml:space="preserve"><value>降级</value></data>
+  <data name="IntegrationsTab_Health_unavailable" xml:space="preserve"><value>不可用</value></data>
+  <data name="IntegrationsTab_Health_unknown" xml:space="preserve"><value>未知</value></data>
+  <data name="IntegrationsTab_Preview_PodmanUserUnitChange" xml:space="preserve"><value>{0} Podman {1}</value></data>
+  <data name="IntegrationsTab_Preview_SystemdUserScopeRequired" xml:space="preserve"><value>需要 systemd 用户范围。</value></data>
+  <data name="IntegrationsTab_Preview_PodmanConnectionChange" xml:space="preserve"><value>{0} Podman 连接 {1}，终结点 {2}</value></data>
+  <data name="IntegrationsTab_Preview_PodmanReachable" xml:space="preserve"><value>已成功探测 Podman。</value></data>
+  <data name="IntegrationsTab_Preview_NoContainerStorageChange" xml:space="preserve"><value>不会变更容器存储或机器状态。</value></data>
+  <data name="IntegrationsTab_RuntimeDetails" xml:space="preserve"><value>版本：{0}；套接字：{1}；服务：{2}；终结点：{3}</value></data>
+  <data name="IntegrationsTab_ValueUnavailable" xml:space="preserve"><value>不可用</value></data>
+  <data name="IntegrationsTab_State_active" xml:space="preserve"><value>活动</value></data>
+  <data name="IntegrationsTab_State_inactive" xml:space="preserve"><value>未活动</value></data>
+  <data name="IntegrationsTab_State_unknown" xml:space="preserve"><value>未知</value></data>
+  <data name="IntegrationsTab_State_unavailable" xml:space="preserve"><value>不可用</value></data>
+  <data name="IntegrationsTab_PodmanUnavailableWsl2" xml:space="preserve"><value>Podman 控制需要 WSL 2 发行版。</value></data>
+  <data name="IntegrationsTab_PodmanUnavailableRuntime" xml:space="preserve"><value>由于 WSL 中的 Podman 未安装或不可达，Podman 控制不可用。</value></data>
+  <data name="IntegrationsTab_PodmanUnavailableSystemd" xml:space="preserve"><value>Podman 服务和套接字控制需要在此发行版中启用 systemd；连接配置仍可用。</value></data>
+  <data name="IntegrationsTab_PodmanUnavailableService" xml:space="preserve"><value>由于未配置容器运行时服务，Podman 控制不可用。</value></data>
 </root>

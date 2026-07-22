@@ -78,6 +78,34 @@
                 </StackPanel>
             </ui:Card>
 
+            <ui:Card Padding="16" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="{lex:Loc IntegrationsTab_ContainerTitle}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                    <TextBlock Text="{Binding ContainerRuntimeSummary}" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               AutomationProperties.Name="{lex:Loc IntegrationsTab_ContainerSummaryAutomationName}"/>
+                    <TextBlock Text="{Binding ContainerRuntimeInventory}" TextWrapping="Wrap" Margin="0,6,0,0"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                    <TextBlock Text="{lex:Loc IntegrationsTab_ContainerReadOnly}"
+                               TextWrapping="Wrap" Margin="0,8,0,0" FontSize="11"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                    <TextBlock Text="{Binding PodmanPrerequisiteMessage}"
+                               TextWrapping="Wrap" Margin="0,6,0,0" FontSize="11"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <ui:Button Content="{lex:Loc IntegrationsTab_StartSocket}" Command="{Binding StartPodmanSocketCommand}" IsEnabled="{Binding IsPodmanServiceControlsEnabled}" Margin="0,0,6,0"/>
+                        <ui:Button Content="{lex:Loc IntegrationsTab_StopSocket}" Command="{Binding StopPodmanSocketCommand}" IsEnabled="{Binding IsPodmanServiceControlsEnabled}" Margin="0,0,6,0"/>
+                        <ui:Button Content="{lex:Loc IntegrationsTab_StartService}" Command="{Binding StartPodmanServiceCommand}" IsEnabled="{Binding IsPodmanServiceControlsEnabled}" Margin="0,0,6,0"/>
+                        <ui:Button Content="{lex:Loc IntegrationsTab_StopService}" Command="{Binding StopPodmanServiceCommand}" IsEnabled="{Binding IsPodmanServiceControlsEnabled}"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <TextBox Width="110" AutomationProperties.Name="{lex:Loc IntegrationsTab_ConnectionNameAutomationName}" Text="{Binding PodmanConnectionName, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsPodmanConnectionEnabled}" Margin="0,0,6,0"/>
+                        <TextBox Width="260" AutomationProperties.Name="{lex:Loc IntegrationsTab_ConnectionEndpointAutomationName}" Text="{Binding PodmanConnectionEndpoint, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsPodmanConnectionEnabled}" Margin="0,0,6,0"/>
+                        <ui:Button Content="{lex:Loc IntegrationsTab_ConfigureConnection}" Command="{Binding ConfigurePodmanConnectionCommand}" IsEnabled="{Binding IsPodmanConnectionEnabled}"/>
+                    </StackPanel>
+                </StackPanel>
+            </ui:Card>
+
         </StackPanel>
     </ScrollViewer>
 </UserControl>

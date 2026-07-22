@@ -183,13 +183,28 @@ public sealed class SystemdNetworkServicesTests
     [Fact]
     public async Task SystemdPreviewToken_RejectsForgedAndReuse()
     {
-        var runner = new Mock<IProcessRunner>(); runner.Setup(x => x.RunAsync(It.IsAny<ProcessRequest>(), It.IsAny<CancellationToken>())).ReturnsAsync(new ProcessResult(0, "Id=ssh.service\n", "", TimeSpan.Zero, false, false, false, 1));
+        var runner = new Mock<IProcessRunner>(); runner.Setup(x => x.RunAsync(It.IsAny<ProcessRequest>(), It.IsAny<CancellationToken>())).ReturnsAsync(new ProcessResult(0, "Id=ssh.service\nActiveState=active\nLoadState=loaded\n", "", TimeSpan.Zero, false, false, false, 1));
         var service = new SystemdService(runner.Object, CapabilityService(), DistributionConfig());
         var preview = await service.PreviewAsync("Ubuntu", new SystemdUnitName("ssh.service"), SystemdAction.Start, SystemdScope.User);
         var forged = preview with { PreviewToken = "forged" };
         Assert.Equal("PreviewRequired", (await service.ExecuteAsync(forged)).OutcomeCode);
         Assert.True((await service.ExecuteAsync(preview)).Succeeded);
         Assert.Equal("PreviewRequired", (await service.ExecuteAsync(preview)).OutcomeCode);
+    }
+
+    [Theory]
+    [InlineData(SystemdAction.Start, "active", true)]
+    [InlineData(SystemdAction.Stop, "inactive", true)]
+    [InlineData(SystemdAction.Start, "inactive", false)]
+    public async Task Execute_VerifiesExpectedActiveState(SystemdAction action, string activeState, bool succeeds)
+    {
+        var runner = new Mock<IProcessRunner>();
+        runner.Setup(x => x.RunAsync(It.IsAny<ProcessRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProcessResult(0, $"Id=ssh.service\nActiveState={activeState}\nLoadState=loaded\n", "", TimeSpan.Zero, false, false, false, 1));
+        var service = new SystemdService(runner.Object, CapabilityService(), DistributionConfig());
+        var result = await service.ExecuteAsync(await service.PreviewAsync("Ubuntu", new SystemdUnitName("ssh.service"), action, SystemdScope.User));
+        Assert.Equal(succeeds, result.Succeeded);
+        Assert.Equal(succeeds ? "Succeeded" : "PostconditionFailed", result.OutcomeCode);
     }
 
     [Fact]

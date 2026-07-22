@@ -2178,4 +2178,43 @@ Please select the directory that contains the PowerShell module manifest file.</
   <data name="Health_WslgDisplayTitle" xml:space="preserve"><value>WSLg display</value></data><data name="Health_WslgDisplayDetail" xml:space="preserve"><value>Display environment was evaluated for this instance.</value></data>
   <data name="Health_WslgAudioTitle" xml:space="preserve"><value>WSLg audio</value></data><data name="Health_WslgAudioDetail" xml:space="preserve"><value>Audio environment was evaluated for this instance.</value></data>
   <data name="Health_WslgStaleShortcutTitle" xml:space="preserve"><value>Possible stale WSLg shortcut</value></data><data name="Health_WslgStaleShortcutDetail" xml:space="preserve"><value>The distribution state can make existing WSLg shortcuts unavailable.</value></data>
+  <data name="IntegrationsTab_ContainerTitle" xml:space="preserve"><value>Container runtimes</value></data>
+  <data name="IntegrationsTab_ContainerReadOnly" xml:space="preserve"><value>Container, image, and Compose diagnostics are read-only. Podman service and socket controls require a separate preview and confirmation.</value></data>
+  <data name="IntegrationsTab_StartSocket" xml:space="preserve"><value>Start socket</value></data><data name="IntegrationsTab_StopSocket" xml:space="preserve"><value>Stop socket</value></data><data name="IntegrationsTab_StartService" xml:space="preserve"><value>Start service</value></data><data name="IntegrationsTab_StopService" xml:space="preserve"><value>Stop service</value></data>
+  <data name="IntegrationsTab_ConfigureConnection" xml:space="preserve"><value>Configure connection</value></data><data name="IntegrationsTab_ConfirmConnection" xml:space="preserve"><value>Confirm Podman connection</value></data>
+  <data name="IntegrationsTab_ConfirmPodmanAction" xml:space="preserve"><value>Confirm Podman action</value></data>
+  <data name="IntegrationsTab_RuntimeSummary" xml:space="preserve"><value>{0}: {1} ({2})</value></data>
+  <data name="IntegrationsTab_RuntimeFailure" xml:space="preserve"><value>{0}: {1}</value></data>
+  <data name="IntegrationsTab_RuntimeInventorySummary" xml:space="preserve"><value>{0}: {1} containers, {2} images, {3} Compose projects</value></data>
+  <data name="IntegrationsTab_ContainerRow" xml:space="preserve"><value>  Container {0}: {1} ({2})</value></data>
+  <data name="IntegrationsTab_ImageRow" xml:space="preserve"><value>  Image {0}:{1}</value></data>
+  <data name="IntegrationsTab_ComposeRow" xml:space="preserve"><value>  Compose {0}: {1} ({2})</value></data>
+  <data name="IntegrationsTab_ContainerSummaryAutomationName" xml:space="preserve"><value>Container runtime diagnostic summary</value></data>
+  <data name="IntegrationsTab_ConnectionNameAutomationName" xml:space="preserve"><value>Podman connection name</value></data>
+  <data name="IntegrationsTab_ConnectionEndpointAutomationName" xml:space="preserve"><value>Podman connection endpoint</value></data>
+  <data name="IntegrationsTab_Runtime_DockerDesktop" xml:space="preserve"><value>Docker Desktop</value></data>
+  <data name="IntegrationsTab_Runtime_PodmanWsl" xml:space="preserve"><value>Podman in WSL</value></data>
+  <data name="IntegrationsTab_Runtime_PodmanDesktop" xml:space="preserve"><value>Podman Desktop</value></data>
+  <data name="IntegrationsTab_Availability_Available" xml:space="preserve"><value>Available</value></data>
+  <data name="IntegrationsTab_Availability_Unavailable" xml:space="preserve"><value>Unavailable</value></data>
+  <data name="IntegrationsTab_Availability_Degraded" xml:space="preserve"><value>Degraded</value></data>
+  <data name="IntegrationsTab_Health_healthy" xml:space="preserve"><value>Healthy</value></data>
+  <data name="IntegrationsTab_Health_degraded" xml:space="preserve"><value>Degraded</value></data>
+  <data name="IntegrationsTab_Health_unavailable" xml:space="preserve"><value>Unavailable</value></data>
+  <data name="IntegrationsTab_Health_unknown" xml:space="preserve"><value>Unknown</value></data>
+  <data name="IntegrationsTab_Preview_PodmanUserUnitChange" xml:space="preserve"><value>{0} Podman {1}</value></data>
+  <data name="IntegrationsTab_Preview_SystemdUserScopeRequired" xml:space="preserve"><value>A systemd user scope is required.</value></data>
+  <data name="IntegrationsTab_Preview_PodmanConnectionChange" xml:space="preserve"><value>{0} Podman connection {1} at {2}</value></data>
+  <data name="IntegrationsTab_Preview_PodmanReachable" xml:space="preserve"><value>Podman was probed successfully.</value></data>
+  <data name="IntegrationsTab_Preview_NoContainerStorageChange" xml:space="preserve"><value>No container storage or machine state will change.</value></data>
+  <data name="IntegrationsTab_RuntimeDetails" xml:space="preserve"><value>Version: {0}; socket: {1}; service: {2}; endpoint: {3}</value></data>
+  <data name="IntegrationsTab_ValueUnavailable" xml:space="preserve"><value>Unavailable</value></data>
+  <data name="IntegrationsTab_State_active" xml:space="preserve"><value>Active</value></data>
+  <data name="IntegrationsTab_State_inactive" xml:space="preserve"><value>Inactive</value></data>
+  <data name="IntegrationsTab_State_unknown" xml:space="preserve"><value>Unknown</value></data>
+  <data name="IntegrationsTab_State_unavailable" xml:space="preserve"><value>Unavailable</value></data>
+  <data name="IntegrationsTab_PodmanUnavailableWsl2" xml:space="preserve"><value>Podman controls require a WSL 2 distribution.</value></data>
+  <data name="IntegrationsTab_PodmanUnavailableRuntime" xml:space="preserve"><value>Podman controls are unavailable because Podman in WSL is not installed or reachable.</value></data>
+  <data name="IntegrationsTab_PodmanUnavailableSystemd" xml:space="preserve"><value>Podman service and socket controls require systemd enabled for this distribution. Connection configuration remains available.</value></data>
+  <data name="IntegrationsTab_PodmanUnavailableService" xml:space="preserve"><value>Podman controls are unavailable because the container runtime service is not configured.</value></data>
 </root>

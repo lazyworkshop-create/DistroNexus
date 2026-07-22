@@ -68,6 +68,9 @@ public sealed class SystemdService : ISystemdService
             return new(false, preview.RequiresLinuxPrivilege ? "RequiresLinuxPrivilege" : "SystemdActionFailed", null, guidance);
         }
         var details = await GetDetailsAsync(preview.InstanceName, preview.Unit, preview.Scope, cancellationToken).ConfigureAwait(false);
+        var expectedState = preview.Action == SystemdAction.Stop ? "inactive" : "active";
+        if (!string.Equals(details?.Service.ActiveState, expectedState, StringComparison.OrdinalIgnoreCase))
+            return new(false, "PostconditionFailed", details?.Service, "DN-8003: systemd did not report the expected service state after the operation.");
         return new(true, "Succeeded", details?.Service);
     }
     private async Task EnsureAvailableAsync(string instance, CancellationToken ct)

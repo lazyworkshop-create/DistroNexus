@@ -13,6 +13,9 @@ var root = Environment.GetEnvironmentVariable("DISTRONEXUS_WORKSPACE_STORE_ROOT"
 var processes = new ProcessRunner();
 var instances = new BridgeWslManagerService(processes);
 var capabilities = new PlatformCapabilityService(processes);
+var distributionConfiguration = new DistributionConfigurationService(processes);
+var systemd = new SystemdService(processes, capabilities, distributionConfiguration);
+var containers = ContainerRuntimeBridgeComposition.Create(processes, systemd);
 var runtime = new WorkspaceRuntime(instances, processes);
 var gate = new WorkspaceActionCapabilityGate(capabilities);
 var handlers = Enum.GetValues<WorkspaceActionType>()
@@ -54,6 +57,11 @@ while ((line = Console.ReadLine()) is not null)
             "remove" => await RemoveAsync(service, request),
             "previewRemove" => await service.PreviewRemoveAsync(request.Id ?? throw new ArgumentException("Workspace id is required."), request.ExpectedRevision ?? throw new ArgumentException("Expected revision is required.")),
             "previewRetryDryRun" => await service.PreviewRetryDryRunAsync(request.Id ?? throw new ArgumentException("Workspace id is required."), request.ActionId ?? throw new ArgumentException("Action id is required."), request.ExpectedRevision ?? throw new ArgumentException("Expected revision is required.")),
+            "previewPodmanUnit" => await PreviewPodmanUnitAsync(request),
+            "executePodmanUnit" => await ExecutePodmanUnitAsync(request),
+            "previewPodmanConnection" => await PreviewPodmanConnectionAsync(request),
+            "executePodmanConnection" => await ExecutePodmanConnectionAsync(request),
+            "containerRuntimeStatus" => await ContainerRuntimeStatusAsync(request),
             _ => throw new ArgumentException("Bridge operation is unsupported.")
         };
         response = new(true, value, null, null);
@@ -61,6 +69,12 @@ while ((line = Console.ReadLine()) is not null)
     catch (Exception ex) { response = new(false, null, ex is InvalidOperationException ? "Workspace.ConflictOrState" : "Workspace.Bridge.Invalid", ex.Message); }
     WriteFrame(response);
 }
+
+async Task<object> PreviewPodmanUnitAsync(BridgeRequest request) { var p = JsonSerializer.Deserialize<PodmanUnitPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Podman payload is required."); var preview = await containers.PreviewPodmanUserUnitAsync(p.InstanceName, p.Unit, p.Action); return new { Token = preview.SystemdPreview.PreviewToken, InstanceName = p.InstanceName, Unit = p.Unit, Action = p.Action, Effects = preview.SystemdPreview.Effects }; }
+async Task<object> ExecutePodmanUnitAsync(BridgeRequest request) { var p = JsonSerializer.Deserialize<PodmanUnitPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Podman payload is required."); return await containers.ExecutePodmanUserUnitAsync(request.Token ?? string.Empty, p.InstanceName, p.Unit, p.Action); }
+async Task<object> PreviewPodmanConnectionAsync(BridgeRequest request) { var p = JsonSerializer.Deserialize<PodmanConnectionPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Podman connection payload is required."); var preview = await containers.PreviewPodmanConnectionAsync(p.InstanceName, new PodmanConnectionRequest(p.Name, new Uri(p.Endpoint, UriKind.Absolute))); return new { preview.Token, preview.InstanceName, Name = preview.Request.Name, Endpoint = preview.Request.SafeEndpoint, preview.Operation, preview.ExistingEndpoint, preview.Effects }; }
+async Task<object> ExecutePodmanConnectionAsync(BridgeRequest request) { var p = JsonSerializer.Deserialize<PodmanConnectionPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Podman connection payload is required."); return await containers.ConfigurePodmanConnectionAsync(request.Token ?? string.Empty, p.InstanceName, new PodmanConnectionRequest(p.Name, new Uri(p.Endpoint, UriKind.Absolute))); }
+async Task<ContainerRuntimeStatusResponse> ContainerRuntimeStatusAsync(BridgeRequest request) { var p = JsonSerializer.Deserialize<PodmanStatusPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Container runtime payload is required."); return await ContainerRuntimeBridgeHandler.GetStatusAsync(containers, p.InstanceName); }
 
 async Task<WorkspaceLaunchResult> LaunchAsync(BridgeRequest request)
 {
@@ -80,6 +94,9 @@ static async Task<object> RemoveAsync(IWorkspaceService service, BridgeRequest r
 static Task<WorkspaceDefinition> DuplicateAsync(IWorkspaceService service, BridgeRequest request) => service.DuplicateAsync(request.Id ?? throw new ArgumentException("Workspace id is required."), request.Name ?? throw new ArgumentException("Workspace name is required."), request.ExpectedRevision ?? throw new ArgumentException("Expected revision is required."));
 static WorkspaceDefinition ParseDefinition(string payload, JsonSerializerOptions options) => JsonSerializer.Deserialize<WorkspaceDefinition>(payload, options) ?? throw new ArgumentException("Workspace definition is required.");
 public sealed record BridgeRequest(string Operation, Guid? Id, JsonElement? Payload, long? ExpectedRevision, string? Token = null, string? Name = null, Guid? ActionId = null);
+public sealed record PodmanUnitPayload(string InstanceName, PodmanUserUnit Unit, SystemdAction Action);
+public sealed record PodmanConnectionPayload(string InstanceName, string Name, string Endpoint);
+public sealed record PodmanStatusPayload(string InstanceName);
 public sealed record BridgeResponse(bool Succeeded, object? Value, string? ErrorCode, string? ErrorMessage, string Frame = "result");
 public sealed class BridgeProgress(Action<BridgeResponse> write) : IProgress<WorkspaceActionResult>
 {
