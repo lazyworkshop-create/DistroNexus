@@ -2057,4 +2057,37 @@
   <data name="Network_SettingsApplied" xml:space="preserve"><value>已应用网络设置。</value></data>
   <data name="Network_SettingsAppliedRestart" xml:space="preserve"><value>已应用网络设置；请重启 WSL 以完成。</value></data>
   <data name="Network_ErrorUnsafeBrowserAddress" xml:space="preserve"><value>只能在浏览器中打开本机回环 HTTP(S) 地址。</value></data>
+  <data name="MonitorTab_RefreshInterval" xml:space="preserve"><value>刷新间隔</value></data>
+  <data name="MonitorTab_Seconds" xml:space="preserve"><value>秒</value></data>
+  <data name="MonitorTab_Refresh" xml:space="preserve"><value>刷新</value></data>
+  <data name="MonitorTab_WarningThresholds" xml:space="preserve"><value>警告阈值 (%)</value></data>
+  <data name="MonitorTab_Cpu" xml:space="preserve"><value>CPU</value></data>
+  <data name="MonitorTab_Memory" xml:space="preserve"><value>内存</value></data>
+  <data name="MonitorTab_Filesystem" xml:space="preserve"><value>文件系统</value></data>
+  <data name="MonitorTab_Pid" xml:space="preserve"><value>PID</value></data>
+  <data name="MonitorTab_User" xml:space="preserve"><value>用户</value></data>
+  <data name="MonitorTab_Command" xml:space="preserve"><value>命令</value></data>
+  <data name="MonitorTab_Actions" xml:space="preserve"><value>操作</value></data>
+  <data name="MonitorTab_Terminate" xml:space="preserve"><value>终止</value></data>
+  <data name="MonitorTab_Kill" xml:space="preserve"><value>TERM 超时后强制结束</value></data>
+  <data name="MonitorTab_LowerPriority" xml:space="preserve"><value>降低优先级</value></data>
+  <data name="Tab_Monitor" xml:space="preserve"><value>监控</value></data>
+  <data name="MonitorTab_Unavailable" xml:space="preserve"><value>不可用</value></data>
+  <data name="MonitorTab_CpuDisplay" xml:space="preserve"><value>CPU {0:F1}%</value></data>
+  <data name="MonitorTab_BytesMemoryDisplay" xml:space="preserve"><value>内存 {0:N0} 字节</value></data>
+  <data name="MonitorTab_BytesSwapDisplay" xml:space="preserve"><value>交换空间 {0:N0} 字节</value></data>
+  <data name="MonitorTab_FilesystemUsageDisplay" xml:space="preserve"><value>Linux 文件系统：已用 {0:N0} / 总计 {1:N0} 字节</value></data>
+  <data name="MonitorTab_DiskIoDisplay" xml:space="preserve"><value>磁盘 I/O：{0:N0}/{1:N0} B/s</value></data>
+  <data name="MonitorTab_NetworkDisplay" xml:space="preserve"><value>网络：{0:N0}/{1:N0} B/s</value></data>
+  <data name="MonitorTab_VhdxDisplay" xml:space="preserve"><value>VHDX {0:N0} 字节</value></data>
+  <data name="MonitorTab_ReclaimDisplay" xml:space="preserve"><value>可回收 {0:N0} 字节</value></data>
+  <data name="MonitorTab_LimitsDisplay" xml:space="preserve"><value>限制：内存 {0}；交换空间 {1}；处理器 {2}</value></data>
+  <data name="MonitorTab_SomeMetricsUnavailable" xml:space="preserve"><value>部分指标不可用。</value></data>
+  <data name="MonitorTab_PrivilegedWarning" xml:space="preserve"><value> 此进程具有特权或属于系统进程。</value></data>
+  <data name="MonitorTab_ConfirmAction" xml:space="preserve"><value>确认进程操作</value></data>
+  <data name="MonitorTab_ActionFailed" xml:space="preserve"><value>进程操作失败</value></data>
+  <data name="MonitorTab_Protocol" xml:space="preserve"><value>协议</value></data>
+  <data name="MonitorTab_Address" xml:space="preserve"><value>监听地址</value></data>
+  <data name="MonitorTab_Port" xml:space="preserve"><value>端口</value></data>
+  <data name="MonitorTab_ListenPorts" xml:space="preserve"><value>监听端口</value></data>
 </root>

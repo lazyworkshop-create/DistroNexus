@@ -121,6 +121,10 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<INetworkStatusAdapter, WindowsNetworkStatusAdapter>();
                     services.AddSingleton<IFirewallOperationBroker, GuardedFirewallOperationBroker>();
                     services.AddSingleton<IBrowserLauncher, BrowserLauncher>();
+                    services.AddSingleton<MonitoringWarningRegistry>();
+                    services.AddSingleton<IMonitoringWarningSource>(sp => sp.GetRequiredService<MonitoringWarningRegistry>());
+                    services.AddSingleton<IMonitoringWarningSink>(sp => sp.GetRequiredService<MonitoringWarningRegistry>());
+                    services.AddSingleton<IMonitoringService, MonitoringService>();
                     services.AddSingleton<ITagService, TagService>();
                     services.AddSingleton<IWslEventWatcher, WslEventWatcher>();
                     services.AddSingleton<IWslCliRunner, WslCliRunner>();

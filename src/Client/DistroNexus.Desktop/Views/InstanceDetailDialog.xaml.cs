@@ -13,5 +13,6 @@ public partial class InstanceDetailDialog : FluentWindow
         InitializeComponent();
         DataContext = viewModel;
         viewModel.CloseRequested += (_, _) => Close();
+        Closed += async (_, _) => await viewModel.DisposeAsync();
     }
 }

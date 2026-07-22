@@ -2063,4 +2063,37 @@ Please select the directory that contains the PowerShell module manifest file.</
   <data name="Network_SettingsApplied" xml:space="preserve"><value>Network settings applied.</value></data>
   <data name="Network_SettingsAppliedRestart" xml:space="preserve"><value>Network settings applied; restart WSL to finish.</value></data>
   <data name="Network_ErrorUnsafeBrowserAddress" xml:space="preserve"><value>Only loopback HTTP(S) addresses can be opened in a browser.</value></data>
+  <data name="MonitorTab_RefreshInterval" xml:space="preserve"><value>Refresh interval</value></data>
+  <data name="MonitorTab_Seconds" xml:space="preserve"><value>seconds</value></data>
+  <data name="MonitorTab_Refresh" xml:space="preserve"><value>Refresh</value></data>
+  <data name="MonitorTab_WarningThresholds" xml:space="preserve"><value>Warning thresholds (%)</value></data>
+  <data name="MonitorTab_Cpu" xml:space="preserve"><value>CPU</value></data>
+  <data name="MonitorTab_Memory" xml:space="preserve"><value>Memory</value></data>
+  <data name="MonitorTab_Filesystem" xml:space="preserve"><value>Filesystem</value></data>
+  <data name="MonitorTab_Pid" xml:space="preserve"><value>PID</value></data>
+  <data name="MonitorTab_User" xml:space="preserve"><value>User</value></data>
+  <data name="MonitorTab_Command" xml:space="preserve"><value>Command</value></data>
+  <data name="MonitorTab_Actions" xml:space="preserve"><value>Actions</value></data>
+  <data name="MonitorTab_Terminate" xml:space="preserve"><value>Terminate</value></data>
+  <data name="MonitorTab_Kill" xml:space="preserve"><value>Kill after TERM timeout</value></data>
+  <data name="MonitorTab_LowerPriority" xml:space="preserve"><value>Lower priority</value></data>
+  <data name="Tab_Monitor" xml:space="preserve"><value>Monitor</value></data>
+  <data name="MonitorTab_Unavailable" xml:space="preserve"><value>Unavailable</value></data>
+  <data name="MonitorTab_CpuDisplay" xml:space="preserve"><value>{0:F1}% CPU</value></data>
+  <data name="MonitorTab_BytesMemoryDisplay" xml:space="preserve"><value>{0:N0} bytes memory</value></data>
+  <data name="MonitorTab_BytesSwapDisplay" xml:space="preserve"><value>{0:N0} bytes swap</value></data>
+  <data name="MonitorTab_FilesystemUsageDisplay" xml:space="preserve"><value>Linux filesystem: {0:N0} / {1:N0} bytes used</value></data>
+  <data name="MonitorTab_DiskIoDisplay" xml:space="preserve"><value>Disk I/O: {0:N0}/{1:N0} B/s</value></data>
+  <data name="MonitorTab_NetworkDisplay" xml:space="preserve"><value>Network: {0:N0}/{1:N0} B/s</value></data>
+  <data name="MonitorTab_VhdxDisplay" xml:space="preserve"><value>{0:N0} bytes VHDX</value></data>
+  <data name="MonitorTab_ReclaimDisplay" xml:space="preserve"><value>{0:N0} bytes reclaimable</value></data>
+  <data name="MonitorTab_LimitsDisplay" xml:space="preserve"><value>Limits: memory {0}; swap {1}; processors {2}</value></data>
+  <data name="MonitorTab_SomeMetricsUnavailable" xml:space="preserve"><value>Some metrics are unavailable.</value></data>
+  <data name="MonitorTab_PrivilegedWarning" xml:space="preserve"><value> This is a privileged or system process.</value></data>
+  <data name="MonitorTab_ConfirmAction" xml:space="preserve"><value>Confirm process action</value></data>
+  <data name="MonitorTab_ActionFailed" xml:space="preserve"><value>Process action failed</value></data>
+  <data name="MonitorTab_Protocol" xml:space="preserve"><value>Protocol</value></data>
+  <data name="MonitorTab_Address" xml:space="preserve"><value>Listening address</value></data>
+  <data name="MonitorTab_Port" xml:space="preserve"><value>Port</value></data>
+  <data name="MonitorTab_ListenPorts" xml:space="preserve"><value>Listening ports</value></data>
 </root>

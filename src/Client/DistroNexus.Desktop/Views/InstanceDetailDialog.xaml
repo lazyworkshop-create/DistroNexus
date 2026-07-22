@@ -123,6 +123,9 @@
             <TabItem Header="{lex:Loc Tab_Services}">
                 <tabs:ServicesTabView DataContext="{Binding ServicesTab}"/>
             </TabItem>
+            <TabItem Header="{lex:Loc Tab_Monitor}">
+                <tabs:MonitorTabView DataContext="{Binding MonitorTab}"/>
+            </TabItem>
         </TabControl>
 
         <!-- Footer -->

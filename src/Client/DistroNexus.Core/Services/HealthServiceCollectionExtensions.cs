@@ -1,6 +1,7 @@
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace DistroNexus.Core.Services;
 
@@ -8,6 +9,12 @@ public static class HealthServiceCollectionExtensions
 {
     public static IServiceCollection AddHealthCenter(this IServiceCollection services)
     {
+        // Health Center can be composed on its own (for example in a command-line host or a
+        // focused test).  Desktop may register the same shared registry first; TryAdd keeps
+        // both health scans and monitor sessions attached to that single projection.
+        services.TryAddSingleton<MonitoringWarningRegistry>();
+        services.TryAddSingleton<IMonitoringWarningSource>(sp => sp.GetRequiredService<MonitoringWarningRegistry>());
+        services.TryAddSingleton<IMonitoringWarningSink>(sp => sp.GetRequiredService<MonitoringWarningRegistry>());
         services.AddSingleton<IHealthRuntimeAdapter, HealthRuntimeAdapter>();
         services.AddSingleton<ISystemdService, SystemdService>();
         services.AddSingleton<IWslNetworkDiagnosticsAdapter, WslNetworkDiagnosticsAdapter>();
@@ -33,6 +40,7 @@ public static class HealthServiceCollectionExtensions
         services.AddSingleton<IHealthCheck, NetworkHealthCheck>();
         services.AddSingleton<IHealthCheck, SystemdHealthCheck>();
         services.AddSingleton<IHealthCheck, TemplateHealthCheck>();
+        services.AddSingleton<IHealthCheck, MonitoringHealthCheck>();
         services.AddSingleton<IHealthOrchestrator, HealthOrchestrator>();
         services.AddSingleton<IHealthNavigationBroker, NullHealthNavigationBroker>();
         services.AddSingleton<IWindowsFeatureRepairBroker, ElevatedWindowsFeatureRepairBroker>();
