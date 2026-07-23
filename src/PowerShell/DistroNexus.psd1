@@ -3,7 +3,7 @@
     RootModule = 'DistroNexus.psm1'
 
     # Version number of this module.
-    ModuleVersion = '2.2.1'
+    ModuleVersion = '2.3.0'
 
     # ID used to uniquely identify this module
     GUID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
@@ -46,6 +46,29 @@
         'Compress-DistroNexusInstance',
         'Get-DistroNexusDockerIntegration',
         'Get-DistroNexusContainerRuntimeStatus',
+        'Get-DistroNexusCapability',
+        'Get-DistroNexusSystemdService',
+        'Get-DistroNexusSystemdServicePreview',
+        'Invoke-DistroNexusSystemdService',
+        'Start-DistroNexusSystemdService',
+        'Stop-DistroNexusSystemdService',
+        'Restart-DistroNexusSystemdService',
+        'Enable-DistroNexusSystemdService',
+        'Disable-DistroNexusSystemdService',
+        'Reload-DistroNexusSystemdService',
+        'Get-DistroNexusWslgApplication',
+        'Start-DistroNexusWslgApplication',
+        'Get-DistroNexusRecoveryPoint',
+        'Test-DistroNexusRecoveryPoint',
+        'Get-DistroNexusRecoveryPointCreatePreview',
+        'New-DistroNexusRecoveryPoint',
+        'Get-DistroNexusRecoveryPointRestorePreview',
+        'Restore-DistroNexusRecoveryPoint',
+        'Remove-DistroNexusRecoveryPoint',
+        'Get-DistroNexusMonitoringSnapshot',
+        'Invoke-DistroNexusHealthScan',
+        'Get-DistroNexusHealthRepairPreview',
+        'Repair-DistroNexusHealthFinding',
         'Get-DistroNexusPodmanUserUnitPreview',
         'Invoke-DistroNexusPodmanUserUnit',
         'Get-DistroNexusPodmanConnectionPreview',
@@ -119,7 +142,7 @@
             ProjectUri = 'https://github.com/LazyWorkshopCreate/DistroNexus'
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Version 2.2.0 - Deep instance management: VHDX compaction, Docker Desktop integration, backup scheduling, port visualization, tagging, and internal architecture improvements'
+            ReleaseNotes = 'Version 2.3.0 release candidate - health, recovery, monitoring, workspaces, WSLg, containers, and trusted templates. External Windows/WSL and package acceptance gates remain open.'
         }
     }
 }

@@ -14,8 +14,10 @@ public interface IRecoveryPointService
     Task RestoreCloneAsync(RecoveryCloneRequest request, string previewToken, CancellationToken cancellationToken = default, IProgress<RecoveryOperationProgress>? progress = null);
     Task<RecoveryPointVerification> VerifyAsync(Guid id, CancellationToken cancellationToken = default);
     Task UpdateNotesAsync(Guid id, string description, IReadOnlyList<string> tags, bool pinned, CancellationToken cancellationToken = default);
-    /// <summary>Deletes a point only after explicit confirmation. Retention cleanup retains its separate implicit safeguards.</summary>
-    Task DeleteAsync(Guid id, bool confirmed, CancellationToken cancellationToken = default);
+    /// <summary>Creates a one-shot, state-bound confirmation preview for deletion.</summary>
+    Task<RecoveryOperationPreview> PreviewDeleteAsync(Guid id, CancellationToken cancellationToken = default);
+    /// <summary>Deletes a point only with a current Core-issued deletion preview token. Retention cleanup retains its separate implicit safeguards.</summary>
+    Task DeleteAsync(Guid id, string previewToken, CancellationToken cancellationToken = default);
     Task ApplyRetentionAsync(string sourceInstance, int maximum, CancellationToken cancellationToken = default);
     Task<int?> GetRetentionAsync(string sourceInstance, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<RecoveryHistoryEntry>> GetHistoryAsync(CancellationToken cancellationToken = default);

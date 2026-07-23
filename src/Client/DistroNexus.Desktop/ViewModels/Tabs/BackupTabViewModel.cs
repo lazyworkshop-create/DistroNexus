@@ -331,8 +331,11 @@ public partial class BackupTabViewModel : ObservableObject
     [RelayCommand]
     private async Task DeleteRecoveryPointAsync()
     {
-        if (SelectedRecoveryPoint is null || !await _dialogService.ShowConfirmAsync(L("Recovery_DeleteTitle"), L("Recovery_DeleteConfirm"))) return;
-        await _recoveryService.DeleteAsync(SelectedRecoveryPoint.Manifest.Id, confirmed: true); await LoadRecoveryPointsAsync(); await LoadBackupHistoryAsync();
+        if (SelectedRecoveryPoint is null) return;
+        var preview = await _recoveryService.PreviewDeleteAsync(SelectedRecoveryPoint.Manifest.Id);
+        var confirmation = string.Join(Environment.NewLine, [L("Recovery_DeleteConfirm"), .. preview.Warnings]);
+        if (!await _dialogService.ShowConfirmAsync(L("Recovery_DeleteTitle"), confirmation)) return;
+        await _recoveryService.DeleteAsync(SelectedRecoveryPoint.Manifest.Id, preview.Token); await LoadRecoveryPointsAsync(); await LoadBackupHistoryAsync();
     }
 
     [RelayCommand]

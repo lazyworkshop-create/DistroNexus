@@ -2,7 +2,7 @@
 
 **中文** | [English](README.md)
 
-> **当前版本：v2.2.1** — 基于 .NET 10 与 WPF 的原生 Windows 深度 WSL 实例管理体验。
+> **当前源码候选：v2.3.0** — 基于 .NET 10 与 WPF 的健康、恢复、监控、可信自动化、WSLg、容器和模板信任能力；发布包仍需通过外部发布门槛。
 
 **DistroNexus** 是一个现代化的 Windows 应用程序，用于管理 Windows Subsystem for Linux (WSL) 发行版。采用 .NET 10 和 WPF 构建，提供原生、直观的界面用于下载、安装和管理 WSL 实例。
 
@@ -42,7 +42,7 @@
 
 - 基于 Fluent 风格的原生 WPF 界面，支持自动浅色/深色主题。
 - 桌面界面和文档支持英文与简体中文。
-- 导出 39 个 PowerShell 函数，覆盖生命周期、存储、备份、配置、网络、Docker、标签、目录、模板和发布诊断。
+- 导出 93 个 PowerShell 函数，覆盖生命周期、健康、恢复、监控、配置、服务、WSLg、容器、工作区、可信模板和诊断。
 - 16 套内置开发模板，覆盖 .NET、Node.js、Python、Java、Go、Rust、容器、Kubernetes、数据库、AI/ML 和基础设施工具。
 - 支持参数化模板执行、环境检查、元数据检查、Dry Run、进度反馈和结构化错误码。
 - 支持包下载进度、传输速度、缓存和详细应用日志。
@@ -61,23 +61,23 @@
 ### 安装
 
 #### 选项 1：安装程序（推荐）
-1. 从 [Releases](https://github.com/LazyWorkshopCreate/DistroNexus/releases) 下载 `DistroNexus-2.2.1-Setup.exe`
+1. v2.3.0 发布后，从 [Releases](https://github.com/LazyWorkshopCreate/DistroNexus/releases) 下载已批准的安装程序
 2. 运行安装程序
 3. 从开始菜单启动
 
 #### 选项 2：便携版
-1. 从 [Releases](https://github.com/LazyWorkshopCreate/DistroNexus/releases) 下载 v2.2.1 便携 ZIP 包
+1. 发布后，从 [Releases](https://github.com/LazyWorkshopCreate/DistroNexus/releases) 下载 v2.3.0 便携 ZIP 包
 2. 解压到任意文件夹
 3. 运行 `DistroNexus.Desktop.exe`
 
 #### 选项 3：自包含版（无需 .NET）
-1. 从 [Releases](https://github.com/LazyWorkshopCreate/DistroNexus/releases) 下载 v2.2.1 自包含 ZIP 包
+1. 发布后，从 [Releases](https://github.com/LazyWorkshopCreate/DistroNexus/releases) 下载 v2.3.0 自包含 ZIP 包
 2. 解压到任意文件夹
 3. 运行 `DistroNexus.Desktop.exe`
 
 ## 🛠️ PowerShell 模块
 
-DistroNexus 2.2.1 包含用于自动化的 PowerShell 模块：
+DistroNexus 2.3.0 包含用于自动化的 PowerShell 模块：
 
 ```powershell
 # 导入模块
@@ -93,14 +93,15 @@ Install-DistroNexusInstance -DistroName "MyUbuntu" -InstallPath "D:\WSL\MyUbuntu
 Start-DistroNexusInstance -DistroName "Ubuntu-22.04"
 ```
 
-模块按能力分组导出 39 个函数：
+模块按能力分组导出 93 个函数：
 
 - **实例**：列出、安装、启动、停止、移动、重命名、移除、设置凭据、导入和导出。
 - **存储与配置**：压缩 VHDX、查看实例配置、管理稀疏模式以及读写 `.wslconfig`。
-- **备份与诊断**：管理备份计划、执行备份、查看端口映射和查询实例缓存。
+- **备份、恢复与诊断**：管理备份计划、创建/验证/还原/安全删除恢复点、查看端口映射、查询实例缓存以及创建发布证据包。
 - **集成与组织**：管理 Docker Desktop 集成和实例标签。
-- **目录与模板**：浏览/下载软件包、更新目录、发现/应用模板、验证环境与元数据以及执行模板自动化。
-- **发布工具**：创建标准化发布证据包。
+- **运行与健康**：查询主机能力、扫描和修复健康问题、查看监控快照，以及预览或操作受支持的 systemd 服务。
+- **Linux 应用与容器工具**：发现或启动 WSLg 应用、查看容器运行时，以及管理 Podman 用户单元和连接。
+- **工作区与可信模板**：管理工作区定义和启动；浏览/下载软件包；验证、应用和自动化模板；并管理可信市场源、评审授权、工件、历史和回滚。
 
 权威导出列表见 [`src/PowerShell/DistroNexus.psd1`](src/PowerShell/DistroNexus.psd1)。
 
@@ -202,7 +203,7 @@ dotnet build src/Client/DistroNexus.slnx -c Release
 .\tools\build.ps1 -Publish -SelfContained -CreateZip -Configuration Release
 
 # 构建 Windows 安装程序（需要 Inno Setup）
-.\tools\build-installer.ps1 -Version 2.2.1
+.\tools\build-installer.ps1 -Version 2.3.0
 
 # 输出将在 release/ 目录中
 ```
@@ -297,4 +298,4 @@ Get-Module DistroNexus
 
 ---
 
-**DistroNexus v2.2.1** — 在 Windows 上管理、自动化、保护并定制 WSL 环境。
+**DistroNexus v2.3.0** — 在 Windows 上管理、自动化、保护并定制 WSL 环境。

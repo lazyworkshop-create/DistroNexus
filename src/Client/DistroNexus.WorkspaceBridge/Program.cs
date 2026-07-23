@@ -4,6 +4,7 @@ using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using DistroNexus.Core.Services;
 using DistroNexus.WorkspaceBridge;
+using Microsoft.Extensions.Logging.Abstractions;
 
 var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, Converters = { new JsonStringEnumConverter(allowIntegerValues: false) } };
 var root = Environment.GetEnvironmentVariable("DISTRONEXUS_WORKSPACE_STORE_ROOT");
@@ -16,6 +17,45 @@ var capabilities = new PlatformCapabilityService(processes);
 var distributionConfiguration = new DistributionConfigurationService(processes);
 var systemd = new SystemdService(processes, capabilities, distributionConfiguration);
 var containers = ContainerRuntimeBridgeComposition.Create(processes, systemd);
+var wslg = new WslgApplicationService(processes, capabilities, root);
+var recovery = new RecoveryPointService(new WslRecoveryPointRuntime(processes, capabilities), root: root);
+var monitoring = new MonitoringService(processes);
+var applicationRoot = root ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DistroNexus");
+var bridgePowerShell = new BridgeReadOnlyPowerShellService();
+var settings = new SettingsService(NullLogger<SettingsService>.Instance, Path.Combine(applicationRoot, "settings.json"));
+var globalConfiguration = new WslConfigService(NullLogger<WslConfigService>.Instance, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+var backups = new BackupService(bridgePowerShell, NullLogger<BackupService>.Instance, applicationRoot);
+var templates = new TemplateService(NullLogger<TemplateService>.Instance, settings, bridgePowerShell, new HttpClient());
+var monitoringWarnings = new MonitoringWarningRegistry();
+var healthRuntime = new HealthRuntimeAdapter(processes, globalConfiguration);
+var healthProbe = new DefaultHealthProbe(new BackupHealthSource(backups), templates, healthRuntime);
+var windowsPrerequisites = new WindowsPrerequisiteProbe(processes);
+var templateRuntimePreflight = new TemplateRuntimePreflightEvaluator(processes);
+// Compose the same concrete Core health check families as the Desktop. Every operation here is
+// read-only; no category is omitted or replaced with a synthetic availability result.
+var health = new HealthOrchestrator([
+    new InitialProbeHealthCheck(healthProbe), new CapabilityHealthCheck(), new WindowsPrerequisiteHealthCheck(windowsPrerequisites),
+    new StorageHealthCheck(), new IntegrationHealthCheck(), new NetworkHealthCheck(), new SystemdHealthCheck(capabilities), new WslgHealthCheck(processes),
+    new GlobalConfigurationHealthCheck(globalConfiguration), new DistributionConfigurationHealthCheck(distributionConfiguration),
+    new BackupHealthCheck(backups), new TemplateHealthCheck(templates, templateRuntimePreflight), new MonitoringHealthCheck(monitoringWarnings)
+], capabilities, instances, Path.Combine(applicationRoot, "health-history.json"));
+var healthRepairs = new HealthRepairService([
+    // Navigation and UAC brokering are intentionally Desktop-only.  Retain their canonical IDs
+    // so PowerShell receives a reviewed, actionable result rather than an unregistered repair.
+    new DesktopOnlyRepairAction("open.wsl-update", "Open WSL update settings", RepairSafety.Safe),
+    new DesktopOnlyRepairAction("open.windows-virtualization-settings", "Open Windows virtualization settings", RepairSafety.Safe),
+    new DesktopOnlyRepairAction("enable.windows-features", "Enable required Windows features", RepairSafety.PrivilegedOrDisruptive),
+    new GlobalConfigurationRepairAction(globalConfiguration),
+    new InstanceConfigurationRepairAction(distributionConfiguration),
+    new FixedProcessRepairAction("wsl.update", "Update WSL", RepairSafety.RequiresConfirmation, RepairIdempotency.Idempotent,
+        ["Download and install the latest available WSL update."], _ => new ProcessRequest("wsl.exe", ["--update"], TimeSpan.FromMinutes(5)), processes,
+        _ => new ProcessRequest("wsl.exe", ["--version"], TimeSpan.FromSeconds(30))),
+    new WslRestartRepairAction(instances, processes),
+    new FixedProcessRepairAction("wsl.trim", "Trim Linux filesystem", RepairSafety.PrivilegedOrDisruptive, RepairIdempotency.Idempotent,
+        ["Run fstrim in the selected running distribution. Linux privilege policy may reject this operation."],
+        finding => string.IsNullOrWhiteSpace(finding.InstanceName) ? null : new ProcessRequest("wsl.exe", ["--distribution", finding.InstanceName, "--", "sudo", "--non-interactive", "fstrim", "-av"], TimeSpan.FromMinutes(2)), processes,
+        finding => string.IsNullOrWhiteSpace(finding.InstanceName) ? null : new ProcessRequest("wsl.exe", ["--distribution", finding.InstanceName, "--", "sh", "-lc", "df -Pk /"], TimeSpan.FromSeconds(30)))
+]);
 var runtime = new WorkspaceRuntime(instances, processes);
 var gate = new WorkspaceActionCapabilityGate(capabilities);
 var handlers = Enum.GetValues<WorkspaceActionType>()
@@ -63,6 +103,26 @@ while ((line = Console.ReadLine()) is not null)
             "previewPodmanConnection" => await PreviewPodmanConnectionAsync(request),
             "executePodmanConnection" => await ExecutePodmanConnectionAsync(request),
             "containerRuntimeStatus" => await ContainerRuntimeStatusAsync(request),
+            "capability" => await GetCapabilitiesAsync(request),
+            "systemdList" => await ListSystemdAsync(request),
+            "systemdPreview" => await PreviewSystemdAsync(request),
+            "systemdExecute" => await ExecuteSystemdAsync(request),
+            "wslgStatus" => await GetWslgStatusAsync(request),
+            "wslgDiscover" => await DiscoverWslgAsync(request),
+            "wslgLaunch" => await LaunchWslgAsync(request),
+            "recoveryList" => await recovery.ListAsync(),
+            "recoveryHistory" => await recovery.GetHistoryAsync(),
+            "recoveryVerify" => await recovery.VerifyAsync(request.Id ?? throw new ArgumentException("Recovery id is required.")),
+            "recoveryPreviewCreate" => await PreviewRecoveryCreateAsync(request),
+            "recoveryCreate" => await CreateRecoveryAsync(request),
+            "recoveryPreviewRestore" => await PreviewRecoveryRestoreAsync(request),
+            "recoveryRestore" => await RestoreRecoveryAsync(request),
+            "recoveryPreviewRemove" => await recovery.PreviewDeleteAsync(request.Id ?? throw new ArgumentException("Recovery id is required.")),
+            "recoveryRemove" => await RemoveRecoveryAsync(request),
+            "monitorSnapshot" => await GetMonitoringSnapshotAsync(request),
+            "healthScan" => await health.ScanAsync(),
+            "healthRepairPreview" => await PreviewHealthRepairAsync(request),
+            "healthRepairExecute" => await ExecuteHealthRepairAsync(request),
             "marketplaceListSources" => await marketplace.GetSourcesAsync(),
             "marketplaceStatus" => await GetMarketplaceStatusAsync(request),
             "marketplaceAddSource" => await AddMarketplaceSourceAsync(request),
@@ -89,6 +149,85 @@ async Task<object> ExecutePodmanUnitAsync(BridgeRequest request) { var p = JsonS
 async Task<object> PreviewPodmanConnectionAsync(BridgeRequest request) { var p = JsonSerializer.Deserialize<PodmanConnectionPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Podman connection payload is required."); var preview = await containers.PreviewPodmanConnectionAsync(p.InstanceName, new PodmanConnectionRequest(p.Name, new Uri(p.Endpoint, UriKind.Absolute))); return new { preview.Token, preview.InstanceName, Name = preview.Request.Name, Endpoint = preview.Request.SafeEndpoint, preview.Operation, preview.ExistingEndpoint, preview.Effects }; }
 async Task<object> ExecutePodmanConnectionAsync(BridgeRequest request) { var p = JsonSerializer.Deserialize<PodmanConnectionPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Podman connection payload is required."); return await containers.ConfigurePodmanConnectionAsync(request.Token ?? string.Empty, p.InstanceName, new PodmanConnectionRequest(p.Name, new Uri(p.Endpoint, UriKind.Absolute))); }
 async Task<ContainerRuntimeStatusResponse> ContainerRuntimeStatusAsync(BridgeRequest request) { var p = JsonSerializer.Deserialize<PodmanStatusPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Container runtime payload is required."); return await ContainerRuntimeBridgeHandler.GetStatusAsync(containers, p.InstanceName); }
+async Task<object> GetCapabilitiesAsync(BridgeRequest request)
+{
+    var p = JsonSerializer.Deserialize<CapabilityPayload>(request.Payload?.GetRawText() ?? "{}", options) ?? new CapabilityPayload(null, false);
+    return string.IsNullOrWhiteSpace(p.InstanceName) || !p.InstanceOnly
+        ? await capabilities.GetHostSnapshotAsync()
+        : await capabilities.GetInstanceSnapshotAsync(p.InstanceName);
+}
+async Task<IReadOnlyList<SystemdServiceInfo>> ListSystemdAsync(BridgeRequest request)
+{
+    var p = JsonSerializer.Deserialize<SystemdPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("systemd payload is required.");
+    return await systemd.ListAsync(p.InstanceName, p.Scope);
+}
+async Task<SystemdOperationPreview> PreviewSystemdAsync(BridgeRequest request)
+{
+    var p = JsonSerializer.Deserialize<SystemdPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("systemd payload is required.");
+    if (p.Action is null || string.IsNullOrWhiteSpace(p.Unit)) throw new ArgumentException("A systemd unit and action are required.");
+    return await systemd.PreviewAsync(p.InstanceName, new SystemdUnitName(p.Unit), p.Action.Value, p.Scope);
+}
+async Task<SystemdOperationResult> ExecuteSystemdAsync(BridgeRequest request)
+{
+    var p = JsonSerializer.Deserialize<SystemdPreviewPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("systemd preview is required.");
+    return await systemd.ExecuteAsync(p.Preview);
+}
+async Task<WslgApplicationStatus> GetWslgStatusAsync(BridgeRequest request)
+{
+    var p = JsonSerializer.Deserialize<WslgInstancePayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("WSLg payload is required.");
+    return await wslg.GetStatusAsync(p.InstanceName);
+}
+async Task<IReadOnlyList<WslgApplication>> DiscoverWslgAsync(BridgeRequest request)
+{
+    var p = JsonSerializer.Deserialize<WslgInstancePayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("WSLg payload is required.");
+    return await wslg.DiscoverAsync(p.InstanceName);
+}
+async Task<WslgLaunchResult> LaunchWslgAsync(BridgeRequest request)
+{
+    var p = JsonSerializer.Deserialize<WslgApplicationPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("WSLg application payload is required.");
+    return await wslg.LaunchAsync(p.Application);
+}
+async Task<RecoveryOperationPreview> PreviewRecoveryCreateAsync(BridgeRequest request)
+{
+    var p = JsonSerializer.Deserialize<RecoveryCreatePayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Recovery create payload is required.");
+    return await recovery.PreviewCreateAsync(p.Request);
+}
+async Task<RecoveryPointSummary> CreateRecoveryAsync(BridgeRequest request)
+{
+    var p = JsonSerializer.Deserialize<RecoveryCreatePayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Recovery create payload is required.");
+    return await recovery.CreateAsync(p.Request, request.Token ?? throw new ArgumentException("Recovery preview token is required."));
+}
+async Task<RecoveryOperationPreview> PreviewRecoveryRestoreAsync(BridgeRequest request)
+{
+    var p = JsonSerializer.Deserialize<RecoveryRestorePayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Recovery restore payload is required.");
+    return await recovery.PreviewRestoreAsync(p.Request);
+}
+async Task<object> RestoreRecoveryAsync(BridgeRequest request)
+{
+    var p = JsonSerializer.Deserialize<RecoveryRestorePayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Recovery restore payload is required.");
+    await recovery.RestoreAsync(p.Request, request.Token ?? throw new ArgumentException("Recovery preview token is required.")); return new { };
+}
+async Task<object> RemoveRecoveryAsync(BridgeRequest request) { await recovery.DeleteAsync(request.Id ?? throw new ArgumentException("Recovery id is required."), request.Token ?? throw new ArgumentException("Recovery preview token is required.")); return new { }; }
+async Task<MonitoringSample> GetMonitoringSnapshotAsync(BridgeRequest request)
+{
+    var p = JsonSerializer.Deserialize<MonitoringPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Monitoring payload is required.");
+    var instance = (await instances.GetInstancesAsync()).FirstOrDefault(x => string.Equals(x.Name, p.InstanceName, StringComparison.OrdinalIgnoreCase)) ?? throw new KeyNotFoundException("WSL instance was not found.");
+    await using var session = monitoring.CreateSession(instance, TimeSpan.FromSeconds(1));
+    await session.StartAsync();
+    await Task.Delay(TimeSpan.FromMilliseconds(1250));
+    await session.StopAsync();
+    return session.Samples.Last();
+}
+async Task<RepairPreview> PreviewHealthRepairAsync(BridgeRequest request)
+{
+    var p = JsonSerializer.Deserialize<HealthFindingPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Health finding payload is required.");
+    return await healthRepairs.PreviewAsync(p.Finding);
+}
+async Task<RepairResult> ExecuteHealthRepairAsync(BridgeRequest request)
+{
+    var p = JsonSerializer.Deserialize<HealthRepairPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Health repair payload is required.");
+    return await healthRepairs.ExecuteAsync(p.Finding, new RepairExecutionRequest(request.Token ?? string.Empty, p.Confirmed));
+}
 async Task<TemplateSource> AddMarketplaceSourceAsync(BridgeRequest request) { var p = JsonSerializer.Deserialize<MarketplaceSourcePayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Marketplace source payload is required."); return await marketplace.AddSourceAsync(p.Url, p.Kind, p.ExplicitlyAcceptedNonHttps); }
 async Task<TemplateMarketplaceStatus> GetMarketplaceStatusAsync(BridgeRequest request) { var p = JsonSerializer.Deserialize<MarketplaceStatusPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Marketplace source payload is required."); return string.IsNullOrWhiteSpace(p.TemplateId) || string.IsNullOrWhiteSpace(p.ManifestDigest) ? await marketplace.GetStatusAsync(p.SourceId) : await marketplace.GetStatusAsync(p.SourceId, p.TemplateId, p.ManifestDigest); }
 async Task<object> SetMarketplaceSourceEnabledAsync(BridgeRequest request) { var p = JsonSerializer.Deserialize<MarketplaceSourceEnabledPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Marketplace source payload is required."); await marketplace.SetSourceEnabledAsync(p.SourceId, p.Enabled); return new { }; }
@@ -122,9 +261,38 @@ public sealed record BridgeRequest(string Operation, Guid? Id, JsonElement? Payl
 public sealed record PodmanUnitPayload(string InstanceName, PodmanUserUnit Unit, SystemdAction Action);
 public sealed record PodmanConnectionPayload(string InstanceName, string Name, string Endpoint);
 public sealed record PodmanStatusPayload(string InstanceName);
+public sealed record CapabilityPayload(string? InstanceName, bool InstanceOnly);
+public sealed record SystemdPayload(string InstanceName, string? Unit, SystemdAction? Action, SystemdScope Scope = SystemdScope.User);
+public sealed record SystemdPreviewPayload(SystemdOperationPreview Preview);
+public sealed record WslgInstancePayload(string InstanceName);
+public sealed record WslgApplicationPayload(WslgApplication Application);
+public sealed record RecoveryCreatePayload(RecoveryPointCreateRequest Request);
+public sealed record RecoveryRestorePayload(RecoveryRestoreRequest Request);
+public sealed record MonitoringPayload(string InstanceName);
+public sealed record HealthFindingPayload(HealthFinding Finding);
+public sealed record HealthRepairPayload(HealthFinding Finding, bool Confirmed);
 public sealed record MarketplaceSourcePayload(string Url, TemplateSourceKind Kind, bool ExplicitlyAcceptedNonHttps);
 public sealed record MarketplaceSourceIdPayload(string SourceId);
 public sealed record MarketplaceStatusPayload(string SourceId, string? TemplateId = null, string? ManifestDigest = null);
+
+/// <summary>
+/// Read-only adapter used by the concrete bridge health composition. It permits health checks to
+/// inspect Core-owned settings, backup, template, and monitoring state without allowing a scan to
+/// invoke PowerShell mutations.
+/// </summary>
+public sealed class BridgeReadOnlyPowerShellService : IPowerShellService
+{
+    private static Task<T> Unavailable<T>() => Task.FromException<T>(new InvalidOperationException("Health scan does not execute PowerShell."));
+    public Task<T?> ExecuteAsync<T>(string cmdlet, Dictionary<string, object>? parameters = null, CancellationToken cancellationToken = default) => Unavailable<T?>();
+    public Task<string> ExecuteScriptAsync(string script, CancellationToken cancellationToken = default) => Unavailable<string>();
+    public Task<PowerShellScriptResult> ExecuteScriptWithResultAsync(string script, CancellationToken cancellationToken = default) => Unavailable<PowerShellScriptResult>();
+    public Task<string> ExecuteScriptStreamingAsync(string script, Action<string>? onOutputLine = null, Action<string>? onErrorLine = null, CancellationToken cancellationToken = default) => Unavailable<string>();
+    public Task ImportModuleAsync(string modulePath, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public Task<bool> IsModuleLoadedAsync(CancellationToken cancellationToken = default) => Task.FromResult(false);
+    public Task<PowerShellScriptResult> ExecuteModuleCmdletAsync(string cmdletName, Dictionary<string, object>? parameters = null, ModuleCallOptions? options = null, CancellationToken cancellationToken = default) => Unavailable<PowerShellScriptResult>();
+    public Task<T?> ExecuteModuleCmdletAsync<T>(string cmdletName, Dictionary<string, object>? parameters = null, ModuleCallOptions? options = null, CancellationToken cancellationToken = default) => Unavailable<T?>();
+    public Task<string> GetDiagnosticInfoAsync(CancellationToken cancellationToken = default) => Task.FromResult("Read-only bridge health composition.");
+}
 public sealed record MarketplaceSourceEnabledPayload(string SourceId, bool Enabled);
 public sealed record MarketplaceSourceRemovePayload(string SourceId);
 public sealed record MarketplaceApprovalPayload(string ReviewToken);

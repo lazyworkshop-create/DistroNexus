@@ -152,8 +152,12 @@ public class TagService : ITagService
         try
         {
             var json    = await File.ReadAllTextAsync(SettingsFilePath, ct);
-            var root    = JsonNode.Parse(json);
-            var tagsNode = root?["instanceTags"];
+            var root = JsonNode.Parse(json)?.AsObject();
+            // v2.2.1 stored settings as a plain object.  v2.3 can persist the same
+            // document in a VersionedJsonStore envelope, whose user settings live under
+            // `value`.  Read both shapes so tag data survives an in-place upgrade.
+            var settings = root?["value"] as JsonObject ?? root;
+            var tagsNode = settings?["instanceTags"];
 
             if (tagsNode is null)
                 return new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
@@ -208,7 +212,11 @@ public class TagService : ITagService
             tagsObj[kv.Key] = arr;
         }
 
-        root["instanceTags"] = tagsObj;
+        // Keep tags alongside the settings payload when an envelope already exists. This
+        // preserves schema/revision/extension fields rather than accidentally flattening a
+        // v2.3 document back to the legacy shape.
+        var settings = root["value"] as JsonObject ?? root;
+        settings["instanceTags"] = tagsObj;
 
         var json = root.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
         await File.WriteAllTextAsync(SettingsFilePath, json, ct);

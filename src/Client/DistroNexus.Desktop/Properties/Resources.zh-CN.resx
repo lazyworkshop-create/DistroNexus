@@ -2271,4 +2271,10 @@
   <data name="MarketplaceDiffComplete" xml:space="preserve"><value>完整内容位于安全审阅上限内</value></data>
   <data name="MarketplaceRemoteSource" xml:space="preserve"><value>远程（HTTPS）</value></data>
   <data name="MarketplaceUserLocalSource" xml:space="preserve"><value>本地文件</value></data>
+  <data name="ConfirmRemoveWithBackupMessage" xml:space="preserve">
+    <value>是否移除“{0}”并删除其备份计划和备份文件？</value>
+  </data>
+  <data name="TooltipSparseModeEnabled" xml:space="preserve">
+    <value>稀疏 VHDX 会在释放空间时自动收缩磁盘文件。需要 WSL v2 和 Windows 11。启用或禁用后需要重启该实例。</value>
+  </data>
 </root>

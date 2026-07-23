@@ -89,7 +89,9 @@ public sealed class BackupTabRecoveryHistoryTests : IDisposable
         recovery.Setup(x => x.ListAsync(It.IsAny<CancellationToken>())).ReturnsAsync([point]);
         recovery.Setup(x => x.UpdateNotesAsync(point.Manifest.Id, "note", It.IsAny<IReadOnlyList<string>>(), true, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         recovery.Setup(x => x.ApplyRetentionAsync("Ubuntu", 2, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
-        recovery.Setup(x => x.DeleteAsync(point.Manifest.Id, true, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        recovery.Setup(x => x.PreviewDeleteAsync(point.Manifest.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RecoveryOperationPreview("delete", "Delete", point.Manifest.Id, "Ubuntu", "", point.DirectoryPath, RecoveryPointFormat.Tar, false, false, ["permanent"], 1));
+        recovery.Setup(x => x.DeleteAsync(point.Manifest.Id, "delete", It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         var dialogs = new Mock<IDialogService>(); dialogs.Setup(x => x.ShowConfirmAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
         var vm = new BackupTabViewModel(Instance(), backup.Object, dialogs.Object, recovery.Object);
         await vm.InitializeAsync(); vm.SelectedRecoveryPoint = point; vm.RecoveryDescription = "note"; vm.RecoveryTags = "safe, local"; vm.RecoveryPinned = true; vm.RecoveryRetention = 2;
@@ -101,7 +103,8 @@ public sealed class BackupTabRecoveryHistoryTests : IDisposable
         recovery.Verify(x => x.UpdateNotesAsync(point.Manifest.Id, "note", It.Is<IReadOnlyList<string>>(t => t.Count == 2), true, It.IsAny<CancellationToken>()), Times.Once);
         recovery.Verify(x => x.ApplyRetentionAsync("Ubuntu", 2, It.IsAny<CancellationToken>()), Times.Once);
         dialogs.Verify(x => x.ShowConfirmAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Once);
-        recovery.Verify(x => x.DeleteAsync(point.Manifest.Id, true, It.IsAny<CancellationToken>()), Times.Once);
+        recovery.Verify(x => x.PreviewDeleteAsync(point.Manifest.Id, It.IsAny<CancellationToken>()), Times.Once);
+        recovery.Verify(x => x.DeleteAsync(point.Manifest.Id, "delete", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

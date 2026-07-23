@@ -56,6 +56,63 @@ public sealed class WorkspaceBridgeProtocolTests
     }
 
     [Fact]
+    public async Task HealthScan_UsesConcreteCoreChecksForEveryAdvertisedCategory()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        var response = await bridge.SendAsync("healthScan");
+
+        Assert.True(response.GetProperty("Succeeded").GetBoolean());
+        var findings = response.GetProperty("Value").GetProperty("Findings").EnumerateArray()
+            .Select(x => x.GetProperty("Id").GetString() ?? string.Empty).ToArray();
+        foreach (var prefix in new[] { "wslconfig.", "backup.", "template.", "wslg.", "capability.", "disk.", "monitoring.", "network.", "windows.feature.", "windows.virtualization." })
+            Assert.True(findings.Any(id => id.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)), $"Missing {prefix}; observed: {string.Join(",", findings)}");
+    }
+
+    [Theory]
+    [InlineData("open.wsl-update", false, "DN-7004")]
+    [InlineData("open.windows-virtualization-settings", false, "DN-7004")]
+    [InlineData("enable.windows-features", false, "DN-7004")]
+    [InlineData("wsl.update", true, null)]
+    [InlineData("wsl.trim", true, null)]
+    public async Task HealthRepairPreview_RecognizesEveryHostRepairRouteAndMarksDesktopOnlyActions(string repairId, bool expectedPreview, string? expectedCode)
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        var payload = JsonDocument.Parse(JsonSerializer.Serialize(new
+        {
+            Finding = new { Id = "repair." + repairId, Severity = "Warning", Scope = "Host", Title = "test", Detail = "test", InstanceName = "Ubuntu", RepairId = repairId, Evidence = new { feature = "VirtualMachinePlatform" } }
+        })).RootElement.Clone();
+
+        var response = await bridge.SendAsync("healthRepairPreview", payload: payload);
+
+        Assert.True(response.GetProperty("Succeeded").GetBoolean());
+        var preview = response.GetProperty("Value");
+        Assert.Equal(repairId, preview.GetProperty("RepairId").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(preview.GetProperty("PreviewToken").GetString()));
+        if (expectedPreview)
+            Assert.NotEqual(0, preview.GetProperty("Commands").GetArrayLength());
+        else
+            Assert.Contains(preview.GetProperty("Preconditions").EnumerateArray().Select(x => x.GetString()), value =>
+                value?.Contains(expectedCode!, StringComparison.Ordinal) == true);
+    }
+
+    [Fact]
+    public async Task DesktopOnlyHealthRepairExecute_ReturnsStructuredResultWithoutMutation()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        var finding = JsonDocument.Parse("""
+            {"Id":"repair.open","Severity":"Warning","Scope":"Host","Title":"test","Detail":"test","RepairId":"open.wsl-update"}
+            """).RootElement.Clone();
+        var previewRequest = JsonDocument.Parse($$"""{"Finding":{{finding.GetRawText()}}}""").RootElement.Clone();
+        var preview = await bridge.SendAsync("healthRepairPreview", payload: previewRequest);
+        var execute = await bridge.SendAsync("healthRepairExecute", token: preview.GetProperty("Value").GetProperty("PreviewToken").GetString(),
+            payload: JsonDocument.Parse($$"""{"Finding":{{finding.GetRawText()}},"Confirmed":true}""").RootElement.Clone());
+
+        Assert.True(execute.GetProperty("Succeeded").GetBoolean());
+        Assert.False(execute.GetProperty("Value").GetProperty("Succeeded").GetBoolean());
+        Assert.Contains("Desktop-only", execute.GetProperty("Value").GetProperty("Error").GetString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task DryRunMutations_AreStructuredAndDoNotPersistOrIssueTokens()
     {
         await using var bridge = await BridgeProcess.StartAsync();

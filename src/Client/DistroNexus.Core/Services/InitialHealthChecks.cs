@@ -64,6 +64,9 @@ public sealed class DistributionConfigurationHealthCheck : IHealthCheck
     public async Task<HealthCheckResult> CheckAsync(HealthCheckContext context, CancellationToken cancellationToken)
     {
         var result = new List<HealthFinding>();
+        if (context.Instances.Count == 0)
+            result.Add(new HealthFinding("wslconf.instances.unavailable", HealthSeverity.Information, HealthScope.Instance,
+                "Distribution configuration unavailable", "No registered distribution is available to inspect."));
         foreach (var instance in context.Instances)
         {
             if (!instance.IsRunning)
@@ -155,6 +158,9 @@ public sealed class SystemdHealthCheck : IHealthCheck
     public async Task<HealthCheckResult> CheckAsync(HealthCheckContext context, CancellationToken cancellationToken)
     {
         var findings = new List<HealthFinding>();
+        if (context.Instances.Count == 0)
+            findings.Add(new HealthFinding("systemd.instances.unavailable", HealthSeverity.Information, HealthScope.Instance,
+                "systemd unavailable", "No registered running distribution is available to inspect."));
         foreach (var instance in context.Instances.Where(x => x.IsRunning))
         {
             var snapshot = await _capabilities.GetInstanceSnapshotAsync(instance.Name, cancellationToken: cancellationToken).ConfigureAwait(false);

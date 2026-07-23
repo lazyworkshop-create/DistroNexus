@@ -42,7 +42,9 @@ public class TemplateService : ITemplateService
         IPowerShellService powerShellService,
         HttpClient httpClient,
         IRecoveryOfferService? recoveryOfferService = null,
-        ITemplateMarketplaceService? marketplaceService = null)
+        ITemplateMarketplaceService? marketplaceService = null,
+        string? appDataDirectory = null,
+        string? localTemplatesPath = null)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
@@ -51,8 +53,7 @@ public class TemplateService : ITemplateService
         _recoveryOfferService = recoveryOfferService;
         _marketplaceService = marketplaceService;
 
-        var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        var appFolder = Path.Combine(appDataPath, "DistroNexus");
+        var appFolder = appDataDirectory ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DistroNexus");
         if (!Directory.Exists(appFolder))
         {
             Directory.CreateDirectory(appFolder);
@@ -62,7 +63,7 @@ public class TemplateService : ITemplateService
         _applicationHistoryPath = Path.Combine(appFolder, "template-application-history.json");
 
         var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-        _localTemplatesPath = FindLocalTemplatesPath(baseDir);
+        _localTemplatesPath = localTemplatesPath ?? FindLocalTemplatesPath(baseDir);
     }
 
     private static string FindLocalTemplatesPath(string baseDir)

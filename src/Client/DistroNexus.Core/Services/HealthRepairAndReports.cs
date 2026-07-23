@@ -82,6 +82,31 @@ public sealed class NullHealthNavigationBroker : IHealthNavigationBroker
     public void Request(string target, HealthFinding finding) { }
 }
 
+/// <summary>
+/// Represents a reviewed repair whose implementation deliberately belongs to the Desktop host.
+/// Non-Desktop callers receive a typed, actionable result instead of an unregistered-action error.
+/// </summary>
+public sealed class DesktopOnlyRepairAction : IRepairAction
+{
+    private readonly string _title;
+    private readonly RepairSafety _safety;
+    public string Id { get; }
+
+    public DesktopOnlyRepairAction(string id, string title, RepairSafety safety)
+        => (Id, _title, _safety) = (id, title, safety);
+
+    public Task<RepairPreview> PreviewAsync(HealthFinding finding, CancellationToken cancellationToken = default) =>
+        Task.FromResult(new RepairPreview(Id, _title, _safety, RepairIdempotency.Idempotent,
+            ["This repair is available only from the DistroNexus Desktop application."], [],
+            Preconditions: ["DN-7004: Desktop navigation or an approved elevation broker is required."]));
+
+    public Task<RepairResult> ExecuteAsync(HealthFinding finding, CancellationToken cancellationToken = default) =>
+        Task.FromResult(new RepairResult(Id, false,
+            ["No host change was started by this non-Desktop caller."],
+            Error: "DN-7004: This repair is Desktop-only because it requires Desktop navigation or the approved elevation broker.",
+            NextSteps: ["Open DistroNexus Desktop, review the repair preview, and explicitly confirm it there."]));
+}
+
 /// <summary>Removes only the malformed managed key identified by a Health finding, then verifies the saved document.</summary>
 public sealed class GlobalConfigurationRepairAction : IRepairAction
 {

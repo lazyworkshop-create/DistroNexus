@@ -2,7 +2,7 @@
 
 [中文文档](README_CN.md) | **English**
 
-> **Current release: v2.2.1** — deep WSL instance management with a native .NET 10 and WPF experience.
+> **Current source candidate: v2.3.0** — operational health, recovery, monitoring, trusted automation, WSLg, containers, and template trust on .NET 10/WPF. Package publication remains an external release gate.
 
 **DistroNexus** is a modern Windows application for managing Windows Subsystem for Linux (WSL) distributions. Built with .NET 10 and WPF, it provides a native, intuitive interface for downloading, installing, and managing your WSL instances.
 
@@ -42,7 +42,7 @@ Full documentation and user guides are hosted on our official website:
 
 - Native Fluent-style WPF interface with automatic light/dark theme support.
 - English and Simplified Chinese desktop UI and documentation.
-- 39 exported PowerShell functions for lifecycle, storage, backup, configuration, networking, Docker, tags, catalogs, templates, and release diagnostics.
+- 93 exported PowerShell functions for lifecycle, health, recovery, monitoring, configuration, services, WSLg, containers, workspaces, trusted templates, and diagnostics.
 - 16 built-in development templates covering .NET, Node.js, Python, Java, Go, Rust, containers, Kubernetes, databases, AI/ML, and infrastructure tooling.
 - Parameterized template execution, environment checks, metadata linting, dry runs, progress, and structured error codes.
 - Package download progress, transfer speed, caching, and detailed application logs.
@@ -61,23 +61,23 @@ Full documentation and user guides are hosted on our official website:
 ### Installation
 
 #### Option 1: Installer (Recommended)
-1. Download `DistroNexus-2.2.1-Setup.exe` from [Releases](https://github.com/LazyWorkshopCreate/DistroNexus/releases)
+1. When the v2.3.0 package is published, download the approved installer from [Releases](https://github.com/LazyWorkshopCreate/DistroNexus/releases)
 2. Run the installer
 3. Launch from Start Menu
 
 #### Option 2: Portable
-1. Download the v2.2.1 portable ZIP from [Releases](https://github.com/LazyWorkshopCreate/DistroNexus/releases)
+1. When published, download the v2.3.0 portable ZIP from [Releases](https://github.com/LazyWorkshopCreate/DistroNexus/releases)
 2. Extract to any folder
 3. Run `DistroNexus.Desktop.exe`
 
 #### Option 3: Self-Contained (No .NET Required)
-1. Download the v2.2.1 self-contained ZIP from [Releases](https://github.com/LazyWorkshopCreate/DistroNexus/releases)
+1. When published, download the v2.3.0 self-contained ZIP from [Releases](https://github.com/LazyWorkshopCreate/DistroNexus/releases)
 2. Extract to any folder
 3. Run `DistroNexus.Desktop.exe`
 
 ## 🛠️ PowerShell Module
 
-DistroNexus 2.2.1 includes a PowerShell module for automation:
+DistroNexus 2.3.0 includes a PowerShell module for automation:
 
 ```powershell
 # Import the module
@@ -93,14 +93,15 @@ Install-DistroNexusInstance -DistroName "MyUbuntu" -InstallPath "D:\WSL\MyUbuntu
 Start-DistroNexusInstance -DistroName "Ubuntu-22.04"
 ```
 
-The module exports 39 functions grouped by capability:
+The module exports 93 functions grouped by capability:
 
 - **Instances**: list, install, start, stop, move, rename, remove, set credentials, import, and export.
 - **Storage and configuration**: compact VHDX, inspect instance configuration, manage sparse mode, and read/write `.wslconfig`.
-- **Backup and diagnostics**: manage backup schedules, invoke backups, inspect port mappings, and query the instance cache.
+- **Backup, recovery, and diagnostics**: manage backup schedules, create, verify, restore, and safely remove recovery points, inspect port mappings, query the instance cache, and create release evidence bundles.
 - **Integrations and organization**: manage Docker Desktop integration and instance tags.
-- **Catalogs and templates**: browse/download packages, update catalogs, discover/apply templates, validate environments and metadata, and run template automation.
-- **Release tooling**: create standardized release evidence bundles.
+- **Operations**: query host capabilities, scan and repair health findings, inspect monitoring snapshots, and preview or operate supported systemd services.
+- **Linux application and container tooling**: discover or launch WSLg applications, inspect container runtimes, and manage Podman user units and connections.
+- **Workspaces and trusted templates**: manage workspace definitions and launches; browse/download packages; validate, apply, and automate templates; and manage trusted marketplace sources, review grants, artifacts, history, and rollback.
 
 See [`src/PowerShell/DistroNexus.psd1`](src/PowerShell/DistroNexus.psd1) for the authoritative export list.
 
@@ -208,7 +209,7 @@ dotnet build src/Client/DistroNexus.slnx -c Release
 .\tools\build.ps1 -Publish -SelfContained -CreateZip -Configuration Release
 
 # Build Windows installer (requires Inno Setup)
-.\tools\build-installer.ps1 -Version 2.2.1
+.\tools\build-installer.ps1 -Version 2.3.0
 
 # Output will be in release/
 ```
@@ -305,4 +306,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**DistroNexus v2.2.1** — Manage, automate, protect, and customize WSL environments from Windows.
+**DistroNexus v2.3.0** — Manage, automate, protect, and customize WSL environments from Windows.

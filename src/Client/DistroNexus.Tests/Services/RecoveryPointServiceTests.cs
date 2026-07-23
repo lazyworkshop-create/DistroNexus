@@ -140,9 +140,9 @@ public sealed class RecoveryPointServiceTests : IDisposable
         await service.UpdateNotesAsync(a.Manifest.Id, "", [], true);
         await service.ApplyRetentionAsync("Ubuntu", 1);
         Assert.Contains((await service.ListAsync()), x => x.Manifest.Id == a.Manifest.Id);
-        await service.DeleteAsync(b.Manifest.Id, confirmed: true);
+        await service.DeleteAsync(b.Manifest.Id, (await service.PreviewDeleteAsync(b.Manifest.Id)).Token);
         // Explicit confirmation permits deleting the final point; only retention is implicitly guarded.
-        await service.DeleteAsync(a.Manifest.Id, confirmed: true);
+        await service.DeleteAsync(a.Manifest.Id, (await service.PreviewDeleteAsync(a.Manifest.Id)).Token);
         Assert.Empty(await service.ListAsync());
     }
 
@@ -251,12 +251,20 @@ public sealed class RecoveryPointServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Delete_RequiresExplicitConfirmation()
+    public async Task Delete_RequiresCurrentPreviewAndRejectsStaleOrInvalidTokens()
     {
         var service = Service(); var point = await Create(service, "only", Path.Combine(_root, "payloads"));
-        var failure = await Assert.ThrowsAsync<WslOperationFailedException>(() => service.DeleteAsync(point.Manifest.Id, confirmed: false));
-        Assert.Equal(DistroNexusErrorCode.RecoveryPointInvalid, failure.Code);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.DeleteAsync(point.Manifest.Id, "invalid"));
         Assert.Single(await service.ListAsync());
+
+        var stale = await service.PreviewDeleteAsync(point.Manifest.Id);
+        await service.UpdateNotesAsync(point.Manifest.Id, "changed", [], false);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.DeleteAsync(point.Manifest.Id, stale.Token));
+        Assert.Single(await service.ListAsync());
+
+        var valid = await service.PreviewDeleteAsync(point.Manifest.Id);
+        await service.DeleteAsync(point.Manifest.Id, valid.Token);
+        Assert.Empty(await service.ListAsync());
     }
 
     [Fact]

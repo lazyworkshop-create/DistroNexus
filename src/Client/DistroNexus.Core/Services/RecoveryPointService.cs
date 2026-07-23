@@ -214,7 +214,27 @@ public sealed class RecoveryPointService : IRecoveryPointService
 
     public async Task<RecoveryPointVerification> VerifyAsync(Guid id, CancellationToken ct = default) { var item = await FindAsync(id, ct) ?? throw new KeyNotFoundException("Recovery point was not found."); return await GetVerificationAsync(item.Manifest, item.DirectoryPath, ct); }
     public async Task UpdateNotesAsync(Guid id, string description, IReadOnlyList<string> tags, bool pinned, CancellationToken ct = default) { var item = await FindAsync(id, ct) ?? throw new KeyNotFoundException("Recovery point was not found."); EnsureOwnedPoint(item); await WriteManifestAsync(item.DirectoryPath, item.Manifest with { Description = description?.Trim() ?? "", Tags = Normalize(tags), Pinned = pinned }, ct); }
-    public async Task DeleteAsync(Guid id, bool confirmed, CancellationToken ct = default) { if (!confirmed) throw new WslOperationFailedException("Recovery-point deletion requires explicit confirmation.", DistroNexusErrorCode.RecoveryPointInvalid, "DeleteRecoveryPoint"); var items = await ListAsync(ct); var item = items.FirstOrDefault(x => x.Manifest.Id == id) ?? throw new KeyNotFoundException("Recovery point was not found."); EnsureOwnedPoint(item); RecoveryPathSafety.DeleteOwnedPoint(item); await RemoveFromCatalogAsync(item.DirectoryPath, ct); }
+    public async Task<RecoveryOperationPreview> PreviewDeleteAsync(Guid id, CancellationToken ct = default)
+    {
+        var item = await FindAsync(id, ct) ?? throw new KeyNotFoundException("Recovery point was not found.");
+        EnsureOwnedPoint(item);
+        var preview = new RecoveryOperationPreview(Guid.NewGuid().ToString("N"), "Delete", item.Manifest.Id, item.Manifest.SourceInstance,
+            "", item.DirectoryPath, item.Manifest.Format, false, false,
+            ["Deletion permanently removes this recovery point and its payload."], item.Manifest.SizeBytes, FingerprintDelete(item));
+        _previews[preview.Token] = preview;
+        return preview;
+    }
+    public async Task DeleteAsync(Guid id, string previewToken, CancellationToken ct = default)
+    {
+        var preview = Consume(previewToken, "Delete");
+        if (preview.RecoveryPointId != id) throw new InvalidOperationException("Recovery point no longer matches its deletion preview.");
+        var item = await FindAsync(id, ct) ?? throw new KeyNotFoundException("Recovery point was not found.");
+        EnsureOwnedPoint(item);
+        if (!StringComparer.Ordinal.Equals(preview.RequestFingerprint, FingerprintDelete(item)))
+            throw new InvalidOperationException("Recovery point changed after its deletion preview; generate a new preview.");
+        RecoveryPathSafety.DeleteOwnedPoint(item);
+        await RemoveFromCatalogAsync(item.DirectoryPath, ct);
+    }
     public async Task ApplyRetentionAsync(string sourceInstance, int maximum, CancellationToken ct = default)
     {
         if (maximum < 1) throw new ArgumentOutOfRangeException(nameof(maximum));
@@ -270,6 +290,7 @@ public sealed class RecoveryPointService : IRecoveryPointService
             throw new InvalidOperationException("Import-in-place requires a supported VHDX recovery point.");
     }
     private RecoveryOperationPreview Consume(string token, string operation) => _previews.TryRemove(token ?? "", out var value) && value.Operation == operation ? value : throw new InvalidOperationException("A current explicit operation preview is required.");
+    private static string FingerprintDelete(RecoveryPointSummary item) => Fingerprint(new { item.Manifest.Id, item.DirectoryPath, item.Manifest.Sha256, item.Manifest.SizeBytes, item.Manifest.Pinned, item.Manifest.Description, Tags = item.Manifest.Tags.OrderBy(x => x, StringComparer.Ordinal) });
     private static async Task<RecoveryPointVerification> GetVerificationAsync(RecoveryPointManifest m, string directory, CancellationToken ct) { var payload = Path.GetFullPath(Path.Combine(directory, m.PayloadFile)); if (!payload.StartsWith(Path.GetFullPath(directory) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) || !File.Exists(payload)) return RecoveryPointVerification.Missing; if (new FileInfo(payload).Length != m.SizeBytes) return RecoveryPointVerification.Corrupt; return StringComparer.Ordinal.Equals(await HashAsync(payload, ct), m.Sha256) ? RecoveryPointVerification.Verified : RecoveryPointVerification.Corrupt; }
     private static async Task<RecoveryPointManifest?> ReadManifestAsync(string directory, CancellationToken ct)
     {
