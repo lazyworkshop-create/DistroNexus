@@ -15,6 +15,7 @@
     <Grid Margin="0">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -58,8 +59,52 @@
                   Command="{Binding GoBackCommand}"/>
         </Grid>
 
+        <ui:Card Grid.Row="1" Margin="0,0,16,12" Padding="12">
+            <StackPanel>
+                <TextBlock Text="{lex:Loc AddSource}" FontWeight="SemiBold"/>
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                    <ComboBox Width="130" SelectedValue="{Binding MarketplaceSourceKind}" SelectedValuePath="Tag"><ComboBoxItem Tag="Remote" Content="{lex:Loc MarketplaceRemoteSource}"/><ComboBoxItem Tag="UserLocal" Content="{lex:Loc MarketplaceUserLocalSource}"/></ComboBox>
+                    <ui:TextBox Width="230" PlaceholderText="{lex:Loc MarketplaceSourcePlaceholder}" Text="{Binding MarketplaceSourceUrl, UpdateSourceTrigger=PropertyChanged}" Margin="8,0,0,0"/>
+                    <ui:Button Content="{lex:Loc AddSource}" Command="{Binding AddMarketplaceSourceCommand}" Margin="8,0,0,0"/>
+                    <ui:Button Content="{lex:Loc Refresh}" Command="{Binding LoadMarketplaceCommand}" Margin="8,0,0,0"/>
+                </StackPanel>
+                <TextBlock Text="{Binding MarketplaceStatus}" Margin="0,6,0,0"/>
+                <ListBox ItemsSource="{Binding MarketplaceSources}" SelectedItem="{Binding SelectedMarketplaceSource}" Margin="0,6,0,0">
+                    <ListBox.ItemTemplate><DataTemplate><StackPanel Orientation="Horizontal" Margin="0,2,0,0"><TextBlock Text="{Binding Url}" Width="260" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding Kind}" Width="70"/><TextBlock Text="{Binding PublisherFingerprint}" Width="100" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding IsEnabled}" Width="55"/><ui:Button Content="{lex:Loc MarketplaceDownload}" Command="{Binding DataContext.DownloadMarketplaceArtifactCommand, RelativeSource={RelativeSource AncestorType=Page}}" Margin="6,0,0,0"/><ui:Button Content="{lex:Loc MarketplaceEnable}" Command="{Binding DataContext.SetMarketplaceSourceEnabledCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="True" Margin="6,0,0,0"/><ui:Button Content="{lex:Loc MarketplaceDisable}" Command="{Binding DataContext.SetMarketplaceSourceEnabledCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="False" Margin="6,0,0,0"/><ui:Button Content="{lex:Loc MarketplaceRemove}" Command="{Binding DataContext.RemoveMarketplaceSourceCommand, RelativeSource={RelativeSource AncestorType=Page}}" Margin="6,0,0,0"/></StackPanel></DataTemplate></ListBox.ItemTemplate>
+                </ListBox>
+                <ui:TextBox PlaceholderText="{lex:Loc Search}" Text="{Binding MarketplaceSearchQuery, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,0"/>
+                <ListBox ItemsSource="{Binding MarketplaceEntries}" SelectedItem="{Binding SelectedMarketplaceEntry}" Margin="0,6,0,0"><ListBox.ItemTemplate><DataTemplate><StackPanel Orientation="Horizontal"><TextBlock Text="{Binding Manifest.Name}" Width="180"/><TextBlock Text="{Binding Manifest.Version}" Width="90"/><TextBlock Text="{Binding ManifestDigest}" Width="140" TextTrimming="CharacterEllipsis"/></StackPanel></DataTemplate></ListBox.ItemTemplate></ListBox>
+                <StackPanel Orientation="Horizontal" Margin="0,6,0,0"><ui:Button Content="{lex:Loc MarketplaceReview}" Command="{Binding ReviewMarketplaceUpdateCommand}"/><ui:Button Content="{lex:Loc MarketplaceApprove}" Command="{Binding ApproveMarketplaceCandidateCommand}" Margin="8,0,0,0"/><ui:Button Content="{lex:Loc MarketplaceRollback}" Command="{Binding RollbackMarketplaceArtifactCommand}" Margin="8,0,0,0"/></StackPanel>
+                <ListBox ItemsSource="{Binding MarketplaceArtifactHistory}" SelectedItem="{Binding SelectedMarketplaceArtifact}" Margin="0,6,0,0"><ListBox.ItemTemplate><DataTemplate><StackPanel Orientation="Horizontal"><TextBlock Text="{Binding Manifest.Version}" Width="90"/><TextBlock Text="{Binding Artifact.Sha256}" Width="360" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding RecordedAt}"/></StackPanel></DataTemplate></ListBox.ItemTemplate></ListBox>
+                <StackPanel Margin="0,6,0,0" DataContext="{Binding SelectedMarketplaceManifest}">
+                    <TextBlock Text="{lex:Loc MarketplaceDetails}" FontWeight="SemiBold"/>
+                    <TextBlock><Run Text="{lex:Loc MarketplaceVersion}"/><Run Text=": "/><Run Text="{Binding Version}"/></TextBlock>
+                    <TextBlock Text="{Binding PublisherFingerprint}" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock><Run Text="{lex:Loc MarketplaceChecksum}"/><Run Text=": "/><Run Text="{Binding ArtifactSha256}"/></TextBlock>
+                    <TextBlock><Run Text="{lex:Loc MarketplaceSignature}"/><Run Text=": "/><Run Text="{Binding PublisherSignature}"/></TextBlock>
+                    <TextBlock DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Page}}"><Run Text="{lex:Loc MarketplaceSignatureStatus}"/><Run Text=": "/><Run Text="{Binding MarketplaceSignatureVerificationDisplay}"/></TextBlock>
+                    <TextBlock DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Page}}"><Run Text="{lex:Loc MarketplaceTrustState}"/><Run Text=": "/><Run Text="{Binding MarketplaceTrustStateDisplay}"/></TextBlock>
+                    <TextBlock DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Page}}"><Run Text="{lex:Loc MarketplaceCapabilities}"/><Run Text=": "/><Run Text="{Binding MarketplaceCapabilitiesDisplay}"/></TextBlock>
+                    <TextBlock DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Page}}"><Run Text="{lex:Loc MarketplaceScripts}"/><Run Text=": "/><Run Text="{Binding MarketplaceScriptsDisplay}"/></TextBlock>
+                    <TextBlock DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Page}}"><Run Text="{lex:Loc MarketplaceCompatibility}"/><Run Text=": "/><Run Text="{Binding MarketplaceCompatibilityDisplay}"/></TextBlock>
+                    <TextBlock DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Page}}"><Run Text="{lex:Loc MarketplaceHealth}"/><Run Text=": "/><Run Text="{Binding MarketplaceHealthDisplay}"/></TextBlock>
+                </StackPanel>
+                <StackPanel Margin="0,6,0,0" DataContext="{Binding MarketplaceScriptDiff}">
+                    <TextBlock Text="{lex:Loc MarketplaceScriptDiff}" FontWeight="SemiBold"/>
+                    <TextBlock DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Page}}"><Run Text="{lex:Loc MarketplaceDiffAdded}"/><Run Text=": "/><Run Text="{Binding MarketplaceDiffAddedDisplay}"/></TextBlock>
+                    <TextBlock DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Page}}"><Run Text="{lex:Loc MarketplaceDiffRemoved}"/><Run Text=": "/><Run Text="{Binding MarketplaceDiffRemovedDisplay}"/></TextBlock>
+                    <TextBlock DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Page}}"><Run Text="{lex:Loc MarketplaceDiffChanged}"/><Run Text=": "/><Run Text="{Binding MarketplaceDiffChangedDisplay}"/></TextBlock>
+                    <TextBlock DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Page}}" Text="{Binding MarketplaceDiffTextDisplay}" TextWrapping="Wrap" MaxHeight="180" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+                <StackPanel DataContext="{Binding SelectedMarketplaceSource}">
+                    <TextBlock Text="{Binding Url}" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock><Run Text="{lex:Loc MarketplaceUpdated}"/><Run Text=": "/><Run Text="{Binding LastFetchedAt}"/></TextBlock>
+                </StackPanel>
+            </StackPanel>
+        </ui:Card>
+
         <!-- Template List -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,16,0">
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="0,0,16,0">
             <ItemsControl ItemsSource="{Binding Templates}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
@@ -116,6 +161,11 @@
                                                   FontSize="12" 
                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
                                     </StackPanel>
+                                    <TextBlock Text="{Binding SourceUrl}"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                               TextTrimming="CharacterEllipsis"
+                                               ToolTip="{Binding PublisherFingerprint}"/>
                                 </StackPanel>
 
                                 <!-- Actions -->

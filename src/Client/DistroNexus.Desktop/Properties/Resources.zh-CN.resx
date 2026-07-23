@@ -1548,6 +1548,13 @@
   <data name="WslConfig_SaveAndRestart" xml:space="preserve">
     <value>保存并标记 WSL 重启待执行</value>
   </data>
+  <data name="MarketplaceSourcePlaceholder" xml:space="preserve"><value>https://catalog.example/templates.json</value></data>
+  <data name="MarketplaceTrust" xml:space="preserve"><value>信任</value></data>
+  <data name="MarketplaceRevoke" xml:space="preserve"><value>撤销信任</value></data>
+  <data name="MarketplaceDownload" xml:space="preserve"><value>下载</value></data>
+  <data name="MarketplaceReview" xml:space="preserve"><value>审阅更新</value></data>
+  <data name="MarketplaceRollback" xml:space="preserve"><value>回滚所选版本</value></data>
+  <data name="MarketplaceApprove" xml:space="preserve"><value>批准已审阅候选项</value></data>
   <data name="WslConfig_SaveAndMarkPendingRestart" xml:space="preserve">
     <value>保存并标记 WSL 重启待执行</value>
   </data>
@@ -2211,4 +2218,57 @@
   <data name="IntegrationsTab_PodmanUnavailableRuntime" xml:space="preserve"><value>由于 WSL 中的 Podman 未安装或不可达，Podman 控制不可用。</value></data>
   <data name="IntegrationsTab_PodmanUnavailableSystemd" xml:space="preserve"><value>Podman 服务和套接字控制需要在此发行版中启用 systemd；连接配置仍可用。</value></data>
   <data name="IntegrationsTab_PodmanUnavailableService" xml:space="preserve"><value>由于未配置容器运行时服务，Podman 控制不可用。</value></data>
+  <data name="MarketplaceEnable" xml:space="preserve"><value>启用</value></data>
+  <data name="MarketplaceDisable" xml:space="preserve"><value>禁用</value></data>
+  <data name="MarketplaceRemove" xml:space="preserve"><value>删除来源</value></data>
+  <data name="MarketplaceDetails" xml:space="preserve"><value>审阅详情</value></data>
+  <data name="MarketplaceVersion" xml:space="preserve"><value>版本</value></data>
+  <data name="MarketplaceCapabilities" xml:space="preserve"><value>能力</value></data>
+  <data name="MarketplaceScripts" xml:space="preserve"><value>脚本哈希</value></data>
+  <data name="MarketplaceCompatibility" xml:space="preserve"><value>兼容性</value></data>
+  <data name="MarketplaceHealth" xml:space="preserve"><value>健康检查</value></data>
+  <data name="MarketplaceUnsafeSourceTitle" xml:space="preserve"><value>确认开发市场来源</value></data>
+  <data name="MarketplaceUnsafeSourceConfirmation" xml:space="preserve"><value>是否将“{0}”添加为仅开发用途的市场来源？非 HTTPS 或本地来源可在 DistroNexus 外被修改，不能用于生产信任。</value></data>
+  <data name="MarketplaceSourceDeclined" xml:space="preserve"><value>未添加市场来源。</value></data>
+  <data name="MarketplaceReviewTitle" xml:space="preserve"><value>确认市场审阅</value></data>
+  <data name="MarketplaceReviewConfirmation" xml:space="preserve"><value>是否在审阅以下有界差异后，仅批准一个经过验证的候选项执行一次？新增脚本：{0}；删除脚本：{1}；更改脚本：{2}；规范化旧/新文本：{3}；差异状态：{4}；能力：{5}；脚本哈希：{6}；兼容性：{7}；健康检查：{8}。</value></data>
+  <data name="MarketplaceChecksum" xml:space="preserve"><value>工件校验和</value></data>
+  <data name="MarketplaceSignature" xml:space="preserve"><value>发布者签名</value></data>
+  <data name="MarketplaceUpdated" xml:space="preserve"><value>上次更新</value></data>
+  <data name="MarketplaceSourcesLoaded" xml:space="preserve"><value>已加载 {0} 个市场来源。</value></data>
+  <data name="MarketplaceSourcesUnavailable" xml:space="preserve"><value>市场来源不可用。</value></data>
+  <data name="MarketplaceLifecycleTitle" xml:space="preserve"><value>确认市场来源变更</value></data>
+  <data name="MarketplaceEnableConfirmation" xml:space="preserve"><value>是否启用此市场来源？</value></data>
+  <data name="MarketplaceDisableConfirmation" xml:space="preserve"><value>是否禁用此市场来源？禁用时，其已审阅候选项无法执行。</value></data>
+  <data name="MarketplaceRemoveTitle" xml:space="preserve"><value>确认删除市场来源</value></data>
+  <data name="MarketplaceRemoveConfirmation" xml:space="preserve"><value>是否删除此市场来源及其信任关系？不会删除保留的工件。</value></data>
+  <data name="MarketplaceOperationDeclined" xml:space="preserve"><value>未确认市场操作。</value></data>
+  <data name="MarketplaceArtifactVerified" xml:space="preserve"><value>已下载并验证市场工件。</value></data>
+  <data name="MarketplaceNoKnownGoodVersion" xml:space="preserve"><value>没有可用于更新比较的已知良好版本。</value></data>
+  <data name="MarketplaceReviewRequired" xml:space="preserve"><value>需要审阅。脚本变化：{0}；发布者变化：{1}；请求的能力：{2}。</value></data>
+  <data name="MarketplaceNoMaterialChanges" xml:space="preserve"><value>未检测到实质性的市场变化。</value></data>
+  <data name="MarketplaceCandidateApproved" xml:space="preserve"><value>已明确批准市场候选项执行一次经过验证的操作。</value></data>
+  <data name="MarketplaceRollbackTitle" xml:space="preserve"><value>确认市场回滚</value></data>
+  <data name="MarketplaceRollbackConfirmation" xml:space="preserve"><value>是否将已验证市场工件 {0} 恢复为已知良好版本？</value></data>
+  <data name="MarketplaceRollbackComplete" xml:space="preserve"><value>市场回滚已完成。</value></data>
+  <data name="MarketplaceScriptDiff" xml:space="preserve"><value>有界脚本差异</value></data>
+  <data name="MarketplaceDiffAdded" xml:space="preserve"><value>新增</value></data>
+  <data name="MarketplaceDiffRemoved" xml:space="preserve"><value>删除</value></data>
+  <data name="MarketplaceDiffChanged" xml:space="preserve"><value>更改</value></data>
+  <data name="MarketplaceYes" xml:space="preserve"><value>是</value></data>
+  <data name="MarketplaceNo" xml:space="preserve"><value>否</value></data>
+  <data name="MarketplaceOperationFailed" xml:space="preserve"><value>市场操作失败。请检查错误代码 {0}。</value></data>
+  <data name="MarketplaceOperationFailedGeneric" xml:space="preserve"><value>市场操作失败。请查看应用日志中的安全诊断信息。</value></data>
+  <data name="MarketplaceSignatureStatus" xml:space="preserve"><value>签名状态</value></data>
+  <data name="MarketplaceSignatureVerified" xml:space="preserve"><value>已验证</value></data>
+  <data name="MarketplaceSignatureNotPresent" xml:space="preserve"><value>未提供</value></data>
+  <data name="MarketplaceSignatureInvalid" xml:space="preserve"><value>无效</value></data>
+  <data name="MarketplaceTrustState" xml:space="preserve"><value>信任状态</value></data>
+  <data name="MarketplaceTrustReviewRequired" xml:space="preserve"><value>需要审阅</value></data>
+  <data name="MarketplaceTrustApproved" xml:space="preserve"><value>已批准</value></data>
+  <data name="MarketplaceTrustUnavailable" xml:space="preserve"><value>不可用</value></data>
+  <data name="MarketplaceDiffTruncated" xml:space="preserve"><value>已截断至安全审阅上限</value></data>
+  <data name="MarketplaceDiffComplete" xml:space="preserve"><value>完整内容位于安全审阅上限内</value></data>
+  <data name="MarketplaceRemoteSource" xml:space="preserve"><value>远程（HTTPS）</value></data>
+  <data name="MarketplaceUserLocalSource" xml:space="preserve"><value>本地文件</value></data>
 </root>

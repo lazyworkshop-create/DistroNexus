@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Diagnostics;
 using System.Text;
+using System.Security.Cryptography;
 using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
@@ -28,6 +29,7 @@ public class TemplateService : ITemplateService
     private readonly IPowerShellService _powerShellService;
     private readonly HttpClient _httpClient;
     private readonly IRecoveryOfferService? _recoveryOfferService;
+    private readonly ITemplateMarketplaceService? _marketplaceService;
     private List<Template>? _cachedTemplates;
     private readonly string _templatesCachePath;
     private readonly string _userTemplatesDirectory;
@@ -39,13 +41,15 @@ public class TemplateService : ITemplateService
         ISettingsService settingsService,
         IPowerShellService powerShellService,
         HttpClient httpClient,
-        IRecoveryOfferService? recoveryOfferService = null)
+        IRecoveryOfferService? recoveryOfferService = null,
+        ITemplateMarketplaceService? marketplaceService = null)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _powerShellService = powerShellService ?? throw new ArgumentNullException(nameof(powerShellService));
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _recoveryOfferService = recoveryOfferService;
+        _marketplaceService = marketplaceService;
 
         var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         var appFolder = Path.Combine(appDataPath, "DistroNexus");
@@ -88,6 +92,31 @@ public class TemplateService : ITemplateService
             _logger.LogInformation("Loaded {Count} templates from local config fallback: {Path}", localTemplates.Count, _localTemplatesPath);
         }
 
+        if (_marketplaceService is not null)
+        {
+            foreach (var entry in await _marketplaceService.DiscoverAsync(cancellationToken).ConfigureAwait(false))
+            {
+                try
+                {
+                    var manifest = entry.Manifest;
+                    var materialized = entry.CanExecute ? LoadVerifiedMarketplaceTemplate(entry, manifest) : null;
+                    templates.Add(materialized ?? new Template
+                    {
+                        Id = manifest.Id, Name = manifest.Name, Version = manifest.Version,
+                        Description = entry.ExecutionReason,
+                        Category = "Marketplace", IsCustom = true, SourceUrl = entry.Source.Url,
+                        PublisherFingerprint = manifest.PublisherFingerprint, TrustState = entry.TrustState,
+                        Capabilities = manifest.Capabilities.ToList(), ArtifactSha256 = manifest.ArtifactSha256,
+                        IsRemoteV2 = true
+                    });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Marketplace discovery could not be refreshed; existing local templates remain available.");
+                }
+            }
+        }
+
         templates = templates
             .GroupBy(t => t.Id, StringComparer.OrdinalIgnoreCase)
             .Select(g => g.First())
@@ -121,6 +150,14 @@ public class TemplateService : ITemplateService
             {
                 template.IsOfficial = isOfficial;
                 template.IsCustom = isCustom;
+                if (isOfficial)
+                {
+                    // Built-in templates are product-owned content, not mutable marketplace
+                    // sources. Keep their provenance visible alongside marketplace templates.
+                    template.SourceUrl = "distronexus://built-in";
+                    template.PublisherFingerprint = "DistroNexus";
+                    template.TrustState = TemplateTrustState.BuiltIn;
+                }
             }
 
             return parsed;
@@ -172,7 +209,25 @@ public class TemplateService : ITemplateService
                 operation: "ApplyTemplate",
                 instanceName: instanceName);
 
+        // A catalog entry alone, including legacy v1 imports, is never a script execution
+        // authority. Only the reviewed v2 artifact's template.json is materialized above.
+        if (template.IsRemoteV2)
+            throw new WslOperationFailedException("Remote marketplace content must be downloaded, verified, and materialized before execution.", DistroNexusErrorCode.TemplateTrustRequired, "ApplyTemplate", instanceName);
+
+        TemplateManifestV2? marketplaceManifest = null;
+        if (template.TrustState != TemplateTrustState.BuiltIn && !string.IsNullOrWhiteSpace(template.SourceUrl))
+        {
+            if (_marketplaceService is null)
+                throw new WslOperationFailedException("Marketplace execution service is unavailable.", DistroNexusErrorCode.TemplateTrustRequired, "ApplyTemplate", instanceName);
+            marketplaceManifest = await _marketplaceService.GetAuthorizedManifestForExecutionAsync(template.SourceUrl, template.Id, template.MarketplaceManifestDigest, template.ArtifactSha256, cancellationToken).ConfigureAwait(false) ?? throw new WslOperationFailedException("No exact reviewed marketplace manifest is available.", DistroNexusErrorCode.TemplateArtifactIntegrityFailed, "ApplyTemplate", instanceName);
+            var artifact = await _marketplaceService.GetVerifiedArtifactForExecutionAsync(template.SourceUrl, marketplaceManifest, cancellationToken).ConfigureAwait(false);
+            if (!string.Equals(template.ArtifactSha256, artifact.Sha256, StringComparison.OrdinalIgnoreCase) || !string.Equals(Path.GetFullPath(template.MarketplaceArtifactRoot), Path.GetFullPath(artifact.RootPath), StringComparison.OrdinalIgnoreCase))
+                throw new WslOperationFailedException("Marketplace template materialization does not match the reviewed artifact.", DistroNexusErrorCode.TemplateArtifactIntegrityFailed, "ApplyTemplate", instanceName);
+        }
+
         var result = new TemplateApplicationResult { ExecutedScripts = new List<string>(), Errors = new List<string>() };
+        if (template.Capabilities.Any(x => x is TemplateCapability.Root or TemplateCapability.FilesystemPaths or TemplateCapability.ServiceChanges))
+            result.RecoveryRecommendation = "A recovery point is recommended before this high-impact template execution.";
         var startTime = DateTime.Now;
         var instanceHistoryRecord = new TemplateApplicationRecord
         {
@@ -211,12 +266,15 @@ public class TemplateService : ITemplateService
 
         variables ??= new Dictionary<string, string>();
         var effectiveVariables = CreateEffectiveVariables(template, variables);
+        instanceHistoryRecord.ResolvedVariables = effectiveVariables.ToDictionary(x => x.Key, x => SensitiveDataRedactor.Redact(x.Value), StringComparer.Ordinal);
+        if (!string.IsNullOrWhiteSpace(template.SourceUrl))
+            instanceHistoryRecord.MarketplaceProvenance = new TemplateMarketplaceApplicationProvenance(template.SourceUrl, template.PublisherFingerprint, template.ArtifactSha256, template.Version);
 
         _logger.LogInformation(
             "Template execution selections; TemplateId={TemplateId}; InstallMode={InstallMode}; Selections={Selections}; OutputArtifacts={OutputArtifacts}",
             template.Id,
             template.InstallMode,
-            JsonSerializer.Serialize(effectiveVariables),
+            JsonSerializer.Serialize(instanceHistoryRecord.ResolvedVariables),
             JsonSerializer.Serialize(template.OutputArtifacts.Select(a => new { a.Type, a.Path, a.Optional })));
         
         reportProgress(0, "Initiating template application...", 0, template.Scripts.Count);
@@ -241,6 +299,7 @@ public class TemplateService : ITemplateService
                 {
                     var execution = await ExecuteScriptAsync(
                         script,
+                        template,
                         instanceName,
                         effectiveVariables,
                         cancellationToken,
@@ -279,7 +338,7 @@ public class TemplateService : ITemplateService
                     if (script.ContinueOnError)
                     {
                         _logger.LogWarning(ex, "Script {ScriptName} failed, but continue on error is enabled.", script.Name);
-                        result.Errors.Add($"Script {script.Name} failed: {ex.Message}");
+                        result.Errors.Add($"Script {script.Name} failed: {SensitiveDataRedactor.Redact(ex.Message)}");
                         _logger.LogWarning(
                             "Template script executed; TemplateId={TemplateId}; ScriptName={ScriptName}; Phase={Phase}; Source={Source}; Result={Result}; DurationMs={DurationMs}; Error={Error}",
                             template.Id,
@@ -288,7 +347,7 @@ public class TemplateService : ITemplateService
                             string.IsNullOrWhiteSpace(script.ScriptPath) ? "Content" : "ScriptPath",
                             "Failed-Continue",
                             scriptStopwatch.ElapsedMilliseconds,
-                            ex.Message);
+                            SensitiveDataRedactor.Redact(ex.Message));
                     }
                     else
                     {
@@ -312,8 +371,8 @@ public class TemplateService : ITemplateService
         {
             _logger.LogError(ex, "Failed to apply template {TemplateId}", templateId);
             result.Success = false;
-            result.Message = ex.Message;
-            result.Errors.Add(ex.Message);
+            result.Message = SensitiveDataRedactor.Redact(ex.Message);
+            result.Errors.Add(SensitiveDataRedactor.Redact(ex.Message));
         }
         finally
         {
@@ -328,6 +387,14 @@ public class TemplateService : ITemplateService
                 instanceHistoryRecord.DeclaredHealthSnapshot = persistedDeclaration with { AppliedScriptIds = result.ExecutedScripts.Order(StringComparer.Ordinal).ToArray() };
 
             await AppendApplicationHistoryAsync(instanceHistoryRecord, cancellationToken);
+        }
+
+        // Promotion is deliberately the last successful application step. A failed,
+        // cancelled, or partially executed candidate leaves the prior known-good pointer
+        // intact and remains only a reviewed candidate for diagnostics/retry.
+        if (result.Success && template.TrustState != TemplateTrustState.BuiltIn && !string.IsNullOrWhiteSpace(template.SourceUrl) && _marketplaceService is not null)
+        {
+            if (marketplaceManifest is not null) await _marketplaceService.CompleteSuccessfulExecutionAsync(template.SourceUrl, marketplaceManifest, cancellationToken).ConfigureAwait(false);
         }
 
         return result;
@@ -554,6 +621,7 @@ public class TemplateService : ITemplateService
     
     private async Task<ScriptExecutionResult> ExecuteScriptAsync(
         TemplateScript script,
+        Template template,
         string instanceName,
         Dictionary<string, string> variables,
         CancellationToken cancellationToken,
@@ -563,13 +631,21 @@ public class TemplateService : ITemplateService
         string scriptContent = script.Content;
         if (string.IsNullOrWhiteSpace(scriptContent) && !string.IsNullOrWhiteSpace(script.ScriptPath))
         {
-            resolvedScriptPath = ResolveAndValidateScriptPath(script.ScriptPath);
+            resolvedScriptPath = ResolveAndValidateScriptPath(script.ScriptPath, template.MarketplaceArtifactRoot);
             if (resolvedScriptPath == null)
             {
                 throw new FileNotFoundException($"Script file not found for path: {script.ScriptPath}");
             }
 
             scriptContent = await File.ReadAllTextAsync(resolvedScriptPath, cancellationToken);
+            if (!string.IsNullOrWhiteSpace(template.SourceUrl))
+            {
+                var expected = template.MarketplaceExecutableFiles.SingleOrDefault(x => string.Equals(x.Path.Replace('\\', '/'), script.ScriptPath.Replace('\\', '/'), StringComparison.OrdinalIgnoreCase));
+                await using var executable = File.OpenRead(resolvedScriptPath);
+                var executableHash = Convert.ToHexString(await SHA256.HashDataAsync(executable, cancellationToken)).ToLowerInvariant();
+                if (expected is null || !string.Equals(executableHash, expected.Sha256, StringComparison.OrdinalIgnoreCase))
+                    throw new WslOperationFailedException("Marketplace executable file no longer matches the reviewed manifest.", DistroNexusErrorCode.TemplateArtifactIntegrityFailed, "ExecuteTemplateScript", instanceName);
+            }
         }
         
         foreach (var kvp in variables)
@@ -604,7 +680,7 @@ public class TemplateService : ITemplateService
         return new ScriptExecutionResult("Content", string.Empty);
     }
 
-    private string? ResolveAndValidateScriptPath(string scriptPath)
+    private string? ResolveAndValidateScriptPath(string scriptPath, string? immutableArtifactRoot = null)
     {
         if (string.IsNullOrWhiteSpace(scriptPath))
         {
@@ -619,6 +695,14 @@ public class TemplateService : ITemplateService
                 operation: "ResolveTemplateScript");
         }
 
+        if (!string.IsNullOrWhiteSpace(immutableArtifactRoot))
+        {
+            var root = Path.GetFullPath(immutableArtifactRoot) + Path.DirectorySeparatorChar;
+            var path = Path.GetFullPath(Path.Combine(immutableArtifactRoot, scriptPath));
+            if (!path.StartsWith(root, StringComparison.OrdinalIgnoreCase) || !File.Exists(path))
+                throw new WslOperationFailedException("Marketplace executable path is outside the immutable artifact root or unavailable.", DistroNexusErrorCode.TemplateScriptFailed, "ResolveTemplateScript");
+            return path;
+        }
         var allowedRoots = new List<string>
         {
             Path.GetFullPath(_userTemplatesDirectory),
@@ -982,5 +1066,33 @@ public class TemplateService : ITemplateService
            _logger.LogError(ex, "Error parsing templates json");
            return null;
        }
+    }
+
+    private Template? LoadVerifiedMarketplaceTemplate(TemplateMarketplaceEntry entry, TemplateManifestV2 manifest)
+    {
+        var path = entry.KnownGoodArtifact is null ? null : Path.Combine(entry.KnownGoodArtifact.RootPath, "template.json");
+        if (path is null || !File.Exists(path) || new FileInfo(path).Length > 1024 * 1024) return null;
+        try
+        {
+            var template = JsonSerializer.Deserialize<Template>(File.ReadAllText(path), TemplateJsonOptions);
+            if (template is null || !string.Equals(template.Id, manifest.Id, StringComparison.Ordinal) || template.Scripts.Count == 0) return null;
+            template.SourceUrl = entry.Source.Url;
+            template.PublisherFingerprint = manifest.PublisherFingerprint;
+            template.TrustState = entry.TrustState;
+            template.Capabilities = manifest.Capabilities.ToList();
+            template.ArtifactSha256 = manifest.ArtifactSha256;
+            template.MarketplaceManifestDigest = entry.ManifestDigest;
+            template.MarketplaceArtifactRoot = entry.KnownGoodArtifact!.RootPath;
+            template.MarketplaceExecutableFiles = manifest.ExecutableFiles.ToList();
+            template.IsRemoteV2 = false;
+            template.IsCustom = true;
+            template.IsOfficial = false;
+            return template;
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogWarning(ex, "Verified marketplace artifact has an invalid template definition; it remains browse-only.");
+            return null;
+        }
     }
 }

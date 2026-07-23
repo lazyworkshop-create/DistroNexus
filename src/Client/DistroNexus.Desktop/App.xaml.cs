@@ -1,4 +1,5 @@
 using System.IO;
+using System.Net.Http;
 using System.Windows;
 using System.Windows.Threading;
 using WPFLocalizeExtension.Engine;
@@ -98,6 +99,7 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<IDownloadService, DownloadService>();
                     services.AddSingleton<ICatalogService, CatalogService>();
                     services.AddSingleton<ICatalogSourceManager, CatalogSourceManager>();
+                    services.AddSingleton<ITemplateMarketplaceService>(sp => new TemplateMarketplaceService(httpClient: sp.GetRequiredService<IHttpClientFactory>().CreateClient()));
                     services.AddSingleton<ITemplateService, TemplateService>();
                     services.AddSingleton<IStoreComplianceModeService, StoreComplianceModeService>();
                     services.AddSingleton<INavigationService, NavigationService>();

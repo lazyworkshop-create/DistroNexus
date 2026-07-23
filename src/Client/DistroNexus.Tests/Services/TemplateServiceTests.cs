@@ -1,4 +1,7 @@
 using System.Text.Json;
+using System.IO.Compression;
+using System.Security.Cryptography;
+using System.Text;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using DistroNexus.Core.Services;
@@ -417,5 +420,78 @@ public class TemplateServiceTests : IDisposable
 
         Assert.True(result.IsValid);
         Assert.Contains(result.Warnings, w => w.Contains("ScenarioTag", StringComparison.OrdinalIgnoreCase));
+    }
+    [Fact]
+    public async Task MarketplaceApply_PromotesOnlySuccessfulExactCandidateAndKeepsOldKnownGoodOnFailure()
+    {
+        File.WriteAllText(_userTemplatesPath, "[]");
+        var root = Path.Combine(Path.GetTempPath(), "DistroNexus", "marketplace-template-service", Guid.NewGuid().ToString("N"));
+        try
+        {
+            var oldArchive = CreateMarketplaceZip("marketplace-demo", "echo old");
+            var oldManifest = MarketplaceManifest("marketplace-demo", "1", "https://catalog.example.test/old.zip", oldArchive, "echo old");
+            var handler = new MarketplaceHandler(new TemplateMarketplaceCatalogV2 { Templates = [oldManifest] }, new Dictionary<string, byte[]> { ["/old.zip"] = oldArchive });
+            using var marketplaceHttp = new HttpClient(handler);
+            var marketplace = new TemplateMarketplaceService(root, marketplaceHttp);
+            var source = await marketplace.AddSourceAsync("https://catalog.example.test/catalog.json", TemplateSourceKind.Remote, false);
+            var oldArtifact = await marketplace.DownloadArtifactAsync(source.Id, oldManifest.Id, marketplace.GetManifestDigest(oldManifest));
+            await marketplace.ApproveCandidateAsync((await marketplace.CreateReviewGrantAsync(source.Id, oldArtifact.Sha256)).Token);
+            _mockPowerShellService.Setup(x => x.ExecuteScriptAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync("ok");
+            var successfulService = new TemplateService(_mockLogger.Object, _mockSettingsService.Object, _mockPowerShellService.Object, _httpClient, marketplaceService: marketplace);
+            Assert.True((await successfulService.ApplyTemplateAsync("marketplace-demo", "Ubuntu")).Success);
+            Assert.Equal(oldArtifact.Sha256, (await marketplace.GetKnownGoodArtifactAsync("marketplace-demo"))!.Sha256);
+
+            var candidateArchive = CreateMarketplaceZip("marketplace-demo", "exit 1");
+            var candidateManifest = MarketplaceManifest("marketplace-demo", "2", "https://catalog.example.test/new.zip", candidateArchive, "exit 1");
+            handler.Catalog = new TemplateMarketplaceCatalogV2 { Templates = [candidateManifest] };
+            handler.Artifacts["/new.zip"] = candidateArchive;
+            var candidateArtifact = await marketplace.DownloadArtifactAsync(source.Id, candidateManifest.Id, marketplace.GetManifestDigest(candidateManifest));
+            await marketplace.ApproveCandidateAsync((await marketplace.CreateReviewGrantAsync(source.Id, candidateArtifact.Sha256)).Token);
+            _mockPowerShellService.Reset();
+            _mockPowerShellService.Setup(x => x.ExecuteScriptAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ThrowsAsync(new InvalidOperationException("simulated failure"));
+            var failedService = new TemplateService(_mockLogger.Object, _mockSettingsService.Object, _mockPowerShellService.Object, _httpClient, marketplaceService: marketplace);
+            Assert.False((await failedService.ApplyTemplateAsync("marketplace-demo", "Ubuntu")).Success);
+            Assert.Equal(oldArtifact.Sha256, (await marketplace.GetKnownGoodArtifactAsync("marketplace-demo"))!.Sha256);
+            Assert.Equal(candidateArtifact.Sha256, (await marketplace.GetVerifiedArtifactForExecutionAsync(source.Url, candidateManifest)).Sha256);
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public async Task LoadTemplatesAsync_ProjectsBuiltInProvenanceForProductTemplates()
+    {
+        File.Delete(_userTemplatesPath);
+        var service = new TemplateService(
+            _mockLogger.Object,
+            _mockSettingsService.Object,
+            _mockPowerShellService.Object,
+            _httpClient);
+
+        var template = (await service.LoadTemplatesAsync()).First();
+
+        Assert.True(template.IsOfficial);
+        Assert.Equal("distronexus://built-in", template.SourceUrl);
+        Assert.Equal("DistroNexus", template.PublisherFingerprint);
+        Assert.Equal(TemplateTrustState.BuiltIn, template.TrustState);
+    }
+
+    private static byte[] CreateMarketplaceZip(string id, string script)
+    {
+        using var stream = new MemoryStream();
+        using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, true))
+        {
+            var entry = archive.CreateEntry("template.json");
+            using var writer = new StreamWriter(entry.Open(), Encoding.UTF8);
+            writer.Write($"{{\"id\":\"{id}\",\"name\":\"Marketplace\",\"scripts\":[{{\"name\":\"setup\",\"content\":\"{script}\",\"type\":\"Bash\",\"order\":1}}]}}");
+        }
+        return stream.ToArray();
+    }
+    private static TemplateManifestV2 MarketplaceManifest(string id, string version, string url, byte[] archive, string script) => new() { Id = id, Name = "Marketplace", Version = version, ArtifactUrl = url, ArtifactSha256 = Hash(archive), PublisherFingerprint = "fixture", ScriptHashes = [Hash(Encoding.UTF8.GetBytes(script))] };
+    private static string Hash(byte[] bytes) => Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+    private sealed class MarketplaceHandler(TemplateMarketplaceCatalogV2 catalog, Dictionary<string, byte[]> artifacts) : HttpMessageHandler
+    {
+        public TemplateMarketplaceCatalogV2 Catalog { get; set; } = catalog;
+        public Dictionary<string, byte[]> Artifacts { get; } = artifacts;
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) => Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = Artifacts.TryGetValue(request.RequestUri!.AbsolutePath, out var artifact) ? new ByteArrayContent(artifact) : new StringContent(JsonSerializer.Serialize(Catalog)) });
     }
 }

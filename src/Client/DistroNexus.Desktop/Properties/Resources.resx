@@ -1554,6 +1554,13 @@ This will start the installation process.</value>
   <data name="WslConfig_SaveAndRestart" xml:space="preserve">
     <value>Save &amp; Mark WSL Restart Pending</value>
   </data>
+  <data name="MarketplaceSourcePlaceholder" xml:space="preserve"><value>https://catalog.example/templates.json</value></data>
+  <data name="MarketplaceTrust" xml:space="preserve"><value>Trust</value></data>
+  <data name="MarketplaceRevoke" xml:space="preserve"><value>Revoke</value></data>
+  <data name="MarketplaceDownload" xml:space="preserve"><value>Download</value></data>
+  <data name="MarketplaceReview" xml:space="preserve"><value>Review update</value></data>
+  <data name="MarketplaceRollback" xml:space="preserve"><value>Rollback selected version</value></data>
+  <data name="MarketplaceApprove" xml:space="preserve"><value>Approve reviewed candidate</value></data>
   <data name="WslConfig_SaveAndMarkPendingRestart" xml:space="preserve">
     <value>Save &amp; Mark WSL Restart Pending</value>
   </data>
@@ -2217,4 +2224,57 @@ Please select the directory that contains the PowerShell module manifest file.</
   <data name="IntegrationsTab_PodmanUnavailableRuntime" xml:space="preserve"><value>Podman controls are unavailable because Podman in WSL is not installed or reachable.</value></data>
   <data name="IntegrationsTab_PodmanUnavailableSystemd" xml:space="preserve"><value>Podman service and socket controls require systemd enabled for this distribution. Connection configuration remains available.</value></data>
   <data name="IntegrationsTab_PodmanUnavailableService" xml:space="preserve"><value>Podman controls are unavailable because the container runtime service is not configured.</value></data>
+  <data name="MarketplaceEnable" xml:space="preserve"><value>Enable</value></data>
+  <data name="MarketplaceDisable" xml:space="preserve"><value>Disable</value></data>
+  <data name="MarketplaceRemove" xml:space="preserve"><value>Remove source</value></data>
+  <data name="MarketplaceDetails" xml:space="preserve"><value>Review details</value></data>
+  <data name="MarketplaceVersion" xml:space="preserve"><value>Version</value></data>
+  <data name="MarketplaceCapabilities" xml:space="preserve"><value>Capabilities</value></data>
+  <data name="MarketplaceScripts" xml:space="preserve"><value>Script hashes</value></data>
+  <data name="MarketplaceCompatibility" xml:space="preserve"><value>Compatibility</value></data>
+  <data name="MarketplaceHealth" xml:space="preserve"><value>Health checks</value></data>
+  <data name="MarketplaceUnsafeSourceTitle" xml:space="preserve"><value>Confirm development marketplace source</value></data>
+  <data name="MarketplaceUnsafeSourceConfirmation" xml:space="preserve"><value>Add '{0}' as a development-only marketplace source? Non-HTTPS or local sources can be altered outside DistroNexus and must not be used for production trust.</value></data>
+  <data name="MarketplaceSourceDeclined" xml:space="preserve"><value>Marketplace source was not added.</value></data>
+  <data name="MarketplaceReviewTitle" xml:space="preserve"><value>Confirm marketplace review</value></data>
+  <data name="MarketplaceReviewConfirmation" xml:space="preserve"><value>Approve one verified candidate execution only after reviewing this bounded diff? Added scripts: {0}; removed scripts: {1}; changed scripts: {2}; normalized old/new text: {3}; diff status: {4}; capabilities: {5}; script hashes: {6}; compatibility: {7}; health checks: {8}.</value></data>
+  <data name="MarketplaceChecksum" xml:space="preserve"><value>Artifact checksum</value></data>
+  <data name="MarketplaceSignature" xml:space="preserve"><value>Publisher signature</value></data>
+  <data name="MarketplaceUpdated" xml:space="preserve"><value>Last updated</value></data>
+  <data name="MarketplaceSourcesLoaded" xml:space="preserve"><value>{0} marketplace source(s) loaded.</value></data>
+  <data name="MarketplaceSourcesUnavailable" xml:space="preserve"><value>Marketplace sources are unavailable.</value></data>
+  <data name="MarketplaceLifecycleTitle" xml:space="preserve"><value>Confirm marketplace source change</value></data>
+  <data name="MarketplaceEnableConfirmation" xml:space="preserve"><value>Enable this marketplace source?</value></data>
+  <data name="MarketplaceDisableConfirmation" xml:space="preserve"><value>Disable this marketplace source? Its reviewed candidates cannot execute while disabled.</value></data>
+  <data name="MarketplaceRemoveTitle" xml:space="preserve"><value>Confirm marketplace source removal</value></data>
+  <data name="MarketplaceRemoveConfirmation" xml:space="preserve"><value>Remove this marketplace source and its trust relationship? Retained artifacts are not deleted.</value></data>
+  <data name="MarketplaceOperationDeclined" xml:space="preserve"><value>Marketplace operation was not confirmed.</value></data>
+  <data name="MarketplaceArtifactVerified" xml:space="preserve"><value>Marketplace artifact was downloaded and verified.</value></data>
+  <data name="MarketplaceNoKnownGoodVersion" xml:space="preserve"><value>No known-good version is available for update comparison.</value></data>
+  <data name="MarketplaceReviewRequired" xml:space="preserve"><value>Review required. Scripts changed: {0}; publisher changed: {1}; requested capabilities: {2}.</value></data>
+  <data name="MarketplaceNoMaterialChanges" xml:space="preserve"><value>No material marketplace changes were detected.</value></data>
+  <data name="MarketplaceCandidateApproved" xml:space="preserve"><value>Marketplace candidate was explicitly approved for one verified execution.</value></data>
+  <data name="MarketplaceRollbackTitle" xml:space="preserve"><value>Confirm marketplace rollback</value></data>
+  <data name="MarketplaceRollbackConfirmation" xml:space="preserve"><value>Restore verified marketplace artifact {0} as the known-good version?</value></data>
+  <data name="MarketplaceRollbackComplete" xml:space="preserve"><value>Marketplace rollback completed.</value></data>
+  <data name="MarketplaceScriptDiff" xml:space="preserve"><value>Bounded script diff</value></data>
+  <data name="MarketplaceDiffAdded" xml:space="preserve"><value>Added</value></data>
+  <data name="MarketplaceDiffRemoved" xml:space="preserve"><value>Removed</value></data>
+  <data name="MarketplaceDiffChanged" xml:space="preserve"><value>Changed</value></data>
+  <data name="MarketplaceYes" xml:space="preserve"><value>Yes</value></data>
+  <data name="MarketplaceNo" xml:space="preserve"><value>No</value></data>
+  <data name="MarketplaceOperationFailed" xml:space="preserve"><value>Marketplace operation failed. Review error code {0}.</value></data>
+  <data name="MarketplaceOperationFailedGeneric" xml:space="preserve"><value>Marketplace operation failed. Review the application log for safe diagnostics.</value></data>
+  <data name="MarketplaceSignatureStatus" xml:space="preserve"><value>Signature status</value></data>
+  <data name="MarketplaceSignatureVerified" xml:space="preserve"><value>Verified</value></data>
+  <data name="MarketplaceSignatureNotPresent" xml:space="preserve"><value>Not supplied</value></data>
+  <data name="MarketplaceSignatureInvalid" xml:space="preserve"><value>Invalid</value></data>
+  <data name="MarketplaceTrustState" xml:space="preserve"><value>Trust state</value></data>
+  <data name="MarketplaceTrustReviewRequired" xml:space="preserve"><value>Review required</value></data>
+  <data name="MarketplaceTrustApproved" xml:space="preserve"><value>Approved</value></data>
+  <data name="MarketplaceTrustUnavailable" xml:space="preserve"><value>Unavailable</value></data>
+  <data name="MarketplaceDiffTruncated" xml:space="preserve"><value>Truncated to the safe review limit</value></data>
+  <data name="MarketplaceDiffComplete" xml:space="preserve"><value>Complete within the safe review limit</value></data>
+  <data name="MarketplaceRemoteSource" xml:space="preserve"><value>Remote (HTTPS)</value></data>
+  <data name="MarketplaceUserLocalSource" xml:space="preserve"><value>User-local file</value></data>
 </root>

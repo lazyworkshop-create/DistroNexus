@@ -30,6 +30,19 @@ public partial class Template : ObservableObject
     public TemplateInstallMode InstallMode { get; set; } = TemplateInstallMode.Scripted;
     public bool IsOfficial { get; set; }
     public bool IsCustom { get; set; }
+    /// <summary>Marketplace provenance shown to users; legacy templates remain local/built-in.</summary>
+    public string SourceUrl { get; set; } = string.Empty;
+    public string PublisherFingerprint { get; set; } = string.Empty;
+    public TemplateTrustState TrustState { get; set; } = TemplateTrustState.Untrusted;
+    public List<TemplateCapability> Capabilities { get; set; } = new();
+    /// <summary>Remote marketplace v2 templates are deliberately non-executable until materialized locally by a reviewed workflow.</summary>
+    public bool IsRemoteV2 { get; set; }
+    public string ArtifactSha256 { get; set; } = string.Empty;
+    /// <summary>Canonical marketplace manifest identity bound to the materialized artifact.</summary>
+    public string MarketplaceManifestDigest { get; set; } = string.Empty;
+    /// <summary>Internal immutable marketplace artifact root. It is never accepted from user template files.</summary>
+    public string MarketplaceArtifactRoot { get; set; } = string.Empty;
+    public List<TemplateExecutableFile> MarketplaceExecutableFiles { get; set; } = new();
 
     [ObservableProperty]
     private bool _isInstalled;
@@ -148,6 +161,8 @@ public class TemplateApplicationResult
     public List<string> Errors { get; set; } = new();
     public string LogFilePath { get; set; } = string.Empty;
     public TimeSpan Duration { get; set; }
+    /// <summary>Safe pre-execution guidance; this never creates a recovery point automatically.</summary>
+    public string? RecoveryRecommendation { get; set; }
 }
 
 /// <summary>

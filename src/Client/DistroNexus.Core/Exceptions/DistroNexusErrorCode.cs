@@ -55,6 +55,10 @@ public enum DistroNexusErrorCode
     // ── Templates ─────────────────────────────────────────────────────────
     TemplateNotFound       = 6001,
     TemplateScriptFailed   = 6002,
+    TemplateManifestInvalid = 6003,
+    TemplateArtifactIntegrityFailed = 6004,
+    TemplateTrustRequired = 6005,
+    TemplateArtifactUnsafe = 6006,
 
     // ── Capability / Health / Monitoring ─────────────────────────────────
     HealthCheckUnavailable = 7001,

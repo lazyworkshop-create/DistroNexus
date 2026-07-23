@@ -85,6 +85,16 @@
         ,'Invoke-DistroNexusWorkspace'
         ,'Get-DistroNexusWorkspaceActionRetryPreview'
         ,'Retry-DistroNexusWorkspaceAction'
+        ,'Get-DistroNexusTemplateSource'
+        ,'Add-DistroNexusTemplateSource'
+        ,'Set-DistroNexusTemplateSourceEnabled'
+        ,'Remove-DistroNexusTemplateSource'
+        ,'Approve-DistroNexusTemplateMarketplaceCandidate'
+        ,'Get-DistroNexusTemplateMarketplaceReviewGrant'
+        ,'Save-DistroNexusTemplateMarketplaceArtifact'
+        ,'Get-DistroNexusTemplateMarketplaceArtifactHistory'
+        ,'Get-DistroNexusTemplateMarketplaceScriptDiff'
+        ,'Restore-DistroNexusTemplateMarketplaceArtifact'
     )
 
     # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
