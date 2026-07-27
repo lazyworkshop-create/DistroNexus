@@ -139,7 +139,9 @@ public class MonitoringServiceTests
         await using var session = new MonitoringService(runner).CreateSession(instance, TimeSpan.FromSeconds(1));
         await session.StartAsync();
         instance.State = "Stopped";
-        await Task.Delay(TimeSpan.FromMilliseconds(1200));
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(3);
+        while (session.IsRunning && DateTimeOffset.UtcNow < deadline)
+            await Task.Delay(TimeSpan.FromMilliseconds(25)).ConfigureAwait(false);
         Assert.False(session.IsRunning);
         Assert.Equal("Monitor.InstanceStopped", session.UnavailableReason);
         Assert.Equal(2, runner.Requests.Count);

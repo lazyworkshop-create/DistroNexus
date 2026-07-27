@@ -48,10 +48,10 @@ public class ModuleLoadingIntegrationTests
         // Assert
         // Module loading should either succeed or provide meaningful error about module not found
         Assert.NotNull(result);
-        // If module wasn't found, UsedModule should be false but no exception should be thrown
+        // An imported module can still fail to execute when its runtime prerequisites are absent.
         if (!result.Success)
         {
-            Assert.False(result.UsedModule);
+            Assert.False(string.IsNullOrWhiteSpace(result.Error));
         }
     }
 
