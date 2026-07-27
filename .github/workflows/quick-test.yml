@@ -36,6 +36,17 @@ jobs:
       run: |
         $PSVersionTable.PSVersion
 
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
+        dotnet-quality: ${{ env.DOTNET_SDK_QUALITY }}
+
+    # The module intentionally fails closed if its Core-owned bridge is absent.
+    # Build it before importing the module in the PowerShell test process.
+    - name: Build WorkspaceBridge for PowerShell tests
+      run: dotnet build src/Client/DistroNexus.WorkspaceBridge/DistroNexus.WorkspaceBridge.csproj --configuration Debug
+
     - name: Install Pester
       shell: pwsh
       run: |
@@ -46,6 +57,7 @@ jobs:
       working-directory: ./tests/PowerShell
       run: |
         # Run quick metadata-selected unit scope
+        Import-Module Pester -MinimumVersion 5.0.0 -Force
         $quickTestConfig = @{
           Run = @{
             Path = './Unit'
@@ -66,12 +78,6 @@ jobs:
         if ($result.FailedCount -gt 0) {
           exit 1
         }
-
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
-        dotnet-quality: ${{ env.DOTNET_SDK_QUALITY }}
 
     - name: Build C# solution
       run: dotnet build src/Client/DistroNexus.slnx --configuration Debug
