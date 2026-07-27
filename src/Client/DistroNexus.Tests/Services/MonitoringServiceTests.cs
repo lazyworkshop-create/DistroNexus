@@ -132,19 +132,18 @@ public class MonitoringServiceTests
     }
 
     [Fact]
-    public async Task Session_StopsAfterInstanceTransitionsToStoppedAndDoesNotRestartItself()
+    public async Task Session_StopsAfterRuntimeReportsInstanceStoppedAndDoesNotRestartItself()
     {
         var instance = new WslInstance { Name = "d", State = "Running", Size = 100 * 1024 };
-        var runner = new RecordingRunner(new ProcessResult(0, ProbeOutput, "", TimeSpan.Zero, false, false, false, 1));
+        var runner = new StateTransitionRunner();
         await using var session = new MonitoringService(runner).CreateSession(instance, TimeSpan.FromSeconds(1));
         await session.StartAsync();
-        instance.State = "Stopped";
         var deadline = DateTimeOffset.UtcNow.AddSeconds(3);
         while (session.IsRunning && DateTimeOffset.UtcNow < deadline)
             await Task.Delay(TimeSpan.FromMilliseconds(25)).ConfigureAwait(false);
         Assert.False(session.IsRunning);
         Assert.Equal("Monitor.InstanceStopped", session.UnavailableReason);
-        Assert.Equal(2, runner.Requests.Count);
+        Assert.Equal(3, runner.Requests.Count);
     }
 
     [Fact]
@@ -443,6 +442,18 @@ public class MonitoringServiceTests
             Requests.Add(request);
             var names = _states.Count == 0 ? [] : _states.Dequeue();
             return Task.FromResult(new ProcessResult(0, string.Join("\n", names), "", TimeSpan.Zero, false, false, false, 1));
+        }
+    }
+    private sealed class StateTransitionRunner : IProcessRunner
+    {
+        private int _runningStateChecks;
+        public List<ProcessRequest> Requests { get; } = [];
+        public Task<ProcessResult> RunAsync(ProcessRequest request, CancellationToken cancellationToken = default)
+        {
+            Requests.Add(request);
+            if (request.Arguments.SequenceEqual(["--list", "--running", "--quiet"]))
+                return Task.FromResult(new ProcessResult(0, Interlocked.Increment(ref _runningStateChecks) == 1 ? "d\n" : "", "", TimeSpan.Zero, false, false, false, 1));
+            return Task.FromResult(new ProcessResult(0, ProbeOutput, "", TimeSpan.Zero, false, false, false, 1));
         }
     }
     private sealed class BlockingProbeRunner : IProcessRunner
