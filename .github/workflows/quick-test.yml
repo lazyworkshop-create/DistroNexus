@@ -56,28 +56,9 @@ jobs:
       shell: pwsh
       working-directory: ./tests/PowerShell
       run: |
-        # Run quick metadata-selected unit scope
-        Import-Module Pester -MinimumVersion 5.0.0 -Force
-        $quickTestConfig = @{
-          Run = @{
-            Path = './Unit'
-          }
-          Filter = @{
-            Tag = @('Unit')
-            ExcludeTag = @('Integration', 'Slow', 'WSL2')
-          }
-          TestResult = @{
-            Enabled = $true
-            OutputPath = '../test-results/quick-pester-results.xml'
-            OutputFormat = 'NUnitXml'
-          }
-        }
-        
-        $result = Invoke-Pester -Configuration $quickTestConfig
-        
-        if ($result.FailedCount -gt 0) {
-          exit 1
-        }
+        # Keep the quick lane on the repository's canonical Pester bootstrap.
+        # It sets the required Pester runtime options for test child scopes.
+        ./TestRunner.ps1 -TestType Unit -CI -OutputPath 'TestResults'
 
     - name: Build C# solution
       run: dotnet build src/Client/DistroNexus.slnx --configuration Debug
@@ -100,6 +81,6 @@ jobs:
       with:
         files: |
           test-results/*.trx
-          tests/test-results/*.xml
+          TestResults/powershell-results.xml
         check_name: 'Quick Validation Tests'
         compare_to_earlier_commit: true
