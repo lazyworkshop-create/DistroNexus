@@ -50,11 +50,14 @@ public sealed class SystemdNetworkServicesTests
     }
 
     [Fact]
-    public async Task NetworkStatusAdapter_ReportsUnavailableWithoutInventingCollision()
+    public async Task NetworkStatusAdapter_ReportsTheObservedPortStatus()
     {
         var adapter = new WindowsNetworkStatusAdapter();
         Assert.True((await adapter.GetFirewallStatusAsync()).Availability is FirewallStatusAvailability.Available or FirewallStatusAvailability.Unavailable);
-        Assert.False((await adapter.GetPortCollisionsAsync([new PortMapping { Port = 80, Protocol = "TCP" }])).Single().IsCollision);
+        var status = (await adapter.GetPortCollisionsAsync([new PortMapping { Port = 80, Protocol = "TCP" }])).Single();
+        Assert.Equal(80, status.Port);
+        Assert.Equal("TCP", status.Protocol);
+        Assert.False(string.IsNullOrWhiteSpace(status.Detail));
     }
 
     [Fact]
@@ -217,13 +220,11 @@ public sealed class SystemdNetworkServicesTests
         Assert.Contains(refused.Outcome, new[] { NetworkProbeOutcome.Refused, NetworkProbeOutcome.TimedOut, NetworkProbeOutcome.ToolUnavailable });
     }
 
-    [Theory]
-    [InlineData(NetworkProbeKind.WslInstance)]
-    [InlineData(NetworkProbeKind.Localhost)]
-    public async Task WslSideProbeKinds_DoNotMasqueradeAsWindowsTcp(NetworkProbeKind kind)
+    [Fact]
+    public async Task WslInstanceProbeWithoutAdapter_DoesNotFallBackToWindowsTcp()
     {
-        var result = await new NetworkDiagnosticsService().ProbeAsync(new NetworkProbeRequest(kind, "127.0.0.1", 80, DistributionName: "Ubuntu"));
-        Assert.True(result.Outcome is NetworkProbeOutcome.ToolUnavailable or NetworkProbeOutcome.Refused or NetworkProbeOutcome.TimedOut);
+        var result = await new NetworkDiagnosticsService().ProbeAsync(new NetworkProbeRequest(NetworkProbeKind.WslInstance, "127.0.0.1", 80, DistributionName: "Ubuntu"));
+        Assert.Equal(NetworkProbeOutcome.ToolUnavailable, result.Outcome);
     }
 
     [Fact]

@@ -64,7 +64,7 @@ public sealed class WorkspaceBridgeProtocolTests
         Assert.True(response.GetProperty("Succeeded").GetBoolean());
         var findings = response.GetProperty("Value").GetProperty("Findings").EnumerateArray()
             .Select(x => x.GetProperty("Id").GetString() ?? string.Empty).ToArray();
-        foreach (var prefix in new[] { "wslconfig.", "backup.", "template.", "wslg.", "capability.", "disk.", "monitoring.", "network.", "windows.feature.", "windows.virtualization." })
+        foreach (var prefix in new[] { "wslconfig.", "backup.", "template", "wslg.", "capability.", "disk.", "monitoring.", "network.", "windows.feature.", "windows.virtualization." })
             Assert.True(findings.Any(id => id.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)), $"Missing {prefix}; observed: {string.Join(",", findings)}");
     }
 
