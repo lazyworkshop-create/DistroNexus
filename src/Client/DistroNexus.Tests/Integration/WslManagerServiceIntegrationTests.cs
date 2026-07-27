@@ -310,8 +310,7 @@ public class WslManagerServiceIntegrationTests
             .ReturnsAsync(mockResult);
 
         var progressReports = new List<(double, string)>();
-        var progress = new Progress<(double Percentage, string Message)>(
-            p => progressReports.Add(p));
+        var progress = new InlineProgress<(double Percentage, string Message)>(progressReports.Add);
 
         // Act
         await _service.InstallInstanceAsync(options, progress);
@@ -518,5 +517,10 @@ public class WslManagerServiceIntegrationTests
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(
             () => _service.GetInstancesAsync(cancellationTokenSource.Token));
+    }
+
+    private sealed class InlineProgress<T>(Action<T> report) : IProgress<T>
+    {
+        public void Report(T value) => report(value);
     }
 }

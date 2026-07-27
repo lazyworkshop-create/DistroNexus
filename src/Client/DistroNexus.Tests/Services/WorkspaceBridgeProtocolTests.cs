@@ -178,8 +178,11 @@ public sealed class WorkspaceBridgeProtocolTests
         public static Task<BridgeProcess> StartAsync()
         {
             var root = FindRoot();
-            var bridge = Path.Combine(root, "src", "Client", "DistroNexus.WorkspaceBridge", "bin", "Debug", "net10.0", "DistroNexus.WorkspaceBridge.dll");
-            Assert.True(File.Exists(bridge), "Build the WorkspaceBridge project before running protocol tests.");
+            var bridgeDirectory = Path.Combine(root, "src", "Client", "DistroNexus.WorkspaceBridge", "bin");
+            var bridge = new[] { "Release", "Debug" }
+                .Select(configuration => Path.Combine(bridgeDirectory, configuration, "net10.0", "DistroNexus.WorkspaceBridge.dll"))
+                .FirstOrDefault(File.Exists)
+                ?? throw new InvalidOperationException("Build the WorkspaceBridge project before running protocol tests.");
             var store = Path.Combine(Path.GetTempPath(), "DistroNexusBridge-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(store);
             var process = Process.Start(new ProcessStartInfo("dotnet", $"\"{bridge}\"")
