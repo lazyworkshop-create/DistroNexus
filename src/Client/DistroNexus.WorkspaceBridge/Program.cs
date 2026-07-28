@@ -973,7 +973,7 @@ public static class FixedLaunchProcess
     {
         var info = new ProcessStartInfo { FileName = kind == TerminalKind.WindowsTerminal ? "wt.exe" : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "cmd.exe"), UseShellExecute = false };
         var arguments = kind == TerminalKind.WindowsTerminal
-            ? startPath is null ? new[] { "-w", "0", "wsl", "-d", instanceName } : new[] { "-w", "0", "wsl", "-d", instanceName, "--cd", startPath }
+            ? startPath is null ? new[] { "-w", "0", "new-tab", "--", "wsl.exe", "-d", instanceName } : new[] { "-w", "0", "new-tab", "--", "wsl.exe", "-d", instanceName, "--cd", startPath }
             : startPath is null ? new[] { "/k", "wsl", "-d", instanceName } : new[] { "/k", "wsl", "-d", instanceName, "--cd", startPath };
         foreach (var argument in arguments) info.ArgumentList.Add(argument);
         return info;

@@ -486,7 +486,10 @@ public sealed class WorkspaceBridgeProtocolTests
         var windowsTerminal = FixedLaunchProcess.CreateTerminalStartInfo(TerminalKind.WindowsTerminal, "Ubuntu", "/home/user");
         Assert.Equal("wt.exe", windowsTerminal.FileName);
         Assert.False(windowsTerminal.UseShellExecute);
-        Assert.Equal(["-w", "0", "wsl", "-d", "Ubuntu", "--cd", "/home/user"], windowsTerminal.ArgumentList);
+        Assert.Equal(["-w", "0", "new-tab", "--", "wsl.exe", "-d", "Ubuntu", "--cd", "/home/user"], windowsTerminal.ArgumentList);
+
+        var windowsTerminalHome = FixedLaunchProcess.CreateTerminalStartInfo(TerminalKind.WindowsTerminal, "Ubuntu", null);
+        Assert.Equal(["-w", "0", "new-tab", "--", "wsl.exe", "-d", "Ubuntu"], windowsTerminalHome.ArgumentList);
 
         var commandPrompt = FixedLaunchProcess.CreateTerminalStartInfo(TerminalKind.CommandPrompt, "Ubuntu", null);
         Assert.Equal(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "cmd.exe"), commandPrompt.FileName);
