@@ -4,7 +4,6 @@ using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.IO;
 using DistroNexus.Core.Exceptions;
 
@@ -26,6 +25,7 @@ public partial class BackupTabViewModel : ObservableObject
     private readonly IBackupService _backupService;
     private readonly IDialogService _dialogService;
     private readonly IRecoveryPointService _recoveryService;
+    private readonly IPowerShellModuleClient _moduleClient;
 
     private bool _initialized;
 
@@ -125,12 +125,13 @@ public partial class BackupTabViewModel : ObservableObject
     public BackupTabViewModel(
         WslInstanceViewModel instance,
         IBackupService backupService,
-        IDialogService dialogService, IRecoveryPointService recoveryService)
+        IDialogService dialogService, IRecoveryPointService recoveryService, IPowerShellModuleClient moduleClient)
     {
         _instance = instance ?? throw new ArgumentNullException(nameof(instance));
         _backupService = backupService ?? throw new ArgumentNullException(nameof(backupService));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
         _recoveryService = recoveryService ?? throw new ArgumentNullException(nameof(recoveryService));
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
     }
 
     // ── Initialization ─────────────────────────────────────────────────────────
@@ -424,10 +425,11 @@ public partial class BackupTabViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void RevealRecoveryPoint()
+    private async Task RevealRecoveryPointAsync()
     {
-        if (SelectedRecoveryPoint is null || !Directory.Exists(SelectedRecoveryPoint.DirectoryPath)) return;
-        Process.Start(new ProcessStartInfo { FileName = "explorer.exe", UseShellExecute = true, ArgumentList = { SelectedRecoveryPoint.DirectoryPath } });
+        if (SelectedRecoveryPoint is null) return;
+        try { await _moduleClient.OpenRecoveryPointFolderAsync(SelectedRecoveryPoint.Manifest.Id); }
+        catch (Exception ex) { await ShowRecoveryErrorAsync(ex); }
     }
 
     [RelayCommand]

@@ -23,7 +23,7 @@ public sealed class BackupTabRecoveryHistoryTests : IDisposable
             new RecoveryHistoryEntry("recovery", "Ubuntu", DateTimeOffset.UtcNow, "RecoveryPoint", "Completed", "point"),
             new RecoveryHistoryEntry("failed", "Ubuntu", DateTimeOffset.UtcNow.AddMinutes(-1), "RecoveryPoint", "Failed", "point")]);
         recovery.Setup(x => x.ListAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
-        var viewModel = new BackupTabViewModel(Instance(), backup.Object, new Mock<IDialogService>().Object, recovery.Object);
+        var viewModel = new BackupTabViewModel(Instance(), backup.Object, new Mock<IDialogService>().Object, recovery.Object, new Mock<IPowerShellModuleClient>().Object);
 
         await viewModel.InitializeAsync();
         Assert.Contains(viewModel.BackupHistory, x => x.Kind == "ScheduledBackup"); // Core has already projected all sources.
@@ -47,7 +47,7 @@ public sealed class BackupTabRecoveryHistoryTests : IDisposable
         recovery.Setup(x => x.GetHistoryAsync(It.IsAny<CancellationToken>())).ReturnsAsync([
             new RecoveryHistoryEntry("manual", "Ubuntu", DateTimeOffset.UtcNow, "RecoveryPoint", "Verified", "point")]);
         recovery.Setup(x => x.ListAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
-        var vm = new BackupTabViewModel(Instance(), backup.Object, new Mock<IDialogService>().Object, recovery.Object);
+        var vm = new BackupTabViewModel(Instance(), backup.Object, new Mock<IDialogService>().Object, recovery.Object, new Mock<IPowerShellModuleClient>().Object);
 
         await vm.InitializeAsync();
 
@@ -69,7 +69,7 @@ public sealed class BackupTabRecoveryHistoryTests : IDisposable
             .ReturnsAsync(new RecoveryOperationPreview("restore", "Restore", point.Manifest.Id, "Ubuntu", "Clone", Path.Combine(_destination, "clone"), RecoveryPointFormat.Tar, false, false, ["distinct"], 1));
         recovery.Setup(x => x.RestoreAsync(It.IsAny<RecoveryRestoreRequest>(), "restore", It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         var dialogs = new Mock<IDialogService>(); dialogs.Setup(x => x.ShowConfirmAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true); dialogs.Setup(x => x.ShowAlertAsync(It.IsAny<string>(), It.IsAny<string>())).Returns(Task.CompletedTask);
-        var vm = new BackupTabViewModel(Instance(), backup.Object, dialogs.Object, recovery.Object);
+        var vm = new BackupTabViewModel(Instance(), backup.Object, dialogs.Object, recovery.Object, new Mock<IPowerShellModuleClient>().Object);
         await vm.InitializeAsync(); vm.SelectedRecoveryPoint = point; vm.RecoveryTargetInstance = "Clone"; vm.RecoveryTargetDirectory = Path.Combine(_destination, "clone");
 
         await vm.RestoreRecoveryPointCommand.ExecuteAsync(null);
@@ -93,7 +93,7 @@ public sealed class BackupTabRecoveryHistoryTests : IDisposable
             .ReturnsAsync(new RecoveryOperationPreview("delete", "Delete", point.Manifest.Id, "Ubuntu", "", point.DirectoryPath, RecoveryPointFormat.Tar, false, false, ["permanent"], 1));
         recovery.Setup(x => x.DeleteAsync(point.Manifest.Id, "delete", It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         var dialogs = new Mock<IDialogService>(); dialogs.Setup(x => x.ShowConfirmAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
-        var vm = new BackupTabViewModel(Instance(), backup.Object, dialogs.Object, recovery.Object);
+        var vm = new BackupTabViewModel(Instance(), backup.Object, dialogs.Object, recovery.Object, new Mock<IPowerShellModuleClient>().Object);
         await vm.InitializeAsync(); vm.SelectedRecoveryPoint = point; vm.RecoveryDescription = "note"; vm.RecoveryTags = "safe, local"; vm.RecoveryPinned = true; vm.RecoveryRetention = 2;
 
         await vm.SaveRecoveryNotesCommand.ExecuteAsync(null);
@@ -116,7 +116,7 @@ public sealed class BackupTabRecoveryHistoryTests : IDisposable
         recovery.Setup(x => x.GetHistoryAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
         recovery.Setup(x => x.ListAsync(It.IsAny<CancellationToken>())).ReturnsAsync([point]);
         recovery.Setup(x => x.GetRetentionAsync("Ubuntu", It.IsAny<CancellationToken>())).ReturnsAsync(4);
-        var vm = new BackupTabViewModel(Instance(), backup.Object, new Mock<IDialogService>().Object, recovery.Object);
+        var vm = new BackupTabViewModel(Instance(), backup.Object, new Mock<IDialogService>().Object, recovery.Object, new Mock<IPowerShellModuleClient>().Object);
 
         await vm.InitializeAsync(); vm.SelectedRecoveryPoint = point;
 
@@ -135,7 +135,7 @@ public sealed class BackupTabRecoveryHistoryTests : IDisposable
         recovery.Setup(x => x.ListAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
         recovery.Setup(x => x.PreviewCreateAsync(It.Is<RecoveryPointCreateRequest>(r => r.Format == RecoveryPointFormat.Vhdx), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new RecoveryOperationPreview("vhd", "Create", null, "Ubuntu", "", _destination, RecoveryPointFormat.Vhdx, false, true, [], 1));
-        var vm = new BackupTabViewModel(Instance(), backup.Object, new Mock<IDialogService>().Object, recovery.Object);
+        var vm = new BackupTabViewModel(Instance(), backup.Object, new Mock<IDialogService>().Object, recovery.Object, new Mock<IPowerShellModuleClient>().Object);
 
         await vm.InitializeAsync(); vm.DestinationPath = _destination;
         await WaitForAsync(() => vm.CanUseVhdx);
@@ -151,7 +151,7 @@ public sealed class BackupTabRecoveryHistoryTests : IDisposable
         recovery.Setup(x => x.GetHistoryAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
         recovery.Setup(x => x.ListAsync(It.IsAny<CancellationToken>())).ReturnsAsync([Point() with { Manifest = Point().Manifest with { Format = RecoveryPointFormat.Vhdx } }]);
         recovery.Setup(x => x.PreviewCreateAsync(It.IsAny<RecoveryPointCreateRequest>(), It.IsAny<CancellationToken>())).ThrowsAsync(new InvalidOperationException("unsupported"));
-        var vm = new BackupTabViewModel(Instance(), backup.Object, new Mock<IDialogService>().Object, recovery.Object);
+        var vm = new BackupTabViewModel(Instance(), backup.Object, new Mock<IDialogService>().Object, recovery.Object, new Mock<IPowerShellModuleClient>().Object);
 
         await vm.InitializeAsync(); vm.RecoveryImportInPlace = true; vm.DestinationPath = _destination;
         await WaitForAsync(() => !vm.CanUseVhdx);
@@ -170,7 +170,7 @@ public sealed class BackupTabRecoveryHistoryTests : IDisposable
         recovery.Setup(x => x.GetHistoryAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
         recovery.Setup(x => x.ListAsync(It.IsAny<CancellationToken>())).ReturnsAsync([point]);
         recovery.Setup(x => x.PreviewCreateAsync(It.IsAny<RecoveryPointCreateRequest>(), It.IsAny<CancellationToken>())).ThrowsAsync(new InvalidOperationException("unsupported"));
-        var vm = new BackupTabViewModel(Instance(), backup.Object, new Mock<IDialogService>().Object, recovery.Object);
+        var vm = new BackupTabViewModel(Instance(), backup.Object, new Mock<IDialogService>().Object, recovery.Object, new Mock<IPowerShellModuleClient>().Object);
 
         await vm.InitializeAsync(); vm.SelectedRecoveryPoint = point; vm.DestinationPath = _destination;
         await WaitForAsync(() => !vm.CanUseVhdx);

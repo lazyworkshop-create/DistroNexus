@@ -4,9 +4,9 @@ using DistroNexus.Core.Models;
 namespace DistroNexus.Core.Services;
 
 /// <summary>Last-moment ownership checks for recovery-point destructive operations.</summary>
-internal static class RecoveryPathSafety
+public static class RecoveryPathSafety
 {
-    internal static bool IsNoReparsePointInExistingPath(string path)
+    public static bool IsNoReparsePointInExistingPath(string path)
     {
         try
         {
@@ -18,7 +18,7 @@ internal static class RecoveryPathSafety
         catch (UnauthorizedAccessException) { return false; }
     }
 
-    internal static bool IsOwnedPointDirectory(string directory, RecoveryPointManifest manifest)
+    public static bool IsOwnedPointDirectory(string directory, RecoveryPointManifest manifest)
     {
         try
         {

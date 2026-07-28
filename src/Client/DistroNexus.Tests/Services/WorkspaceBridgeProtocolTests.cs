@@ -1,6 +1,9 @@
 using System.Diagnostics;
 using System.Text.Json;
 using DistroNexus.Core.Models;
+using DistroNexus.Core.Services;
+using DistroNexus.Core.Interfaces;
+using Moq;
 
 namespace DistroNexus.Tests.Services;
 
@@ -553,6 +556,51 @@ public sealed class WorkspaceBridgeProtocolTests
         }
         Assert.Equal("Monitor.InvalidRequest", extra.GetProperty("ErrorCode").GetString());
         Assert.Equal("Monitor.SnapshotInvalid", forged.GetProperty("ErrorCode").GetString());
+    }
+
+    [Fact]
+    public async Task FixedExplorerRoutes_RejectPayloadsMissingIdsAndUnknownRecoveryPointsBeforeLaunch()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        var payload = JsonDocument.Parse("{\"Path\":\"C:\\\\outside\"}").RootElement.Clone();
+        var wslPayload = await bridge.SendAsync("explorer.wslconfig.v1", payload: payload);
+        var recoveryPayload = await bridge.SendAsync("explorer.recovery-point.v1", Guid.NewGuid(), payload);
+        var recoveryMissingId = await bridge.SendAsync("explorer.recovery-point.v1");
+        var recoveryUnknown = await bridge.SendAsync("explorer.recovery-point.v1", Guid.NewGuid());
+
+        foreach (var response in new[] { wslPayload, recoveryPayload, recoveryMissingId, recoveryUnknown })
+            Assert.False(response.GetProperty("Succeeded").GetBoolean());
+    }
+
+    [Fact]
+    public void FixedExplorerLaunchSpec_UsesOnlyExplorerAndOneResolvedArgument()
+    {
+        var info = FixedLaunchProcess.CreateExplorerStartInfo(@"C:\safe\fixed-target");
+        Assert.Equal("explorer.exe", info.FileName);
+        Assert.False(info.UseShellExecute);
+        Assert.Equal([@"C:\safe\fixed-target"], info.ArgumentList);
+    }
+
+    [Fact]
+    public async Task FixedExplorerRoutes_RejectMissingWslConfigAndForeignRecoveryWithoutLaunching()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "DistroNexus-reparse-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var id = Guid.NewGuid();
+            var foreign = new RecoveryPointSummary(new RecoveryPointManifest(1, id, "foreign", "Ubuntu", 2, RecoveryPointFormat.Tar, DateTimeOffset.UtcNow, "payload.tar", 1, "hash", "test", [], ""), root, RecoveryPointVerification.Verified);
+            var recovery = new Mock<IRecoveryPointService>(MockBehavior.Strict);
+            recovery.Setup(x => x.ListAsync(It.IsAny<CancellationToken>())).ReturnsAsync([foreign]);
+            var launches = 0;
+            var routes = new FixedExplorerRoutes(recovery.Object, () => root, _ => launches++, _ => true);
+
+            Assert.Throws<InvalidOperationException>(() => routes.OpenWslConfig(new BridgeRequest("explorer.wslconfig.v1", null, null, null)));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => routes.OpenRecoveryPointAsync(new BridgeRequest("explorer.recovery-point.v1", id, null, null)));
+            Assert.Equal(0, launches);
+            recovery.Verify(x => x.ListAsync(It.IsAny<CancellationToken>()), Times.Once);
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
     }
 
     private sealed class BridgeProcess : IAsyncDisposable

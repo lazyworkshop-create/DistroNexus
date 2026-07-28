@@ -110,7 +110,11 @@ public interface IPowerShellModuleClient
     Task<MonitoringSnapshotResult> GetMonitoringSnapshotAsync(string name, int intervalSeconds, CancellationToken cancellationToken = default);
     Task<MonitoringProcessActionPreview> GetMonitoringProcessActionPreviewAsync(string snapshotToken, int processId, MonitoringProcessAction action, CancellationToken cancellationToken = default);
     Task<ProcessActionResult> InvokeMonitoringProcessActionAsync(string previewToken, CancellationToken cancellationToken = default);
+    Task<FixedExplorerResult> OpenWslConfigFileAsync(CancellationToken cancellationToken = default);
+    Task<FixedExplorerResult> OpenRecoveryPointFolderAsync(Guid id, CancellationToken cancellationToken = default);
 }
+
+public sealed record FixedExplorerResult(bool Succeeded, string OutcomeCode);
 
 public sealed record DistroNexusPodmanUserUnitPreview(string Token, string InstanceName, PodmanUserUnit Unit, SystemdAction Action, IReadOnlyList<string> Effects);
 public sealed record DistroNexusPodmanUserUnitResult(bool Succeeded, string OutcomeCode, string? Guidance = null);

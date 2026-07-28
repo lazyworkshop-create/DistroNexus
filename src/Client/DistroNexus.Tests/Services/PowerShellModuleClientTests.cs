@@ -461,6 +461,8 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.InvokePodmanUserUnitAsync),
                 nameof(IPowerShellModuleClient.LaunchWslgApplicationAsync),
                 nameof(IPowerShellModuleClient.OpenPackageCacheFolderAsync),
+                nameof(IPowerShellModuleClient.OpenRecoveryPointFolderAsync),
+                nameof(IPowerShellModuleClient.OpenWslConfigFileAsync),
                 nameof(IPowerShellModuleClient.RefreshCatalogAsync),
                 nameof(IPowerShellModuleClient.RemoveCatalogSourceAsync),
                 nameof(IPowerShellModuleClient.RemoveInstanceTagAsync),
@@ -485,6 +487,22 @@ public sealed class PowerShellModuleClientTests
         Assert.DoesNotContain(methods, method => method.Name.Contains("Script", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(methods, method => method.Name.Contains("Command", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(methods, method => method.Name.Equals("ExecuteOperationAsync", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task ExplorerOperations_UseOnlyFixedCmdletsAndAnExactRecoveryId()
+    {
+        var id = Guid.NewGuid();
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Open-DistroNexusWslConfigFile", null, It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Succeeded\":true,\"OutcomeCode\":\"Opened\"}" });
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Open-DistroNexusRecoveryPointFolder", It.Is<Dictionary<string, object>>(p => p.Count == 1 && (Guid)p["Id"] == id), It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Succeeded\":true,\"OutcomeCode\":\"Opened\"}" });
+        var client = new PowerShellModuleClient(powerShell.Object);
+        Assert.True((await client.OpenWslConfigFileAsync()).Succeeded);
+        Assert.True((await client.OpenRecoveryPointFolderAsync(id)).Succeeded);
+        await Assert.ThrowsAsync<ArgumentException>(() => client.OpenRecoveryPointFolderAsync(Guid.Empty));
+        powerShell.VerifyAll();
     }
 
     [Fact]

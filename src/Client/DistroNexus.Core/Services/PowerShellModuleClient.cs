@@ -55,6 +55,8 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string GetMonitoringSnapshotCommand = "Get-DistroNexusMonitoringSnapshot";
     private const string GetMonitoringProcessActionPreviewCommand = "Get-DistroNexusMonitoringProcessActionPreview";
     private const string InvokeMonitoringProcessActionCommand = "Invoke-DistroNexusMonitoringProcessAction";
+    private const string OpenWslConfigFileCommand = "Open-DistroNexusWslConfigFile";
+    private const string OpenRecoveryPointFolderCommand = "Open-DistroNexusRecoveryPointFolder";
     private readonly IPowerShellService _powerShellService;
 
     public PowerShellModuleClient(IPowerShellService powerShellService)
@@ -406,6 +408,9 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     { ValidateToken(snapshotToken, nameof(snapshotToken)); if (processId <= 1 || action is not (MonitoringProcessAction.Terminate or MonitoringProcessAction.Kill or MonitoringProcessAction.Renice)) throw new ArgumentOutOfRangeException(nameof(processId)); return ExecuteJsonAsync<MonitoringProcessActionPreview>(GetMonitoringProcessActionPreviewCommand, new() { ["SnapshotToken"] = snapshotToken, ["ProcessId"] = processId, ["Action"] = action.ToString() }, cancellationToken); }
     public Task<ProcessActionResult> InvokeMonitoringProcessActionAsync(string previewToken, CancellationToken cancellationToken = default)
     { ValidateToken(previewToken, nameof(previewToken)); return ExecuteJsonAsync<ProcessActionResult>(InvokeMonitoringProcessActionCommand, new() { ["PreviewToken"] = previewToken }, cancellationToken); }
+    public Task<FixedExplorerResult> OpenWslConfigFileAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<FixedExplorerResult>(OpenWslConfigFileCommand, null, cancellationToken);
+    public Task<FixedExplorerResult> OpenRecoveryPointFolderAsync(Guid id, CancellationToken cancellationToken = default)
+    { if (id == Guid.Empty) throw new ArgumentException("A recovery point id is required.", nameof(id)); return ExecuteJsonAsync<FixedExplorerResult>(OpenRecoveryPointFolderCommand, new() { ["Id"] = id }, cancellationToken); }
     private Task<WslgActionResult> ExecuteWslgActionAsync(string command, string token, string applicationId, bool? pinned, CancellationToken ct)
     { if (string.IsNullOrWhiteSpace(token) || token.Length != 64 || token.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("A WSLg discovery token is invalid.", nameof(token)); ValidateName(applicationId, nameof(applicationId)); var parameters = new Dictionary<string, object> { ["DiscoveryToken"] = token, ["ApplicationId"] = applicationId }; if (pinned is not null) parameters["Pinned"] = pinned.Value; return ExecuteJsonAsync<WslgActionResult>(command, parameters, ct); }
 

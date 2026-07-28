@@ -3,7 +3,6 @@ using CommunityToolkit.Mvvm.Input;
 using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
-using System.Diagnostics;
 using System.IO;
 using System.Collections.ObjectModel;
 using DistroNexus.Core.Services;
@@ -218,14 +217,11 @@ public partial class WslConfigSectionViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void OpenRawFile()
+    private async Task OpenRawFileAsync()
     {
-        string configPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".wslconfig");
-
         try
         {
-            Process.Start(new ProcessStartInfo(configPath) { UseShellExecute = true });
+            await _moduleClient.OpenWslConfigFileAsync();
         }
         catch (Exception ex)
         {

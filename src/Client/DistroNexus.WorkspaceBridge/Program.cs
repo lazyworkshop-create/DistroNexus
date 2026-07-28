@@ -26,6 +26,7 @@ var systemd = new SystemdService(processes, capabilities, distributionConfigurat
 var containers = ContainerRuntimeBridgeComposition.Create(processes, systemd);
 var wslg = new WslgApplicationService(processes, capabilities, root);
 var recovery = new RecoveryPointService(new WslRecoveryPointRuntime(processes, capabilities), root: root);
+var explorerRoutes = new FixedExplorerRoutes(recovery, () => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), info => Process.Start(info), RecoveryPathSafety.IsNoReparsePointInExistingPath);
 var monitoring = new MonitoringService(processes);
 var applicationRoot = root ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DistroNexus");
 var monitoringAutomation = new MonitoringAutomationService(monitoring, processes, applicationRoot);
@@ -148,6 +149,8 @@ while ((line = Console.ReadLine()) is not null)
             "recovery.list.v1" => await RecoveryListV1Async(request),
             "recovery.history.v1" => await RecoveryHistoryV1Async(request),
             "recovery.verify.v1" => await RecoveryVerifyV1Async(request),
+            "explorer.wslconfig.v1" => explorerRoutes.OpenWslConfig(request),
+            "explorer.recovery-point.v1" => await explorerRoutes.OpenRecoveryPointAsync(request),
             "recovery.preview-create.v1" => await PreviewRecoveryCreateV1Async(request),
             "recovery.create.v1" => await CreateRecoveryV1Async(request),
             "recovery.preview-restore.v1" => await PreviewRecoveryRestoreV1Async(request),
@@ -807,6 +810,49 @@ public static class FixedLaunchProcess
         var info = new ProcessStartInfo { FileName = "explorer.exe", UseShellExecute = false };
         info.ArgumentList.Add(existingCacheRoot);
         return info;
+    }
+    public static ProcessStartInfo CreateExplorerStartInfo(string existingTarget)
+    {
+        var info = new ProcessStartInfo { FileName = "explorer.exe", UseShellExecute = false };
+        info.ArgumentList.Add(existingTarget);
+        return info;
+    }
+}
+public sealed record FixedExplorerResult(bool Succeeded, string OutcomeCode);
+/// <summary>Closed fixed-target Explorer routes; dependencies are injectable solely for deterministic bridge tests.</summary>
+public sealed class FixedExplorerRoutes
+{
+    private readonly IRecoveryPointService recovery;
+    private readonly Func<string> userProfile;
+    private readonly Action<ProcessStartInfo> launch;
+    private readonly Func<string, bool> noReparsePath;
+
+    public FixedExplorerRoutes(IRecoveryPointService recovery, Func<string> userProfile, Action<ProcessStartInfo> launch, Func<string, bool> noReparsePath)
+    { this.recovery = recovery; this.userProfile = userProfile; this.launch = launch; this.noReparsePath = noReparsePath; }
+
+    public FixedExplorerResult OpenWslConfig(BridgeRequest request)
+    {
+        Validate(request, false);
+        var path = Path.Combine(userProfile(), ".wslconfig");
+        var file = new FileInfo(path);
+        if (!file.Exists || file.Attributes.HasFlag(FileAttributes.ReparsePoint) || !noReparsePath(path)) throw new InvalidOperationException("The current user's .wslconfig file is unavailable or unsafe.");
+        launch(FixedLaunchProcess.CreateExplorerStartInfo(path));
+        return new(true, "Opened");
+    }
+
+    public async Task<FixedExplorerResult> OpenRecoveryPointAsync(BridgeRequest request)
+    {
+        Validate(request, true);
+        var point = (await recovery.ListAsync()).SingleOrDefault(x => x.Manifest.Id == request.Id) ?? throw new InvalidOperationException("The recovery point no longer exists.");
+        if (!RecoveryPathSafety.IsOwnedPointDirectory(point.DirectoryPath, point.Manifest)) throw new InvalidOperationException("The recovery point path is unsafe.");
+        launch(FixedLaunchProcess.CreateExplorerStartInfo(point.DirectoryPath));
+        return new(true, "Opened");
+    }
+
+    private static void Validate(BridgeRequest request, bool requireId)
+    {
+        if (request.Payload is not null || requireId != request.Id.HasValue || request.ExpectedRevision is not null || request.Token is not null || request.Name is not null || request.ActionId is not null)
+            throw new ArgumentException("The fixed Explorer operation request is invalid.");
     }
 }
 public sealed record NetworkPortMappingPayload(string Name, string? Protocol = null);

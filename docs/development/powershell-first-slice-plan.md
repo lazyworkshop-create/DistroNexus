@@ -12,7 +12,7 @@
 
 ## Dependency Order
 
-S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S18 -> S19 -> S20 -> S21 -> S22 -> S23 -> S24 -> {S25 blocked, S26 -> S27} -> S06 -> S07 -> S08
+S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S18 -> S19 -> S20 -> S21 -> S22 -> S23 -> S24 -> {S25 blocked, S26 -> S27 -> S28} -> S06 -> S07 -> S08
 
 ## Slice S01: Verified module contract and migration baseline
 
@@ -1439,6 +1439,66 @@ One accepted fixed terminal/package-cache module and presentation-client migrati
 ### Out of Scope
 
 Terminal installation, arbitrary browsing/launching, application update, USB elevation and runtime UAT.
+
+## Slice S28: Fixed WSL configuration and recovery-folder reveal migration
+
+### Status
+
+In Progress
+
+### Objective
+
+Route WSL configuration and recovery-folder reveal through fixed PowerShell commands without accepting caller paths or generic launch inputs.
+
+### Sources
+
+Requirements FR-001 and FR-003 through FR-007; `docs/specs/powershell-first-design.md` Fixed WSL configuration and recovery-folder reveal contract amendment.
+
+### Dependencies
+
+S27
+
+### Allowed Paths
+
+WorkspaceBridge Program, narrow recovery-safe resolver support only if required, new public reveal command files and manifest, typed module-client interface/implementation, `WslConfigSectionViewModel`, `BackupTabViewModel`, focused Bridge/Core/module-client/view-model/Pester tests, design and plan.
+
+### Excluded Paths
+
+Generic Explorer/file/URI launcher, caller paths/arguments, old WSL config scripts, Services/Network/Resources, application update, USB, release/publishing.
+
+### Contract and Documentation
+
+Define only no-payload `explorer.wslconfig.v1` and exact-ID `explorer.recovery-point.v1`. Both public cmdlets use `ShouldProcess`; results contain only success/outcome code.
+
+### Implementation Scope
+
+Resolve the fixed current-user `.wslconfig` and existing owned recovery point only at execution time, reject unsafe/reparse/nonexistent targets, and launch only the fixed OS shell/Explorer behavior. WPF passes no path.
+
+### Test Scope
+
+Cover no/unknown/malformed payload, foreign/missing/unsafe recovery point, reparse/missing WSL config, WhatIf/decline, fixed launch shape and module-only view-model routing.
+
+### Acceptance Criteria
+
+- Neither migrated WPF view model invokes `Process.Start` or passes a filesystem path for these actions.
+- No route accepts a caller-selected path, executable, URI or arguments.
+- Unsafe/missing targets and declined/WhatIf requests cause no launch.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Recovery|FullyQualifiedName~WslConfig|FullyQualifiedName~PowerShellModuleClient|FullyQualifiedName~WorkspaceBridgeProtocol"
+pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Unit
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+One accepted fixed configuration/recovery reveal migration slice.
+
+### Out of Scope
+
+General file browsing, recovery mutation, WSL configuration read/write migration, services/network/resources migration, runtime UAT, deployment and publishing.
 
 ## Slice S06: Platform-integrated command parity
 

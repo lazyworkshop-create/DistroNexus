@@ -143,6 +143,12 @@ Current WPF consumers call `ITerminalService`, whose implementation assembles Po
 
 No route accepts a program, command line, Windows path, URI, environment expansion, raw shell argument, terminal installation request or WSL command. Starting a terminal may start the selected distribution and is therefore an explicit command consent boundary. Future distribution browsing requires a separately designed enum-only contract; this slice does not add it.
 
+### Fixed WSL configuration and recovery-folder reveal contract amendment
+
+`WslConfigSectionViewModel` currently opens `%USERPROFILE%\\.wslconfig` directly and `BackupTabViewModel` passes an authority-bearing recovery directory path directly to Explorer. Slice S28 replaces both with narrow module operations, not a generic file or Explorer launcher.
+
+`explorer.wslconfig.v1` accepts no payload and resolves only the current user's existing normal `.wslconfig` file at execution time, rejecting reparse/abnormal paths. `explorer.recovery-point.v1` accepts exactly `{ Id: Guid }`; the Bridge re-finds the point and uses existing `RecoveryPathSafety.IsOwnedPointDirectory` immediately before fixed Explorer start. Public `Open-DistroNexusWslConfigFile` and `Open-DistroNexusRecoveryPointFolder -Id` use `ShouldProcess`; their results are path-free outcome records. The typed client exposes only no-input WSL config reveal and ID-based recovery reveal. No route accepts a path, URI, executable or arguments.
+
 ## Data and Execution Semantics
 
 - Data ownership and retention: Core owns settings, cache, catalog, backup, recovery, templates, and configuration persistence. Desktop never writes those stores. Existing retention and cleanup policies remain unchanged.
