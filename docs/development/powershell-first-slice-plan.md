@@ -1925,7 +1925,7 @@ Path-bearing lifecycle and disk operations, real WSL lifecycle, keep-alive persi
 
 ### Status
 
-Planned
+Committed
 
 ### Objective
 
@@ -1933,7 +1933,7 @@ Define and deliver module-only contracts for install, remove, move, rename, impo
 
 ### Sources
 
-Requirements FR-001 through FR-007 and FR-004C; lifecycle evidence inventory.
+Requirements FR-001 through FR-007, FR-004C and FR-004D; lifecycle evidence inventory.
 
 ### Dependencies
 
@@ -1978,6 +1978,186 @@ One accepted design/contract baseline followed by separately accepted implementa
 ### Out of Scope
 
 Production WSL/VHDX/elevation UAT and all other capability families.
+
+## Slice S37: Path-bearing lifecycle route foundation
+
+### Status
+
+Planned
+
+### Objective
+
+Provide reviewed fixed module routes for remove, move, rename, export and import, with Core-owned local-path validation, durable grants and recovery reporting.
+
+### Sources
+
+Requirements FR-001 through FR-007, FR-004C and FR-004D; path-bearing lifecycle contract amendment.
+
+### Dependencies
+
+S36
+
+### Allowed Paths
+
+Lifecycle Core/Bridge/module/client and `MainViewModel`/`WslInstanceViewModel` consumers; requirements/design/plan; focused tests.
+
+### Excluded Paths
+
+Package acquisition/install, credentials, compaction, templates, workspaces, USB/elevation, release/publishing and real WSL mutation.
+
+### Contract and Documentation
+
+Implement exact preview/execute payloads, local-root path resolver, grant/fingerprint rules, outcome/recovery codes and compatibility facades.
+
+### Implementation Scope
+
+Remove raw-Core/Desktop fallback execution and duplicate Desktop metadata cleanup for these operations. No arbitrary paths at execute, shell text, commands or privilege elevation.
+
+### Test Scope
+
+Path grammar/canonicalization/reparse/collision/target tests; grant SID/expiry/replay/concurrency; transition and rollback outcomes; PowerShell consent; typed-client and WPF routing guards.
+
+### Acceptance Criteria
+
+- Each covered mutation executes only a Core-issued opaque token.
+- A rejected/failing module or Bridge request cannot trigger raw WSL fallback.
+- Desktop neither mutates product paths nor duplicates lifecycle cleanup.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Lifecycle|FullyQualifiedName~PowerShellModuleClient|FullyQualifiedName~WorkspaceBridgeProtocol"
+pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Unit
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+One accepted path-bearing lifecycle foundation and presentation-client migration slice.
+
+### Out of Scope
+
+Install acquisition, credentials, compaction and production WSL UAT.
+
+## Slice S38: Verified install and credential migration
+
+### Status
+
+Planned
+
+### Objective
+
+Make package acquisition, installation and credential configuration module-only, with verified artifacts and secret-safe transport.
+
+### Sources
+
+Requirements FR-001 through FR-007, FR-004C and FR-004D; path-bearing lifecycle contract amendment.
+
+### Dependencies
+
+S36, S37
+
+### Allowed Paths
+
+Package/install/credential Core/Bridge/module/client; install workflow and legacy wizard consumers; requirements/design/plan; focused tests.
+
+### Excluded Paths
+
+Compaction, templates, workspaces, USB/elevation, release/publishing and live download/WSL mutation.
+
+### Contract and Documentation
+
+Implement verified acquisition reference, install preview/execute, direct secure parameter binding, secret redaction and rollback/cancellation outcomes.
+
+### Implementation Scope
+
+Split package acquisition from install; remove plaintext secrets from Desktop/Core durable state and generated scripts; migrate both wizard paths.
+
+### Test Scope
+
+Verified/missing/corrupt source, consent/cancellation, local-root checks, secret redaction/metacharacters, rollback and WPF no-secret/no-service structural checks.
+
+### Acceptance Criteria
+
+- Install never downloads implicitly and only executes a verified artifact reference.
+- Secrets never enter generated command text, logs, results or persistent wizard/Core state.
+- Both active and legacy install paths use typed module contracts.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Install|FullyQualifiedName~PowerShellModuleClient|FullyQualifiedName~WorkspaceBridgeProtocol"
+pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Unit
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+One accepted verified-install and credential-safety migration slice.
+
+### Out of Scope
+
+Compaction and production package/WSL UAT.
+
+## Slice S39: Compaction and disk presentation migration
+
+### Status
+
+Planned
+
+### Objective
+
+Route disk-size and compaction presentation through a reviewed module preview/execute contract without misleading savings estimates.
+
+### Sources
+
+Requirements FR-001 through FR-007, FR-004C and FR-004D; path-bearing lifecycle contract amendment.
+
+### Dependencies
+
+S36, S37
+
+### Allowed Paths
+
+Compaction Core/Bridge/module/client, `DiskTabViewModel` and related composition/tests; requirements/design/plan.
+
+### Excluded Paths
+
+Package/install/credential, templates, workspaces, USB/elevation, release/publishing and real VHDX mutation.
+
+### Contract and Documentation
+
+Implement read-only preview, same-user single-use execute grant, truthful estimate kind, fixed method/privilege outcomes and restart recovery result.
+
+### Implementation Scope
+
+Remove Core compaction calls and UI-side what-if/confirmation authority. No caller path, method, elevation flag, script or arbitrary process input.
+
+### Test Scope
+
+Preview no-side-effect, token/fingerprint/replay/expiry, privilege/state drift, result parsing and DiskTab routing/estimate-display tests.
+
+### Acceptance Criteria
+
+- Preview never represents current size as reclaimable size.
+- Execute accepts only a token and preserves prior running state or reports recovery outcome.
+- DiskTab has no direct lifecycle/disk execution path.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Compact|FullyQualifiedName~PowerShellModuleClient|FullyQualifiedName~WorkspaceBridgeProtocol"
+pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Unit
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+One accepted compaction module/presentation-client migration slice.
+
+### Out of Scope
+
+Production VHDX/privilege UAT and all unrelated lifecycle capabilities.
 
 ## Slice S06: Platform-integrated command parity
 

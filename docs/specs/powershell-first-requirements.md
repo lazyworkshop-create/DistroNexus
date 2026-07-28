@@ -71,6 +71,12 @@ The public module must expose the supported instance list/refresh, start/stop, i
 
 Acceptance: refresh is an explicitly non-mutating read whose disk-size behavior is bounded for stopped instances; start behavior states whether keep-alive was requested and established; every destructive lifecycle or compaction command honors `ShouldProcess` even with `-Force`; and the desktop has no direct lifecycle or disk-service execution path.
 
+### FR-004D Path-bearing lifecycle, secret, and compaction safety
+
+Path-bearing lifecycle operations must use local, user-approved instance roots only. The module may accept a bounded input path only at preview or verified-source acquisition; Core is the sole authority for canonicalization, reparse-point rejection, target reservation, free-space/collision checks, staging, and immediate pre-execution revalidation. Install package acquisition is an explicit, separate module operation from instance creation. Passwords and credential changes must use a secret-safe parameter transport and never occur in generated script text, logs, public results, errors, or Desktop durable state. Compaction must use a reviewed, single-use token and must not present current VHDX size as an estimated saving.
+
+Acceptance: all remaining lifecycle and disk mutations execute a same-user, short-lived, single-use reviewed token; no Core fallback executes raw WSL after module/Bridge failure; package acquisition and install have independent consent/cancellation outcomes; no supplied secret is observable in diagnostics or process arguments; and WPF performs no path or archive mutation beyond collecting user input and rendering sanitized results.
+
 ### FR-005 WPF presentation-only behavior
 
 The desktop client may own visual state, rendering, navigation, input dialogs, and user-initiated presentation actions such as opening a returned local result in the shell. It must not create, delete, edit, validate-for-write, download, configure, or execute product business state independently.
