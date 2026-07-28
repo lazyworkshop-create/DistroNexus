@@ -122,6 +122,69 @@ public sealed class WorkspaceBridgeProtocolTests
     }
 
     [Fact]
+    public async Task CatalogSource_RoutesCoverEveryManagerOperationWithTypedPayloads()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+
+        var defaults = await bridge.SendAsync("catalog-source.defaults.get.v1");
+        Assert.True(defaults.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal(2, defaults.GetProperty("Value").GetArrayLength());
+
+        var initial = await bridge.SendAsync("catalog-source.list.v1");
+        Assert.True(initial.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal(0, initial.GetProperty("Value").GetArrayLength());
+
+        var addPayload = JsonDocument.Parse("""{"Name":"Test source","Url":"https://example.test/catalog.json","Description":"Test-only","IsActive":true}""").RootElement.Clone();
+        var added = await bridge.SendAsync("catalog-source.add.v1", payload: addPayload);
+        Assert.True(added.GetProperty("Succeeded").GetBoolean());
+        var sourceId = added.GetProperty("Value").GetProperty("Id").GetString();
+        Assert.False(string.IsNullOrWhiteSpace(sourceId));
+
+        var updatePayload = JsonDocument.Parse($$"""{"SourceId":"{{sourceId}}","Name":"Updated source","Url":"https://example.test/updated.json","Description":"Updated","IsActive":true}""").RootElement.Clone();
+        var updated = await bridge.SendAsync("catalog-source.update.v1", payload: updatePayload);
+        Assert.True(updated.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("Updated source", updated.GetProperty("Value").GetProperty("Name").GetString());
+
+        var active = await bridge.SendAsync("catalog-source.active.set.v1", payload: JsonDocument.Parse($$"""{"SourceId":"{{sourceId}}","IsActive":false}""").RootElement.Clone());
+        Assert.True(active.GetProperty("Succeeded").GetBoolean());
+        Assert.True(active.GetProperty("Value").GetBoolean());
+
+        var reordered = await bridge.SendAsync("catalog-source.reorder.v1", payload: JsonDocument.Parse($$"""{"SourceIds":["{{sourceId}}"]}""").RootElement.Clone());
+        Assert.True(reordered.GetProperty("Succeeded").GetBoolean());
+        Assert.True(reordered.GetProperty("Value").GetBoolean());
+
+        var removed = await bridge.SendAsync("catalog-source.remove.v1", payload: JsonDocument.Parse($$"""{"SourceId":"{{sourceId}}"}""").RootElement.Clone());
+        Assert.True(removed.GetProperty("Succeeded").GetBoolean());
+        Assert.True(removed.GetProperty("Value").GetBoolean());
+
+        var reset = await bridge.SendAsync("catalog-source.defaults.reset.v1");
+        Assert.True(reset.GetProperty("Succeeded").GetBoolean());
+        Assert.True(reset.GetProperty("Value").GetBoolean());
+    }
+
+    [Fact]
+    public async Task CatalogSource_RoutesRejectMalformedOrGenericPayloadsBeforeExecution()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+
+        var listWithPayload = await bridge.SendAsync("catalog-source.list.v1", payload: JsonDocument.Parse("{}").RootElement.Clone());
+        var malformedAdd = await bridge.SendAsync("catalog-source.add.v1", payload: JsonDocument.Parse("""{"Name":"","Url":"","Script":"Get-ChildItem"}""").RootElement.Clone());
+        var incompleteUpdate = await bridge.SendAsync("catalog-source.update.v1", payload: JsonDocument.Parse("""{"SourceId":"source-1","IsActive":true}""").RootElement.Clone());
+        var blankUpdate = await bridge.SendAsync("catalog-source.update.v1", payload: JsonDocument.Parse("""{"SourceId":"source-1","Name":"","Url":"","IsActive":true}""").RootElement.Clone());
+        var malformedReorder = await bridge.SendAsync("catalog-source.reorder.v1", payload: JsonDocument.Parse("""{"SourceIds":[],"Operation":"settings.save.v1"}""").RootElement.Clone());
+        var test = await bridge.SendAsync("catalog-source.test.v1", payload: JsonDocument.Parse("""{"Url":""}""").RootElement.Clone());
+
+        Assert.False(listWithPayload.GetProperty("Succeeded").GetBoolean());
+        Assert.False(malformedAdd.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("Workspace.Bridge.Invalid", malformedAdd.GetProperty("ErrorCode").GetString());
+        Assert.False(incompleteUpdate.GetProperty("Succeeded").GetBoolean());
+        Assert.False(blankUpdate.GetProperty("Succeeded").GetBoolean());
+        Assert.False(malformedReorder.GetProperty("Succeeded").GetBoolean());
+        Assert.False(test.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("Workspace.Bridge.Invalid", test.GetProperty("ErrorCode").GetString());
+    }
+
+    [Fact]
     public async Task HealthScan_UsesConcreteCoreChecksForEveryAdvertisedCategory()
     {
         await using var bridge = await BridgeProcess.StartAsync();

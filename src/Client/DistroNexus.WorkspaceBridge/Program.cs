@@ -23,6 +23,7 @@ var monitoring = new MonitoringService(processes);
 var applicationRoot = root ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DistroNexus");
 var bridgePowerShell = new BridgeReadOnlyPowerShellService();
 var settings = new SettingsService(NullLogger<SettingsService>.Instance, Path.Combine(applicationRoot, "settings.json"));
+var catalogSources = new CatalogSourceManager(settings, new HttpClient(), NullLogger<CatalogSourceManager>.Instance);
 var globalConfiguration = new WslConfigService(NullLogger<WslConfigService>.Instance, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
 var backups = new BackupService(bridgePowerShell, NullLogger<BackupService>.Instance, applicationRoot);
 var templates = new TemplateService(NullLogger<TemplateService>.Instance, settings, bridgePowerShell, new HttpClient());
@@ -141,6 +142,15 @@ while ((line = Console.ReadLine()) is not null)
             "settings.get.v1" => GetSettings(request),
             "settings.save.v1" => SaveSettings(request),
             "settings.reset.v1" => ResetSettings(request),
+            "catalog-source.list.v1" => await GetCatalogSourcesAsync(request),
+            "catalog-source.add.v1" => await AddCatalogSourceAsync(request),
+            "catalog-source.update.v1" => await UpdateCatalogSourceAsync(request),
+            "catalog-source.remove.v1" => await RemoveCatalogSourceAsync(request),
+            "catalog-source.test.v1" => await TestCatalogSourceAsync(request),
+            "catalog-source.active.set.v1" => await SetCatalogSourceActiveAsync(request),
+            "catalog-source.reorder.v1" => await ReorderCatalogSourcesAsync(request),
+            "catalog-source.defaults.get.v1" => GetDefaultCatalogSources(request),
+            "catalog-source.defaults.reset.v1" => await ResetCatalogSourcesAsync(request),
             _ => throw new ArgumentException("Bridge operation is unsupported.")
         };
         response = new(true, value, null, null);
@@ -180,6 +190,95 @@ GlobalSettings ResetSettings(BridgeRequest request)
     RequireNoPayload(request, "Settings reset does not accept a payload.");
     settings.ResetSettings();
     return settings.LoadSettings();
+}
+
+async Task<List<CatalogSource>> GetCatalogSourcesAsync(BridgeRequest request)
+{
+    RequireNoPayload(request, "Catalog source list does not accept a payload.");
+    return await catalogSources.GetSourcesAsync();
+}
+
+async Task<CatalogSource> AddCatalogSourceAsync(BridgeRequest request)
+{
+    var payload = DeserializeCatalogSourcePayload<CatalogSourceAddPayload>(request, "Catalog source add payload is required.");
+    ValidateCatalogSourceDetails(payload.Name, payload.Url);
+    return await catalogSources.AddSourceAsync(new CatalogSource
+    {
+        Name = payload.Name,
+        Url = payload.Url,
+        Description = payload.Description ?? string.Empty,
+        IsActive = payload.IsActive
+    });
+}
+
+async Task<CatalogSource> UpdateCatalogSourceAsync(BridgeRequest request)
+{
+    var payload = DeserializeCatalogSourcePayload<CatalogSourceUpdatePayload>(request, "Catalog source update payload is required.");
+    if (string.IsNullOrWhiteSpace(payload.SourceId))
+        throw new ArgumentException("Catalog source id is required.");
+    ValidateCatalogSourceDetails(payload.Name, payload.Url);
+    return await catalogSources.UpdateSourceAsync(new CatalogSource
+    {
+        Id = payload.SourceId,
+        Name = payload.Name,
+        Url = payload.Url,
+        Description = payload.Description ?? string.Empty,
+        IsActive = payload.IsActive
+    });
+}
+
+async Task<bool> RemoveCatalogSourceAsync(BridgeRequest request) =>
+    await catalogSources.RemoveSourceAsync(DeserializeCatalogSourcePayload<CatalogSourceIdPayload>(request, "Catalog source remove payload is required.").SourceId);
+
+async Task<bool> TestCatalogSourceAsync(BridgeRequest request) =>
+    await TestCatalogSourceUrlAsync(request);
+
+async Task<bool> TestCatalogSourceUrlAsync(BridgeRequest request)
+{
+    var payload = DeserializeCatalogSourcePayload<CatalogSourceTestPayload>(request, "Catalog source test payload is required.");
+    ValidateCatalogSourceUrl(payload.Url);
+    return await catalogSources.TestSourceAsync(payload.Url);
+}
+
+async Task<bool> SetCatalogSourceActiveAsync(BridgeRequest request)
+{
+    var payload = DeserializeCatalogSourcePayload<CatalogSourceActivePayload>(request, "Catalog source active-state payload is required.");
+    return await catalogSources.SetSourceActiveAsync(payload.SourceId, payload.IsActive);
+}
+
+async Task<bool> ReorderCatalogSourcesAsync(BridgeRequest request) =>
+    await catalogSources.ReorderSourcesAsync(DeserializeCatalogSourcePayload<CatalogSourceReorderPayload>(request, "Catalog source reorder payload is required.").SourceIds);
+
+List<CatalogSource> GetDefaultCatalogSources(BridgeRequest request)
+{
+    RequireNoPayload(request, "Catalog source defaults do not accept a payload.");
+    return catalogSources.GetDefaultSources();
+}
+
+async Task<bool> ResetCatalogSourcesAsync(BridgeRequest request)
+{
+    RequireNoPayload(request, "Catalog source reset does not accept a payload.");
+    return await catalogSources.ResetToDefaultsAsync();
+}
+
+T DeserializeCatalogSourcePayload<T>(BridgeRequest request, string missingPayloadMessage)
+{
+    return JsonSerializer.Deserialize<T>(request.Payload?.GetRawText() ?? string.Empty,
+        new JsonSerializerOptions(options) { UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow })
+        ?? throw new ArgumentException(missingPayloadMessage);
+}
+
+static void ValidateCatalogSourceDetails(string? name, string? url)
+{
+    if (string.IsNullOrWhiteSpace(name))
+        throw new ArgumentException("Catalog source name is required.");
+    ValidateCatalogSourceUrl(url);
+}
+
+static void ValidateCatalogSourceUrl(string? url)
+{
+    if (string.IsNullOrWhiteSpace(url))
+        throw new ArgumentException("Catalog source URL is required.");
 }
 
 static void RequireNoPayload(BridgeRequest request, string message)
@@ -310,6 +409,12 @@ public sealed record BridgeRequest(string Operation, Guid? Id, JsonElement? Payl
 public sealed record InstanceNamePayload(string Name);
 public sealed record InstanceListPayload(bool IncludeRelease = false, bool IncludeUser = false, bool SkipDiskSize = false);
 public sealed record SettingsSavePayload(GlobalSettings Settings);
+public sealed record CatalogSourceAddPayload(string Name, string Url, string? Description, bool IsActive);
+public sealed record CatalogSourceUpdatePayload(string SourceId, string Name, string Url, string? Description, bool IsActive);
+public sealed record CatalogSourceIdPayload(string SourceId);
+public sealed record CatalogSourceTestPayload(string Url);
+public sealed record CatalogSourceActivePayload(string SourceId, bool IsActive);
+public sealed record CatalogSourceReorderPayload(List<string> SourceIds);
 public sealed record PodmanUnitPayload(string InstanceName, PodmanUserUnit Unit, SystemdAction Action);
 public sealed record PodmanConnectionPayload(string InstanceName, string Name, string Endpoint);
 public sealed record PodmanStatusPayload(string InstanceName);

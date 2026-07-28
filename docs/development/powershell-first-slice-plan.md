@@ -12,7 +12,7 @@
 
 ## Dependency Order
 
-S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S05 -> S06 -> S07 -> S08
+S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S05 -> S06 -> S07 -> S08
 
 ## Slice S01: Verified module contract and migration baseline
 
@@ -482,6 +482,65 @@ Typed settings module-client extension and the named settings UI migration.
 ### Out of Scope
 
 Wizard defaults, legacy install wizard, and bootstrap lifecycle redesign.
+
+## Slice S13: Catalog source bridge-backed module contract
+
+### Status
+
+Committed
+
+### Objective
+
+Automation can list current/default sources, add, update, remove, test, enable, reorder, and reset catalog sources through fixed PowerShell commands backed by `ICatalogSourceManager` bridge operations.
+
+### Sources
+
+FR-001 through FR-007; `ICatalogSourceManager.cs`; `CatalogSourceManager.cs`; `SourceManagerViewModel.cs`; settings/catalog evidence inventory.
+
+### Dependencies
+
+S11.
+
+### Allowed Paths
+
+`src/Client/DistroNexus.WorkspaceBridge/Program.cs`, `src/PowerShell/DistroNexus.psd1`, catalog-source public command scripts, focused WorkspaceBridge xUnit tests, focused PowerShell Pester tests, plan.
+
+### Excluded Paths
+
+Desktop consumers, `CatalogSourceManager`/settings schema, `CatalogService`/package/cache services, private Config scripts, existing package commands, release/publishing surfaces.
+
+### Contract and Documentation
+
+Define capability-specific versioned source operations and typed payloads. Source mutations use modeled identifiers/URLs/order and `ShouldProcess`; no raw settings JSON, arbitrary URL command, script, or generic bridge operation is accepted.
+
+### Implementation Scope
+
+Compose `ICatalogSourceManager` in bridge and expose fixed list/defaults/add/update/remove/test/active/reorder/reset routes. Add matching exported command family while retaining manager validation and source persistence semantics.
+
+### Test Scope
+
+Bridge success/invalid payload/error tests; command mapping, validation, `WhatIf`/decline tests; manifest/export contract verification.
+
+### Acceptance Criteria
+
+- Every `ICatalogSourceManager` operation has a fixed exported command and bridge operation.
+- Source mutations do no bridge work under `WhatIf` or declined confirmation.
+- No generic configuration/script bridge surface is introduced.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~WorkspaceBridgeProtocol|FullyQualifiedName~CatalogSource"
+pwsh -NoProfile -Command "Invoke-Pester -Path tests/PowerShell/Unit/Public"
+```
+
+### Commit Boundary
+
+Catalog source module contract and focused tests.
+
+### Out of Scope
+
+Desktop source-manager migration, catalog refresh/load/search/package/cache behavior, and source-to-catalog refresh integration.
 
 ## Slice S05: Network, systemd, firewall, recovery, health, and diagnostics command parity
 
