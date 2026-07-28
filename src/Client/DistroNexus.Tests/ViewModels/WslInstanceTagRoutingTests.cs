@@ -1,7 +1,10 @@
 using System.Reflection;
 using System.Reflection.Emit;
 using DistroNexus.Core.Interfaces;
+using DistroNexus.Core.Models;
 using DistroNexus.Desktop.ViewModels;
+using Microsoft.Extensions.Logging;
+using Moq;
 
 namespace DistroNexus.Tests.ViewModels;
 
@@ -45,6 +48,71 @@ public sealed class WslInstanceTagRoutingTests
 
         Assert.Contains(moduleMethod, CalledMethodNames(moveNext));
     }
+
+    [Theory]
+    [InlineData("StopAsync")]
+    [InlineData("RemoveAsync")]
+    public void ConfirmationOperations_GetSettingsThroughTheTypedModuleClient(string operation)
+    {
+        var stateMachine = typeof(WslInstanceViewModel)
+            .GetNestedTypes(BindingFlags.NonPublic)
+            .Single(type => type.Name.StartsWith($"<{operation}>", StringComparison.Ordinal));
+        var moveNext = stateMachine.GetMethod("MoveNext", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+        Assert.Contains(nameof(IPowerShellModuleClient.GetSettingsAsync), CalledMethodNames(moveNext));
+    }
+
+    [Fact]
+    public void NamedSettingsPresentationTypes_DoNotReferenceISettingsService()
+    {
+        var namedTypes = new[] { typeof(MainViewModel), typeof(WslInstanceViewModel), typeof(SettingsViewModel) };
+
+        Assert.All(namedTypes, type => Assert.DoesNotContain(type.GetFields(BindingFlags.Instance | BindingFlags.NonPublic),
+            field => field.FieldType == typeof(ISettingsService)));
+    }
+
+    [Fact]
+    public async Task InitializeAsync_LoadsUserPreferencesThroughTheModuleClient()
+    {
+        var moduleClient = new Mock<IPowerShellModuleClient>();
+        moduleClient.Setup(client => client.GetSettingsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GlobalSettings { Theme = "Light", Language = "zh-CN" });
+        var viewModel = NewMainViewModel(moduleClient.Object);
+
+        await viewModel.InitializeAsync();
+
+        Assert.Equal("Light", viewModel.CurrentTheme);
+        Assert.Equal("zh-CN", viewModel.CurrentLanguage);
+        moduleClient.Verify(client => client.GetSettingsAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task LoadInstancesCommand_LoadsTheDefaultInstancePreferenceThroughTheModuleClient()
+    {
+        var moduleClient = new Mock<IPowerShellModuleClient>();
+        moduleClient.Setup(client => client.GetInstancesAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        moduleClient.Setup(client => client.GetSettingsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GlobalSettings { DefaultDistributionId = "Ubuntu" });
+        var viewModel = NewMainViewModel(moduleClient.Object);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => viewModel.LoadInstancesCommand.ExecuteAsync(null));
+
+        moduleClient.Verify(client => client.GetInstancesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        moduleClient.Verify(client => client.GetSettingsAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    private static MainViewModel NewMainViewModel(IPowerShellModuleClient moduleClient) => new(
+        Mock.Of<IWslManagerService>(),
+        Mock.Of<INavigationService>(),
+        Mock.Of<ITerminalService>(),
+        Mock.Of<IDownloadTaskManager>(),
+        Mock.Of<IServiceProvider>(),
+        Mock.Of<ILogger<MainViewModel>>(),
+        Mock.Of<IWslEventWatcher>(),
+        moduleClient,
+        Mock.Of<IBackupService>(),
+        Mock.Of<IDockerIntegrationService>(),
+        Mock.Of<IDialogService>());
 
     private static IEnumerable<string> CalledMethodNames(MethodInfo method)
     {

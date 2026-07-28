@@ -27,7 +27,6 @@ namespace DistroNexus.Desktop.ViewModels;
 public partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly IWslManagerService _wslManager;
-    private readonly ISettingsService _settingsService;
     private readonly INavigationService _navigationService;
     private readonly ITerminalService _terminalService;
     private readonly IDownloadTaskManager _downloadTaskManager;
@@ -105,7 +104,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     public MainViewModel(
         IWslManagerService wslManager,
-        ISettingsService settingsService,
         INavigationService navigationService,
         ITerminalService terminalService,
         IDownloadTaskManager downloadTaskManager,
@@ -118,7 +116,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
         IDialogService dialogService)
     {
         _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
-        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
         _terminalService = terminalService ?? throw new ArgumentNullException(nameof(terminalService));
         _downloadTaskManager = downloadTaskManager ?? throw new ArgumentNullException(nameof(downloadTaskManager));
@@ -205,11 +202,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Loads user preferences from settings.
     /// </summary>
-    private Task LoadUserPreferencesAsync()
+    private async Task LoadUserPreferencesAsync()
     {
         try
         {
-            var settings = _settingsService.LoadSettings();
+            var settings = await _moduleClient.GetSettingsAsync();
             CurrentTheme = settings.Theme ?? "Dark";
             CurrentLanguage = settings.Language ?? "en-US";
 
@@ -220,8 +217,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             _logger.LogWarning(ex, "Failed to load user preferences, using defaults");
         }
-
-        return Task.CompletedTask;
     }
 
     private static readonly System.Text.RegularExpressions.Regex _errorCodePattern =
@@ -290,13 +285,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
             using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
             var instances = await _moduleClient.GetInstancesAsync(combinedCts.Token);
+            var settings = await _moduleClient.GetSettingsAsync(combinedCts.Token);
             
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 Instances.Clear();
                 foreach (var instance in instances)
                 {
-                    var vm = new WslInstanceViewModel(instance, _wslManager, _terminalService, _settingsService, _logger, _moduleClient, _backupService, _serviceProvider);
+                    var vm = new WslInstanceViewModel(instance, _wslManager, _terminalService, _logger, _moduleClient, _backupService, _serviceProvider);
                     vm.RefreshRequested += (s, e) => _ = RefreshAsync();
                     vm.TagsChanged += (s, e) => _ = RefreshAvailableTagsAsync();
                     Instances.Add(vm);
@@ -305,7 +301,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 // Check for default distro setting and select it if no selection exists
                 if (SelectedInstance == null)
                 {
-                    var settings = _settingsService.LoadSettings();
                     if (!string.IsNullOrEmpty(settings.DefaultDistributionId))
                     {
                         var defaultInstance = Instances.FirstOrDefault(i => i.Name == settings.DefaultDistributionId);
@@ -753,7 +748,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// Toggles between light and dark theme.
     /// </summary>
     [RelayCommand]
-    private void ToggleTheme()
+    private async Task ToggleThemeAsync()
     {
         try
         {
@@ -767,9 +762,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             app.ApplyThemeFromSettings(CurrentTheme);
 
             // Save theme preference
-            var settings = _settingsService.LoadSettings();
-            settings.Theme = CurrentTheme;
-            _settingsService.SaveSettings(settings);
+            await _moduleClient.SaveSettingsAsync(new DistroNexusSettingsUpdate(Theme: CurrentTheme));
 
             StatusMessage = string.Format(Properties.Resources.StatusThemeChanged, CurrentTheme);
             _logger.LogInformation("Theme changed to {Theme}", CurrentTheme);
@@ -785,7 +778,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// Toggles between English and Chinese language.
     /// </summary>
     [RelayCommand]
-    private void ToggleLanguage()
+    private async Task ToggleLanguageAsync()
     {
         try
         {
@@ -801,9 +794,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             Thread.CurrentThread.CurrentUICulture = culture;
 
             // Save language preference
-            var settings = _settingsService.LoadSettings();
-            settings.Language = CurrentLanguage;
-            _settingsService.SaveSettings(settings);
+            await _moduleClient.SaveSettingsAsync(new DistroNexusSettingsUpdate(Language: CurrentLanguage));
 
             StatusMessage = Properties.Resources.LanguageChangedTitle;
 

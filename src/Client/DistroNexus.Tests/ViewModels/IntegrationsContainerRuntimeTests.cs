@@ -162,6 +162,6 @@ public sealed class IntegrationsContainerRuntimeTests
         var docker = new Mock<IDockerIntegrationService>(); docker.Setup(x => x.IsDockerDesktopInstalledAsync(It.IsAny<CancellationToken>())).ReturnsAsync(false);
         var capabilities = new Mock<IPlatformCapabilityService>();
         capabilities.Setup(x => x.GetInstanceSnapshotAsync("Ubuntu", false, It.IsAny<CancellationToken>())).ReturnsAsync(new InstanceCapabilitySnapshot(new InstancePlatformFacts("Ubuntu", 2, null, null, systemdStatus == CapabilityStatus.Supported, systemdStatus == CapabilityStatus.Supported), new Dictionary<CapabilityId, CapabilityResult> { [CapabilityId.InstanceSystemd] = new(CapabilityId.InstanceSystemd, systemdStatus, "test", CapabilitySource.InstanceCli, DateTimeOffset.UtcNow) }, DateTimeOffset.UtcNow));
-        return new IntegrationsTabViewModel(new WslInstanceViewModel(new WslInstance { Name = "Ubuntu", State = "Running", Version = 2 }, Mock.Of<IWslManagerService>(), Mock.Of<ITerminalService>(), Mock.Of<ISettingsService>(), Mock.Of<ILogger>(), Mock.Of<IPowerShellModuleClient>(), Mock.Of<IBackupService>(), Mock.Of<IServiceProvider>()), docker.Object, dialogs, capabilities.Object, runtime);
+        return new IntegrationsTabViewModel(new WslInstanceViewModel(new WslInstance { Name = "Ubuntu", State = "Running", Version = 2 }, Mock.Of<IWslManagerService>(), Mock.Of<ITerminalService>(), Mock.Of<ILogger>(), Mock.Of<IPowerShellModuleClient>(), Mock.Of<IBackupService>(), Mock.Of<IServiceProvider>()), docker.Object, dialogs, capabilities.Object, runtime);
     }
 }

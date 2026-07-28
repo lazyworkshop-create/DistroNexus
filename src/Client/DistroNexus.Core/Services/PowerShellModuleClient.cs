@@ -17,6 +17,9 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string GetInstancesCommand = "Get-DistroNexusInstance";
     private const string StartInstanceCommand = "Start-DistroNexusInstance";
     private const string StopInstanceCommand = "Stop-DistroNexusInstance";
+    private const string GetSettingsCommand = "Get-DistroNexusSettings";
+    private const string SetSettingsCommand = "Set-DistroNexusSettings";
+    private const string ResetSettingsCommand = "Reset-DistroNexusSettings";
     private readonly IPowerShellService _powerShellService;
 
     public PowerShellModuleClient(IPowerShellService powerShellService)
@@ -113,6 +116,44 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
             ["NewName"] = newName
         }, cancellationToken);
 
+    /// <inheritdoc />
+    public async Task<GlobalSettings> GetSettingsAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(
+            GetSettingsCommand,
+            options: new ModuleCallOptions { ParseAsJson = true },
+            cancellationToken: cancellationToken);
+        if (!result.Success)
+        {
+            throw result.Exception ?? new InvalidOperationException(result.Error ?? "The DistroNexus module operation failed.");
+        }
+
+        if (string.IsNullOrWhiteSpace(result.Output))
+        {
+            return new GlobalSettings();
+        }
+
+        return JsonSerializer.Deserialize<GlobalSettings>(result.Output, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+            ?? new GlobalSettings();
+    }
+
+    /// <inheritdoc />
+    public async Task SaveSettingsAsync(DistroNexusSettingsUpdate settings, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        var parameters = SettingsParameters(settings);
+        if (parameters.Count == 0)
+        {
+            throw new ArgumentException("Specify at least one modeled settings field.", nameof(settings));
+        }
+
+        await ExecuteSettingsMutationAsync(SetSettingsCommand, parameters, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task ResetSettingsAsync(CancellationToken cancellationToken = default) =>
+        ExecuteSettingsMutationAsync(ResetSettingsCommand, null, cancellationToken);
+
     private async Task ExecuteTagMutationAsync(
         string command,
         Dictionary<string, object> parameters,
@@ -122,6 +163,48 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
         if (!result.Success)
         {
             throw result.Exception ?? new InvalidOperationException(result.Error ?? "The DistroNexus module operation failed.");
+        }
+    }
+
+    private async Task ExecuteSettingsMutationAsync(
+        string command,
+        Dictionary<string, object>? parameters,
+        CancellationToken cancellationToken)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(command, parameters, cancellationToken: cancellationToken);
+        if (!result.Success)
+        {
+            throw result.Exception ?? new InvalidOperationException(result.Error ?? "The DistroNexus module operation failed.");
+        }
+    }
+
+    private static Dictionary<string, object> SettingsParameters(DistroNexusSettingsUpdate settings)
+    {
+        var parameters = new Dictionary<string, object>();
+        Add("DefaultInstallPath", settings.DefaultInstallPath);
+        Add("PackageCachePath", settings.PackageCachePath);
+        Add("TerminalStartPath", settings.TerminalStartPath);
+        Add("DefaultWslVersion", settings.DefaultWslVersion);
+        Add("DefaultUsername", settings.DefaultUsername);
+        Add("DefaultDistributionId", settings.DefaultDistributionId);
+        Add("EnableLogging", settings.EnableLogging);
+        Add("LogPath", settings.LogPath);
+        Add("CheckUpdatesOnStartup", settings.CheckUpdatesOnStartup);
+        Add("CatalogUrl", settings.CatalogUrl);
+        Add("Theme", settings.Theme);
+        Add("Language", settings.Language);
+        Add("ShowConfirmationDialogs", settings.ShowConfirmationDialogs);
+        Add("MaxConcurrentDownloads", settings.MaxConcurrentDownloads);
+        Add("AutoRetryDownloads", settings.AutoRetryDownloads);
+        Add("MaxRetryAttempts", settings.MaxRetryAttempts);
+        Add("AutoSaveEnabled", settings.AutoSaveEnabled);
+        Add("AutoSaveInterval", settings.AutoSaveInterval);
+        if (settings.UpdatePowerShellModulePath) parameters["PowerShellModulePath"] = settings.PowerShellModulePath!;
+        return parameters;
+
+        void Add(string name, object? value)
+        {
+            if (value is not null) parameters[name] = value;
         }
     }
 

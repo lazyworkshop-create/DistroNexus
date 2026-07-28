@@ -189,7 +189,73 @@ public sealed class PowerShellModuleClientTests
     }
 
     [Fact]
-    public void Interface_ExposesOnlyTheRegisteredTypedTagOperations()
+    public async Task GetSettingsAsync_UsesTheFixedCmdletAndDeserializesModeledSettings()
+    {
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(service => service.ExecuteModuleCmdletAsync(
+                "Get-DistroNexusSettings", null, It.Is<ModuleCallOptions>(options => options.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Theme\":\"Dark\",\"DefaultWslVersion\":1}" });
+        var client = new PowerShellModuleClient(powerShell.Object);
+
+        var settings = await client.GetSettingsAsync();
+
+        Assert.Equal("Dark", settings.Theme);
+        Assert.Equal(1, settings.DefaultWslVersion);
+        powerShell.VerifyAll();
+    }
+
+    [Fact]
+    public async Task SaveSettingsAsync_SendsOnlyExplicitTypedFieldsToTheFixedCmdlet()
+    {
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(service => service.ExecuteModuleCmdletAsync(
+                "Set-DistroNexusSettings",
+                It.Is<Dictionary<string, object>>(parameters => parameters.Count == 2 &&
+                    (string)parameters["Theme"] == "Light" && (bool)parameters["ShowConfirmationDialogs"] == false),
+                null,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0 });
+        var client = new PowerShellModuleClient(powerShell.Object);
+
+        await client.SaveSettingsAsync(new DistroNexusSettingsUpdate(Theme: "Light", ShowConfirmationDialogs: false));
+
+        powerShell.VerifyAll();
+    }
+
+    [Fact]
+    public async Task SaveSettingsAsync_CanExplicitlyClearTheModulePath()
+    {
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(service => service.ExecuteModuleCmdletAsync(
+                "Set-DistroNexusSettings",
+                It.Is<Dictionary<string, object>>(parameters => parameters.Count == 1 &&
+                    parameters.ContainsKey("PowerShellModulePath") && parameters["PowerShellModulePath"] == null),
+                null,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0 });
+        var client = new PowerShellModuleClient(powerShell.Object);
+
+        await client.SaveSettingsAsync(new DistroNexusSettingsUpdate(PowerShellModulePath: null, UpdatePowerShellModulePath: true));
+
+        powerShell.VerifyAll();
+    }
+
+    [Fact]
+    public async Task ResetSettingsAsync_UsesTheFixedCmdletAndPreservesCancellation()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(service => service.ExecuteModuleCmdletAsync(
+                "Reset-DistroNexusSettings", null, null, cancellation.Token))
+            .Returns(Task.FromCanceled<PowerShellScriptResult>(cancellation.Token));
+        var client = new PowerShellModuleClient(powerShell.Object);
+
+        await Assert.ThrowsAsync<TaskCanceledException>(() => client.ResetSettingsAsync(cancellation.Token));
+    }
+
+    [Fact]
+    public void Interface_ExposesOnlyTheRegisteredTypedOperations()
     {
         var methods = typeof(IPowerShellModuleClient).GetMethods();
 
@@ -198,8 +264,11 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.AddInstanceTagAsync),
                 nameof(IPowerShellModuleClient.GetInstancesAsync),
                 nameof(IPowerShellModuleClient.GetInstanceTagsAsync),
+                nameof(IPowerShellModuleClient.GetSettingsAsync),
                 nameof(IPowerShellModuleClient.RemoveInstanceTagAsync),
                 nameof(IPowerShellModuleClient.RenameInstanceTagsAsync),
+                nameof(IPowerShellModuleClient.ResetSettingsAsync),
+                nameof(IPowerShellModuleClient.SaveSettingsAsync),
                 nameof(IPowerShellModuleClient.SetInstanceTagsAsync),
                 nameof(IPowerShellModuleClient.StartInstanceAsync),
                 nameof(IPowerShellModuleClient.StopInstanceAsync)

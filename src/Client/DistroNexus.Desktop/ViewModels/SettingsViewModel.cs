@@ -19,7 +19,7 @@ namespace DistroNexus.Desktop.ViewModels;
 /// </summary>
 public partial class SettingsViewModel : ObservableObject
 {
-    private readonly ISettingsService _settingsService;
+    private readonly IPowerShellModuleClient _moduleClient;
     private readonly ICatalogService _catalogService;
     private readonly ITerminalService _terminalService;
     private readonly IStoreComplianceModeService _storeComplianceModeService;
@@ -124,7 +124,6 @@ public partial class SettingsViewModel : ObservableObject
     public ManageTagsViewModel ManageTags { get; }
 
     public SettingsViewModel(
-        ISettingsService settingsService, 
         ICatalogService catalogService,
         ITerminalService terminalService,
         IStoreComplianceModeService storeComplianceModeService,
@@ -136,7 +135,7 @@ public partial class SettingsViewModel : ObservableObject
         IWslConfigurationService configurationService,
         IPlatformCapabilityService capabilityService)
     {
-        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
         _terminalService = terminalService ?? throw new ArgumentNullException(nameof(terminalService));
         _storeComplianceModeService = storeComplianceModeService ?? throw new ArgumentNullException(nameof(storeComplianceModeService));
@@ -168,7 +167,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             _logger.LogInformation("Loading settings");
 
-            var settings = _settingsService.LoadSettings();
+            var settings = await _moduleClient.GetSettingsAsync();
             var isStoreComplianceMode = _storeComplianceModeService.IsStoreComplianceModeEnabled();
 
             DefaultInstallPath = settings.DefaultInstallPath;
@@ -236,30 +235,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             _logger.LogInformation("Saving settings");
 
-            var settings = new GlobalSettings
-            {
-                DefaultInstallPath = DefaultInstallPath,
-                PackageCachePath = PackageCachePath,
-                TerminalStartPath = TerminalStartPath,
-                DefaultWslVersion = DefaultWslVersion,
-                DefaultUsername = DefaultUsername,
-                DefaultDistributionId = DefaultDistribution?.Id ?? string.Empty,
-                EnableLogging = EnableLogging,
-                LogPath = LogPath,
-                CheckUpdatesOnStartup = IsUpdateCheckOnStartupAvailable && CheckUpdatesOnStartup,
-                CatalogUrl = CatalogUrl,
-                Theme = Theme,
-                Language = Language,
-                ShowConfirmationDialogs = ShowConfirmationDialogs,
-                MaxConcurrentDownloads = MaxConcurrentDownloads,
-                AutoRetryDownloads = AutoRetryDownloads,
-                MaxRetryAttempts = MaxRetryAttempts,
-                AutoSaveEnabled = AutoSaveEnabled,
-                AutoSaveInterval = AutoSaveInterval,
-                PowerShellModulePath = PowerShellModulePath
-            };
-
-            _settingsService.SaveSettings(settings);
+            await _moduleClient.SaveSettingsAsync(CreateSettingsUpdate(includePowerShellModulePath: true));
 
             // Apply theme immediately
             await ApplyThemeAsync(Theme);
@@ -309,7 +285,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             _logger.LogInformation("Resetting settings to defaults");
 
-            _settingsService.ResetSettings();
+            await _moduleClient.ResetSettingsAsync();
             await LoadSettingsAsync();
 
             await ShowAlert(Properties.Resources.Success, Properties.Resources.StatusSettingsReset);
@@ -650,29 +626,7 @@ public partial class SettingsViewModel : ObservableObject
             {
                 _logger.LogInformation("Auto-saving settings");
                 
-                var settings = new GlobalSettings
-                {
-                    DefaultInstallPath = DefaultInstallPath,
-                    PackageCachePath = PackageCachePath,
-                    TerminalStartPath = TerminalStartPath,
-                    DefaultWslVersion = DefaultWslVersion,
-                    DefaultUsername = DefaultUsername,
-                    DefaultDistributionId = DefaultDistribution?.Id ?? string.Empty,
-                    EnableLogging = EnableLogging,
-                    LogPath = LogPath,
-                    CheckUpdatesOnStartup = IsUpdateCheckOnStartupAvailable && CheckUpdatesOnStartup,
-                    CatalogUrl = CatalogUrl,
-                    Theme = Theme,
-                    Language = Language,
-                    ShowConfirmationDialogs = ShowConfirmationDialogs,
-                    MaxConcurrentDownloads = MaxConcurrentDownloads,
-                    AutoRetryDownloads = AutoRetryDownloads,
-                    MaxRetryAttempts = MaxRetryAttempts,
-                    AutoSaveEnabled = AutoSaveEnabled,
-                    AutoSaveInterval = AutoSaveInterval
-                };
-
-                _settingsService.SaveSettings(settings);
+                await _moduleClient.SaveSettingsAsync(CreateSettingsUpdate(includePowerShellModulePath: false));
 
                 IsDirty = false;
                 AutoSaveStatus = $"Last auto-saved: {DateTime.Now:HH:mm:ss}";
@@ -696,4 +650,26 @@ public partial class SettingsViewModel : ObservableObject
         _autoSaveTimer?.Dispose();
         _autoSaveTimer = null;
     }
+
+    private DistroNexusSettingsUpdate CreateSettingsUpdate(bool includePowerShellModulePath) => new(
+        DefaultInstallPath,
+        PackageCachePath,
+        TerminalStartPath,
+        DefaultWslVersion,
+        DefaultUsername,
+        DefaultDistribution?.Id ?? string.Empty,
+        EnableLogging,
+        LogPath,
+        IsUpdateCheckOnStartupAvailable && CheckUpdatesOnStartup,
+        CatalogUrl,
+        Theme,
+        Language,
+        ShowConfirmationDialogs,
+        MaxConcurrentDownloads,
+        AutoRetryDownloads,
+        MaxRetryAttempts,
+        AutoSaveEnabled,
+        AutoSaveInterval,
+        PowerShellModulePath,
+        includePowerShellModulePath);
 }

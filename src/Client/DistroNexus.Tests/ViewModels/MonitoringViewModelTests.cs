@@ -81,7 +81,7 @@ public sealed class MonitoringViewModelTests
         return new InstanceDetailViewModel(instance, Mock.Of<IWslManagerService>(), Mock.Of<IDockerIntegrationService>(), Mock.Of<INetworkService>(), Mock.Of<IBackupService>(), Mock.Of<IRecoveryPointService>(), Mock.Of<IWslConfigService>(), dialogs.Object, Mock.Of<IDistributionConfigurationService>(), Mock.Of<IPlatformCapabilityService>(), Mock.Of<ISystemdService>(), Mock.Of<INetworkDiagnosticsService>(), Mock.Of<IFirewallOperationBroker>(), Mock.Of<INetworkConfigurationService>(), Mock.Of<INetworkStatusAdapter>(), Mock.Of<IBrowserLauncher>(), monitoring);
     }
 
-    private static WslInstanceViewModel NewInstance() => new(new WslInstance { Name = "Ubuntu", State = "Running", Version = 2 }, Mock.Of<IWslManagerService>(), Mock.Of<ITerminalService>(), Mock.Of<ISettingsService>(), Mock.Of<ILogger>(), Mock.Of<IPowerShellModuleClient>(), Mock.Of<IBackupService>(), Mock.Of<IServiceProvider>());
+    private static WslInstanceViewModel NewInstance() => new(new WslInstance { Name = "Ubuntu", State = "Running", Version = 2 }, Mock.Of<IWslManagerService>(), Mock.Of<ITerminalService>(), Mock.Of<ILogger>(), Mock.Of<IPowerShellModuleClient>(), Mock.Of<IBackupService>(), Mock.Of<IServiceProvider>());
 
     private static async Task WaitUntilAsync(Func<bool> condition, TimeSpan timeout)
     {

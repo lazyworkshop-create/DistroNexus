@@ -12,7 +12,7 @@
 
 ## Dependency Order
 
-S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S05 -> S06 -> S07 -> S08
+S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S05 -> S06 -> S07 -> S08
 
 ## Slice S01: Verified module contract and migration baseline
 
@@ -423,6 +423,65 @@ Typed global settings module contract and focused tests.
 ### Out of Scope
 
 WPF settings page migration, catalog/source/cache, and private Config-script consolidation.
+
+## Slice S12: Settings presentation-client migration
+
+### Status
+
+Committed
+
+### Objective
+
+The main settings UI, main-window preferences, and instance confirmation preference use fixed typed PowerShell settings operations instead of `ISettingsService`.
+
+### Sources
+
+FR-001, FR-004, FR-005, FR-006; S11; settings UI inventory; `SettingsViewModel`, `MainViewModel`, and `WslInstanceViewModel` evidence.
+
+### Dependencies
+
+S11.
+
+### Allowed Paths
+
+`src/Client/DistroNexus.Core/Interfaces/IPowerShellModuleClient.cs`, `src/Client/DistroNexus.Core/Services/PowerShellModuleClient.cs`, `src/Client/DistroNexus.Desktop/ViewModels/SettingsViewModel.cs`, `src/Client/DistroNexus.Desktop/ViewModels/MainViewModel.cs`, `src/Client/DistroNexus.Desktop/ViewModels/WslInstanceViewModel.cs`, `src/Client/DistroNexus.Desktop/App.xaml.cs`, directly impacted xUnit tests, plan.
+
+### Excluded Paths
+
+App bootstrap/module-path resolution, wizard settings defaults, legacy install wizard, PowerShell public commands, WorkspaceBridge, `SettingsService`/settings schema, catalog/source/package services, release/publishing surfaces.
+
+### Contract and Documentation
+
+Extend the closed client with typed get/save/reset settings methods that map solely to S11 commands. Document the intentional application-bootstrap exception: module path resolution precedes module client construction and remains an internal composition concern until a separate bootstrap design is approved.
+
+### Implementation Scope
+
+Remove direct `ISettingsService` dependencies/calls in the named view models. Preserve UI preference behavior, auto-save, confirmation decisions, cancellation and errors. Keep the service in app composition for bootstrap only.
+
+### Test Scope
+
+Fixed settings client mapping/partial update/reset/cancellation tests; named view-model load/save/reset/preference/confirmation routing tests; impacted constructor fixtures compile.
+
+### Acceptance Criteria
+
+- SettingsViewModel, MainViewModel, and WslInstanceViewModel contain no direct `ISettingsService` calls.
+- Typed settings client maps only to Get/Set/Reset-DistroNexusSettings and exposes no arbitrary command or JSON input.
+- App retains `ISettingsService` only for documented bootstrap/module-path resolution, not normal UI settings behavior.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~PowerShellModuleClient|FullyQualifiedName~Settings|FullyQualifiedName~ViewModel"
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+Typed settings module-client extension and the named settings UI migration.
+
+### Out of Scope
+
+Wizard defaults, legacy install wizard, and bootstrap lifecycle redesign.
 
 ## Slice S05: Network, systemd, firewall, recovery, health, and diagnostics command parity
 

@@ -34,9 +34,44 @@ public interface IPowerShellModuleClient
 
     /// <summary>Migrates tags to an instance's new name through the module contract.</summary>
     Task RenameInstanceTagsAsync(string oldName, string newName, CancellationToken cancellationToken = default);
+
+    /// <summary>Gets the modeled global settings through the module contract.</summary>
+    Task<GlobalSettings> GetSettingsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Applies the supplied modeled settings fields through the module contract.</summary>
+    Task SaveSettingsAsync(DistroNexusSettingsUpdate settings, CancellationToken cancellationToken = default);
+
+    /// <summary>Resets modeled global settings through the module contract.</summary>
+    Task ResetSettingsAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>
 /// Represents the stable module result for an instance tag query.
 /// </summary>
 public sealed record DistroNexusInstanceTagResult(string Name, IReadOnlyList<string> Tags);
+
+/// <summary>
+/// Represents the explicit subset of modeled global settings to update. A null member is not sent
+/// to the module, allowing presentation clients to make a typed partial update.
+/// </summary>
+public sealed record DistroNexusSettingsUpdate(
+    string? DefaultInstallPath = null,
+    string? PackageCachePath = null,
+    string? TerminalStartPath = null,
+    int? DefaultWslVersion = null,
+    string? DefaultUsername = null,
+    string? DefaultDistributionId = null,
+    bool? EnableLogging = null,
+    string? LogPath = null,
+    bool? CheckUpdatesOnStartup = null,
+    string? CatalogUrl = null,
+    string? Theme = null,
+    string? Language = null,
+    bool? ShowConfirmationDialogs = null,
+    int? MaxConcurrentDownloads = null,
+    bool? AutoRetryDownloads = null,
+    int? MaxRetryAttempts = null,
+    bool? AutoSaveEnabled = null,
+    int? AutoSaveInterval = null,
+    string? PowerShellModulePath = null,
+    bool UpdatePowerShellModulePath = false);

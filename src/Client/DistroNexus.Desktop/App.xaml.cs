@@ -343,8 +343,8 @@ public partial class App : System.Windows.Application
                 return;
             }
 
-            var settingsService = _host.Services.GetRequiredService<ISettingsService>();
-            var settings = settingsService.LoadSettings();
+            var moduleClient = _host.Services.GetRequiredService<IPowerShellModuleClient>();
+            var settings = await moduleClient.GetSettingsAsync();
 
             if (!settings.CheckUpdatesOnStartup)
             {

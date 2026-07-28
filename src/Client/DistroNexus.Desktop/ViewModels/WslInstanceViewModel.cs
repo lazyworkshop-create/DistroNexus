@@ -21,7 +21,6 @@ public partial class WslInstanceViewModel : ObservableObject
 {
     private readonly IWslManagerService _wslManager;
     private readonly ITerminalService _terminalService;
-    private readonly ISettingsService _settingsService;
     private readonly ILogger _logger;
     private readonly IPowerShellModuleClient _moduleClient;
     private readonly IBackupService _backupService;
@@ -107,7 +106,6 @@ public partial class WslInstanceViewModel : ObservableObject
         WslInstance instance,
         IWslManagerService wslManager,
         ITerminalService terminalService,
-        ISettingsService settingsService,
         ILogger logger,
         IPowerShellModuleClient moduleClient,
         IBackupService backupService,
@@ -116,7 +114,6 @@ public partial class WslInstanceViewModel : ObservableObject
         _instance = instance;
         _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
         _terminalService = terminalService ?? throw new ArgumentNullException(nameof(terminalService));
-        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
@@ -305,7 +302,7 @@ public partial class WslInstanceViewModel : ObservableObject
     {
         try
         {
-            var settings = _settingsService.LoadSettings();
+            var settings = await _moduleClient.GetSettingsAsync();
 
             if (settings.ShowConfirmationDialogs)
             {
@@ -350,7 +347,7 @@ public partial class WslInstanceViewModel : ObservableObject
     {
         if (IsBusy) return;
 
-        var settings = _settingsService.LoadSettings();
+        var settings = await _moduleClient.GetSettingsAsync();
 
         if (settings.ShowConfirmationDialogs)
         {
