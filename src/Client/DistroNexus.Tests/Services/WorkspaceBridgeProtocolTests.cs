@@ -452,6 +452,19 @@ public sealed class WorkspaceBridgeProtocolTests
         Assert.Equal(JsonValueKind.Null, retention.GetProperty("Value").GetProperty("Maximum").ValueKind);
     }
 
+    [Fact]
+    public async Task WslgRoutes_RejectUnknownPayloadsAndReturnRedactedGrantCodes()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        var unknown = await bridge.SendAsync("wslg.status.v1", payload: JsonDocument.Parse("""{"InstanceName":"Ubuntu","Unexpected":true}""").RootElement.Clone());
+        var forged = await bridge.SendAsync("wslg.launch.v1", payload: JsonDocument.Parse($$"""{"DiscoveryToken":"{{new string('a', 64)}}","ApplicationId":"forged"}""").RootElement.Clone());
+        Assert.False(unknown.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("Workspace.Bridge.Invalid", unknown.GetProperty("ErrorCode").GetString());
+        Assert.False(forged.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("Wslg.DiscoveryGrantInvalid", forged.GetProperty("ErrorCode").GetString());
+        Assert.Equal("Wslg.DiscoveryGrantInvalid", forged.GetProperty("ErrorMessage").GetString());
+    }
+
     private sealed class BridgeProcess : IAsyncDisposable
     {
         private readonly Process process;

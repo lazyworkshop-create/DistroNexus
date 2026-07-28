@@ -12,7 +12,7 @@
 
 ## Dependency Order
 
-S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S18 -> S19 -> S20 -> S21 -> S06 -> S07 -> S08
+S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S18 -> S19 -> S20 -> S21 -> S22 -> S06 -> S07 -> S08
 
 ## Slice S01: Verified module contract and migration baseline
 
@@ -1071,6 +1071,67 @@ One accepted container-runtime/Podman presentation-client migration slice.
 ### Out of Scope
 
 All uncontracted platform families and final Desktop-wide structural closure.
+
+## Slice S22: WSLg discovery-grant contract and presentation-client migration
+
+### Status
+
+Planned
+
+### Objective
+
+Make the exported WSLg commands, backed by a short-lived protected discovery grant, the sole execution path for the applications presentation surface.
+
+### Sources
+
+Requirements FR-001 and FR-003 through FR-007; `docs/specs/powershell-first-design.md` WSLg discovery-grant contract amendment; `docs/architecture/powershell-first-decision.md`.
+
+### Dependencies
+
+S21
+
+### Allowed Paths
+
+`src/Client/DistroNexus.Core/Models/WslgApplicationModels.cs`, `src/Client/DistroNexus.Core/Interfaces/IWslgApplicationService.cs`, `src/Client/DistroNexus.Core/Services/WslgApplicationService.cs`, a WSLg-specific Core discovery-grant store and its narrowly scoped test support, `src/Client/DistroNexus.WorkspaceBridge/Program.cs`, `src/PowerShell/Public/WslgCommands.ps1`, `src/PowerShell/DistroNexus.psd1`, `src/Client/DistroNexus.Core/Interfaces/IPowerShellModuleClient.cs`, `src/Client/DistroNexus.Core/Services/PowerShellModuleClient.cs`, `src/Client/DistroNexus.Desktop/ViewModels/ApplicationsViewModel.cs`, `src/Client/DistroNexus.Desktop/Views/ApplicationsPage.xaml`, `src/Client/DistroNexus.Desktop/App.xaml.cs`, focused WSLg/Core/Bridge/module-client/view-model/Pester tests, design, plan.
+
+### Excluded Paths
+
+Docker, containers, monitoring, USB, terminal/explorer, application update, arbitrary script or process execution, generic grant infrastructure, external WSLg UAT, release/publishing surfaces.
+
+### Contract and Documentation
+
+Define only `wslg.status.v1`, `wslg.discover.v1`, `wslg.launch.v1`, `wslg.reveal.v1`, and `wslg.pin.v1`. Discovery returns a sanitized `WslgDiscoveryResult` projection and a Core-issued short-lived opaque token. Actions accept only `DiscoveryToken`, `ApplicationId`, and (for pin) `Pinned`; they retain `ShouldProcess` and resolve the protected grant before Core revalidation. The direct application-object start parameter and unversioned UI routes are not used by the typed client.
+
+### Implementation Scope
+
+Implement the WSLg-specific protected discovery-grant store with expiry, bounded payloads, cross-process-safe access, stable redacted errors, and best-effort cleanup. Preserve Core capability gates, parser/path/icon limits, and read-before/read-after desktop-entry checks. Replace `ApplicationsViewModel` direct `IWslgApplicationService` usage with typed module-client calls, keep only visual state locally, clear a stale grant after refresh/unavailability/action failure, and remove the raw launch-command copy action.
+
+### Test Scope
+
+Add negative Core and Bridge tests for invalid/expired/foreign token, forged application id, changed desktop entry, unknown fields, and absence of a process action. Add public command validation and `WhatIf` tests. Add typed client command-shape/serialization tests proving no authority-bearing application fields cross the module boundary. Update view-model tests to prove module-only execution and stale-token clearing.
+
+### Acceptance Criteria
+
+- `ApplicationsViewModel` no longer references `IWslgApplicationService` and all WSLg business actions use closed typed module-client methods.
+- No public action accepts executable, arguments, desktop-entry paths, or a caller-supplied `WslgApplication` object.
+- Discovery grants survive the intended cross-process module invocation, expire authoritatively, and are revalidated before every action.
+- WSLg actions preserve `ShouldProcess`, existing capability/path/parser safeguards, and stable redacted failures.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Wslg|FullyQualifiedName~ApplicationsViewModel|FullyQualifiedName~PowerShellModuleClient|FullyQualifiedName~WorkspaceBridgeProtocol"
+pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Unit
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+One accepted WSLg discovery-grant and presentation-client migration slice.
+
+### Out of Scope
+
+WSLg runtime installation/repair, Start Menu integration, remote icons, external WSLg UAT, and every other uncontracted platform family.
 
 ## Slice S06: Platform-integrated command parity
 

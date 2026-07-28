@@ -95,6 +95,11 @@ public interface IPowerShellModuleClient
     Task<DistroNexusPodmanUserUnitResult> InvokePodmanUserUnitAsync(DistroNexusPodmanUserUnitPreview preview, CancellationToken cancellationToken = default);
     Task<DistroNexusPodmanConnectionPreview> GetPodmanConnectionPreviewAsync(string name, PodmanConnectionRequest request, CancellationToken cancellationToken = default);
     Task<PodmanConnectionResult> InvokePodmanConnectionAsync(DistroNexusPodmanConnectionPreview preview, CancellationToken cancellationToken = default);
+    Task<WslgApplicationStatus> GetWslgStatusAsync(string name, CancellationToken cancellationToken = default);
+    Task<WslgDiscoveryResult> DiscoverWslgApplicationsAsync(string name, CancellationToken cancellationToken = default);
+    Task<WslgActionResult> LaunchWslgApplicationAsync(string discoveryToken, string applicationId, CancellationToken cancellationToken = default);
+    Task<WslgActionResult> RevealWslgApplicationAsync(string discoveryToken, string applicationId, CancellationToken cancellationToken = default);
+    Task<WslgActionResult> SetWslgApplicationPinAsync(string discoveryToken, string applicationId, bool pinned, CancellationToken cancellationToken = default);
 }
 
 public sealed record DistroNexusPodmanUserUnitPreview(string Token, string InstanceName, PodmanUserUnit Unit, SystemdAction Action, IReadOnlyList<string> Effects);

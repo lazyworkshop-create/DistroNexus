@@ -436,6 +436,7 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.AddInstanceTagAsync),
                 nameof(IPowerShellModuleClient.ClearPackageCacheAsync),
                 nameof(IPowerShellModuleClient.DeletePackageCacheEntryAsync),
+                nameof(IPowerShellModuleClient.DiscoverWslgApplicationsAsync),
                 nameof(IPowerShellModuleClient.GetCatalogSourcesAsync),
                 nameof(IPowerShellModuleClient.GetContainerRuntimeStatusAsync),
                 nameof(IPowerShellModuleClient.GetInstanceCapabilitiesAsync),
@@ -448,8 +449,10 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.GetPodmanConnectionPreviewAsync),
                 nameof(IPowerShellModuleClient.GetPodmanUserUnitPreviewAsync),
                 nameof(IPowerShellModuleClient.GetSettingsAsync),
+                nameof(IPowerShellModuleClient.GetWslgStatusAsync),
                 nameof(IPowerShellModuleClient.InvokePodmanConnectionAsync),
                 nameof(IPowerShellModuleClient.InvokePodmanUserUnitAsync),
+                nameof(IPowerShellModuleClient.LaunchWslgApplicationAsync),
                 nameof(IPowerShellModuleClient.RefreshCatalogAsync),
                 nameof(IPowerShellModuleClient.RemoveCatalogSourceAsync),
                 nameof(IPowerShellModuleClient.RemoveInstanceTagAsync),
@@ -457,10 +460,12 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.ReorderCatalogSourcesAsync),
                 nameof(IPowerShellModuleClient.ResetCatalogSourcesAsync),
                 nameof(IPowerShellModuleClient.ResetSettingsAsync),
+                nameof(IPowerShellModuleClient.RevealWslgApplicationAsync),
                 nameof(IPowerShellModuleClient.SaveSettingsAsync),
                 nameof(IPowerShellModuleClient.SearchPackagesAsync),
                 nameof(IPowerShellModuleClient.SetCatalogSourceActiveAsync),
                 nameof(IPowerShellModuleClient.SetInstanceTagsAsync),
+                nameof(IPowerShellModuleClient.SetWslgApplicationPinAsync),
                 nameof(IPowerShellModuleClient.StartInstanceAsync),
                 nameof(IPowerShellModuleClient.StopInstanceAsync),
                 nameof(IPowerShellModuleClient.TestCatalogSourceAsync),
@@ -484,6 +489,19 @@ public sealed class PowerShellModuleClientTests
 
         Assert.Empty((await client.GetContainerRuntimeStatusAsync("Ubuntu")).Runtimes);
         Assert.Empty((await client.GetInstanceCapabilitiesAsync("Ubuntu")).Capabilities);
+        powerShell.VerifyAll();
+    }
+
+    [Fact]
+    public async Task WslgOperations_UseOnlyFixedCmdletsAndAuthorityFreeParameters()
+    {
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusWslgStatus", It.Is<Dictionary<string, object>>(p => p.Count == 1 && p.ContainsKey("Name") && (string)p["Name"] == "Ubuntu"), It.IsAny<ModuleCallOptions>(), It.IsAny<CancellationToken>())).ReturnsAsync(new PowerShellScriptResult { ExitCode=0, Output="{\"IsAvailable\":true,\"Reason\":\"ok\",\"Guidance\":[]}" });
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusWslgApplication", It.Is<Dictionary<string, object>>(p => p.Count == 1 && p.ContainsKey("Name") && (string)p["Name"] == "Ubuntu"), It.IsAny<ModuleCallOptions>(), It.IsAny<CancellationToken>())).ReturnsAsync(new PowerShellScriptResult { ExitCode=0, Output="{\"Status\":{\"IsAvailable\":true,\"Reason\":\"ok\",\"Guidance\":[]},\"DiscoveryToken\":\"" + new string('a',64) + "\",\"Applications\":[]}" });
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync(It.Is<string>(c => c == "Start-DistroNexusWslgApplication" || c == "Show-DistroNexusWslgApplicationEntry"), It.Is<Dictionary<string, object>>(p => p.Count == 2 && p.ContainsKey("ApplicationId") && p.ContainsKey("DiscoveryToken") && (string)p["ApplicationId"] == "app"), It.IsAny<ModuleCallOptions>(), It.IsAny<CancellationToken>())).ReturnsAsync(new PowerShellScriptResult { ExitCode=0, Output="{\"Succeeded\":true,\"Diagnostic\":\"ok\"}" });
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Set-DistroNexusWslgApplicationPin", It.Is<Dictionary<string, object>>(p => p.Count == 3 && p.ContainsKey("ApplicationId") && p.ContainsKey("DiscoveryToken") && p.ContainsKey("Pinned") && (bool)p["Pinned"]), It.IsAny<ModuleCallOptions>(), It.IsAny<CancellationToken>())).ReturnsAsync(new PowerShellScriptResult { ExitCode=0, Output="{\"Succeeded\":true,\"Diagnostic\":\"ok\"}" });
+        var client=new PowerShellModuleClient(powerShell.Object); var token=new string('a',64);
+        await client.GetWslgStatusAsync("Ubuntu"); await client.DiscoverWslgApplicationsAsync("Ubuntu"); await client.LaunchWslgApplicationAsync(token,"app"); await client.RevealWslgApplicationAsync(token,"app"); await client.SetWslgApplicationPinAsync(token,"app",true);
         powerShell.VerifyAll();
     }
 

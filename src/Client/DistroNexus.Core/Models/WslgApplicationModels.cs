@@ -9,3 +9,9 @@ public sealed record WslgApplication(
 
 public sealed record WslgApplicationStatus(bool IsAvailable, string Reason, IReadOnlyList<string> Guidance);
 public sealed record WslgLaunchResult(bool Succeeded, string InstanceName, string Executable, string Diagnostic);
+
+/// <summary>Safe WSLg application data that can cross the module presentation boundary.</summary>
+public sealed record WslgApplicationProjection(string ApplicationId, string DisplayName, IReadOnlyList<string> Categories, bool IsPinned, byte[]? IconBytes)
+{ public string Name => DisplayName; public string CategoriesText => string.Join(", ", Categories); }
+public sealed record WslgDiscoveryResult(WslgApplicationStatus Status, string? DiscoveryToken, DateTimeOffset? ExpiresAt, IReadOnlyList<WslgApplicationProjection> Applications);
+public sealed record WslgActionResult(bool Succeeded, string Diagnostic);

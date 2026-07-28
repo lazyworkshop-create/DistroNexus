@@ -123,9 +123,11 @@ while ((line = Console.ReadLine()) is not null)
             "systemd.execute.v1" => await ExecuteSystemdV1Async(request),
             "systemd.details.v1" => await GetSystemdDetailsV1Async(request),
             "systemd.journal.v1" => await GetSystemdJournalV1Async(request),
-            "wslgStatus" => await GetWslgStatusAsync(request),
-            "wslgDiscover" => await DiscoverWslgAsync(request),
-            "wslgLaunch" => await LaunchWslgAsync(request),
+            "wslg.status.v1" => await GetWslgStatusAsync(request),
+            "wslg.discover.v1" => await DiscoverWslgAsync(request),
+            "wslg.launch.v1" => await LaunchWslgAsync(request),
+            "wslg.reveal.v1" => await RevealWslgAsync(request),
+            "wslg.pin.v1" => await PinWslgAsync(request),
             "recoveryList" => await RecoveryListV1Async(request),
             "recoveryHistory" => await RecoveryHistoryV1Async(request),
             "recoveryVerify" => await RecoveryVerifyV1Async(request),
@@ -213,6 +215,7 @@ while ((line = Console.ReadLine()) is not null)
         response = new(true, value, null, null);
     }
     catch (DistroNexus.Core.Exceptions.WslOperationFailedException ex) { response = new(false, null, ex.Code.ToString(), ex.Message); }
+    catch (InvalidOperationException ex) when (ex.Message is "Wslg.DiscoveryGrantInvalid" or "Wslg.DiscoveryGrantExpired" or "Wslg.ApplicationNotFound" or "Wslg.EntryChanged") { response = new(false, null, ex.Message, ex.Message); }
     catch (InvalidOperationException ex) when (string.Equals(ex.Message, "PackageCache.EntryInvalid", StringComparison.Ordinal)) { response = new(false, null, "PackageCache.EntryInvalid", "Package cache entry is invalid."); }
     catch (Exception ex) when (request?.Operation.StartsWith("diagnostics.", StringComparison.Ordinal) == true) { response = new(false, null, "Diagnostic.ExportInvalid", SensitiveDataRedactor.Redact(ex.Message)); }
     catch (Exception ex) { response = new(false, null, ex is InvalidOperationException ? "Workspace.ConflictOrState" : "Workspace.Bridge.Invalid", ex.Message); }
@@ -503,16 +506,20 @@ async Task<WslgApplicationStatus> GetWslgStatusAsync(BridgeRequest request)
     var p = JsonSerializer.Deserialize<WslgInstancePayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("WSLg payload is required.");
     return await wslg.GetStatusAsync(p.InstanceName);
 }
-async Task<IReadOnlyList<WslgApplication>> DiscoverWslgAsync(BridgeRequest request)
+async Task<WslgDiscoveryResult> DiscoverWslgAsync(BridgeRequest request)
 {
     var p = JsonSerializer.Deserialize<WslgInstancePayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("WSLg payload is required.");
-    return await wslg.DiscoverAsync(p.InstanceName);
+    return await wslg.DiscoverWithGrantAsync(p.InstanceName);
 }
-async Task<WslgLaunchResult> LaunchWslgAsync(BridgeRequest request)
+async Task<WslgActionResult> LaunchWslgAsync(BridgeRequest request)
 {
-    var p = JsonSerializer.Deserialize<WslgApplicationPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("WSLg application payload is required.");
-    return await wslg.LaunchAsync(p.Application);
+    var p = JsonSerializer.Deserialize<WslgActionPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("WSLg action payload is required.");
+    return await wslg.LaunchGrantedAsync(p.DiscoveryToken, p.ApplicationId);
 }
+async Task<WslgActionResult> RevealWslgAsync(BridgeRequest request)
+{ var p = JsonSerializer.Deserialize<WslgActionPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("WSLg action payload is required."); return await wslg.RevealGrantedAsync(p.DiscoveryToken, p.ApplicationId); }
+async Task<WslgActionResult> PinWslgAsync(BridgeRequest request)
+{ var p = JsonSerializer.Deserialize<WslgPinPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("WSLg pin payload is required."); return await wslg.SetGrantedPinnedAsync(p.DiscoveryToken, p.ApplicationId, p.Pinned); }
 async Task<RecoveryOperationPreview> PreviewRecoveryCreateAsync(BridgeRequest request)
 {
     var p = JsonSerializer.Deserialize<RecoveryCreatePayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Recovery create payload is required.");
@@ -680,7 +687,8 @@ public sealed record SystemdPayload(string InstanceName, string? Unit, SystemdAc
 public sealed record SystemdJournalPayload(string InstanceName, string Unit, SystemdScope Scope = SystemdScope.User, string? Search = null, int LineLimit = 200);
 public sealed record SystemdPreviewPayload(SystemdOperationPreview Preview);
 public sealed record WslgInstancePayload(string InstanceName);
-public sealed record WslgApplicationPayload(WslgApplication Application);
+public sealed record WslgActionPayload(string DiscoveryToken, string ApplicationId);
+public sealed record WslgPinPayload(string DiscoveryToken, string ApplicationId, bool Pinned);
 public sealed record RecoveryCreatePayload(RecoveryPointCreateRequest Request);
 public sealed record RecoveryRestorePayload(RecoveryRestoreRequest Request);
 public sealed record RecoveryClonePayload(RecoveryCloneRequest Request);

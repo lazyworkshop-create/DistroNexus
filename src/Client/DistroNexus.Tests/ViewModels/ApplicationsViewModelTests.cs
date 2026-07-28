@@ -1,6 +1,7 @@
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using DistroNexus.Desktop.ViewModels;
+using Moq;
 
 namespace DistroNexus.Tests.ViewModels;
 public sealed class ApplicationsViewModelTests
@@ -8,28 +9,27 @@ public sealed class ApplicationsViewModelTests
     [Fact]
     public async Task UnavailableStatus_DisablesActionsAndExplainsState()
     {
-        var vm=new ApplicationsViewModel(new FakeService { Status=new(false,"WSLg unavailable: unsupported.",[]) }) { DistributionName="Ubuntu" };
+        var module = Module(new WslgDiscoveryResult(new(false,"WSLg unavailable: unsupported.",[]),null,null,[])); var vm=new ApplicationsViewModel(module.Object) { DistributionName="Ubuntu" };
         await vm.RefreshCommand.ExecuteAsync(null); Assert.False(vm.IsAvailable); Assert.Contains("unavailable",vm.Status,StringComparison.OrdinalIgnoreCase);
     }
     [Fact]
     public async Task SearchAndPin_UpdateVisibleApplications()
     {
-        var service=new FakeService(); var vm=new ApplicationsViewModel(service){DistributionName="Ubuntu"}; await vm.RefreshCommand.ExecuteAsync(null); vm.SearchText="Code"; var app=Assert.Single(vm.FilteredApplications); vm.SelectedApplication=app; await vm.TogglePinCommand.ExecuteAsync(null); Assert.True(vm.SelectedApplication!.IsPinned); Assert.Equal(app.Id,service.Pinned);
+        var module=Module(Result()); var vm=new ApplicationsViewModel(module.Object){DistributionName="Ubuntu"}; await vm.RefreshCommand.ExecuteAsync(null); vm.SearchText="Code"; var app=Assert.Single(vm.FilteredApplications); vm.SelectedApplication=app; await vm.TogglePinCommand.ExecuteAsync(null); Assert.True(vm.SelectedApplication!.IsPinned); module.Verify(x=>x.SetWslgApplicationPinAsync("a",app.ApplicationId,true,It.IsAny<CancellationToken>()));
     }
     [Fact]
     public async Task Reveal_DelegatesOnlyForSelectedApplication()
     {
-        var service=new FakeService(); var vm=new ApplicationsViewModel(service){DistributionName="Ubuntu"}; await vm.RefreshCommand.ExecuteAsync(null); vm.SelectedApplication=Assert.Single(vm.Applications); await vm.RevealEntryCommand.ExecuteAsync(null); Assert.Equal("id",service.Revealed);
+        var module=Module(Result()); var vm=new ApplicationsViewModel(module.Object){DistributionName="Ubuntu"}; await vm.RefreshCommand.ExecuteAsync(null); vm.SelectedApplication=Assert.Single(vm.Applications); await vm.RevealEntryCommand.ExecuteAsync(null); module.Verify(x=>x.RevealWslgApplicationAsync("a","id",It.IsAny<CancellationToken>()));
     }
-    private sealed class FakeService : IWslgApplicationService
+    [Fact]
+    public async Task FailedActionResult_ClearsTheDiscoveryGrant()
     {
-        public WslgApplicationStatus Status {get;set;}=new(true,"available",[]); public string? Pinned; public string? Revealed;
-        public Task<WslgApplicationStatus> GetStatusAsync(string n,CancellationToken c=default)=>Task.FromResult(Status);
-        public Task<IReadOnlyList<WslgApplication>> DiscoverAsync(string n,CancellationToken c=default)=>Task.FromResult<IReadOnlyList<WslgApplication>>([new("id",n,"Code","/usr/bin/code",[],["Development"],"/usr/share/applications/code.desktop",null)]);
-        public Task<WslgLaunchResult> LaunchAsync(WslgApplication a,CancellationToken c=default)=>Task.FromResult(new WslgLaunchResult(true,a.InstanceName,a.Executable,"ok"));
-        public Task<byte[]?> GetIconAsync(WslgApplication a,CancellationToken c=default)=>Task.FromResult<byte[]?>(null);
-        public Task<WslgLaunchResult> RevealAsync(WslgApplication a,CancellationToken c=default){Revealed=a.Id;return Task.FromResult(new WslgLaunchResult(true,a.InstanceName,"","ok"));}
-        public Task SetPinnedAsync(string id,bool p,CancellationToken c=default){Pinned=id;return Task.CompletedTask;}
-        public Task<IReadOnlySet<string>> GetPinsAsync(CancellationToken c=default)=>Task.FromResult<IReadOnlySet<string>>(new HashSet<string>());
+        var module=Module(Result()); module.Setup(x=>x.LaunchWslgApplicationAsync("a","id",It.IsAny<CancellationToken>())).ReturnsAsync(new WslgActionResult(false,"expired"));
+        var vm=new ApplicationsViewModel(module.Object){DistributionName="Ubuntu"}; await vm.RefreshCommand.ExecuteAsync(null); vm.SelectedApplication=Assert.Single(vm.Applications);
+        await vm.LaunchCommand.ExecuteAsync(null); await vm.RevealEntryCommand.ExecuteAsync(null);
+        module.Verify(x=>x.RevealWslgApplicationAsync(It.IsAny<string>(),It.IsAny<string>(),It.IsAny<CancellationToken>()), Times.Never);
     }
+    private static WslgDiscoveryResult Result() => new(new(true,"available",[]),"a",DateTimeOffset.UtcNow.AddMinutes(2),[new("id","Code",["Development"],false,null)]);
+    private static Mock<IPowerShellModuleClient> Module(WslgDiscoveryResult result) { var mock=new Mock<IPowerShellModuleClient>(); mock.Setup(x=>x.DiscoverWslgApplicationsAsync("Ubuntu",It.IsAny<CancellationToken>())).ReturnsAsync(result); mock.Setup(x=>x.SetWslgApplicationPinAsync(It.IsAny<string>(),It.IsAny<string>(),It.IsAny<bool>(),It.IsAny<CancellationToken>())).ReturnsAsync(new WslgActionResult(true,"ok")); mock.Setup(x=>x.RevealWslgApplicationAsync(It.IsAny<string>(),It.IsAny<string>(),It.IsAny<CancellationToken>())).ReturnsAsync(new WslgActionResult(true,"ok")); return mock; }
 }

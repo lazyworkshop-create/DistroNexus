@@ -49,10 +49,17 @@ Describe 'Recovery, monitoring and WSLg PowerShell bridge adapters' -Tag 'Unit',
         (Get-DistroNexusMonitoringSnapshot -Name Ubuntu).CpuPercent | Should -Be 2
         Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -ParameterFilter { $Operation -eq 'monitorSnapshot' -and $Payload.InstanceName -eq 'Ubuntu' } -Times 1
     }
-    It 'uses discovered WSLg objects and honors WhatIf' {
-        $app = [pscustomobject]@{ Id='app'; InstanceName='Ubuntu'; Name='Editor'; Executable='/usr/bin/editor' }
+    It 'uses discovery grants and honors WhatIf without invoking the action route' {
         Mock Invoke-DistroNexusWorkspaceBridge { throw 'must not run' }
-        (Start-DistroNexusWslgApplication -Application $app -WhatIf).Detail | Should -Be 'WhatIf'
+        (Start-DistroNexusWslgApplication -DiscoveryToken ('a' * 64) -ApplicationId app -WhatIf).Detail | Should -Be 'WhatIf'
+        Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 0
+    }
+    It 'validates public reveal and pin grants and honors WhatIf without invoking the bridge' {
+        Mock Invoke-DistroNexusWorkspaceBridge { throw 'must not run' }
+        { Show-DistroNexusWslgApplicationEntry -DiscoveryToken bad -ApplicationId app } | Should -Throw
+        { Set-DistroNexusWslgApplicationPin -DiscoveryToken bad -ApplicationId app -Pinned $true } | Should -Throw
+        Show-DistroNexusWslgApplicationEntry -DiscoveryToken ('a' * 64) -ApplicationId app -WhatIf | Should -BeNullOrEmpty
+        Set-DistroNexusWslgApplicationPin -DiscoveryToken ('a' * 64) -ApplicationId app -Pinned $true -WhatIf | Should -BeNullOrEmpty
         Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 0
     }
 }

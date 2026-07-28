@@ -7,8 +7,36 @@ namespace DistroNexus.Core.Services;
 public sealed class WslgApplicationService : IWslgApplicationService
 {
     private static readonly string[] Roots = ["/usr/share/applications", "/usr/local/share/applications", "/home"];
-    private readonly IProcessRunner _runner; private readonly IPlatformCapabilityService? _capabilities; private readonly VersionedJsonStore<string[]> _pins; private readonly SemaphoreSlim _gate = new(1,1); private readonly WslgIconCache _icons = new();
-    public WslgApplicationService(IProcessRunner runner, IPlatformCapabilityService? capabilities = null, string? appDataDirectory = null) { _runner=runner; _capabilities=capabilities; var root=appDataDirectory ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DistroNexus"); _pins=new VersionedJsonStore<string[]>(Path.Combine(root,"wslg-pins.json"),1); }
+    private readonly IProcessRunner _runner; private readonly IPlatformCapabilityService? _capabilities; private readonly VersionedJsonStore<string[]> _pins; private readonly SemaphoreSlim _gate = new(1,1); private readonly WslgIconCache _icons = new(); private readonly WslgDiscoveryGrantStore _grants;
+    public WslgApplicationService(IProcessRunner runner, IPlatformCapabilityService? capabilities = null, string? appDataDirectory = null, TimeProvider? timeProvider = null) { _runner=runner; _capabilities=capabilities; var root=appDataDirectory ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DistroNexus"); _pins=new VersionedJsonStore<string[]>(Path.Combine(root,"wslg-pins.json"),1); _grants = new WslgDiscoveryGrantStore(root, timeProvider); }
+    public async Task<WslgDiscoveryResult> DiscoverWithGrantAsync(string instanceName, CancellationToken ct = default)
+    {
+        var status = await GetStatusAsync(instanceName, ct);
+        if (!status.IsAvailable) return new(status, null, null, []);
+        var applications = await DiscoverAsync(instanceName, ct);
+        var issued = await _grants.IssueAsync(instanceName, applications, ct);
+        return new(status, issued.Token, issued.ExpiresAt, applications.Select(a => new WslgApplicationProjection(a.Id, a.Name, a.Categories, a.IsPinned, a.IconBytes)).ToArray());
+    }
+    public async Task<WslgActionResult> LaunchGrantedAsync(string discoveryToken, string applicationId, CancellationToken ct = default)
+    {
+        var app = await _grants.ResolveAsync(discoveryToken, applicationId, ct);
+        var result = await LaunchAsync(app, ct);
+        return new(result.Succeeded, result.Succeeded ? result.Diagnostic : "Wslg.EntryChanged");
+    }
+    public async Task<WslgActionResult> RevealGrantedAsync(string discoveryToken, string applicationId, CancellationToken ct = default)
+    {
+        var app = await _grants.ResolveAsync(discoveryToken, applicationId, ct);
+        var result = await RevealAsync(app, ct);
+        return new(result.Succeeded, result.Succeeded ? result.Diagnostic : "Wslg.EntryChanged");
+    }
+    public async Task<WslgActionResult> SetGrantedPinnedAsync(string discoveryToken, string applicationId, bool pinned, CancellationToken ct = default)
+    {
+        var app = await _grants.ResolveAsync(discoveryToken, applicationId, ct);
+        var rebound = await ReadEntryAsync(app.InstanceName, app.DesktopFilePath, ct);
+        if (rebound is null || rebound.Id != app.Id || rebound.Executable != app.Executable || !rebound.Arguments.SequenceEqual(app.Arguments, StringComparer.Ordinal)) throw new InvalidOperationException("Wslg.EntryChanged");
+        await SetPinnedAsync(app.Id, pinned, ct);
+        return new(true, "Application pin updated.");
+    }
     public async Task<WslgApplicationStatus> GetStatusAsync(string instanceName, CancellationToken ct=default)
     {
         if (string.IsNullOrWhiteSpace(instanceName)) return new(false, "A WSL distribution is required.", []);
@@ -53,7 +81,7 @@ public sealed class WslgApplicationService : IWslgApplicationService
         if(await EnsureCapabilityAsync(ct) is { } unavailable) return new(false,app.InstanceName,string.Empty,unavailable.Reason);
         if(!DesktopEntryParser.IsApprovedDesktopPath(app.DesktopFilePath)) return new(false,app.InstanceName,string.Empty,"The desktop entry path is unsafe.");
         var bound=await ReadEntryAsync(app.InstanceName,app.DesktopFilePath,ct);
-        if(bound is null || bound.Id != app.Id) return new(false,app.InstanceName,string.Empty,"The desktop entry changed and must be rediscovered before reveal.");
+        if(bound is null || bound.Id != app.Id || bound.Executable != app.Executable || !bound.Arguments.SequenceEqual(app.Arguments,StringComparer.Ordinal)) return new(false,app.InstanceName,string.Empty,"The desktop entry changed and must be rediscovered before reveal.");
         var directory=app.DesktopFilePath[..app.DesktopFilePath.LastIndexOf('/')];
         var result=await _runner.RunAsync(new ProcessRequest("wsl.exe",["--distribution",app.InstanceName,"--exec","/usr/bin/xdg-open",directory],TimeSpan.FromSeconds(10),64*1024,64*1024),ct);
         return new(result.ExitCode==0,app.InstanceName,"/usr/bin/xdg-open",result.ExitCode==0 ? "Desktop entry location opened." : "Could not reveal the desktop entry.");

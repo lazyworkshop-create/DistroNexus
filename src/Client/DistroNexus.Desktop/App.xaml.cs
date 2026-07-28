@@ -140,7 +140,6 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<IContainerRuntimeAdapter, PodmanWslRuntimeAdapter>();
                     services.AddSingleton<IContainerRuntimeAdapter>(sp => new PodmanDesktopRuntimeAdapter(sp.GetRequiredService<IProcessRunner>(), sp.GetRequiredService<IPodmanDesktopInstallationDetector>()));
                     services.AddSingleton<IContainerRuntimeService, ContainerRuntimeService>();
-                    services.AddWslgApplications();
                     services.AddSingleton<IWorkspaceRuntime, WorkspaceRuntime>();
                     services.AddSingleton<IWorkspaceTemplatePrerequisiteChecker, UnavailableWorkspaceTemplatePrerequisiteChecker>();
                     services.AddSingleton<IWorkspaceActionCapabilityGate, WorkspaceActionCapabilityGate>();

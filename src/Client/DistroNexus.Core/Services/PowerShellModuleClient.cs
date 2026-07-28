@@ -41,6 +41,11 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string InvokePodmanUserUnitCommand = "Invoke-DistroNexusPodmanUserUnit";
     private const string GetPodmanConnectionPreviewCommand = "Get-DistroNexusPodmanConnectionPreview";
     private const string InvokePodmanConnectionCommand = "Invoke-DistroNexusPodmanConnection";
+    private const string GetWslgStatusCommand = "Get-DistroNexusWslgStatus";
+    private const string GetWslgApplicationsCommand = "Get-DistroNexusWslgApplication";
+    private const string StartWslgApplicationCommand = "Start-DistroNexusWslgApplication";
+    private const string RevealWslgApplicationCommand = "Show-DistroNexusWslgApplicationEntry";
+    private const string SetWslgApplicationPinCommand = "Set-DistroNexusWslgApplicationPin";
     private readonly IPowerShellService _powerShellService;
 
     public PowerShellModuleClient(IPowerShellService powerShellService)
@@ -357,6 +362,16 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
         request.Validate();
         return await ExecuteJsonAsync<PodmanConnectionResult>(InvokePodmanConnectionCommand, new() { ["PreviewToken"] = preview.Token, ["InstanceName"] = preview.InstanceName, ["ConnectionName"] = request.Name, ["Endpoint"] = request.SafeEndpoint }, cancellationToken);
     }
+
+    public Task<WslgApplicationStatus> GetWslgStatusAsync(string name, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); return ExecuteJsonAsync<WslgApplicationStatus>(GetWslgStatusCommand, new() { ["Name"] = name }, cancellationToken); }
+    public Task<WslgDiscoveryResult> DiscoverWslgApplicationsAsync(string name, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); return ExecuteJsonAsync<WslgDiscoveryResult>(GetWslgApplicationsCommand, new() { ["Name"] = name }, cancellationToken); }
+    public Task<WslgActionResult> LaunchWslgApplicationAsync(string token, string applicationId, CancellationToken cancellationToken = default) => ExecuteWslgActionAsync(StartWslgApplicationCommand, token, applicationId, null, cancellationToken);
+    public Task<WslgActionResult> RevealWslgApplicationAsync(string token, string applicationId, CancellationToken cancellationToken = default) => ExecuteWslgActionAsync(RevealWslgApplicationCommand, token, applicationId, null, cancellationToken);
+    public Task<WslgActionResult> SetWslgApplicationPinAsync(string token, string applicationId, bool pinned, CancellationToken cancellationToken = default) => ExecuteWslgActionAsync(SetWslgApplicationPinCommand, token, applicationId, pinned, cancellationToken);
+    private Task<WslgActionResult> ExecuteWslgActionAsync(string command, string token, string applicationId, bool? pinned, CancellationToken ct)
+    { if (string.IsNullOrWhiteSpace(token) || token.Length != 64 || token.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("A WSLg discovery token is invalid.", nameof(token)); ValidateName(applicationId, nameof(applicationId)); var parameters = new Dictionary<string, object> { ["DiscoveryToken"] = token, ["ApplicationId"] = applicationId }; if (pinned is not null) parameters["Pinned"] = pinned.Value; return ExecuteJsonAsync<WslgActionResult>(command, parameters, ct); }
 
     private async Task<IReadOnlyList<DistroPackage>> ExecutePackagesAsync(Dictionary<string, object>? parameters, CancellationToken cancellationToken)
     {
