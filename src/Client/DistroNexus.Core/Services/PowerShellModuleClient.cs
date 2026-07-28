@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Security;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 
@@ -23,6 +24,7 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string RenameInstanceCommand = "Rename-DistroNexusInstance";
     private const string ExportInstanceCommand = "Export-DistroNexusInstance";
     private const string ImportInstanceCommand = "Import-DistroNexusInstance";
+    private const string SetCredentialCommand = "Set-DistroNexusCredential";
     private const string GetInstanceResourcesCommand = "Get-DistroNexusInstanceResources";
     private const string GetInstanceSparsePreviewCommand = "Get-DistroNexusInstanceSparsePreview";
     private const string SetInstanceSparseModeCommand = "Set-DistroNexusInstanceSparseMode";
@@ -39,6 +41,10 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string ResetCatalogSourcesCommand = "Reset-DistroNexusCatalogSource";
     private const string GetPackagesCommand = "Get-DistroNexusPackage";
     private const string RefreshCatalogCommand = "Update-DistroNexusCatalog";
+    private const string GetInstallSourceCommand = "Get-DistroNexusInstallSource";
+    private const string GetPackageAcquisitionPreviewCommand = "Get-DistroNexusPackageAcquisitionPreview";
+    private const string InvokePackageAcquisitionCommand = "Invoke-DistroNexusPackageAcquisition";
+    private const string InstallVerifiedInstanceCommand = "Install-DistroNexusInstance";
     private const string GetPackageCacheLocationCommand = "Get-DistroNexusPackageCacheLocation";
     private const string GetPackageCacheUsageCommand = "Get-DistroNexusPackageCacheUsage";
     private const string RemovePackageCacheCommand = "Remove-DistroNexusPackage";
@@ -214,6 +220,56 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
         }
 
         return DeserializeTagResults(result.Output);
+    }
+
+    public async Task<CredentialOperationResult> SetCredentialAsync(string name, string username, SecureString password, CancellationToken cancellationToken = default)
+    {
+        ValidateName(name, nameof(name));
+        ValidateName(username, nameof(username));
+        ArgumentNullException.ThrowIfNull(password);
+        var result = await _powerShellService.ExecuteModuleCmdletWithSecureStringAsync(
+            SetCredentialCommand,
+            new Dictionary<string, object> { ["Name"] = name, ["Username"] = username, ["Confirm"] = false },
+            "Password", password, new ModuleCallOptions { ParseAsJson = true }, cancellationToken);
+        ThrowIfFailed(result);
+        return JsonSerializer.Deserialize<CredentialOperationResult>(result.Output, JsonOptions)
+            ?? throw new InvalidOperationException("The module returned an invalid credential result.");
+    }
+
+    public Task<InstallSourceResolution> ResolveInstallSourceAsync(string packageId, CancellationToken cancellationToken = default)
+    {
+        ValidatePackageId(packageId, nameof(packageId));
+        return ExecuteJsonAsync<InstallSourceResolution>(GetInstallSourceCommand, new() { ["PackageId"] = packageId }, cancellationToken);
+    }
+
+    public Task<PackageAcquisitionPreview> PreviewPackageAcquisitionAsync(string packageId, CancellationToken cancellationToken = default)
+    {
+        ValidatePackageId(packageId, nameof(packageId));
+        return ExecuteJsonAsync<PackageAcquisitionPreview>(GetPackageAcquisitionPreviewCommand, new() { ["PackageId"] = packageId }, cancellationToken);
+    }
+
+    public Task<PackageAcquisitionResult> AcquirePackageAsync(string previewToken, CancellationToken cancellationToken = default)
+    {
+        ValidateToken(previewToken, nameof(previewToken));
+        return ExecuteJsonAsync<PackageAcquisitionResult>(InvokePackageAcquisitionCommand, new() { ["PreviewToken"] = previewToken, ["Confirm"] = false }, cancellationToken);
+    }
+
+    public async Task<VerifiedInstallResult> InstallVerifiedInstanceAsync(string packageReference, string name, string installRoot, string username, string shell, string? locale, bool setAsDefault, SecureString? password = null, CancellationToken cancellationToken = default)
+    {
+        ValidateToken(packageReference, nameof(packageReference));
+        ValidateName(name, nameof(name));
+        ValidateName(username, nameof(username));
+        if (string.IsNullOrWhiteSpace(installRoot) || installRoot.IndexOfAny(['\r', '\n', '\0']) >= 0) throw new ArgumentException("The install root is invalid.", nameof(installRoot));
+        if (shell is not ("bash" or "zsh" or "fish" or "sh")) throw new ArgumentException("The shell is invalid.", nameof(shell));
+        if (locale?.Length > 128 || locale?.IndexOfAny(['\r', '\n', '\0']) >= 0) throw new ArgumentException("The locale is invalid.", nameof(locale));
+        var parameters = new Dictionary<string, object> { ["PackageReference"] = packageReference, ["Name"] = name, ["InstallRoot"] = installRoot, ["Username"] = username, ["Shell"] = shell, ["SetAsDefault"] = setAsDefault, ["Confirm"] = false };
+        if (locale is not null) parameters["Locale"] = locale;
+        var result = password is null
+            ? await _powerShellService.ExecuteModuleCmdletAsync(InstallVerifiedInstanceCommand, parameters, new ModuleCallOptions { ParseAsJson = true }, cancellationToken)
+            : await _powerShellService.ExecuteModuleCmdletWithSecureStringAsync(InstallVerifiedInstanceCommand, parameters, "Password", password, new ModuleCallOptions { ParseAsJson = true }, cancellationToken);
+        ThrowIfFailed(result);
+        return JsonSerializer.Deserialize<VerifiedInstallResult>(result.Output, JsonOptions)
+            ?? throw new InvalidOperationException("The module returned an invalid install result.");
     }
 
     /// <inheritdoc />
@@ -634,6 +690,10 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private static void ValidateName(string value, string parameterName)
     {
         if (string.IsNullOrWhiteSpace(value) || value.IndexOfAny(['\r', '\n', '\0']) >= 0) throw new ArgumentException("The instance name is invalid.", parameterName);
+    }
+    private static void ValidatePackageId(string value, string parameterName)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length > 128 || value.IndexOfAny(['\r', '\n', '\0']) >= 0) throw new ArgumentException("The package id is invalid.", parameterName);
     }
     private static bool IsValidLinuxStartPath(string value) => value.Length is > 0 and <= 1024 && value.IndexOfAny(['\r', '\n', '\0', '\\']) < 0 && (value == "~" || (value.StartsWith('/') && !value.Contains("//", StringComparison.Ordinal) && !value.Split('/').Any(segment => segment == "..")));
     private static void ValidateToken(string value, string parameterName)

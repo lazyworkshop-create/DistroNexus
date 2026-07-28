@@ -1,4 +1,5 @@
 using DistroNexus.Core.Models;
+using System.Security;
 
 namespace DistroNexus.Core.Interfaces;
 
@@ -73,6 +74,18 @@ public interface IPowerShellService
         Dictionary<string, object>? parameters = null,
         ModuleCallOptions? options = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Invokes a closed module command with one directly bound secure parameter. Secret-bearing
+    /// values are intentionally rejected by the generic dictionary-based invocation API.
+    /// </summary>
+    Task<PowerShellScriptResult> ExecuteModuleCmdletWithSecureStringAsync(
+        string cmdletName,
+        IReadOnlyDictionary<string, object> parameters,
+        string secureParameterName,
+        SecureString secret,
+        ModuleCallOptions? options = null,
+        CancellationToken cancellationToken = default) => throw new NotSupportedException("Direct secure module invocation is unavailable.");
 
     /// <summary>
     /// Executes a DistroNexus PowerShell module cmdlet with typed result.

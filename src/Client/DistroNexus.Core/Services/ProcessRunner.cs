@@ -19,6 +19,7 @@ public sealed class ProcessRunner : IProcessRunner
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            RedirectStandardInput = request.StandardInput is not null,
             CreateNoWindow = true,
             WorkingDirectory = request.WorkingDirectory ?? string.Empty
         };
@@ -38,6 +39,12 @@ public sealed class ProcessRunner : IProcessRunner
         }
         var stdout = ReadBoundedAsync(process.StandardOutput, request.MaxStandardOutputBytes, encoding);
         var stderr = ReadBoundedAsync(process.StandardError, request.MaxStandardErrorBytes, encoding);
+        if (request.StandardInput is not null)
+        {
+            await process.StandardInput.WriteAsync(request.StandardInput).ConfigureAwait(false);
+            await process.StandardInput.FlushAsync(cancellationToken).ConfigureAwait(false);
+            process.StandardInput.Close();
+        }
         using var timeout = new CancellationTokenSource(request.Timeout);
         using var completion = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
         var timedOut = false;

@@ -57,6 +57,12 @@ public partial class UserConfigurationStep : WizardStepBase
 
     public override bool Validate()
     {
+        if (Content is UserConfigurationStepView view && !view.ValidatePassword(out var passwordError))
+        {
+            ErrorMessage = passwordError ?? Properties.Resources.ErrorPasswordMismatch;
+            return false;
+        }
+
         if (Context?.CreateUser == true)
         {
             if (string.IsNullOrWhiteSpace(Context.Username))
@@ -72,26 +78,6 @@ public partial class UserConfigurationStep : WizardStepBase
                 return false;
             }
 
-            // Check password strength if provided
-            if (!string.IsNullOrWhiteSpace(Context.Password))
-            {
-                if (Context.Password.Length < 4)
-                {
-                    ErrorMessage = Properties.Resources.ErrorPasswordMinLength;
-                    return false;
-                }
-
-                if (Context.Password != Context.ConfirmPassword)
-                {
-                    ErrorMessage = Properties.Resources.ErrorPasswordMismatch;
-                    return false;
-                }
-            }
-            else if (!string.IsNullOrWhiteSpace(Context.ConfirmPassword))
-            {
-                ErrorMessage = Properties.Resources.ErrorPasswordMismatch;
-                return false;
-            }
         }
 
         // Validate WSL version
@@ -131,12 +117,16 @@ public partial class UserConfigurationStep : WizardStepBase
 
         // Use root user for quick install (no password needed)
         Context.Username = "root";
-        Context.Password = string.Empty;
-        Context.ConfirmPassword = string.Empty;
         Context.CreateUser = false;
         Context.WslVersion = settings.DefaultWslVersion;
 
         _logger.LogInformation("Applied quick install user defaults: Username=root, WSL Version={Version}", 
             Context.WslVersion);
+    }
+
+    public override Task OnExitAsync()
+    {
+        if (Content is UserConfigurationStepView view) view.ClearPassword();
+        return Task.CompletedTask;
     }
 }

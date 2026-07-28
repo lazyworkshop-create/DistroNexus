@@ -502,17 +502,13 @@ public partial class WslManagerService : IWslManagerService
                 ["DistroName"] = options.Package?.Name ?? "Ubuntu",
                 ["InstallPath"] = actualInstallPath,  // Use instance-specific path
                 ["InstanceName"] = options.InstanceName,
-                ["AutoDownload"] = true  // Enable auto-download if package not found in cache
+                ["AutoDownload"] = false
             };
 
             // Add optional parameters
             if (!string.IsNullOrWhiteSpace(options.Username) && options.Username != "root")
             {
                 moduleParams["Username"] = options.Username;
-                if (!string.IsNullOrWhiteSpace(options.Password))
-                {
-                    moduleParams["Password"] = "***"; // Don't log actual password
-                }
             }
 
             if (options.InitCommands != null && options.InitCommands.Count > 0)
@@ -1045,65 +1041,12 @@ public partial class WslManagerService : IWslManagerService
     }
 
     /// <inheritdoc/>
-    public async Task SetCredentialsAsync(string instanceName, string username, string password, CancellationToken cancellationToken = default)
+    public Task SetCredentialsAsync(string instanceName, string username, System.Security.SecureString password, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(instanceName);
         ArgumentNullException.ThrowIfNull(username);
         ArgumentNullException.ThrowIfNull(password);
-
-        try
-        {
-            _logger.LogInformation("Setting credentials for WSL instance '{InstanceName}'", instanceName);
-
-            // Try using PowerShell module Cmdlet first
-            var moduleParams = new Dictionary<string, object>
-            {
-                ["Name"] = instanceName,
-                ["Username"] = username,
-                ["Password"] = password
-            };
-
-            var moduleResult = await _powerShellService.ExecuteModuleCmdletAsync(
-                "Set-DistroNexusCredential",
-                moduleParams,
-                new ModuleCallOptions
-                {
-                    TimeoutSeconds = NormalOperationTimeoutSeconds,
-                    ParseAsJson = false,
-                    UseModuleFallback = _useModuleFallback
-                },
-                cancellationToken: cancellationToken);
-
-            if (moduleResult.Success)
-            {
-                _logger.LogInformation("Credentials set successfully for WSL instance '{InstanceName}' using module", instanceName);
-                return;
-            }
-
-            // Fallback to inline script if module failed
-            _logger.LogWarning("Module execution failed for SetCredentialsAsync, falling back to inline script");
-            var escapedName = EscapePowerShellString(instanceName);
-            var escapedUsername = EscapePowerShellString(username);
-            var escapedPassword = EscapePowerShellString(password);
-            
-            var script = 
-                $"wsl --distribution {escapedName} -- bash -c \"id -u {escapedUsername} 2>/dev/null || useradd -m -s /bin/bash {escapedUsername}\"; " +
-                $"if ($LASTEXITCODE -ne 0) {{ throw \"Failed to create user\" }}; " +
-                $"wsl --distribution {escapedName} -- bash -c \"echo {escapedPassword} | chpasswd\"; " +
-                $"if ($LASTEXITCODE -ne 0) {{ throw \"Failed to set password\" }}; " +
-                $"wsl --distribution {escapedName} -- bash -c \"echo -e '[user]\\ndefault={escapedUsername}' > /etc/wsl.conf\"; " +
-                $"if ($LASTEXITCODE -ne 0) {{ throw \"Failed to configure default user\" }}; " +
-                "'success'";
-
-            await _powerShellService.ExecuteScriptAsync(script, cancellationToken);
-
-            _logger.LogInformation("Credentials set successfully for WSL instance '{InstanceName}' using fallback script", instanceName);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to set credentials for WSL instance '{InstanceName}'", instanceName);
-            throw;
-        }
+        return Task.FromException(new NotSupportedException("Credential changes must use IPowerShellModuleClient.SetCredentialAsync."));
     }
 
     /// <summary>

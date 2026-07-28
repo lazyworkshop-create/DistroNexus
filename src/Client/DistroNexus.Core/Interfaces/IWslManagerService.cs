@@ -76,9 +76,9 @@ public interface IWslManagerService
     /// </summary>
     /// <param name="instanceName">The name of the instance.</param>
     /// <param name="username">The username.</param>
-    /// <param name="password">The password.</param>
+    /// <param name="password">The credential supplied through a secure UI transport.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
-    Task SetCredentialsAsync(string instanceName, string username, string password, CancellationToken cancellationToken = default);
+    Task SetCredentialsAsync(string instanceName, string username, System.Security.SecureString password, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets the disk size of a WSL instance by reading the VHDX file.

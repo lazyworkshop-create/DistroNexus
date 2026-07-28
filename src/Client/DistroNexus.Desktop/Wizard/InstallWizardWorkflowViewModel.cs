@@ -12,7 +12,6 @@ namespace DistroNexus.Desktop.Wizard;
 /// </summary>
 public partial class InstallWizardWorkflowViewModel : ObservableObject
 {
-    private readonly IWslManagerService _wslManager;
     private readonly IPowerShellModuleClient _moduleClient;
     private readonly ISettingsService _settingsService;
     private readonly ITemplateService _templateService;
@@ -28,13 +27,11 @@ public partial class InstallWizardWorkflowViewModel : ObservableObject
     public event EventHandler<bool>? WizardCompleted;
 
     public InstallWizardWorkflowViewModel(
-        IWslManagerService wslManager,
         IPowerShellModuleClient moduleClient,
         ISettingsService settingsService,
         ITemplateService templateService,
         ILogger<InstallWizardWorkflowViewModel> logger)
     {
-        _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
         _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _templateService = templateService ?? throw new ArgumentNullException(nameof(templateService));
@@ -57,7 +54,7 @@ public partial class InstallWizardWorkflowViewModel : ObservableObject
         workflow.AddStep(new SelectTemplateStep(_templateService, _logger));
         workflow.AddStep(new TemplateOptionsStep());
         workflow.AddStep(new ReviewStep());
-        workflow.AddStep(new ProgressStep(_wslManager, _logger));
+        workflow.AddStep(new ProgressStep(_moduleClient, _logger));
         workflow.AddStep(new TemplateApplyStep(_templateService, _logger));
         workflow.AddStep(new ResultStep());
 

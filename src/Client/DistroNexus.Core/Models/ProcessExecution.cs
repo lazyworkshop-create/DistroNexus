@@ -7,7 +7,8 @@ public sealed record ProcessRequest(
     int MaxStandardOutputBytes = 1024 * 1024,
     int MaxStandardErrorBytes = 256 * 1024,
     string? WorkingDirectory = null,
-    ProcessOutputEncoding OutputEncoding = ProcessOutputEncoding.Utf8);
+    ProcessOutputEncoding OutputEncoding = ProcessOutputEncoding.Utf8,
+    string? StandardInput = null);
 
 public enum ProcessOutputEncoding { Utf8, Utf16LittleEndian }
 public enum ProcessFailureKind { None, StartFailed }

@@ -2,11 +2,70 @@ using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using DistroNexus.Core.Services;
 using Moq;
+using System.Security;
 
 namespace DistroNexus.Tests.Services;
 
 public sealed class PowerShellModuleClientTests
 {
+    [Fact]
+    public async Task SetCredential_UsesDedicatedSecureParameterBinding()
+    {
+        using var secret = new SecureString(); secret.AppendChar('x'); secret.MakeReadOnly();
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(service => service.ExecuteModuleCmdletWithSecureStringAsync(
+                "Set-DistroNexusCredential",
+                It.Is<IReadOnlyDictionary<string, object>>(parameters => parameters.Count == 3 && (string)parameters["Name"] == "Ubuntu" && (string)parameters["Username"] == "developer" && !(bool)parameters["Confirm"] && !parameters.ContainsKey("Password")),
+                "Password", secret, It.Is<ModuleCallOptions>(options => options.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Succeeded\":true,\"InstanceName\":\"Ubuntu\",\"OutcomeCode\":\"Lifecycle.CredentialSucceeded\"}" });
+
+        var result = await new PowerShellModuleClient(powerShell.Object).SetCredentialAsync("Ubuntu", "developer", secret);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal("Ubuntu", result.InstanceName);
+        powerShell.VerifyAll();
+    }
+
+    [Fact]
+    public async Task SetCredential_PreservesStableCredentialOutcomeCode()
+    {
+        using var secret = new SecureString(); secret.AppendChar('x'); secret.MakeReadOnly();
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(service => service.ExecuteModuleCmdletWithSecureStringAsync(
+                "Set-DistroNexusCredential", It.IsAny<IReadOnlyDictionary<string, object>>(), "Password", secret,
+                It.Is<ModuleCallOptions>(options => options.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Succeeded\":false,\"InstanceName\":\"Ubuntu\",\"OutcomeCode\":\"Lifecycle.CredentialGrantExpired\"}" });
+
+        var result = await new PowerShellModuleClient(powerShell.Object).SetCredentialAsync("Ubuntu", "developer", secret);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("Lifecycle.CredentialGrantExpired", result.OutcomeCode);
+        powerShell.VerifyAll();
+    }
+
+    [Fact]
+    public async Task VerifiedInstallOperations_UseOnlyRegisteredCommandsAndDirectSecureBinding()
+    {
+        const string token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        using var secret = new SecureString(); secret.AppendChar('x'); secret.MakeReadOnly();
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusInstallSource", It.Is<Dictionary<string, object>>(p => p.Count == 1 && (string)p["PackageId"] == "ubuntu"), It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"PackageId\":\"ubuntu\",\"CacheState\":\"Missing\",\"DownloadAvailable\":true,\"ExpectedSha256\":\"hash\",\"ExpectedSizeBytes\":1,\"SourceProvenance\":\"Catalog\"}" });
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusPackageAcquisitionPreview", It.Is<Dictionary<string, object>>(p => p.Count == 1 && (string)p["PackageId"] == "ubuntu"), It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = $$"""{"PreviewToken":"{{token}}","PackageId":"ubuntu","ExpiresAt":"2030-01-01T00:00:00+00:00"}""" });
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Invoke-DistroNexusPackageAcquisition", It.Is<Dictionary<string, object>>(p => p.Count == 2 && (string)p["PreviewToken"] == token && !(bool)p["Confirm"]), It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = $$"""{"PackageReference":"{{token}}","PackageId":"ubuntu","Sha256":"hash","SizeBytes":1,"ExpiresAt":"2030-01-01T00:00:00+00:00","OutcomeCode":"Lifecycle.Acquired"}""" });
+        powerShell.Setup(x => x.ExecuteModuleCmdletWithSecureStringAsync("Install-DistroNexusInstance", It.Is<IReadOnlyDictionary<string, object>>(p => p.Count == 7 && (string)p["PackageReference"] == token && (string)p["Name"] == "Ubuntu" && !p.ContainsKey("Password") && !(bool)p["Confirm"]), "Password", secret, It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Succeeded\":true,\"Operation\":\"Install\",\"InstanceName\":\"Ubuntu\",\"OutcomeCode\":\"Lifecycle.Succeeded\",\"RecoveryAction\":\"None\"}" });
+        var client = new PowerShellModuleClient(powerShell.Object);
+
+        Assert.Equal("Missing", (await client.ResolveInstallSourceAsync("ubuntu")).CacheState);
+        Assert.Equal(token, (await client.PreviewPackageAcquisitionAsync("ubuntu")).PreviewToken);
+        Assert.Equal(token, (await client.AcquirePackageAsync(token)).PackageReference);
+        Assert.True((await client.InstallVerifiedInstanceAsync(token, "Ubuntu", "D:\\WSL", "developer", "bash", null, false, secret)).Succeeded);
+        powerShell.VerifyAll();
+    }
+
     [Fact]
     public async Task PackageQueries_UseClosedCmdletParametersAndDeserializeResults()
     {
@@ -449,6 +508,7 @@ public sealed class PowerShellModuleClientTests
             new[]
             {
                 nameof(IPowerShellModuleClient.AddCatalogSourceAsync),
+                nameof(IPowerShellModuleClient.AcquirePackageAsync),
                 nameof(IPowerShellModuleClient.AddInstanceTagAsync),
                 nameof(IPowerShellModuleClient.ClearPackageCacheAsync),
                 nameof(IPowerShellModuleClient.CloneRecoveryPointAsync),
@@ -490,6 +550,7 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.GetNetworkSettingsPreviewAsync),
                 nameof(IPowerShellModuleClient.GetNetworkStatusAsync),
                 nameof(IPowerShellModuleClient.GetPackageAsync),
+                nameof(IPowerShellModuleClient.PreviewPackageAcquisitionAsync),
                 nameof(IPowerShellModuleClient.GetPackageCacheLocationAsync),
                 nameof(IPowerShellModuleClient.GetPackageCacheUsageAsync),
                 nameof(IPowerShellModuleClient.GetPackagesAsync),
@@ -535,6 +596,7 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.RemoveInstanceTagAsync),
                 nameof(IPowerShellModuleClient.RemoveRecoveryPointAsync),
                 nameof(IPowerShellModuleClient.RepairHealthAsync),
+                nameof(IPowerShellModuleClient.ResolveInstallSourceAsync),
                 nameof(IPowerShellModuleClient.RenameInstanceTagsAsync),
                 nameof(IPowerShellModuleClient.ReorderCatalogSourcesAsync),
                 nameof(IPowerShellModuleClient.ResetCatalogSourcesAsync),
@@ -546,6 +608,7 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.SearchPackagesAsync),
                 nameof(IPowerShellModuleClient.ScanHealthAsync),
                 nameof(IPowerShellModuleClient.SetCatalogSourceActiveAsync),
+                nameof(IPowerShellModuleClient.SetCredentialAsync),
                 nameof(IPowerShellModuleClient.SetDockerIntegrationAsync),
                 nameof(IPowerShellModuleClient.SetInstanceSparseModeAsync),
                 nameof(IPowerShellModuleClient.SetGlobalConfigurationAsync),
@@ -557,6 +620,7 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.StartInstanceAsync),
                 nameof(IPowerShellModuleClient.StartInstanceWithResultAsync),
                 nameof(IPowerShellModuleClient.StartTerminalAsync),
+                nameof(IPowerShellModuleClient.InstallVerifiedInstanceAsync),
                 nameof(IPowerShellModuleClient.StopInstanceAsync),
                 nameof(IPowerShellModuleClient.TestCatalogSourceAsync),
                 nameof(IPowerShellModuleClient.UpdateCatalogSourceAsync),

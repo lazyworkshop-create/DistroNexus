@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
+using System.Security;
 using System.Windows;
 
 namespace DistroNexus.Desktop.ViewModels;
@@ -567,14 +568,14 @@ public partial class WslInstanceViewModel : ObservableObject
         var passResult = await passDialog.ShowDialogAsync();
         if (passResult != Wpf.Ui.Controls.MessageBoxResult.Primary) return;
         
-        var password = passwordBox.Password;
-
         try
         {
             IsBusy = true;
             _logger.LogInformation("Setting credentials for instance {Name}", Name);
-            
-            await _wslManager.SetCredentialsAsync(Name, username, password);
+            using SecureString password = passwordBox.SecurePassword.Copy();
+            passwordBox.Clear();
+            if (password.Length == 0) return;
+            await _moduleClient.SetCredentialAsync(Name, username, password);
             
             await ShowAlert(Properties.Resources.SuccessTitle, string.Format(Properties.Resources.SuccessCredentialsSet, Name));
         }

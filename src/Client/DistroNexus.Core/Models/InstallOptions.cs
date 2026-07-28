@@ -26,11 +26,6 @@ public class InstallOptions
     public string Username { get; set; } = "root";
 
     /// <summary>
-    /// Gets or sets the password for the user.
-    /// </summary>
-    public string? Password { get; set; }
-
-    /// <summary>
     /// Gets or sets the WSL version to use (1 or 2).
     /// </summary>
     public int WslVersion { get; set; } = 2;

@@ -219,6 +219,7 @@ public partial class WizardWorkflow : ObservableObject
     /// </summary>
     public void Cancel()
     {
+        foreach (var step in _steps) _ = step.OnExitAsync();
         Complete(false);
     }
 

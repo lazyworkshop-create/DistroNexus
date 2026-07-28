@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using System.Management.Automation;
+using System.Security;
 using System.Text.RegularExpressions;
 using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
@@ -497,6 +499,8 @@ public class PowerShellService : IPowerShellService, IDisposable
         ModuleCallOptions? options = null,
         CancellationToken cancellationToken = default)
     {
+        if (parameters?.Values.Any(value => value is SecureString) == true)
+            throw new ArgumentException("SecureString values require the dedicated secure module invocation API.", nameof(parameters));
         ArgumentNullException.ThrowIfNull(cmdletName);
 
         options ??= new ModuleCallOptions();
@@ -700,6 +704,39 @@ public class PowerShellService : IPowerShellService, IDisposable
                 Exception = ex
             };
         }
+    }
+
+    public async Task<PowerShellScriptResult> ExecuteModuleCmdletWithSecureStringAsync(
+        string cmdletName,
+        IReadOnlyDictionary<string, object> parameters,
+        string secureParameterName,
+        SecureString secret,
+        ModuleCallOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(cmdletName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(secureParameterName);
+        ArgumentNullException.ThrowIfNull(parameters);
+        ArgumentNullException.ThrowIfNull(secret);
+        if (_moduleBasePath is null) return new PowerShellScriptResult { ExitCode = 1, Error = "DistroNexus PowerShell module path not configured." };
+
+        try
+        {
+            var manifest = Path.Combine(_moduleBasePath, "DistroNexus.psd1");
+            if (!File.Exists(manifest)) return new PowerShellScriptResult { ExitCode = 1, Error = "DistroNexus PowerShell module files are missing." };
+            using var powerShell = PowerShell.Create();
+            powerShell.AddCommand("Import-Module").AddParameter("Name", manifest).AddParameter("Force").AddParameter("ErrorAction", ActionPreference.Stop);
+            await Task.Run(() => powerShell.Invoke(), cancellationToken).ConfigureAwait(false);
+            if (powerShell.HadErrors) return new PowerShellScriptResult { ExitCode = 1, Error = "DistroNexus module import failed." };
+            powerShell.Commands.Clear();
+            powerShell.AddCommand(cmdletName).AddParameters(new Dictionary<string, object>(parameters)).AddParameter(secureParameterName, secret).AddParameter("ErrorAction", ActionPreference.Stop);
+            if (options?.ParseAsJson == true) powerShell.AddCommand("ConvertTo-Json").AddParameter("Depth", 10).AddParameter("Compress");
+            var output = await Task.Run(() => powerShell.Invoke(), cancellationToken).ConfigureAwait(false);
+            if (powerShell.HadErrors) return new PowerShellScriptResult { ExitCode = 1, Error = "Secure module operation failed.", UsedModule = true };
+            return new PowerShellScriptResult { ExitCode = 0, Output = string.Join(Environment.NewLine, output.Select(item => item?.ToString())), UsedModule = true };
+        }
+        catch (OperationCanceledException) { return new PowerShellScriptResult { ExitCode = 1, Error = "Secure module operation cancelled.", UsedModule = true }; }
+        catch { return new PowerShellScriptResult { ExitCode = 1, Error = "Secure module operation failed.", UsedModule = true }; }
     }
 
     /// <summary>

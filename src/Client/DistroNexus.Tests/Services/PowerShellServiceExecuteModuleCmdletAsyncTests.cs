@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Security;
 using DistroNexus.Core.Models;
 using DistroNexus.Core.Services;
 using FluentAssertions;
@@ -81,6 +82,17 @@ public class PowerShellServiceExecuteModuleCmdletAsyncTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task ExecuteModuleCmdletAsync_RejectsSecureStringInGenericParameterDictionary()
+    {
+        using var secret = new SecureString();
+        secret.AppendChar('x');
+        secret.MakeReadOnly();
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.ExecuteModuleCmdletAsync(
+            "Set-DistroNexusCredential", new Dictionary<string, object> { ["Password"] = secret }));
     }
 
     [Fact]

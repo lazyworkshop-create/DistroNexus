@@ -18,7 +18,6 @@ namespace DistroNexus.Desktop.ViewModels;
 public partial class InstallWizardViewModel : ObservableObject
 {
     private readonly IPowerShellModuleClient _moduleClient;
-    private readonly IWslManagerService _wslManager;
     private readonly ISettingsService _settingsService;
     private readonly ILogger<InstallWizardViewModel> _logger;
     private CancellationTokenSource? _installCts;
@@ -85,11 +84,6 @@ public partial class InstallWizardViewModel : ObservableObject
     [ObservableProperty]
     private string _username = string.Empty;
 
-    [ObservableProperty]
-    private string _password = string.Empty;
-
-    [ObservableProperty]
-    private string _confirmPassword = string.Empty;
 
     [ObservableProperty]
     private bool _createUser = true;
@@ -119,12 +113,10 @@ public partial class InstallWizardViewModel : ObservableObject
 
     public InstallWizardViewModel(
         IPowerShellModuleClient moduleClient,
-        IWslManagerService wslManager,
         ISettingsService settingsService,
         ILogger<InstallWizardViewModel> logger)
     {
         _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
-        _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -210,33 +202,19 @@ public partial class InstallWizardViewModel : ObservableObject
             _logger.LogInformation("Starting installation of {DistroName} to {Path}", 
                 SelectedDistribution?.Name, InstallPath);
 
-            var options = new InstallOptions
-            {
-                InstanceName = InstanceName,
-                Package = SelectedDistribution,
-                InstallPath = InstallPath,
-                Username = CreateUser ? Username : "root",
-                Password = CreateUser ? Password : null,
-                WslVersion = WslVersion,
-                SetAsDefault = SetAsDefault,
-                LaunchAfterInstall = LaunchAfterInstall,
-                UseLocalCache = UseLocalCache,
-                InitCommands = GetInitializationCommands()
-            };
-
             // Clear previous logs
             InstallLogs.Clear();
             AddInstallLog(Properties.Resources.LogStartingInstall);
 
-            // Progress callback
-            var progress = new Progress<(double percentage, string message)>(p =>
-            {
-                InstallProgress = p.percentage;
-                InstallStatusMessage = p.message;
-                AddInstallLog($"[{p.percentage:F1}%] {p.message}");
-            });
-
-            await _wslManager.InstallInstanceAsync(options, progress, _installCts.Token);
+            var packageId = SelectedDistribution?.Id ?? throw new InvalidOperationException("A package is required.");
+            InstallProgress = 15;
+            var source = await _moduleClient.ResolveInstallSourceAsync(packageId, _installCts.Token);
+            InstallProgress = 30;
+            var preview = await _moduleClient.PreviewPackageAcquisitionAsync(source.PackageId, _installCts.Token);
+            var package = await _moduleClient.AcquirePackageAsync(preview.PreviewToken, _installCts.Token);
+            InstallProgress = 55;
+            var result = await _moduleClient.InstallVerifiedInstanceAsync(package.PackageReference, InstanceName, InstallPath, CreateUser ? Username : "root", "bash", null, SetAsDefault, cancellationToken: _installCts.Token);
+            if (!result.Succeeded) throw new InvalidOperationException(result.OutcomeCode);
 
             InstallProgress = 100;
             InstallStatusMessage = Properties.Resources.InstallSuccessLabel;
@@ -341,7 +319,6 @@ public partial class InstallWizardViewModel : ObservableObject
             {
                 InstallPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DistroNexus", "Instances");
                 Username = "user";
-                Password = "password";
                 CreateUser = true;
                 SetAsDefault = false;
                 UseLocalCache = true;
@@ -392,16 +369,6 @@ public partial class InstallWizardViewModel : ObservableObject
                         ErrorMessage = Properties.Resources.ValMsgEnterUsername;
                         return false;
                     }
-                    if (string.IsNullOrWhiteSpace(Password))
-                    {
-                        ErrorMessage = Properties.Resources.ValMsgEnterPassword;
-                        return false;
-                    }
-                    if (Password != ConfirmPassword)
-                    {
-                        ErrorMessage = Properties.Resources.ValMsgPasswordsNoMatch;
-                        return false;
-                    }
                 }
                 break;
 
@@ -412,11 +379,6 @@ public partial class InstallWizardViewModel : ObservableObject
                     if (string.IsNullOrWhiteSpace(Username))
                     {
                         ErrorMessage = Properties.Resources.ValMsgEnterUsername;
-                        return false;
-                    }
-                    if (Password != ConfirmPassword)
-                    {
-                        ErrorMessage = Properties.Resources.ValMsgPasswordsNoMatch;
                         return false;
                     }
                 }

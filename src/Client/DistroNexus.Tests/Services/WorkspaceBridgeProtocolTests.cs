@@ -167,6 +167,52 @@ public sealed class WorkspaceBridgeProtocolTests
         }
     }
 
+    [Theory]
+    [InlineData("install.source.resolve.v1", "{\"PackageId\":\"ubuntu\",\"Path\":\"C:\\\\unsafe\"}")]
+    [InlineData("package.acquire.preview.v1", "{\"PackageId\":\"ubuntu\",\"Url\":\"https://unsafe.test\"}")]
+    [InlineData("package.acquire.execute.v1", "{\"PreviewToken\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"Command\":\"cmd\"}")]
+    [InlineData("instance.install.preview.v1", "{\"PackageReference\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"Name\":\"Ubuntu\",\"InstallRoot\":\"D:\\\\WSL\",\"Username\":\"developer\",\"Shell\":\"bash\",\"SetAsDefault\":false,\"Command\":\"cmd\"}")]
+    [InlineData("instance.install.execute.v1", "{\"PreviewToken\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"PackagePath\":\"C:\\\\unsafe\"}")]
+    public async Task VerifiedInstallRoutes_RejectUnknownPayloadFields(string operation, string json)
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        var response = await bridge.SendAsync(operation, payload: JsonDocument.Parse(json).RootElement.Clone());
+        Assert.False(response.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("Workspace.Bridge.Invalid", response.GetProperty("ErrorCode").GetString());
+    }
+
+    [Theory]
+    [InlineData("install.source.resolve.v1", "{\"PackageId\":\"\"}", "Lifecycle.AcquisitionInvalid", "")]
+    [InlineData("package.acquire.preview.v1", "{\"PackageId\":\"\"}", "Lifecycle.AcquisitionInvalid", "")]
+    [InlineData("package.acquire.execute.v1", "{\"PreviewToken\":\"gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg\"}", "Lifecycle.GrantInvalid", "")]
+    [InlineData("instance.install.preview.v1", "{\"PackageReference\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"Name\":\"bad\\nname\",\"InstallRoot\":\"C:\\\\private\\\\secret-root\",\"Username\":\"developer\",\"Shell\":\"bash\",\"SetAsDefault\":false}", "Workspace.Bridge.Invalid", "C:\\private\\secret-root")]
+    [InlineData("instance.install.execute.v1", "{\"PreviewToken\":\"gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg\"}", "Lifecycle.GrantInvalid", "")]
+    public async Task VerifiedInstallRoutes_MapFailuresToStableSanitizedOutcomes(string operation, string json, string outcome, string forbidden)
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        var response = await bridge.SendAsync(operation, payload: JsonDocument.Parse(json).RootElement.Clone());
+
+        Assert.False(response.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal(outcome, response.GetProperty("ErrorCode").GetString());
+        Assert.Equal(outcome, response.GetProperty("ErrorMessage").GetString());
+        Assert.DoesNotContain("private", response.GetRawText(), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("secret-root", response.GetRawText(), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("http", response.GetRawText(), StringComparison.OrdinalIgnoreCase);
+        if (!string.IsNullOrEmpty(forbidden)) Assert.DoesNotContain(forbidden, response.GetRawText(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task CredentialPreviewRoute_PreservesStableSanitizedCredentialInvalidOutcome()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        var response = await bridge.SendAsync("instance.credential.preview.v1", payload: JsonDocument.Parse("{\"Name\":\"Ubuntu\",\"Username\":\"developer\",\"SecretEnvelope\":\"plaintext-secret\"}").RootElement.Clone());
+
+        Assert.False(response.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("Lifecycle.CredentialInvalid", response.GetProperty("ErrorCode").GetString());
+        Assert.Equal("Lifecycle.CredentialInvalid", response.GetProperty("ErrorMessage").GetString());
+        Assert.DoesNotContain("plaintext-secret", response.GetRawText(), StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task CapabilityV1Routes_RejectPayloadsOutsideTheirFixedContractsBeforeProbe()
     {

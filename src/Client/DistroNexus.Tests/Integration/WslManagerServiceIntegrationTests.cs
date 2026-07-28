@@ -242,41 +242,20 @@ public class WslManagerServiceIntegrationTests
     }
 
     [Fact]
-    public async Task SetCredentialsAsync_Should_Call_PowerShell_Module()
+    public async Task SetCredentialsAsync_RejectsTheLegacyCoreExecutionPath()
     {
         // Arrange
         var instanceName = "Ubuntu-22.04";
         var username = "customuser";
-        var password = "password123";
-        var mockResult = new PowerShellScriptResult
-        {
-            ExitCode = 0,
-            Error = string.Empty,
-            UsedModule = true
-        };
-
-        _mockPowerShellService
-            .Setup(x => x.ExecuteModuleCmdletAsync(
-                It.IsAny<string>(),
-                It.IsAny<Dictionary<string, object>>(),
-                It.IsAny<ModuleCallOptions>(),
-                It.IsAny<System.Threading.CancellationToken>()))
-            .ReturnsAsync(mockResult);
+        using var password = new System.Security.SecureString();
+        foreach (var character in "password123") password.AppendChar(character);
+        password.MakeReadOnly();
 
         // Act
-        await _service.SetCredentialsAsync(instanceName, username, password);
+        await Assert.ThrowsAsync<NotSupportedException>(() => _service.SetCredentialsAsync(instanceName, username, password));
 
         // Assert
-        _mockPowerShellService.Verify(
-            x => x.ExecuteModuleCmdletAsync(
-                "Set-DistroNexusCredential",
-                It.Is<Dictionary<string, object>>(
-                    d => d["Name"].Equals(instanceName) &&
-                         d["Username"].Equals(username) &&
-                         d["Password"].Equals(password)),
-                It.IsAny<ModuleCallOptions>(),
-                It.IsAny<System.Threading.CancellationToken>()),
-            Times.Once);
+        _mockPowerShellService.VerifyNoOtherCalls();
     }
 
     [Fact]

@@ -1,5 +1,7 @@
 using System.Text.RegularExpressions;
 using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.Win32;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
@@ -73,6 +75,25 @@ internal sealed class BridgeWslManagerService(IProcessRunner processes, string l
         return instances;
     }
 
+    /// <summary>Returns a non-reversible registered-instance identity/state fingerprint for credential grants.</summary>
+    public async Task<string> GetCredentialFingerprintAsync(string instanceName, CancellationToken cancellationToken = default)
+    {
+        var details = await GetInstanceDetailsAsync(new InstanceListOptions(false, false, true, false), cancellationToken);
+        var match = details.SingleOrDefault(item => string.Equals(item.Name, instanceName, StringComparison.OrdinalIgnoreCase));
+        if (match is null || string.IsNullOrWhiteSpace(match.Guid) || string.IsNullOrWhiteSpace(match.BasePath) || match.InstallTime is null || match.Version is < 1 or > 2)
+            throw new InvalidOperationException("Lifecycle.CredentialStateChanged");
+        return Fingerprint(match);
+    }
+
+    internal static string Fingerprint(BridgeInstanceDetails details)
+    {
+        if (string.IsNullOrWhiteSpace(details.Guid) || string.IsNullOrWhiteSpace(details.BasePath) || details.InstallTime is null || details.Version is < 1 or > 2)
+            throw new InvalidOperationException("Lifecycle.CredentialStateChanged");
+        var pathIdentity = Path.GetFullPath(details.BasePath).TrimEnd(Path.DirectorySeparatorChar).ToUpperInvariant();
+        var material = $"{details.Guid}|{pathIdentity}|{details.InstallTime.Value.ToUniversalTime().Ticks}|{details.State}|{details.Version}";
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(material)));
+    }
+
     private async Task<string?> ProbeAsync(string instanceName, IReadOnlyList<string> arguments, string? osReleaseKey, CancellationToken cancellationToken)
     {
         try
@@ -118,7 +139,7 @@ internal sealed class BridgeWslManagerService(IProcessRunner processes, string l
     public async Task<bool> RemoveInstanceAsync(string instanceName, CancellationToken cancellationToken = default) { await _lifecycle.RemoveAsync(instanceName, false, cancellationToken); return true; }
     public Task MoveInstanceAsync(string instanceName, string newPath, IProgress<double>? progress = null, CancellationToken cancellationToken = default) => _lifecycle.MoveAsync(instanceName, newPath, cancellationToken);
     public Task RenameInstanceAsync(string oldName, string newName, CancellationToken cancellationToken = default) => _lifecycle.RenameAsync(oldName, newName, cancellationToken);
-    public Task SetCredentialsAsync(string instanceName, string username, string password, CancellationToken cancellationToken = default) => Unsupported();
+    public Task SetCredentialsAsync(string instanceName, string username, System.Security.SecureString password, CancellationToken cancellationToken = default) => Unsupported();
     public Task<long> GetInstanceDiskSizeAsync(string instanceName, CancellationToken cancellationToken = default) => Unsupported<long>();
     public Task<WslInstance?> ForceRefreshInstanceAsync(string instanceName, CancellationToken cancellationToken = default) => Unsupported<WslInstance?>();
     public Task CompactInstanceAsync(string instanceName, IProgress<(double Percentage, string Message)>? progress = null, bool whatIf = false, CancellationToken cancellationToken = default) => Unsupported();

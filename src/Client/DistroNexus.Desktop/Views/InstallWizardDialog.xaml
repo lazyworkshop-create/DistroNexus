@@ -126,14 +126,6 @@ d:DataContext="{d:DesignInstance Type=vm:InstallWizardViewModel}">
                                         PlaceholderText="{lex:Loc PlaceholderUsername}" 
                                         Margin="0,0,0,15"/>
 
-                            <TextBlock Text="{lex:Loc LabelPassword}" Margin="0,0,0,5"/>
-                            <ui:PasswordBox Password="{Binding Password, UpdateSourceTrigger=PropertyChanged}" 
-                                            PlaceholderText="{lex:Loc PlaceholderPassword}" 
-                                            Margin="0,0,0,15"/>
-
-                            <TextBlock Text="{lex:Loc LabelConfirmPassword}" Margin="0,0,0,5"/>
-                            <ui:PasswordBox Password="{Binding ConfirmPassword, UpdateSourceTrigger=PropertyChanged}" 
-                                            PlaceholderText="{lex:Loc PlaceholderConfirmPassword}"/>
                         </StackPanel>
                     </StackPanel>
                 </Grid>

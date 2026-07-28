@@ -16,6 +16,7 @@ var processes = new ProcessRunner();
 var lifecycleRoot = root ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DistroNexus");
 var instances = new BridgeWslManagerService(processes, lifecycleRoot);
 var lifecycleRoutes = new LifecyclePathOperationService(instances, lifecycleRoot, new LifecycleMetadataCleanup(lifecycleRoot, processes));
+var credentials = new CredentialOperationService(processes, async (name, cancellation) => (await instances.GetInstancesAsync(cancellation)).Any(instance => string.Equals(instance.Name, name, StringComparison.OrdinalIgnoreCase)), Path.Combine(lifecycleRoot, "credential-grants"), fingerprint: instances.GetCredentialFingerprintAsync);
 var instanceResources = new InstanceResourceService(new RegisteredInstanceSparseAdapter(processes), Path.Combine(root ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DistroNexus"), "instance-sparse-grants"));
 var dockerIntegration = new DockerIntegrationService(NullLogger<DockerIntegrationService>.Instance, instances);
 var capabilities = new PlatformCapabilityService(processes);
@@ -38,6 +39,11 @@ var settings = new SettingsService(NullLogger<SettingsService>.Instance, Path.Co
 var catalogSources = new CatalogSourceManager(settings, new HttpClient(), NullLogger<CatalogSourceManager>.Instance);
 var catalogHttp = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(10) };
 var catalog = new CatalogService(NullLogger<CatalogService>.Instance, settings, catalogHttp);
+var verifiedInstall = new VerifiedInstallService(
+    catalog,
+    processes,
+    async (name, cancellation) => (await instances.GetInstancesAsync(cancellation)).Any(instance => string.Equals(instance.Name, name, StringComparison.OrdinalIgnoreCase)),
+    lifecycleRoot);
 var globalConfiguration = new WslConfigService(NullLogger<WslConfigService>.Instance, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
 var globalConfigurationGateway = new GlobalConfigurationService(globalConfiguration, globalConfiguration, capabilities, Path.Combine(applicationRoot, "global-configuration-grants"));
 var backups = new BackupService(bridgePowerShell, NullLogger<BackupService>.Instance, applicationRoot);
@@ -226,6 +232,13 @@ while ((line = Console.ReadLine()) is not null)
             "instance.export.execute.v1" => await LifecycleExecuteV1Async(request),
             "instance.import.preview.v1" => await LifecycleImportPreviewV1Async(request),
             "instance.import.execute.v1" => await LifecycleExecuteV1Async(request),
+            "instance.credential.preview.v1" => await CredentialPreviewV1Async(request),
+            "instance.credential.execute.v1" => await CredentialExecuteV1Async(request),
+            "install.source.resolve.v1" => await ResolveInstallSourceV1Async(request),
+            "package.acquire.preview.v1" => await PreviewPackageAcquisitionV1Async(request),
+            "package.acquire.execute.v1" => await AcquirePackageV1Async(request),
+            "instance.install.preview.v1" => await PreviewVerifiedInstallV1Async(request),
+            "instance.install.execute.v1" => await ExecuteVerifiedInstallV1Async(request),
             "instance.lifecycle.execute.v1" => await LifecycleExecuteV1Async(request),
             "instance.resources.get.v1" => await InstanceResourcesGetV1Async(request),
             "instance.sparse.preview.v1" => await InstanceSparsePreviewV1Async(request),
@@ -280,14 +293,25 @@ while ((line = Console.ReadLine()) is not null)
     catch (DistroNexus.Core.Exceptions.WslOperationFailedException ex) { response = new(false, null, ex.Code.ToString(), ex.Message); }
     catch (InvalidOperationException ex) when (ex.Message is "Wslg.DiscoveryGrantInvalid" or "Wslg.DiscoveryGrantExpired" or "Wslg.ApplicationNotFound" or "Wslg.EntryChanged") { response = new(false, null, ex.Message, ex.Message); }
     catch (InvalidOperationException ex) when (string.Equals(ex.Message, "PackageCache.EntryInvalid", StringComparison.Ordinal)) { response = new(false, null, "PackageCache.EntryInvalid", "Package cache entry is invalid."); }
+    catch (Exception ex) when (IsVerifiedInstallOperation(request?.Operation))
+    {
+        var code = ex switch
+        {
+            ArgumentException => "Workspace.Bridge.Invalid",
+            OperationCanceledException => "Lifecycle.Cancelled",
+            InvalidOperationException when IsVerifiedInstallOutcome(ex.Message) => ex.Message,
+            _ => "Lifecycle.Failed"
+        };
+        response = new(false, null, code, code);
+    }
     catch (Exception ex) when (request?.Operation.StartsWith("instance.", StringComparison.Ordinal) == true && (request.Operation.Contains(".preview.", StringComparison.Ordinal) || request.Operation.Contains(".execute.", StringComparison.Ordinal)))
     {
-        var code = ex is OperationCanceledException ? "Lifecycle.Cancelled" : ex.Message is "Lifecycle.PathInvalid" or "Lifecycle.GrantInvalid" or "Lifecycle.GrantExpired" or "Lifecycle.InstanceStateChanged" or "Lifecycle.KeepFilesUnavailable" ? ex.Message : "Lifecycle.Failed";
+        var code = ex is ArgumentException ? "Workspace.Bridge.Invalid" : ex is OperationCanceledException ? "Lifecycle.Cancelled" : ex.Message is "Lifecycle.PathInvalid" or "Lifecycle.GrantInvalid" or "Lifecycle.GrantExpired" or "Lifecycle.InstanceStateChanged" or "Lifecycle.KeepFilesUnavailable" or "Lifecycle.CredentialInvalid" or "Lifecycle.CredentialGrantInvalid" or "Lifecycle.CredentialGrantExpired" or "Lifecycle.CredentialStateChanged" or "Lifecycle.CredentialFailed" ? ex.Message : "Lifecycle.Failed";
         response = new(false, null, code, code);
     }
     catch (Exception ex) when (request?.Operation.StartsWith("instance.", StringComparison.Ordinal) == true && request.Operation.Contains(".preview.", StringComparison.Ordinal) || request?.Operation.StartsWith("instance.", StringComparison.Ordinal) == true && request.Operation.Contains(".execute.", StringComparison.Ordinal) == true)
     {
-        var code = ex is OperationCanceledException ? "Lifecycle.Cancelled" : ex.Message is "Lifecycle.PathInvalid" or "Lifecycle.GrantInvalid" or "Lifecycle.GrantExpired" or "Lifecycle.InstanceStateChanged" or "Lifecycle.KeepFilesUnavailable" ? ex.Message : "Lifecycle.Failed";
+        var code = ex is ArgumentException ? "Workspace.Bridge.Invalid" : ex is OperationCanceledException ? "Lifecycle.Cancelled" : ex.Message is "Lifecycle.PathInvalid" or "Lifecycle.GrantInvalid" or "Lifecycle.GrantExpired" or "Lifecycle.InstanceStateChanged" or "Lifecycle.KeepFilesUnavailable" or "Lifecycle.CredentialInvalid" or "Lifecycle.CredentialGrantInvalid" or "Lifecycle.CredentialGrantExpired" or "Lifecycle.CredentialStateChanged" or "Lifecycle.CredentialFailed" ? ex.Message : "Lifecycle.Failed";
         response = new(false, null, code, code);
     }
     catch (Exception ex) when (request?.Operation.StartsWith("docker.integration.", StringComparison.Ordinal) == true)
@@ -318,6 +342,18 @@ while ((line = Console.ReadLine()) is not null)
     catch (Exception ex) { response = new(false, null, ex is InvalidOperationException ? "Workspace.ConflictOrState" : "Workspace.Bridge.Invalid", ex.Message); }
     WriteFrame(response);
 }
+
+static bool IsVerifiedInstallOperation(string? operation) => operation is
+    "install.source.resolve.v1" or "package.acquire.preview.v1" or "package.acquire.execute.v1" or
+    "instance.install.preview.v1" or "instance.install.execute.v1";
+
+static bool IsVerifiedInstallOutcome(string value) => value is
+    "Lifecycle.AcquisitionInvalid" or "Lifecycle.AcquisitionUnavailable" or "Lifecycle.AcquisitionFailed" or
+    "Lifecycle.GrantInvalid" or "Lifecycle.GrantExpired" or "Lifecycle.PackageMissing" or "Lifecycle.PackageInvalid" or
+    "Lifecycle.PathInvalid" or "Lifecycle.InstanceStateChanged" or "Lifecycle.StateChanged" or
+    "Lifecycle.InstallInvalid" or "Lifecycle.InstallRuntimeUnsupported" or "Lifecycle.InstallArtifactUnsupported" or
+    "Lifecycle.InstallArchiveFailed" or "Lifecycle.InstallArchiveInvalid" or "Lifecycle.InstallConfigurationFailed" or
+    "Lifecycle.CredentialInvalid" or "Lifecycle.CredentialFailed";
 
 void ValidateEmptyPayload(BridgeRequest request)
 {
@@ -397,6 +433,43 @@ async Task<LifecycleOperationResult> LifecycleExecuteV1Async(BridgeRequest reque
 {
     ValidatePayload(request, ["PreviewToken"], ["PreviewToken"]);
     return await lifecycleRoutes.ExecuteAsync(ParsePayload<LifecycleExecutePayload>(request).PreviewToken);
+}
+async Task<CredentialOperationPreview> CredentialPreviewV1Async(BridgeRequest request)
+{
+    ValidatePayload(request, ["Name", "Username", "SecretEnvelope"], ["Name", "Username", "SecretEnvelope"]);
+    var payload = ParsePayload<CredentialPreviewPayload>(request);
+    return await credentials.PreviewAsync(payload.Name, payload.Username, payload.SecretEnvelope);
+}
+async Task<CredentialOperationResult> CredentialExecuteV1Async(BridgeRequest request)
+{
+    ValidatePayload(request, ["PreviewToken"], ["PreviewToken"]);
+    return await credentials.ExecuteAsync(ParsePayload<CredentialExecutePayload>(request).PreviewToken);
+}
+async Task<InstallSourceResolution> ResolveInstallSourceV1Async(BridgeRequest request)
+{
+    ValidatePayload(request, ["PackageId"], ["PackageId"]);
+    return await verifiedInstall.ResolveAsync(ParsePayload<InstallSourcePayload>(request).PackageId);
+}
+async Task<PackageAcquisitionPreview> PreviewPackageAcquisitionV1Async(BridgeRequest request)
+{
+    ValidatePayload(request, ["PackageId"], ["PackageId"]);
+    return await verifiedInstall.PreviewAcquireAsync(ParsePayload<PackageAcquisitionPayload>(request).PackageId);
+}
+async Task<PackageAcquisitionResult> AcquirePackageV1Async(BridgeRequest request)
+{
+    ValidatePayload(request, ["PreviewToken"], ["PreviewToken"]);
+    return await verifiedInstall.AcquireAsync(ParsePayload<PackageAcquisitionExecutePayload>(request).PreviewToken);
+}
+async Task<InstallPreview> PreviewVerifiedInstallV1Async(BridgeRequest request)
+{
+    ValidatePayload(request, ["PackageReference", "Name", "InstallRoot", "Username", "Shell", "Locale", "SetAsDefault", "SecretEnvelope"], ["PackageReference", "Name", "InstallRoot", "Username", "Shell", "SetAsDefault"]);
+    var payload = ParsePayload<VerifiedInstallPreviewPayload>(request);
+    return await verifiedInstall.PreviewInstallAsync(payload.PackageReference, payload.Name, payload.InstallRoot, payload.Username, payload.Shell, payload.Locale, payload.SetAsDefault, payload.SecretEnvelope);
+}
+async Task<VerifiedInstallResult> ExecuteVerifiedInstallV1Async(BridgeRequest request)
+{
+    ValidatePayload(request, ["PreviewToken"], ["PreviewToken"]);
+    return await verifiedInstall.InstallAsync(ParsePayload<VerifiedInstallExecutePayload>(request).PreviewToken);
 }
 
 GlobalSettings GetSettings(BridgeRequest request)
@@ -964,6 +1037,13 @@ public sealed record CatalogSearchPayload(string Query);
 public sealed record CatalogGetPayload(string Id);
 public sealed record CatalogRefreshPayload(string? SourceUrl = null);
 public sealed record PackageCacheDeletePayload(string? CacheEntryId = null, string? DefaultName = null, string? LocalPath = null);
+public sealed record CredentialPreviewPayload(string Name, string Username, string SecretEnvelope);
+public sealed record CredentialExecutePayload(string PreviewToken);
+public sealed record InstallSourcePayload(string PackageId);
+public sealed record PackageAcquisitionPayload(string PackageId);
+public sealed record PackageAcquisitionExecutePayload(string PreviewToken);
+public sealed record VerifiedInstallPreviewPayload(string PackageReference, string Name, string InstallRoot, string Username, string Shell, string? Locale, bool SetAsDefault, string? SecretEnvelope = null);
+public sealed record VerifiedInstallExecutePayload(string PreviewToken);
 public sealed record TerminalLaunchPayload(string InstanceName, string? StartPath = null, TerminalKind TerminalKind = TerminalKind.Auto);
 
 /// <summary>Owns the only executable and argument shapes used by fixed external-launch routes.</summary>

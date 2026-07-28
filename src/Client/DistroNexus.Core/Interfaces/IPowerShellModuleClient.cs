@@ -1,4 +1,5 @@
 using DistroNexus.Core.Models;
+using System.Security;
 
 namespace DistroNexus.Core.Interfaces;
 
@@ -26,6 +27,7 @@ public interface IPowerShellModuleClient
     Task<LifecycleOperationPreview> PreviewExportInstanceAsync(string name, string destination, bool stopRunning, CancellationToken cancellationToken = default);
     Task<LifecycleOperationPreview> PreviewImportInstanceAsync(string name, string source, string installPath, CancellationToken cancellationToken = default);
     Task<LifecycleOperationResult> ExecuteLifecycleOperationAsync(string previewToken, CancellationToken cancellationToken = default);
+    Task<CredentialOperationResult> SetCredentialAsync(string name, string username, SecureString password, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets tags for every instance, or for one instance when <paramref name="name"/> is supplied.
@@ -94,6 +96,11 @@ public interface IPowerShellModuleClient
 
     /// <summary>Refreshes the catalog through the module contract.</summary>
     Task<DistroNexusCatalogRefreshResult> RefreshCatalogAsync(string? sourceUrl = null, CancellationToken cancellationToken = default);
+
+    Task<InstallSourceResolution> ResolveInstallSourceAsync(string packageId, CancellationToken cancellationToken = default);
+    Task<PackageAcquisitionPreview> PreviewPackageAcquisitionAsync(string packageId, CancellationToken cancellationToken = default);
+    Task<PackageAcquisitionResult> AcquirePackageAsync(string previewToken, CancellationToken cancellationToken = default);
+    Task<VerifiedInstallResult> InstallVerifiedInstanceAsync(string packageReference, string name, string installRoot, string username, string shell, string? locale, bool setAsDefault, SecureString? password = null, CancellationToken cancellationToken = default);
 
     Task<PackageCacheLocationResult> GetPackageCacheLocationAsync(CancellationToken cancellationToken = default);
     Task<CacheUsageInfo> GetPackageCacheUsageAsync(CancellationToken cancellationToken = default);

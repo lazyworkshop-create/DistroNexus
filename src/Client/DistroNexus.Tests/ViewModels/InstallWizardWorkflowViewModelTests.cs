@@ -10,7 +10,6 @@ namespace DistroNexus.Tests.ViewModels;
 public class InstallWizardWorkflowViewModelTests
 {
     private readonly Mock<ICatalogService> _mockCatalogService;
-    private readonly Mock<IWslManagerService> _mockWslManagerService;
     private readonly Mock<IPowerShellModuleClient> _mockModuleClient;
     private readonly Mock<ISettingsService> _mockSettingsService;
     private readonly Mock<ITemplateService> _mockTemplateService;
@@ -19,7 +18,6 @@ public class InstallWizardWorkflowViewModelTests
     public InstallWizardWorkflowViewModelTests()
     {
         _mockCatalogService = new Mock<ICatalogService>();
-        _mockWslManagerService = new Mock<IWslManagerService>();
         _mockModuleClient = new Mock<IPowerShellModuleClient>();
         _mockSettingsService = new Mock<ISettingsService>();
         _mockTemplateService = new Mock<ITemplateService>();
@@ -131,7 +129,6 @@ public class InstallWizardWorkflowViewModelTests
     private InstallWizardWorkflowViewModel CreateViewModel()
     {
         return new InstallWizardWorkflowViewModel(
-            _mockWslManagerService.Object,
             _mockModuleClient.Object,
             _mockSettingsService.Object,
             _mockTemplateService.Object,
