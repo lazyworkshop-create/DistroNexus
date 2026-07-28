@@ -32,11 +32,7 @@ public sealed partial class DiagnosticLogSelectionViewModel : ObservableObject
 
 public partial class HealthCenterViewModel : ObservableObject, IDisposable
 {
-    private readonly IHealthOrchestrator _health;
-    private readonly IHealthRepairService _repairs;
-    private readonly IDiagnosticReportService _reports;
-    private readonly IDiagnosticLogProvider _logs;
-    private readonly IPowerShellModuleClient? _moduleClient;
+    private readonly IPowerShellModuleClient _moduleClient;
     private CancellationTokenSource? _scanCts;
     private CancellationTokenSource? _reportCts;
     private CancellationTokenSource? _repairCts;
@@ -64,14 +60,9 @@ public partial class HealthCenterViewModel : ObservableObject, IDisposable
     public string? StatusCode => Regex.Match(Status, @"DN-\d{4}", RegexOptions.CultureInvariant).Success ? Regex.Match(Status, @"DN-\d{4}", RegexOptions.CultureInvariant).Value : null;
     public bool HasStatusCode => StatusCode is not null;
 
-    public HealthCenterViewModel(IHealthOrchestrator health, IHealthRepairService repairs, IDiagnosticReportService reports, IDiagnosticLogProvider logs, IPowerShellModuleClient? moduleClient = null)
+    public HealthCenterViewModel(IPowerShellModuleClient moduleClient)
     {
-        (_health, _repairs, _reports, _logs, _moduleClient) = (health, repairs, reports, logs, moduleClient);
-        foreach (var id in logs.AllowedLogIds.Order(StringComparer.Ordinal))
-        {
-            AvailableLogIds.Add(id);
-            DiagnosticLogs.Add(new DiagnosticLogSelectionViewModel(id));
-        }
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
     }
     public bool IsBusy => IsScanning || IsReporting || IsRepairing;
     public bool CanRunHealthActions => IsHealthAvailable && !IsBusy;
@@ -87,7 +78,6 @@ public partial class HealthCenterViewModel : ObservableObject, IDisposable
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
-        if (_moduleClient is null) return;
         try
         {
             OperationPhase = L("Health_CheckingCapabilities", "Checking Health prerequisites…");
@@ -99,6 +89,9 @@ public partial class HealthCenterViewModel : ObservableObject, IDisposable
                 Status = HealthAvailabilityReason;
             }
             else { IsHealthAvailable = true; HealthAvailabilityReason = string.Empty; }
+            var logIds = await _moduleClient.GetDiagnosticLogOptionsAsync(cancellationToken) ?? [];
+            if (AvailableLogIds.Count == 0)
+                foreach (var id in logIds.Order(StringComparer.Ordinal)) { AvailableLogIds.Add(id); DiagnosticLogs.Add(new DiagnosticLogSelectionViewModel(id)); }
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex) { IsHealthAvailable = false; HealthAvailabilityReason = HealthFindingText.Error(MainViewModel.FormatAlertMessage(ex)); Status = HealthAvailabilityReason; }
@@ -115,7 +108,8 @@ public partial class HealthCenterViewModel : ObservableObject, IDisposable
         try
         {
             var progress = new Progress<HealthFinding>(finding => { Findings.Add(new HealthFindingViewModel(finding)); OperationPhase = string.Format(L("Health_ScanFindingPhase", "Evaluating: {0}"), finding.Title); OnPropertyChanged(nameof(VisibleFindings)); });
-            var scan = await _health.ScanAsync(progress, _scanCts.Token);
+            var scan = await _moduleClient.ScanHealthAsync(_scanCts.Token);
+            foreach (var finding in scan.Findings) Findings.Add(new HealthFindingViewModel(finding));
             LastRun = scan.CompletedAt; Status = scan.WasCancelled ? L("Health_Cancelled", "Scan cancelled") : string.Format(L("Health_Complete", "Scan complete: {0} findings"), Findings.Count);
         }
         catch (OperationCanceledException) { Status = L("Health_Cancelled", "Scan cancelled"); }
@@ -154,16 +148,13 @@ public partial class HealthCenterViewModel : ObservableObject, IDisposable
         OperationPhase = L("Health_RepairPhase", "Preparing and applying repair…");
         try
         {
-            var preview = await _repairs.PreviewAsync(finding.Finding, _repairCts.Token);
+            var preview = await _moduleClient.GetHealthRepairPreviewAsync(finding.Finding, _repairCts.Token);
             if (string.IsNullOrWhiteSpace(preview.PreviewToken)) { Status = "DN-7002: " + L("Health_RepairPreviewUnavailable", "Repair preview was unavailable."); return; }
             RepairDetails = Describe(preview);
-            var recoveryOffer = await _repairs.GetRecoveryOfferAsync(finding.Finding, _repairCts.Token);
-            if (recoveryOffer?.IsAvailable == true && MessageBox.Show(L("Recovery_OfferRepair", "A recovery point is available before this repair."), L("Recovery_OfferTitle", "Optional recovery point"), MessageBoxButton.OKCancel, MessageBoxImage.Warning) != MessageBoxResult.OK)
-            { Status = L("Health_RepairCancelled", "Repair cancelled."); return; }
             var confirmed = preview.Safety == RepairSafety.Safe || MessageBox.Show(RepairDetails, preview.Title, MessageBoxButton.OKCancel, MessageBoxImage.Warning) == MessageBoxResult.OK;
             if (!confirmed) { Status = L("Health_RepairCancelled", "Repair cancelled."); return; }
             OperationPhase = L("Health_RepairExecutingPhase", "Applying repair…");
-            var result = await _repairs.ExecuteAsync(finding.Finding, new RepairExecutionRequest(preview.PreviewToken, true), _repairCts.Token);
+            var result = await _moduleClient.RepairHealthAsync(preview.PreviewToken, _repairCts.Token);
             RepairDetails = string.Join(Environment.NewLine, result.Results.Concat(result.NextSteps ?? []).Concat(result.Error is null ? [] : [result.Error]));
             Status = result.Succeeded ? string.Join(" ", result.Results) : HealthFindingText.Error(result.Error ?? "DN-7005");
         }
@@ -179,7 +170,7 @@ public partial class HealthCenterViewModel : ObservableObject, IDisposable
         _reportCts = new CancellationTokenSource(); IsReporting = true; OperationPhase = L("Health_ReportPreviewPhase", "Preparing redacted diagnostic preview…");
         try
         {
-            var preview = await _reports.PreviewAsync(new DiagnosticReportRequest(DiagnosticFormat, RedactDiagnostic, SelectedLogIds), _reportCts.Token);
+            var preview = await _moduleClient.GetDiagnosticReportPreviewAsync(DiagnosticFormat, SelectedLogIds, _reportCts.Token);
             _diagnosticPreviewToken = preview.SnapshotToken;
             DiagnosticPreview = preview.Content;
             Status = string.Format(L("Health_DiagnosticGenerated", "Diagnostic preview generated ({0} characters, redacted)."), preview.Content.Length);
@@ -203,7 +194,7 @@ public partial class HealthCenterViewModel : ObservableObject, IDisposable
         _reportCts = new CancellationTokenSource(); IsReporting = true; OperationPhase = L("Health_ReportExportPhase", "Saving redacted diagnostic report…");
         try
         {
-            var path = await _reports.ExportAsync(new DiagnosticReportRequest(DiagnosticFormat, RedactDiagnostic, SelectedLogIds, _diagnosticPreviewToken), dialog.FileName, _reportCts.Token);
+            var path = await _moduleClient.ExportDiagnosticReportAsync(_diagnosticPreviewToken, System.IO.Path.GetFileName(dialog.FileName), cancellationToken: _reportCts.Token);
             _diagnosticPreviewToken = null; // Report snapshots are single-use.
             Status = string.Format(L("Health_DiagnosticSaved", "Diagnostic report saved: {0}"), path);
         }

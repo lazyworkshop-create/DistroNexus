@@ -10,6 +10,12 @@ function Get-DistroNexusHealthHistory {
     $value = Invoke-DistroNexusWorkspaceBridge -Operation 'health.history.v1'
     if ($AsJson) { return ($value | ConvertTo-Json -Depth 16) }; $value
 }
+function Get-DistroNexusDiagnosticLogOption {
+    [CmdletBinding()]
+    param([switch]$AsJson)
+    $value = Invoke-DistroNexusWorkspaceBridge -Operation 'diagnostics.log-options.v1'
+    if ($AsJson) { return ($value | ConvertTo-Json -Depth 8) }; $value
+}
 function Get-DistroNexusHealthRepairPreview {
     [CmdletBinding()]
     param([Parameter(Mandatory, ValueFromPipeline)][psobject]$Finding)
@@ -17,10 +23,9 @@ function Get-DistroNexusHealthRepairPreview {
 }
 function Repair-DistroNexusHealthFinding {
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact='High')]
-    param([Parameter(Mandatory, ValueFromPipeline)][psobject]$Finding, [Parameter(Mandatory)][psobject]$Preview)
+    param([Parameter(Mandatory)][ValidatePattern('^[0-9a-fA-F]{32}$')][string]$PreviewToken)
     process {
-        if (-not $Finding.Id -or -not $Finding.RepairId -or -not $Preview.PreviewToken) { throw 'A current Core-issued health repair preview is required.' }
-        if (-not $PSCmdlet.ShouldProcess($Finding.Id, "Repair $($Finding.Title)")) { return [pscustomobject]@{ Succeeded=$false; OutcomeCode='WhatIf' } }
-        Invoke-DistroNexusWorkspaceBridge -Operation 'health.repair.v1' -Token $Preview.PreviewToken -Payload @{ Finding=$Finding; Confirmed=$true }
+        if (-not $PSCmdlet.ShouldProcess('Core-issued health repair preview', 'Repair health finding')) { return [pscustomobject]@{ Succeeded=$false; OutcomeCode='WhatIf' } }
+        Invoke-DistroNexusWorkspaceBridge -Operation 'health.repair.v1' -Token $PreviewToken -Payload @{}
     }
 }

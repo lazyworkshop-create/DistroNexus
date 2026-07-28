@@ -18,12 +18,12 @@ Describe 'Health Center PowerShell bridge adapters' -Tag 'Unit', 'Public', 'Auto
 
     It 'returns the Core preview and does not execute an automatable repair under WhatIf' {
         Mock Invoke-DistroNexusWorkspaceBridge {
-            if ($Operation -eq 'health.repair-preview.v1') { return [pscustomobject]@{ PreviewToken = 'preview'; RepairId = 'wsl.update' } }
+            if ($Operation -eq 'health.repair-preview.v1') { return [pscustomobject]@{ PreviewToken = ('a' * 32); RepairId = 'wsl.update' } }
             throw 'execution must not run under WhatIf'
         }
         $finding = [pscustomobject]@{ Id = 'update'; RepairId = 'wsl.update'; Title = 'Update WSL' }
         $preview = Get-DistroNexusHealthRepairPreview -Finding $finding
-        $result = Repair-DistroNexusHealthFinding -Finding $finding -Preview $preview -WhatIf
+        $result = Repair-DistroNexusHealthFinding -PreviewToken $preview.PreviewToken -WhatIf
         $result.OutcomeCode | Should -Be 'WhatIf'
         Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 1 -ParameterFilter { $Operation -eq 'health.repair-preview.v1' }
         Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 0 -ParameterFilter { $Operation -eq 'health.repair.v1' }
@@ -32,5 +32,12 @@ Describe 'Health Center PowerShell bridge adapters' -Tag 'Unit', 'Public', 'Auto
         Mock Invoke-DistroNexusWorkspaceBridge { [pscustomobject]@{ Operation=$Operation } }
         (Get-DistroNexusHealthHistory).Operation | Should -Be 'health.history.v1'
         Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 1 -ParameterFilter { $Operation -eq 'health.history.v1' }
+    }
+    It 'executes with only the Core-issued preview token' {
+        Mock Invoke-DistroNexusWorkspaceBridge { [pscustomobject]@{ Operation=$Operation; Payload=$Payload; Token=$Token } }
+        $result = Repair-DistroNexusHealthFinding -PreviewToken ('a' * 32) -Confirm:$false
+        $result.Operation | Should -Be 'health.repair.v1'
+        $result.Payload.Count | Should -Be 0
+        Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 1 -ParameterFilter { $Operation -eq 'health.repair.v1' -and $Token -eq ('a' * 32) }
     }
 }

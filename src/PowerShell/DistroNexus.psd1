@@ -92,6 +92,7 @@
         'Invoke-DistroNexusMonitoringProcessAction',
         'Invoke-DistroNexusHealthScan',
         'Get-DistroNexusHealthHistory',
+        'Get-DistroNexusDiagnosticLogOption',
         'Get-DistroNexusHealthRepairPreview',
         'Repair-DistroNexusHealthFinding',
         'Get-DistroNexusDiagnosticReportPreview',

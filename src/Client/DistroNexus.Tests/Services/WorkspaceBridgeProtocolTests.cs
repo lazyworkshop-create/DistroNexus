@@ -315,9 +315,9 @@ public sealed class WorkspaceBridgeProtocolTests
             {"Id":"repair.open","Severity":"Warning","Scope":"Host","Title":"test","Detail":"test","RepairId":"open.wsl-update"}
             """).RootElement.Clone();
         var previewRequest = JsonDocument.Parse($$"""{"Finding":{{finding.GetRawText()}}}""").RootElement.Clone();
-        var preview = await bridge.SendAsync("healthRepairPreview", payload: previewRequest);
-        var execute = await bridge.SendAsync("healthRepairExecute", token: preview.GetProperty("Value").GetProperty("PreviewToken").GetString(),
-            payload: JsonDocument.Parse($$"""{"Finding":{{finding.GetRawText()}},"Confirmed":true}""").RootElement.Clone());
+        var preview = await bridge.SendAsync("health.repair-preview.v1", payload: previewRequest);
+        var execute = await bridge.SendAsync("health.repair.v1", token: preview.GetProperty("Value").GetProperty("PreviewToken").GetString(),
+            payload: JsonDocument.Parse("{}").RootElement.Clone());
 
         Assert.True(execute.GetProperty("Succeeded").GetBoolean());
         Assert.False(execute.GetProperty("Value").GetProperty("Succeeded").GetBoolean());
@@ -501,7 +501,7 @@ public sealed class WorkspaceBridgeProtocolTests
             ("recoveryPreviewCreate", "recovery.preview-create.v1"), ("recoveryCreate", "recovery.create.v1"),
             ("recoveryPreviewRestore", "recovery.preview-restore.v1"), ("recoveryRestore", "recovery.restore.v1"),
             ("recoveryPreviewRemove", "recovery.preview-remove.v1"), ("recoveryRemove", "recovery.remove.v1"),
-            ("healthScan", "health.scan.v1"), ("healthRepairPreview", "health.repair-preview.v1"), ("healthRepairExecute", "health.repair.v1")
+            ("healthScan", "health.scan.v1"), ("healthRepairPreview", "health.repair-preview.v1")
         };
         foreach (var (legacy, versioned) in pairs)
         {

@@ -12,7 +12,7 @@
 
 ## Dependency Order
 
-S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S18 -> S19 -> S20 -> S21 -> S22 -> S23 -> S24 -> {S25 blocked, S26 -> S27 -> S28 -> S29 -> S30 -> S31} -> S06 -> S07 -> S08
+S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S18 -> S19 -> S20 -> S21 -> S22 -> S23 -> S24 -> {S25 blocked, S26 -> S27 -> S28 -> S29 -> S30 -> S31 -> S32} -> S06 -> S07 -> S08
 
 ## Slice S01: Verified module contract and migration baseline
 
@@ -1679,6 +1679,66 @@ One accepted resources/sparse module migration slice.
 ### Out of Scope
 
 Disk compaction and elevation design, VHDX runtime UAT, and every other remaining capability family.
+
+## Slice S32: Health and diagnostics module migration
+
+### Status
+
+Completed
+
+### Objective
+
+Make typed health/diagnostic module contracts the only HealthCenter product path while preserving DesktopOnly repair outcomes.
+
+### Sources
+
+Requirements FR-001 and FR-003 through FR-007; Health repair and diagnostics durable contract amendment.
+
+### Dependencies
+
+S31
+
+### Allowed Paths
+
+Narrow health repair/diagnostic durable support, WorkspaceBridge Program, health/diagnostic public command files, typed module client, HealthCenterViewModel, focused Core/Bridge/client/view-model/Pester tests, design and plan.
+
+### Excluded Paths
+
+Generic destination/path/shell APIs, Windows feature/UAC/navigation broker changes, app update, unrelated repairs, release/publishing.
+
+### Contract and Documentation
+
+Health repair execute accepts only PreviewToken; diagnostics export accepts only SnapshotToken, basename and bounded deadline. Add read-only log-options route.
+
+### Implementation Scope
+
+Durably protect repair previews and redacted diagnostic snapshots across fresh module processes, migrate typed client and HealthCenter; retain DesktopOnly structured outcomes.
+
+### Test Scope
+
+Cover fresh-instance grants, expiry/replay/SID/canonical mismatch/parallel/cleanup, strict payload/redaction/path rejection, fixed-directory basename export, WhatIf/decline and module-only UI behavior.
+
+### Acceptance Criteria
+
+- HealthCenter has no direct health/repair/report/log provider execution path.
+- No action accepts caller repair/finding/content/full path; desktop-only repairs do not bypass authorization.
+- Diagnostic export is redacted, one-shot and fixed-directory only.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Health|FullyQualifiedName~Diagnostic|FullyQualifiedName~PowerShellModuleClient|FullyQualifiedName~WorkspaceBridgeProtocol"
+pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Unit
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+One accepted health/diagnostics module migration slice.
+
+### Out of Scope
+
+UAC/Windows feature/navigation broker, app update, arbitrary report destinations and runtime UAT.
 
 ## Slice S06: Platform-integrated command parity
 

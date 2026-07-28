@@ -314,13 +314,13 @@ public sealed class HealthInitialAndRepairTests
     public async Task HealthCenterViewModel_RepairReportsBusyAndForwardsCancellationToken()
     {
         var finding = new HealthFinding("config.test", HealthSeverity.Warning, HealthScope.Host, "Test", "detail", RepairId: "config.global");
-        var repairs = new Mock<IHealthRepairService>();
-        repairs.Setup(x => x.PreviewAsync(finding, It.IsAny<CancellationToken>()))
+        var module = SupportedCapabilities();
+        module.Setup(x => x.GetHealthRepairPreviewAsync(finding, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new RepairPreview("config.global", "Fix", RepairSafety.Safe, RepairIdempotency.Idempotent, [], [], PreviewToken: "token"));
         var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        repairs.Setup(x => x.ExecuteAsync(finding, It.IsAny<RepairExecutionRequest>(), It.IsAny<CancellationToken>()))
-            .Returns<HealthFinding, RepairExecutionRequest, CancellationToken>(async (_, _, token) => { started.TrySetResult(); await Task.Delay(Timeout.InfiniteTimeSpan, token); return default!; });
-        using var viewModel = CreateViewModel(repairs: repairs, capabilities: SupportedCapabilities());
+        module.Setup(x => x.RepairHealthAsync("token", It.IsAny<CancellationToken>()))
+            .Returns<string, CancellationToken>(async (_, token) => { started.TrySetResult(); await Task.Delay(Timeout.InfiniteTimeSpan, token); return default!; });
+        using var viewModel = new HealthCenterViewModel(module.Object);
 
         var task = viewModel.RepairCommand.ExecuteAsync(new HealthFindingViewModel(finding));
         await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -527,9 +527,9 @@ public sealed class HealthInitialAndRepairTests
     [Fact]
     public void HealthCenterViewModel_ExposesAndSelectsOnlyAvailableDiagnosticLogs()
     {
-        var health = new Mock<IHealthOrchestrator>(); var repairs = new Mock<IHealthRepairService>(); var reports = new Mock<IDiagnosticReportService>();
-        var logs = new Mock<IDiagnosticLogProvider>(); logs.SetupGet(x => x.AllowedLogIds).Returns(["app:current"]);
-        using var viewModel = new HealthCenterViewModel(health.Object, repairs.Object, reports.Object, logs.Object);
+        var module = new Mock<IPowerShellModuleClient>(); module.Setup(x => x.GetDiagnosticLogOptionsAsync(It.IsAny<CancellationToken>())).ReturnsAsync(["app:current"]);
+        using var viewModel = new HealthCenterViewModel(module.Object);
+        viewModel.AvailableLogIds.Add("app:current");
 
         viewModel.ToggleDiagnosticLogCommand.Execute("app:current");
         viewModel.ToggleDiagnosticLogCommand.Execute("not-allowed");
@@ -549,7 +549,7 @@ public sealed class HealthInitialAndRepairTests
         var capabilities = new Mock<IPowerShellModuleClient>();
         capabilities.Setup(x => x.GetHostCapabilitiesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(HostWithWsl(CapabilityStatus.Unavailable, "Capability.Probe.ExecutableMissing"));
-        using var viewModel = new HealthCenterViewModel(health.Object, repairs.Object, reports.Object, logs.Object, capabilities.Object);
+        using var viewModel = new HealthCenterViewModel(capabilities.Object);
 
         await viewModel.InitializeAsync();
         await viewModel.RescanCommand.ExecuteAsync(null);
@@ -565,18 +565,16 @@ public sealed class HealthInitialAndRepairTests
     [Fact]
     public async Task HealthCenterViewModel_ScanReportsProgressAndCancellationToTheServiceToken()
     {
-        var health = new Mock<IHealthOrchestrator>();
+        var health = SupportedCapabilities();
         var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        health.Setup(x => x.ScanAsync(It.IsAny<IProgress<HealthFinding>>(), It.IsAny<CancellationToken>()))
-            .Returns<IProgress<HealthFinding>, CancellationToken>(async (progress, token) =>
+        health.Setup(x => x.ScanHealthAsync(It.IsAny<CancellationToken>()))
+            .Returns<CancellationToken>(async token =>
             {
-                progress.Report(new HealthFinding("network.dns", HealthSeverity.Warning, HealthScope.Host, "DNS", "token=private C:\\Users\\alice"));
                 started.TrySetResult();
                 await Task.Delay(Timeout.InfiniteTimeSpan, token);
                 return default!;
             });
-        var capabilities = SupportedCapabilities();
-        using var viewModel = CreateViewModel(health: health, capabilities: capabilities);
+        using var viewModel = new HealthCenterViewModel(health.Object);
 
         var task = viewModel.RescanCommand.ExecuteAsync(null);
         await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -588,34 +586,32 @@ public sealed class HealthInitialAndRepairTests
 
         Assert.False(viewModel.IsScanning);
         Assert.Contains("cancel", viewModel.Status, StringComparison.OrdinalIgnoreCase);
-        Assert.Single(viewModel.Findings);
-        Assert.Contains("WSL networking", viewModel.OperationPhase + viewModel.Findings[0].Title);
+        Assert.Empty(viewModel.Findings);
     }
 
     [Fact]
     public async Task HealthCenterViewModel_ReportCancellationAndSelectedLogsAreForwardedAsRedactedRequest()
     {
-        var reports = new Mock<IDiagnosticReportService>();
+        var reports = SupportedCapabilities();
         var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        DiagnosticReportRequest? received = null;
-        reports.Setup(x => x.PreviewAsync(It.IsAny<DiagnosticReportRequest>(), It.IsAny<CancellationToken>()))
-            .Returns<DiagnosticReportRequest, CancellationToken>(async (request, token) =>
+        IReadOnlyList<string>? received = null;
+        reports.Setup(x => x.GetDiagnosticReportPreviewAsync(It.IsAny<DiagnosticReportFormat>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
+            .Returns<DiagnosticReportFormat, IReadOnlyList<string>, CancellationToken>(async (_, request, token) =>
             {
                 received = request;
                 started.TrySetResult();
                 await Task.Delay(Timeout.InfiniteTimeSpan, token);
                 return default!;
             });
-        var logs = new Mock<IDiagnosticLogProvider>(); logs.SetupGet(x => x.AllowedLogIds).Returns(["app:current"]);
-        using var viewModel = CreateViewModel(reports: reports, logs: logs);
+        reports.Setup(x => x.GetDiagnosticLogOptionsAsync(It.IsAny<CancellationToken>())).ReturnsAsync(["app:current"]);
+        using var viewModel = new HealthCenterViewModel(reports.Object); viewModel.AvailableLogIds.Add("app:current");
         viewModel.ToggleDiagnosticLogCommand.Execute("app:current");
 
         var task = viewModel.ExportDiagnosticsCommand.ExecuteAsync(null);
         await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.True(viewModel.IsReporting);
         Assert.True(viewModel.RedactDiagnostic);
-        Assert.Equal(["app:current"], received!.SelectedLogs);
-        Assert.True(received.Redact);
+        Assert.Equal(["app:current"], received);
         viewModel.CancelReportCommand.Execute(null);
         await task;
 
@@ -626,22 +622,22 @@ public sealed class HealthInitialAndRepairTests
     [Fact]
     public async Task HealthCenterViewModel_RepairIsGatedWhenUnavailableAndExecutesSafePreviewWhenAvailable()
     {
-        var repairs = new Mock<IHealthRepairService>();
+        var repairs = SupportedCapabilities();
         var finding = new HealthFinding("config.dns", HealthSeverity.Warning, HealthScope.Host, "DNS", "detail", RepairId: "config.global");
-        repairs.Setup(x => x.PreviewAsync(finding, It.IsAny<CancellationToken>()))
+        repairs.Setup(x => x.GetHealthRepairPreviewAsync(finding, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new RepairPreview("config.global", "Fix DNS", RepairSafety.Safe, RepairIdempotency.Idempotent, ["Change DNS"], [], PreviewToken: "preview"));
-        repairs.Setup(x => x.ExecuteAsync(finding, It.IsAny<RepairExecutionRequest>(), It.IsAny<CancellationToken>()))
+        repairs.Setup(x => x.RepairHealthAsync("preview", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new RepairResult("config.global", true, ["fixed"]));
         var unavailable = new Mock<IPowerShellModuleClient>();
         unavailable.Setup(x => x.GetHostCapabilitiesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(HostWithWsl(CapabilityStatus.Unavailable, "missing"));
-        using var blocked = CreateViewModel(repairs: repairs, capabilities: unavailable);
+        using var blocked = new HealthCenterViewModel(unavailable.Object);
         await blocked.InitializeAsync();
         await blocked.RepairCommand.ExecuteAsync(new HealthFindingViewModel(finding));
-        repairs.Verify(x => x.PreviewAsync(It.IsAny<HealthFinding>(), It.IsAny<CancellationToken>()), Times.Never);
+        repairs.Verify(x => x.GetHealthRepairPreviewAsync(It.IsAny<HealthFinding>(), It.IsAny<CancellationToken>()), Times.Never);
 
-        using var available = CreateViewModel(repairs: repairs, capabilities: SupportedCapabilities());
+        using var available = new HealthCenterViewModel(repairs.Object);
         await available.RepairCommand.ExecuteAsync(new HealthFindingViewModel(finding));
-        repairs.Verify(x => x.ExecuteAsync(finding, It.Is<RepairExecutionRequest>(r => r.PreviewToken == "preview" && r.Confirmed), It.IsAny<CancellationToken>()), Times.Once);
+        repairs.Verify(x => x.RepairHealthAsync("preview", It.IsAny<CancellationToken>()), Times.Once);
         Assert.Contains("fixed", available.RepairDetails);
     }
 
@@ -682,7 +678,7 @@ public sealed class HealthInitialAndRepairTests
             logs = new Mock<IDiagnosticLogProvider>();
             logs.SetupGet(x => x.AllowedLogIds).Returns([]);
         }
-        return new HealthCenterViewModel(health.Object, repairs.Object, reports.Object, logs.Object, capabilities?.Object);
+        return new HealthCenterViewModel(capabilities?.Object ?? SupportedCapabilities().Object);
     }
     private static Mock<IPowerShellModuleClient> SupportedCapabilities()
     {

@@ -431,21 +431,27 @@ public sealed class PowerShellModuleClientTests
         var methods = typeof(IPowerShellModuleClient).GetMethods();
 
         Assert.Equal(
-            [
+            new[]
+            {
                 nameof(IPowerShellModuleClient.AddCatalogSourceAsync),
                 nameof(IPowerShellModuleClient.AddInstanceTagAsync),
                 nameof(IPowerShellModuleClient.ClearPackageCacheAsync),
                 nameof(IPowerShellModuleClient.CreateFirewallRuleAsync),
                 nameof(IPowerShellModuleClient.DeletePackageCacheEntryAsync),
                 nameof(IPowerShellModuleClient.DiscoverWslgApplicationsAsync),
+                nameof(IPowerShellModuleClient.ExportDiagnosticReportAsync),
                 nameof(IPowerShellModuleClient.GetCatalogSourcesAsync),
                 nameof(IPowerShellModuleClient.GetContainerRuntimeStatusAsync),
                 nameof(IPowerShellModuleClient.GetDockerIntegrationAsync),
                 nameof(IPowerShellModuleClient.GetDockerIntegrationPreviewAsync),
+                nameof(IPowerShellModuleClient.GetDiagnosticLogOptionsAsync),
+                nameof(IPowerShellModuleClient.GetDiagnosticReportPreviewAsync),
                 nameof(IPowerShellModuleClient.GetFirewallCreatePreviewAsync),
                 nameof(IPowerShellModuleClient.GetFirewallRemovePreviewAsync),
                 nameof(IPowerShellModuleClient.GetFirewallRulesAsync),
                 nameof(IPowerShellModuleClient.GetHostCapabilitiesAsync),
+                nameof(IPowerShellModuleClient.GetHealthHistoryAsync),
+                nameof(IPowerShellModuleClient.GetHealthRepairPreviewAsync),
                 nameof(IPowerShellModuleClient.GetInstanceCapabilitiesAsync),
                 nameof(IPowerShellModuleClient.GetInstanceIpAddressAsync),
                 nameof(IPowerShellModuleClient.GetInstanceResourcesAsync),
@@ -487,6 +493,7 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.RemoveCatalogSourceAsync),
                 nameof(IPowerShellModuleClient.RemoveFirewallRuleAsync),
                 nameof(IPowerShellModuleClient.RemoveInstanceTagAsync),
+                nameof(IPowerShellModuleClient.RepairHealthAsync),
                 nameof(IPowerShellModuleClient.RenameInstanceTagsAsync),
                 nameof(IPowerShellModuleClient.ReorderCatalogSourcesAsync),
                 nameof(IPowerShellModuleClient.ResetCatalogSourcesAsync),
@@ -494,6 +501,7 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.RevealWslgApplicationAsync),
                 nameof(IPowerShellModuleClient.SaveSettingsAsync),
                 nameof(IPowerShellModuleClient.SearchPackagesAsync),
+                nameof(IPowerShellModuleClient.ScanHealthAsync),
                 nameof(IPowerShellModuleClient.SetCatalogSourceActiveAsync),
                 nameof(IPowerShellModuleClient.SetDockerIntegrationAsync),
                 nameof(IPowerShellModuleClient.SetInstanceSparseModeAsync),
@@ -506,7 +514,7 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.StopInstanceAsync),
                 nameof(IPowerShellModuleClient.TestCatalogSourceAsync),
                 nameof(IPowerShellModuleClient.UpdateCatalogSourceAsync)
-            ],
+            }.Order(),
             methods.Select(method => method.Name).Order());
         Assert.DoesNotContain(methods, method => method.Name.Contains("Script", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(methods, method => method.Name.Contains("Command", StringComparison.OrdinalIgnoreCase));

@@ -1,5 +1,7 @@
 using System.Text;
 using System.Text.Json;
+using System.Security.Cryptography;
+using System.Security.Principal;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 
@@ -11,7 +13,9 @@ public sealed class HealthRepairService : IHealthRepairService
     private readonly IRecoveryOfferService? _recoveryOffers;
     private readonly Dictionary<string, (HealthFinding Finding, RepairPreview Preview)> _previews = new(StringComparer.Ordinal);
     private readonly object _sync = new();
-    public HealthRepairService(IEnumerable<IRepairAction> actions, IRecoveryOfferService? recoveryOffers = null) { _actions = actions.ToDictionary(x => x.Id, StringComparer.Ordinal); _recoveryOffers = recoveryOffers; }
+    private readonly HealthRepairGrantStore? _durableGrants;
+    private readonly IHealthOrchestrator? _health;
+    public HealthRepairService(IEnumerable<IRepairAction> actions, IRecoveryOfferService? recoveryOffers = null, string? durableGrantRoot = null, IHealthOrchestrator? health = null) { _actions = actions.ToDictionary(x => x.Id, StringComparer.Ordinal); _recoveryOffers = recoveryOffers; _health = health; if (durableGrantRoot is not null) _durableGrants = new HealthRepairGrantStore(durableGrantRoot); }
 
     public async Task<RecoveryOffer> GetRecoveryOfferAsync(HealthFinding finding, CancellationToken cancellationToken = default)
     {
@@ -31,8 +35,29 @@ public sealed class HealthRepairService : IHealthRepairService
             Reversibility = preview.Reversibility ?? (preview.BackupPath is null ? "No automatic undo is available." : "A backup is created before the change and can be restored manually."),
             UndoSteps = preview.UndoSteps ?? (preview.BackupPath is null ? [] : ["Restore the backup shown above if the result is not acceptable."])
         };
-        lock (_sync) _previews[token] = (finding, preview);
+        if (_durableGrants is null) lock (_sync) _previews[token] = (finding, preview);
+        else await _durableGrants.IssueAsync(token, finding, preview, cancellationToken).ConfigureAwait(false);
         return preview;
+    }
+    public async Task<RepairResult> ExecuteAsync(string previewToken, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(previewToken)) return new RepairResult("unknown", false, [], Error: "DN-7002: Repair preview is missing, expired, or invalid.");
+        if (_durableGrants is null) return new RepairResult("unknown", false, [], Error: "DN-7002: Repair preview must be executed by the issuing process.");
+        try
+        {
+            var saved = await _durableGrants.ConsumeAsync(previewToken, cancellationToken).ConfigureAwait(false);
+            if (!_actions.ContainsKey(saved.Finding.RepairId ?? string.Empty)) return new RepairResult("unknown", false, [], Error: "DN-7002: Repair preview is no longer eligible.");
+            if (_health is not null && _actions[saved.Finding.RepairId!] is not DesktopOnlyRepairAction)
+            {
+                var current = await _health.ScanAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+                if (!current.Findings.Any(x => x.Id == saved.Finding.Id && x.RepairId == saved.Finding.RepairId && CanonicalFinding(x) == saved.FindingCanonical))
+                    return new RepairResult(saved.Preview.RepairId, false, [], Error: "DN-7002: Repair finding changed; scan and preview again.");
+            }
+            var result = await _actions[saved.Finding.RepairId!].ExecuteAsync(saved.Finding, cancellationToken).ConfigureAwait(false);
+            return result with { Results = result.Results.Concat(["Postcondition: repair action completed; rescan to verify the finding is resolved."]).ToArray(), Idempotency = saved.Preview.Idempotency, NextSteps = result.NextSteps ?? ["Rescan Health Center to verify the finding is resolved."] };
+        }
+        catch (InvalidOperationException ex) { return new RepairResult("unknown", false, [], Error: "DN-7002: " + SensitiveDataRedactor.Redact(ex.Message)); }
+        catch (Exception ex) { return new RepairResult("unknown", false, [], Error: "DN-7005: " + SensitiveDataRedactor.Redact(ex.Message)); }
     }
     public async Task<RepairResult> ExecuteAsync(HealthFinding finding, RepairExecutionRequest request, CancellationToken cancellationToken = default)
     {
@@ -60,6 +85,41 @@ public sealed class HealthRepairService : IHealthRepairService
         }
     }
     private IRepairAction Action(HealthFinding finding) => !string.IsNullOrWhiteSpace(finding.RepairId) && _actions.TryGetValue(finding.RepairId, out var action) ? action : throw new InvalidOperationException("No repair is available for this finding.");
+    private static string CanonicalFinding(HealthFinding finding) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(finding))));
+}
+
+/// <summary>DPAPI-protected same-SID single-use repair grants, persisted for independent module processes.</summary>
+internal sealed class HealthRepairGrantStore
+{
+    private const int MaxRecords = 64;
+    private readonly string _directory;
+    private readonly Func<string> _sid;
+    private readonly Func<byte[], byte[]> _protect;
+    private readonly Func<byte[], byte[]> _unprotect;
+    private readonly TimeProvider _clock;
+    private static string Sid() => WindowsIdentity.GetCurrent().User?.Value ?? throw new InvalidOperationException("Current user identity is unavailable.");
+    public HealthRepairGrantStore(string root, Func<string>? sid = null, Func<byte[], byte[]>? protect = null, Func<byte[], byte[]>? unprotect = null, TimeProvider? clock = null) { _directory = Path.Combine(root, "health-repair-grants"); _sid = sid ?? Sid; _protect = protect ?? (x => ProtectedData.Protect(x, null, DataProtectionScope.CurrentUser)); _unprotect = unprotect ?? (x => ProtectedData.Unprotect(x, null, DataProtectionScope.CurrentUser)); _clock = clock ?? TimeProvider.System; }
+    public async Task IssueAsync(string token, HealthFinding finding, RepairPreview preview, CancellationToken ct)
+    {
+        await using var gate = await LockAsync(ct); Sweep();
+        if (Directory.EnumerateFiles(_directory, "*.grant").Count() >= MaxRecords) throw new InvalidOperationException("Repair preview store is full.");
+        var grant = new Grant(_sid(), Canonical(finding), finding, preview, _clock.GetUtcNow().AddMinutes(10));
+        await File.WriteAllBytesAsync(PathFor(token), _protect(JsonSerializer.SerializeToUtf8Bytes(grant)), ct).ConfigureAwait(false);
+    }
+    public async Task<Grant> ConsumeAsync(string token, CancellationToken ct)
+    {
+        await using var gate = await LockAsync(ct); var path = PathFor(token); Sweep(path);
+        if (!File.Exists(path)) throw new InvalidOperationException("Repair preview is missing or replayed.");
+        try { var grant = JsonSerializer.Deserialize<Grant>(_unprotect(await File.ReadAllBytesAsync(path, ct))) ?? throw new InvalidOperationException("Repair preview is invalid."); File.Delete(path); if (grant.ExpiresAt <= _clock.GetUtcNow() || grant.Sid != _sid() || grant.FindingCanonical != Canonical(grant.Finding)) throw new InvalidOperationException("Repair preview is expired or invalid."); return grant; }
+        catch (CryptographicException) { TryDelete(path); throw new InvalidOperationException("Repair preview is invalid."); }
+        catch (JsonException) { TryDelete(path); throw new InvalidOperationException("Repair preview is invalid."); }
+    }
+    private async Task<FileStream> LockAsync(CancellationToken ct) { Directory.CreateDirectory(_directory); var p=Path.Combine(_directory,".lock"); for(var i=0;;i++) try{return new FileStream(p,FileMode.OpenOrCreate,FileAccess.ReadWrite,FileShare.None);} catch(IOException) when(i<100){await Task.Delay(20,ct);} }
+    private string PathFor(string token) => Path.Combine(_directory, Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token))) + ".grant");
+    private void Sweep(string? except = null) { foreach(var p in Directory.EnumerateFiles(_directory,"*.grant")) { if (string.Equals(p,except,StringComparison.OrdinalIgnoreCase)) continue; try { var g=JsonSerializer.Deserialize<Grant>(_unprotect(File.ReadAllBytes(p))); if(g is null || g.ExpiresAt<=_clock.GetUtcNow()) TryDelete(p); } catch { TryDelete(p); } } }
+    private static string Canonical(HealthFinding finding) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(finding))));
+    private static void TryDelete(string p) { try { File.Delete(p); } catch(IOException) { } }
+    internal sealed record Grant(string Sid, string FindingCanonical, HealthFinding Finding, RepairPreview Preview, DateTimeOffset ExpiresAt);
 }
 
 /// <summary>Configuration repair intentionally only previews known safe edits; saving remains user-confirmed in the editor.</summary>
@@ -331,13 +391,13 @@ public sealed class DiagnosticReportService : IDiagnosticReportService
     private readonly IDiagnosticLogProvider _logs;
     private readonly IStructuredErrorProvider _errors;
     private readonly string _exportDirectory;
-    private readonly Dictionary<string, CachedReport> _snapshots = new(StringComparer.Ordinal);
-    private readonly object _snapshotSync = new();
+    private readonly DiagnosticSnapshotGrantStore _snapshots;
     private static readonly TimeSpan SnapshotLifetime = TimeSpan.FromMinutes(10);
     public DiagnosticReportService(IHealthOrchestrator health, IPlatformCapabilityService capabilities, IDiagnosticLogProvider logs, IStructuredErrorProvider errors, string? exportDirectory = null)
     {
         (_health, _capabilities, _logs, _errors) = (health, capabilities, logs, errors);
         _exportDirectory = Path.GetFullPath(exportDirectory ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DistroNexus", "Diagnostics"));
+        _snapshots = new DiagnosticSnapshotGrantStore(Path.Combine(Directory.GetParent(_exportDirectory)?.FullName ?? _exportDirectory, "diagnostic-snapshot-grants"));
     }
     public async Task<DiagnosticReportPreview> PreviewAsync(DiagnosticReportRequest request, CancellationToken cancellationToken = default)
     {
@@ -355,12 +415,7 @@ public sealed class DiagnosticReportService : IDiagnosticReportService
         // The public export contract is redacted; secrets, paths, and user identifiers never leave Core.
         content = SensitiveDataRedactor.Redact(content);
         var token = Guid.NewGuid().ToString("N");
-        lock (_snapshotSync)
-        {
-            var now = DateTimeOffset.UtcNow;
-            foreach (var expired in _snapshots.Where(x => x.Value.ExpiresAt <= now).Select(x => x.Key).ToArray()) _snapshots.Remove(expired);
-            _snapshots[token] = new CachedReport(request.Format, content, now.Add(SnapshotLifetime));
-        }
+        await _snapshots.IssueAsync(token, request.Format, selected, content, DateTimeOffset.UtcNow.Add(SnapshotLifetime), cancellationToken).ConfigureAwait(false);
         return new DiagnosticReportPreview(request.Format, content, ["versions", "capabilities", "findings", "recent structured errors", "selected logs"], token,
             new DiagnosticReportSelectionMetadata(true, selected));
     }
@@ -383,20 +438,64 @@ public sealed class DiagnosticReportService : IDiagnosticReportService
         if (string.IsNullOrWhiteSpace(path) || Path.IsPathRooted(path) || path.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 ||
             !string.Equals(path, Path.GetFileName(path), StringComparison.Ordinal))
             throw new InvalidOperationException("DN-7007: Diagnostic destination must be a file name in the DistroNexus diagnostic export directory.");
-        CachedReport preview;
-        lock (_snapshotSync)
-        {
-            if (!_snapshots.TryGetValue(previewToken, out preview!) || preview.ExpiresAt <= DateTimeOffset.UtcNow)
-                throw new InvalidOperationException("DN-7008: The diagnostic preview is missing or expired. Preview the report again before exporting.");
-            var expected = preview.Format == DiagnosticReportFormat.Json ? ".json" : ".md";
-            if (!string.Equals(Path.GetExtension(path), expected, StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("DN-7007: Export path extension does not match report format.");
-            if (expectedFormat is not null && preview.Format != expectedFormat) throw new InvalidOperationException("DN-7008: The diagnostic preview format no longer matches the requested export.");
-            _snapshots.Remove(previewToken);
-        }
+        var format = await _snapshots.PeekFormatAsync(previewToken, cancellationToken).ConfigureAwait(false);
+        var expected = format == DiagnosticReportFormat.Json ? ".json" : ".md";
+        if (!string.Equals(Path.GetExtension(path), expected, StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("DN-7007: Export path extension does not match report format.");
+        if (expectedFormat is not null && format != expectedFormat) throw new InvalidOperationException("DN-7008: The diagnostic preview format no longer matches the requested export.");
+        var preview = await _snapshots.ConsumeAsync(previewToken, cancellationToken).ConfigureAwait(false);
         var fullPath = Path.Combine(_exportDirectory, path);
         Directory.CreateDirectory(_exportDirectory);
         await File.WriteAllTextAsync(fullPath, preview.Content, new UTF8Encoding(false), cancellationToken).ConfigureAwait(false); return fullPath;
     }
     private static string Markdown(object payload) => "# DistroNexus diagnostic report\n\n```json\n" + JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }) + "\n```\n";
-    private sealed record CachedReport(DiagnosticReportFormat Format, string Content, DateTimeOffset ExpiresAt);
+}
+
+/// <summary>Persists only already-redacted diagnostic snapshots, protected for the issuing Windows user.</summary>
+internal sealed class DiagnosticSnapshotGrantStore
+{
+    private const int MaxRecords = 64;
+    private const long MaxBytes = 4 * 1024 * 1024;
+    private readonly string _directory;
+    private readonly Func<string> _sid;
+    private readonly Func<byte[], byte[]> _protect;
+    private readonly Func<byte[], byte[]> _unprotect;
+    private readonly TimeProvider _clock;
+    private static string Sid() => WindowsIdentity.GetCurrent().User?.Value ?? throw new InvalidOperationException("Current user identity is unavailable.");
+    public DiagnosticSnapshotGrantStore(string root, Func<string>? sid = null, Func<byte[], byte[]>? protect = null, Func<byte[], byte[]>? unprotect = null, TimeProvider? clock = null) { _directory = root; _sid = sid ?? Sid; _protect = protect ?? (x => ProtectedData.Protect(x, null, DataProtectionScope.CurrentUser)); _unprotect = unprotect ?? (x => ProtectedData.Unprotect(x, null, DataProtectionScope.CurrentUser)); _clock = clock ?? TimeProvider.System; }
+    public async Task IssueAsync(string token, DiagnosticReportFormat format, IReadOnlyList<string> selection, string content, DateTimeOffset expiresAt, CancellationToken ct)
+    {
+        await using var gate = await LockAsync(ct); Sweep();
+        if (Directory.EnumerateFiles(_directory, "*.grant").Count() >= MaxRecords || Directory.EnumerateFiles(_directory, "*.grant").Sum(x => new FileInfo(x).Length) >= MaxBytes) throw new InvalidOperationException("DN-7007: Diagnostic snapshot store is full.");
+        var grant = new Grant(_sid(), format, selection.ToArray(), content, expiresAt);
+        await using var file = new FileStream(PathFor(token), FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, true);
+        var bytes = _protect(JsonSerializer.SerializeToUtf8Bytes(grant));
+        await file.WriteAsync(bytes, ct).ConfigureAwait(false); await file.FlushAsync(ct).ConfigureAwait(false);
+    }
+    public async Task<Grant> ConsumeAsync(string token, CancellationToken ct)
+    {
+        await using var gate = await LockAsync(ct); var path = PathFor(token); Sweep(path);
+        if (!File.Exists(path)) throw new InvalidOperationException("DN-7008: The diagnostic preview is missing, expired, or already used.");
+        try
+        {
+            var grant = JsonSerializer.Deserialize<Grant>(_unprotect(await File.ReadAllBytesAsync(path, ct).ConfigureAwait(false))) ?? throw new InvalidOperationException("DN-7008: The diagnostic preview is invalid.");
+            File.Delete(path);
+            if (grant.ExpiresAt <= _clock.GetUtcNow() || grant.Sid != _sid() || grant.Selection.Any(string.IsNullOrWhiteSpace)) throw new InvalidOperationException("DN-7008: The diagnostic preview is invalid or expired.");
+            return grant;
+        }
+        catch (CryptographicException) { TryDelete(path); throw new InvalidOperationException("DN-7008: The diagnostic preview is invalid."); }
+        catch (JsonException) { TryDelete(path); throw new InvalidOperationException("DN-7008: The diagnostic preview is invalid."); }
+    }
+    public async Task<DiagnosticReportFormat> PeekFormatAsync(string token, CancellationToken ct)
+    {
+        await using var gate = await LockAsync(ct); var path = PathFor(token); Sweep(path);
+        if (!File.Exists(path)) throw new InvalidOperationException("DN-7008: The diagnostic preview is missing, expired, or already used.");
+        try { var grant = JsonSerializer.Deserialize<Grant>(_unprotect(await File.ReadAllBytesAsync(path, ct).ConfigureAwait(false))) ?? throw new InvalidOperationException("DN-7008: The diagnostic preview is invalid."); if (grant.ExpiresAt <= _clock.GetUtcNow() || grant.Sid != _sid()) throw new InvalidOperationException("DN-7008: The diagnostic preview is invalid or expired."); return grant.Format; }
+        catch (CryptographicException) { TryDelete(path); throw new InvalidOperationException("DN-7008: The diagnostic preview is invalid."); }
+        catch (JsonException) { TryDelete(path); throw new InvalidOperationException("DN-7008: The diagnostic preview is invalid."); }
+    }
+    private async Task<FileStream> LockAsync(CancellationToken ct) { Directory.CreateDirectory(_directory); var p = Path.Combine(_directory, ".lock"); for (var i = 0; ; i++) try { return new FileStream(p, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None); } catch (IOException) when (i < 100) { await Task.Delay(20, ct).ConfigureAwait(false); } }
+    private string PathFor(string token) => Path.Combine(_directory, Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token))) + ".grant");
+    private void Sweep(string? except = null) { foreach (var p in Directory.EnumerateFiles(_directory, "*.grant")) { if (string.Equals(p, except, StringComparison.OrdinalIgnoreCase)) continue; try { var g = JsonSerializer.Deserialize<Grant>(_unprotect(File.ReadAllBytes(p))); if (g is null || g.ExpiresAt <= _clock.GetUtcNow()) TryDelete(p); } catch { TryDelete(p); } } }
+    private static void TryDelete(string path) { try { File.Delete(path); } catch (IOException) { } }
+    internal sealed record Grant(string Sid, DiagnosticReportFormat Format, string[] Selection, string Content, DateTimeOffset ExpiresAt);
 }

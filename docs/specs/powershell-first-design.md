@@ -171,6 +171,12 @@ No registry keys, config path/raw document, WSL command, VHDX path, `Force`, dis
 
 S31 adds a narrow Core-owned registered-instance sparse adapter because the existing Bridge WSL manager intentionally rejects configuration/sparse calls. The adapter may read only the product's registered instance identity and current sparse state, and may execute only the fixed `wsl.exe --manage <registered-name> --set-sparse <true|false>` argument array after Core validation. It does not expose registry values, instance install/VHDX paths, arbitrary `wsl.exe` arguments, a script runner, or a general manager API. This is the final authority used both at preview and immediate pre-execute revalidation.
 
+### Health repair and diagnostics durable contract amendment
+
+`HealthCenterViewModel` directly owns scan, repair preview/execute, diagnostic snapshot/export and allowed-log lookup. Slice S32 makes scan/history/log-options typed read routes, while repair and diagnostic snapshot records become same-user protected durable opaque grants. `health.repair.v1` accepts exactly PreviewToken and revalidates canonical finding/repair eligibility; it never accepts caller Finding/Confirmed data. Desktop-only repair actions retain structured safe outcomes rather than gaining a navigation/elevation bypass.
+
+Diagnostic preview persists only already-redacted content, bound to SID/format/selected allow-listed log IDs/expiry, and exports once through `diagnostics.export.v1 {SnapshotToken,DestinationFileName,DeadlineMilliseconds?}`. The filename is a basename with the expected extension; the Bridge alone rebuilds the fixed DistroNexus diagnostics directory. Desktop no longer chooses arbitrary full paths. No generic report destination, raw content, shell command, Windows-feature repair or external update/navigation authority is introduced.
+
 ## Data and Execution Semantics
 
 - Data ownership and retention: Core owns settings, cache, catalog, backup, recovery, templates, and configuration persistence. Desktop never writes those stores. Existing retention and cleanup policies remain unchanged.

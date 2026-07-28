@@ -81,6 +81,13 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string CreateFirewallRuleCommand = "New-DistroNexusFirewallRule";
     private const string GetFirewallRemovePreviewCommand = "Get-DistroNexusFirewallRuleRemovePreview";
     private const string RemoveFirewallRuleCommand = "Remove-DistroNexusFirewallRule";
+    private const string ScanHealthCommand = "Invoke-DistroNexusHealthScan";
+    private const string GetHealthHistoryCommand = "Get-DistroNexusHealthHistory";
+    private const string GetHealthRepairPreviewCommand = "Get-DistroNexusHealthRepairPreview";
+    private const string RepairHealthCommand = "Repair-DistroNexusHealthFinding";
+    private const string GetDiagnosticLogOptionsCommand = "Get-DistroNexusDiagnosticLogOption";
+    private const string GetDiagnosticReportPreviewCommand = "Get-DistroNexusDiagnosticReportPreview";
+    private const string ExportDiagnosticReportCommand = "Export-DistroNexusDiagnosticReport";
     private readonly IPowerShellService _powerShellService;
 
     public PowerShellModuleClient(IPowerShellService powerShellService)
@@ -469,6 +476,17 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     public Task<FixedExplorerResult> OpenWslConfigFileAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<FixedExplorerResult>(OpenWslConfigFileCommand, null, cancellationToken);
     public Task<FixedExplorerResult> OpenRecoveryPointFolderAsync(Guid id, CancellationToken cancellationToken = default)
     { if (id == Guid.Empty) throw new ArgumentException("A recovery point id is required.", nameof(id)); return ExecuteJsonAsync<FixedExplorerResult>(OpenRecoveryPointFolderCommand, new() { ["Id"] = id }, cancellationToken); }
+    public Task<HealthScanResult> ScanHealthAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<HealthScanResult>(ScanHealthCommand, new() { ["AsJson"] = true }, cancellationToken);
+    public Task<IReadOnlyList<HealthHistoryEntry>> GetHealthHistoryAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<IReadOnlyList<HealthHistoryEntry>>(GetHealthHistoryCommand, new() { ["AsJson"] = true }, cancellationToken);
+    public Task<RepairPreview> GetHealthRepairPreviewAsync(HealthFinding finding, CancellationToken cancellationToken = default)
+    { if (string.IsNullOrWhiteSpace(finding.Id) || string.IsNullOrWhiteSpace(finding.RepairId)) throw new ArgumentException("A repairable health finding is required.", nameof(finding)); return ExecuteJsonAsync<RepairPreview>(GetHealthRepairPreviewCommand, new() { ["Finding"] = finding }, cancellationToken); }
+    public Task<RepairResult> RepairHealthAsync(string previewToken, CancellationToken cancellationToken = default)
+    { if (string.IsNullOrWhiteSpace(previewToken) || previewToken.Length != 32 || previewToken.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("A Core-issued health repair preview token is required.", nameof(previewToken)); return ExecuteJsonAsync<RepairResult>(RepairHealthCommand, new() { ["PreviewToken"] = previewToken, ["Confirm"] = false }, cancellationToken); }
+    public Task<IReadOnlyList<string>> GetDiagnosticLogOptionsAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<IReadOnlyList<string>>(GetDiagnosticLogOptionsCommand, new() { ["AsJson"] = true }, cancellationToken);
+    public Task<DiagnosticReportPreview> GetDiagnosticReportPreviewAsync(DiagnosticReportFormat format, IReadOnlyList<string> selectedLogIds, CancellationToken cancellationToken = default)
+    { if (selectedLogIds.Count > 32 || selectedLogIds.Any(string.IsNullOrWhiteSpace)) throw new ArgumentException("Diagnostic log selection is invalid.", nameof(selectedLogIds)); return ExecuteJsonAsync<DiagnosticReportPreview>(GetDiagnosticReportPreviewCommand, new() { ["Format"] = format.ToString(), ["SelectedLogId"] = selectedLogIds.ToArray() }, cancellationToken); }
+    public Task<DiagnosticReportExportResult> ExportDiagnosticReportAsync(string snapshotToken, string destinationFileName, int? deadlineMilliseconds = null, CancellationToken cancellationToken = default)
+    { if (string.IsNullOrWhiteSpace(snapshotToken) || snapshotToken.Length != 32 || snapshotToken.Any(c => !Uri.IsHexDigit(c)) || !string.Equals(destinationFileName, Path.GetFileName(destinationFileName), StringComparison.Ordinal) || string.IsNullOrWhiteSpace(destinationFileName) || deadlineMilliseconds is < 1 or > 30_000) throw new ArgumentException("A Core-issued snapshot token, diagnostic file name, and bounded deadline are required."); var p = new Dictionary<string, object> { ["SnapshotToken"] = snapshotToken, ["DestinationFileName"] = destinationFileName, ["Confirm"] = false }; if (deadlineMilliseconds is not null) p["DeadlineMilliseconds"] = deadlineMilliseconds.Value; return ExecuteJsonAsync<DiagnosticReportExportResult>(ExportDiagnosticReportCommand, p, cancellationToken); }
     private Task<WslgActionResult> ExecuteWslgActionAsync(string command, string token, string applicationId, bool? pinned, CancellationToken ct)
     { if (string.IsNullOrWhiteSpace(token) || token.Length != 64 || token.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("A WSLg discovery token is invalid.", nameof(token)); ValidateName(applicationId, nameof(applicationId)); var parameters = new Dictionary<string, object> { ["DiscoveryToken"] = token, ["ApplicationId"] = applicationId }; if (pinned is not null) parameters["Pinned"] = pinned.Value; return ExecuteJsonAsync<WslgActionResult>(command, parameters, ct); }
 

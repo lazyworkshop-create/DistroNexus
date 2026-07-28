@@ -136,6 +136,13 @@ public interface IPowerShellModuleClient
     Task<FirewallOperationResult> RemoveFirewallRuleAsync(string previewToken, CancellationToken cancellationToken = default);
     Task<FixedExplorerResult> OpenWslConfigFileAsync(CancellationToken cancellationToken = default);
     Task<FixedExplorerResult> OpenRecoveryPointFolderAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<HealthScanResult> ScanHealthAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<HealthHistoryEntry>> GetHealthHistoryAsync(CancellationToken cancellationToken = default);
+    Task<RepairPreview> GetHealthRepairPreviewAsync(HealthFinding finding, CancellationToken cancellationToken = default);
+    Task<RepairResult> RepairHealthAsync(string previewToken, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<string>> GetDiagnosticLogOptionsAsync(CancellationToken cancellationToken = default);
+    Task<DiagnosticReportPreview> GetDiagnosticReportPreviewAsync(DiagnosticReportFormat format, IReadOnlyList<string> selectedLogIds, CancellationToken cancellationToken = default);
+    Task<DiagnosticReportExportResult> ExportDiagnosticReportAsync(string snapshotToken, string destinationFileName, int? deadlineMilliseconds = null, CancellationToken cancellationToken = default);
 }
 
 public sealed record FixedExplorerResult(bool Succeeded, string OutcomeCode);

@@ -68,7 +68,7 @@ var healthRepairs = new HealthRepairService([
         ["Run fstrim in the selected running distribution. Linux privilege policy may reject this operation."],
         finding => string.IsNullOrWhiteSpace(finding.InstanceName) ? null : new ProcessRequest("wsl.exe", ["--distribution", finding.InstanceName, "--", "sudo", "--non-interactive", "fstrim", "-av"], TimeSpan.FromMinutes(2)), processes,
         finding => string.IsNullOrWhiteSpace(finding.InstanceName) ? null : new ProcessRequest("wsl.exe", ["--distribution", finding.InstanceName, "--", "sh", "-lc", "df -Pk /"], TimeSpan.FromSeconds(30)))
-]);
+], durableGrantRoot: applicationRoot, health: health);
 var diagnosticLogs = new ApplicationDiagnosticLogProvider(settings);
 var diagnosticReports = new DiagnosticReportService(health, capabilities, diagnosticLogs, new StructuredFileErrorProvider(diagnosticLogs), Path.Combine(applicationRoot, "diagnostics"));
 var runtime = new WorkspaceRuntime(instances, processes);
@@ -168,9 +168,9 @@ while ((line = Console.ReadLine()) is not null)
             "monitoring.process.execute.v1" => await ExecuteMonitoringProcessActionAsync(request),
             "healthScan" => await HealthScanV1Async(request),
             "healthRepairPreview" => await PreviewHealthRepairV1Async(request),
-            "healthRepairExecute" => await ExecuteHealthRepairV1Async(request),
             "health.scan.v1" => await HealthScanV1Async(request),
             "health.history.v1" => await HealthHistoryV1Async(request),
+            "diagnostics.log-options.v1" => DiagnosticLogOptionsV1(request),
             "health.repair-preview.v1" => await PreviewHealthRepairV1Async(request),
             "health.repair.v1" => await ExecuteHealthRepairV1Async(request),
             "diagnostics.preview.v1" => await PreviewDiagnosticsV1Async(request),
@@ -682,7 +682,8 @@ async Task<object> SetRecoveryRetentionV1Async(BridgeRequest request) { Validate
 async Task<HealthScanResult> HealthScanV1Async(BridgeRequest request) { ValidateEmptyPayload(request); return await health.ScanAsync(); }
 async Task<IReadOnlyList<HealthHistoryEntry>> HealthHistoryV1Async(BridgeRequest request) { ValidateEmptyPayload(request); return await health.GetHistoryAsync(); }
 async Task<RepairPreview> PreviewHealthRepairV1Async(BridgeRequest request) { ValidatePayload(request, ["Finding"], ["Finding"]); return await PreviewHealthRepairAsync(request); }
-async Task<RepairResult> ExecuteHealthRepairV1Async(BridgeRequest request) { ValidatePayload(request, ["Finding", "Confirmed"], ["Finding", "Confirmed"]); return await ExecuteHealthRepairAsync(request); }
+async Task<RepairResult> ExecuteHealthRepairV1Async(BridgeRequest request) { ValidatePayload(request, [], []); if (string.IsNullOrWhiteSpace(request.Token)) throw new ArgumentException("Health repair preview token is required."); return await healthRepairs.ExecuteAsync(request.Token); }
+IReadOnlyList<string> DiagnosticLogOptionsV1(BridgeRequest request) { ValidateEmptyPayload(request); return diagnosticLogs.AllowedLogIds.Order(StringComparer.Ordinal).ToArray(); }
 async Task<DiagnosticReportPreview> PreviewDiagnosticsV1Async(BridgeRequest request)
 {
     ValidatePayload(request, ["Format", "SelectedLogIds", "DeadlineMilliseconds"], ["Format"]);
@@ -769,11 +770,6 @@ async Task<RepairPreview> PreviewHealthRepairAsync(BridgeRequest request)
 {
     var p = JsonSerializer.Deserialize<HealthFindingPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Health finding payload is required.");
     return await healthRepairs.PreviewAsync(p.Finding);
-}
-async Task<RepairResult> ExecuteHealthRepairAsync(BridgeRequest request)
-{
-    var p = JsonSerializer.Deserialize<HealthRepairPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Health repair payload is required.");
-    return await healthRepairs.ExecuteAsync(p.Finding, new RepairExecutionRequest(request.Token ?? string.Empty, p.Confirmed));
 }
 async Task<TemplateSource> AddMarketplaceSourceAsync(BridgeRequest request) { var p = JsonSerializer.Deserialize<MarketplaceSourcePayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Marketplace source payload is required."); return await marketplace.AddSourceAsync(p.Url, p.Kind, p.ExplicitlyAcceptedNonHttps); }
 async Task<TemplateMarketplaceStatus> GetMarketplaceStatusAsync(BridgeRequest request) { var p = JsonSerializer.Deserialize<MarketplaceStatusPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Marketplace source payload is required."); return string.IsNullOrWhiteSpace(p.TemplateId) || string.IsNullOrWhiteSpace(p.ManifestDigest) ? await marketplace.GetStatusAsync(p.SourceId) : await marketplace.GetStatusAsync(p.SourceId, p.TemplateId, p.ManifestDigest); }
