@@ -65,6 +65,12 @@ The module must expose supported backup schedules, reviewed manual backup, recov
 
 Acceptance: mutations execute only a same-user reviewed token, archive retention deletes only Core-owned instance-named archives, and backup/recovery view models have no direct `IBackupService` or `IRecoveryPointService` execution path.
 
+### FR-004C Instance lifecycle and disk parity
+
+The public module must expose the supported instance list/refresh, start/stop, install, remove, move, rename, import/export, credential, disk-size, and compaction operations. The desktop must use typed module-client methods for those operations and must not call `IWslManagerService`, construct WSL commands, inspect instance paths, or use Core-only compaction previews.
+
+Acceptance: refresh is an explicitly non-mutating read whose disk-size behavior is bounded for stopped instances; start behavior states whether keep-alive was requested and established; every destructive lifecycle or compaction command honors `ShouldProcess` even with `-Force`; and the desktop has no direct lifecycle or disk-service execution path.
+
 ### FR-005 WPF presentation-only behavior
 
 The desktop client may own visual state, rendering, navigation, input dialogs, and user-initiated presentation actions such as opening a returned local result in the shell. It must not create, delete, edit, validate-for-write, download, configure, or execute product business state independently.

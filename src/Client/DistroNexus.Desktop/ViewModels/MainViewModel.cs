@@ -476,21 +476,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 
                 // Use ForceRefreshInstanceAsync for each running instance
                 // This will calculate disk size and update configuration
-                foreach (var instance in runningInstances)
-                {
-                    try
-                    {
-                        var refreshedInstance = await _wslManager.ForceRefreshInstanceAsync(instance.Name);
-                        if (refreshedInstance != null)
-                        {
-                            instance.UpdateDiskSize(refreshedInstance.Size);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to refresh instance {Name}", instance.Name);
-                    }
-                }
+                // The module list contract owns refresh and returns a bounded projection. Do not
+                // force an instance-specific disk probe from the presentation layer.
+                _logger.LogInformation("Instance refresh completed through the module contract.");
             }
         }
         catch (Exception ex)

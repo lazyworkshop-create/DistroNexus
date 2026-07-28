@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using System.Diagnostics;
 using Microsoft.Win32;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
@@ -52,7 +53,7 @@ internal sealed class BridgeWslManagerService(IProcessRunner processes) : IWslMa
             if (!string.IsNullOrWhiteSpace(basePath) && Directory.Exists(basePath))
             {
                 item = item with { InstallTime = Directory.GetCreationTime(basePath) };
-                if (!options.SkipDiskSize)
+                if (!options.SkipDiskSize && item.State.Equals("Running", StringComparison.OrdinalIgnoreCase))
                 {
                     var vhdx = Path.Combine(basePath, "ext4.vhdx");
                     if (File.Exists(vhdx)) item = item with { DiskSize = new FileInfo(vhdx).Length };
@@ -96,11 +97,22 @@ internal sealed class BridgeWslManagerService(IProcessRunner processes) : IWslMa
         return result.ExitCode == 0 && !result.TimedOut && !result.Cancelled && result.Failure == ProcessFailureKind.None;
     }
 
+    public Task<bool> StartInstanceWithKeepAliveAsync(string instanceName, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var startInfo = new ProcessStartInfo { FileName = "wsl.exe", UseShellExecute = false, CreateNoWindow = true };
+        startInfo.ArgumentList.Add("--distribution");
+        startInfo.ArgumentList.Add(instanceName);
+        startInfo.ArgumentList.Add("--exec");
+        startInfo.ArgumentList.Add("sleep");
+        startInfo.ArgumentList.Add("infinity");
+        return Task.FromResult(Process.Start(startInfo) is not null);
+    }
+
     private static Task Unsupported() => Task.FromException(new NotSupportedException("WorkspaceBridge does not expose this WSL instance-management operation."));
     private static Task<bool> UnsupportedBool() => Task.FromException<bool>(new NotSupportedException("WorkspaceBridge does not expose WSL instance management."));
     private static Task<T> Unsupported<T>() => Task.FromException<T>(new NotSupportedException("WorkspaceBridge does not expose WSL instance management."));
     public Task InstallInstanceAsync(InstallOptions options, IProgress<(double Percentage, string Message)>? progress = null, CancellationToken cancellationToken = default) => Unsupported();
-    public Task<bool> StartInstanceWithKeepAliveAsync(string instanceName, CancellationToken cancellationToken = default) => UnsupportedBool();
     public Task<bool> RemoveInstanceAsync(string instanceName, CancellationToken cancellationToken = default) => UnsupportedBool();
     public Task MoveInstanceAsync(string instanceName, string newPath, IProgress<double>? progress = null, CancellationToken cancellationToken = default) => Unsupported();
     public Task RenameInstanceAsync(string oldName, string newName, CancellationToken cancellationToken = default) => Unsupported();
@@ -115,5 +127,5 @@ internal sealed class BridgeWslManagerService(IProcessRunner processes) : IWslMa
     public Task ShutdownWslAsync(CancellationToken cancellationToken = default) => Unsupported();
 }
 
-internal sealed record InstanceListOptions(bool IncludeRelease, bool IncludeUser, bool SkipDiskSize);
+internal sealed record InstanceListOptions(bool IncludeRelease, bool IncludeUser, bool SkipDiskSize, bool ForceRefresh);
 internal sealed record BridgeInstanceDetails(string Name, string State, int Version, string BasePath, long DiskSize, DateTime? InstallTime, string Distribution, string Guid, string? Release = null, string? CurrentUser = null);

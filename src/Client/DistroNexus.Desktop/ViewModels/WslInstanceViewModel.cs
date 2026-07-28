@@ -165,10 +165,11 @@ public partial class WslInstanceViewModel : ObservableObject
             IsForceRefreshing = true;
             OnPropertyChanged(nameof(DiskSizeDisplay));
 
-            _logger.LogInformation("Starting force refresh for instance {Name}", Name);
+            _logger.LogInformation("Starting read-only force refresh for instance {Name}", Name);
 
-            // Call force refresh method
-            var refreshedInstance = await _wslManager.ForceRefreshInstanceAsync(Name);
+            var refreshedInstance = (await _moduleClient.GetInstancesAsync(
+                new InstanceListRequest(SkipDiskSize: true, ForceRefresh: true)))
+                .FirstOrDefault(instance => string.Equals(instance.Name, Name, StringComparison.OrdinalIgnoreCase));
 
             if (refreshedInstance != null)
             {
@@ -176,9 +177,6 @@ public partial class WslInstanceViewModel : ObservableObject
                 OnPropertyChanged(nameof(State));
                 OnPropertyChanged(nameof(RawState));
                 OnPropertyChanged(nameof(IsRunning));
-
-                // Auto-load disk size
-                await LoadDiskSizeAsync();
 
                 _logger.LogInformation("Force refresh completed for {Name}", Name);
             }
@@ -266,18 +264,17 @@ public partial class WslInstanceViewModel : ObservableObject
     {
         try
         {
-            _logger.LogInformation("Starting instance {Name} with keep-alive task", Name);
+            _logger.LogInformation("Starting instance {Name} with keep-alive request", Name);
             
-            // Start instance with a background keep-alive process
-            var success = await _wslManager.StartInstanceWithKeepAliveAsync(Name);
+            var result = await _moduleClient.StartInstanceWithResultAsync(Name, keepAlive: true);
             
-            if (success)
+            if (result.Succeeded)
             {
                 Instance.State = "Running";
                 OnPropertyChanged(nameof(State));
                 OnPropertyChanged(nameof(RawState));
                 OnPropertyChanged(nameof(IsRunning));
-                _logger.LogInformation("Instance {Name} started with keep-alive task", Name);
+                _logger.LogInformation("Instance {Name} started; keep-alive established: {KeepAliveEstablished}", Name, result.KeepAliveEstablished);
             }
             else
             {

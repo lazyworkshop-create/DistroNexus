@@ -1076,7 +1076,7 @@ All uncontracted platform families and final Desktop-wide structural closure.
 
 ### Status
 
-Planned
+Committed
 
 ### Objective
 
@@ -1137,7 +1137,7 @@ WSLg runtime installation/repair, Start Menu integration, remote icons, external
 
 ### Status
 
-Planned
+Committed
 
 ### Objective
 
@@ -1198,7 +1198,7 @@ Docker Desktop installation/restart, runtime container/image/project operations,
 
 ### Status
 
-Planned
+Committed
 
 ### Objective
 
@@ -1324,7 +1324,7 @@ The existing helper deliberately authorizes only the signed `DistroNexus.Desktop
 
 ### Status
 
-In Progress
+Committed
 
 ### Objective
 
@@ -1384,7 +1384,7 @@ Capability probe algorithm changes, platform mutation, application update, termi
 
 ### Status
 
-In Progress
+Committed
 
 ### Objective
 
@@ -1444,7 +1444,7 @@ Terminal installation, arbitrary browsing/launching, application update, USB ele
 
 ### Status
 
-In Progress
+Committed
 
 ### Objective
 
@@ -1504,7 +1504,7 @@ General file browsing, recovery mutation, WSL configuration read/write migration
 
 ### Status
 
-In Progress
+Committed
 
 ### Objective
 
@@ -1564,7 +1564,7 @@ Network/resource changes, systemd installation/repair, real WSL UAT, deployment 
 
 ### Status
 
-Planned
+Committed
 
 ### Objective
 
@@ -1624,7 +1624,7 @@ Firewall helper signing/elevation integration, actual firewall mutation UAT, arb
 
 ### Status
 
-Planned
+Committed
 
 ### Objective
 
@@ -1684,7 +1684,7 @@ Disk compaction and elevation design, VHDX runtime UAT, and every other remainin
 
 ### Status
 
-Completed
+Committed
 
 ### Objective
 
@@ -1860,6 +1860,124 @@ One accepted backup and recovery module/presentation-client migration slice.
 ### Out of Scope
 
 Real backup/restore/clone UAT and all non-backup lifecycle capabilities.
+
+## Slice S35: Instance read, refresh, start, and stop module migration
+
+### Status
+
+Committed
+
+### Objective
+
+Make supported instance list/refresh and start/stop paths module-owned, with their WPF consumers using only typed module-client methods.
+
+### Sources
+
+Requirements FR-001 through FR-007 and FR-004C; `docs/specs/powershell-first-design.md` Instance lifecycle and disk contract amendment; lifecycle evidence inventory.
+
+### Dependencies
+
+S34
+
+### Allowed Paths
+
+Requirements/design/plan; instance list/start/stop Core contracts and fixed Bridge routes; list/start/stop public module commands; typed module client; `MainViewModel`, `WslInstanceViewModel` and composition consumers; focused tests.
+
+### Excluded Paths
+
+Path-bearing lifecycle operations (install/remove/move/rename/import/export/credential), disk-size/compaction, templates, marketplace, workspaces, USB/elevation, download-task orchestration, release/publishing, arbitrary command/process launch, and real WSL/VHDX mutation.
+
+### Contract and Documentation
+
+Define non-mutating force-refresh and explicit keep-alive start semantics. Record external lifecycle UAT gates.
+
+### Implementation Scope
+
+Preserve Core instance validation behind fixed versioned list/start/stop routes. Remove direct Desktop execution for only the covered read/start/stop operations. No generic WSL command, arbitrary path, process argument, or elevation bypass is introduced.
+
+### Test Scope
+
+Cover exact route payloads; invalid/unknown field rejection; `WhatIf` and declined confirmation; stopped-instance refresh; keep-alive result handling; typed client and WPF routing guards.
+
+### Acceptance Criteria
+
+- Covered read/start/stop operations in Desktop invoke only typed PowerShell module methods.
+- Force refresh is read-only and never starts a stopped instance or triggers an implicit disk probe.
+- Start and stop mutations honor PowerShell consent and return only sanitized results.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Lifecycle|FullyQualifiedName~PowerShellModuleClient|FullyQualifiedName~WorkspaceBridgeProtocol"
+pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Unit
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+One accepted instance read/start/stop contract and presentation-client migration slice.
+
+### Out of Scope
+
+Path-bearing lifecycle and disk operations, real WSL lifecycle, keep-alive persistence and rollback UAT; all non-lifecycle capability families.
+
+## Slice S36: Path-bearing lifecycle and disk contract design
+
+### Status
+
+Planned
+
+### Objective
+
+Define and deliver module-only contracts for install, remove, move, rename, import, export, credential, disk-size and compaction without allowing a WPF/Core bypass.
+
+### Sources
+
+Requirements FR-001 through FR-007 and FR-004C; lifecycle evidence inventory.
+
+### Dependencies
+
+S35
+
+### Allowed Paths
+
+Requirements/design/plan; lifecycle/disk Core, Bridge, module, typed-client and Desktop consumers; focused tests.
+
+### Excluded Paths
+
+Templates, marketplace, workspaces, USB/elevation, release/publishing and real WSL/VHDX mutation.
+
+### Contract and Documentation
+
+Before delegation, define exact schemas, Core-only path policy, credential transport, preview/grant behavior, recovery/rollback outcomes, redaction, and the install/download boundary.
+
+### Implementation Scope
+
+No implementation starts until the design gate closes every path-bearing and destructive-operation contract.
+
+### Test Scope
+
+Contract-first negative, consent, token, path-safety, rollback and routing coverage.
+
+### Acceptance Criteria
+
+- The design identifies a module-only contract for every remaining FR-004C operation.
+- No route accepts arbitrary commands, uncontrolled paths, credentials in public results, or elevation bypasses.
+
+### Verification Commands
+
+```text
+.\.agents\skills\agentteam-requirements-design\scripts\validate-design-readiness.ps1 -RequirementsPath docs\specs\powershell-first-requirements.md -DesignPath docs\specs\powershell-first-design.md
+.\.agents\skills\agentteam-slice-delivery\scripts\validate-slice-plan.ps1 -Path docs\development\powershell-first-slice-plan.md
+```
+
+### Commit Boundary
+
+One accepted design/contract baseline followed by separately accepted implementation slices.
+
+### Out of Scope
+
+Production WSL/VHDX/elevation UAT and all other capability families.
 
 ## Slice S06: Platform-integrated command parity
 

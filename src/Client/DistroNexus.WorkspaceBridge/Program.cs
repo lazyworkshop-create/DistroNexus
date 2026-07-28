@@ -212,8 +212,8 @@ while ((line = Console.ReadLine()) is not null)
             "marketplaceRollback" => await RollbackMarketplaceArtifactAsync(request),
             "marketplaceDownloadArtifact" => await DownloadMarketplaceArtifactAsync(request),
             "instance.list.v1" => await instances.GetInstanceDetailsAsync(ParseInstanceListOptions(request)),
-            "instance.start.v1" => await instances.StartInstanceAsync(ParseInstanceName(request)),
-            "instance.stop.v1" => await instances.StopInstanceAsync(ParseInstanceName(request)),
+            "instance.start.v1" => await StartInstanceV1Async(request),
+            "instance.stop.v1" => await StopInstanceV1Async(request),
             "instance.resources.get.v1" => await InstanceResourcesGetV1Async(request),
             "instance.sparse.preview.v1" => await InstanceSparsePreviewV1Async(request),
             "instance.sparse.execute.v1" => await InstanceSparseExecuteV1Async(request),
@@ -308,13 +308,36 @@ void ValidatePayload(BridgeRequest request, IEnumerable<string> allowed, IEnumer
         throw new ArgumentException("Bridge payload does not match the operation contract.");
 }
 
-string ParseInstanceName(BridgeRequest request)
+string ParseInstanceName(BridgeRequest request, bool allowKeepAlive = false) => ParseInstancePayload(request, allowKeepAlive).Name;
+
+InstanceNamePayload ParseInstancePayload(BridgeRequest request, bool allowKeepAlive = false)
 {
-    var payload = JsonSerializer.Deserialize<InstanceNamePayload>(request.Payload?.GetRawText() ?? string.Empty, options)
+    ValidatePayload(request, allowKeepAlive ? ["Name", "KeepAlive"] : ["Name"], ["Name"]);
+    var payload = JsonSerializer.Deserialize<InstanceNamePayload>(request.Payload?.GetRawText() ?? string.Empty,
+        new JsonSerializerOptions(options) { UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow })
         ?? throw new ArgumentException("Instance payload is required.");
     if (string.IsNullOrWhiteSpace(payload.Name))
         throw new ArgumentException("Instance name is required.");
-    return payload.Name;
+    return payload;
+}
+
+async Task<object> StartInstanceV1Async(BridgeRequest request)
+{
+    var payload = ParseInstancePayload(request, allowKeepAlive: true);
+    var name = payload.Name;
+    var registered = await instances.GetInstanceDetailsAsync(new InstanceListOptions(false, false, true, false));
+    if (!registered.Any(instance => string.Equals(instance.Name, name, StringComparison.OrdinalIgnoreCase)))
+        throw new ArgumentException("The instance is not registered.");
+    var started = payload.KeepAlive
+        ? await instances.StartInstanceWithKeepAliveAsync(name)
+        : await instances.StartInstanceAsync(name);
+    return new { Succeeded = started, Started = started, KeepAliveEstablished = started && payload.KeepAlive };
+}
+
+async Task<object> StopInstanceV1Async(BridgeRequest request)
+{
+    var stopped = await instances.StopInstanceAsync(ParseInstanceName(request));
+    return new { Succeeded = stopped };
 }
 
 GlobalSettings GetSettings(BridgeRequest request)
@@ -568,10 +591,13 @@ static void RequireNoPayload(BridgeRequest request, string message)
         throw new ArgumentException(message);
 }
 
-InstanceListOptions ParseInstanceListOptions(BridgeRequest request) =>
-    JsonSerializer.Deserialize<InstanceListPayload>(request.Payload?.GetRawText() ?? "{}", options) is { } payload
-        ? new InstanceListOptions(payload.IncludeRelease, payload.IncludeUser, payload.SkipDiskSize)
-        : new InstanceListOptions(false, false, false);
+InstanceListOptions ParseInstanceListOptions(BridgeRequest request)
+{
+    ValidatePayload(request, ["IncludeRelease", "IncludeUser", "SkipDiskSize", "ForceRefresh"], []);
+    var payload = JsonSerializer.Deserialize<InstanceListPayload>(request.Payload!.Value.GetRawText(), new JsonSerializerOptions(options) { UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow })
+        ?? throw new ArgumentException("Instance list payload is required.");
+    return new InstanceListOptions(payload.IncludeRelease, payload.IncludeUser, payload.SkipDiskSize, payload.ForceRefresh);
+}
 
 async Task<object> PreviewPodmanUnitAsync(BridgeRequest request) { var p = JsonSerializer.Deserialize<PodmanUnitPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Podman payload is required."); var preview = await containers.PreviewPodmanUserUnitAsync(p.InstanceName, p.Unit, p.Action); return new { Token = preview.SystemdPreview.PreviewToken, InstanceName = p.InstanceName, Unit = p.Unit, Action = p.Action, Effects = preview.SystemdPreview.Effects }; }
 async Task<object> ExecutePodmanUnitAsync(BridgeRequest request) { var p = JsonSerializer.Deserialize<PodmanUnitPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Podman payload is required."); return await containers.ExecutePodmanUserUnitAsync(request.Token ?? string.Empty, p.InstanceName, p.Unit, p.Action); }
@@ -850,7 +876,7 @@ static async Task<object> RemoveAsync(IWorkspaceService service, BridgeRequest r
 static Task<WorkspaceDefinition> DuplicateAsync(IWorkspaceService service, BridgeRequest request) => service.DuplicateAsync(request.Id ?? throw new ArgumentException("Workspace id is required."), request.Name ?? throw new ArgumentException("Workspace name is required."), request.ExpectedRevision ?? throw new ArgumentException("Expected revision is required."));
 static WorkspaceDefinition ParseDefinition(string payload, JsonSerializerOptions options) => JsonSerializer.Deserialize<WorkspaceDefinition>(payload, options) ?? throw new ArgumentException("Workspace definition is required.");
 public sealed record BridgeRequest(string Operation, Guid? Id, JsonElement? Payload, long? ExpectedRevision, string? Token = null, string? Name = null, Guid? ActionId = null);
-public sealed record InstanceNamePayload(string Name);
+public sealed record InstanceNamePayload(string Name, bool KeepAlive = false);
 public sealed record InstanceResourcePayload(string Name);
 public sealed record InstanceSparsePayload(string Name, bool Enabled);
 public sealed record InstanceSparseExecutePayload(string PreviewToken);
@@ -858,7 +884,7 @@ public sealed record RecoveryExecutePayload(string PreviewToken);
 public sealed record BackupManualPayload(string InstanceName, int RetentionCount, string? Destination = null);
 public sealed record GlobalConfigurationPreviewPayload(Dictionary<string, string?> Changes);
 public sealed record GlobalConfigurationExecutePayload(string PreviewToken);
-public sealed record InstanceListPayload(bool IncludeRelease = false, bool IncludeUser = false, bool SkipDiskSize = false);
+public sealed record InstanceListPayload(bool IncludeRelease = false, bool IncludeUser = false, bool SkipDiskSize = false, bool ForceRefresh = false);
 public sealed record SettingsSavePayload(GlobalSettings Settings);
 public sealed record CatalogSourceAddPayload(string Name, string Url, string? Description, bool IsActive);
 public sealed record CatalogSourceUpdatePayload(string SourceId, string Name, string Url, string? Description, bool IsActive);

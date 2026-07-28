@@ -19,7 +19,7 @@ function Get-DistroNexusInstance {
     )
 
     process {
-        $instances = @(Invoke-DistroNexusWorkspaceBridge -Operation 'instance.list.v1' -Payload @{ IncludeRelease = [bool]$IncludeRelease; IncludeUser = [bool]$IncludeUser; SkipDiskSize = [bool]$SkipDiskSize })
+        $instances = @(Invoke-DistroNexusWorkspaceBridge -Operation 'instance.list.v1' -Payload @{ IncludeRelease = [bool]$IncludeRelease; IncludeUser = [bool]$IncludeUser; SkipDiskSize = [bool]$SkipDiskSize; ForceRefresh = [bool]$ForceUpdate })
         foreach ($instance in $instances) {
             if ($Name -and $instance.Name -notlike $Name) { continue }
             $result = [PSCustomObject]@{

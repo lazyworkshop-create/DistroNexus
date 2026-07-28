@@ -126,6 +126,24 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
             GetInstancesCommand,
             options: new ModuleCallOptions { ParseAsJson = true },
             cancellationToken: cancellationToken);
+        ThrowIfFailed(result);
+        return string.IsNullOrWhiteSpace(result.Output) ? Array.Empty<WslInstance>() : DeserializeInstances(result.Output);
+    }
+
+    public async Task<IReadOnlyList<WslInstance>> GetInstancesAsync(InstanceListRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(
+            GetInstancesCommand,
+            new Dictionary<string, object>
+            {
+                ["IncludeRelease"] = request.IncludeRelease,
+                ["IncludeUser"] = request.IncludeUser,
+                ["SkipDiskSize"] = request.SkipDiskSize,
+                ["ForceUpdate"] = request.ForceRefresh
+            },
+            options: new ModuleCallOptions { ParseAsJson = true },
+            cancellationToken: cancellationToken);
 
         if (!result.Success)
         {
@@ -141,12 +159,15 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     }
 
     /// <inheritdoc />
-    public Task<bool> StartInstanceAsync(string name, CancellationToken cancellationToken = default) =>
-        ExecuteInstanceMutationAsync(StartInstanceCommand, name, cancellationToken);
+    public async Task<bool> StartInstanceAsync(string name, CancellationToken cancellationToken = default) =>
+        (await StartInstanceWithResultAsync(name, keepAlive: false, cancellationToken)).Succeeded;
+
+    public Task<InstanceStartResult> StartInstanceWithResultAsync(string name, bool keepAlive, CancellationToken cancellationToken = default) =>
+        ExecuteInstanceMutationAsync<InstanceStartResult>(StartInstanceCommand, name, keepAlive, cancellationToken);
 
     /// <inheritdoc />
-    public Task<bool> StopInstanceAsync(string name, CancellationToken cancellationToken = default) =>
-        ExecuteInstanceMutationAsync(StopInstanceCommand, name, cancellationToken);
+    public async Task<bool> StopInstanceAsync(string name, CancellationToken cancellationToken = default) =>
+        (await ExecuteInstanceMutationAsync<InstanceStopResult>(StopInstanceCommand, name, false, cancellationToken)).Succeeded;
 
     public Task<InstanceResourceSnapshot> GetInstanceResourcesAsync(string name, CancellationToken cancellationToken = default)
     { ValidateName(name, nameof(name)); return ExecuteJsonAsync<InstanceResourceSnapshot>(GetInstanceResourcesCommand, new() { ["Name"] = name }, cancellationToken); }
@@ -686,23 +707,23 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
         }
     }
 
-    private async Task<bool> ExecuteInstanceMutationAsync(string command, string name, CancellationToken cancellationToken)
+    private async Task<T> ExecuteInstanceMutationAsync<T>(string command, string name, bool keepAlive, CancellationToken cancellationToken)
     {
+        ValidateName(name, nameof(name));
+        var parameters = new Dictionary<string, object> { ["Name"] = name };
+        if (command == StartInstanceCommand) parameters["KeepAlive"] = keepAlive;
         var result = await _powerShellService.ExecuteModuleCmdletAsync(
             command,
-            new Dictionary<string, object> { ["Name"] = name },
+            parameters,
+            new ModuleCallOptions { ParseAsJson = true },
             cancellationToken: cancellationToken);
         if (!result.Success)
         {
             throw result.Exception ?? new InvalidOperationException(result.Error ?? "The DistroNexus module operation failed.");
         }
 
-        if (bool.TryParse(result.Output.Trim(), out var success))
-        {
-            return success;
-        }
-
-        throw new InvalidOperationException("The DistroNexus module operation returned an invalid instance lifecycle result.");
+        return JsonSerializer.Deserialize<T>(result.Output, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+            ?? throw new InvalidOperationException("The DistroNexus module operation returned an invalid instance lifecycle result.");
     }
 
     private static IReadOnlyList<DistroNexusInstanceTagResult> DeserializeTagResults(string output)

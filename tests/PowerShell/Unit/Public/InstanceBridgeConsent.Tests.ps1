@@ -6,9 +6,12 @@ BeforeAll {
 Describe 'Instance lifecycle bridge routing and consent' -Tag 'Unit', 'Public', 'Instance' {
     It 'maps start to its fixed bridge operation and payload' {
         InModuleScope DistroNexus {
-            Mock Invoke-DistroNexusWorkspaceBridge { $true } -ParameterFilter { $Operation -eq 'instance.start.v1' }
+            Mock Invoke-DistroNexusWorkspaceBridge { [PSCustomObject]@{ Succeeded = $true; Started = $true; KeepAliveEstablished = $false } } -ParameterFilter { $Operation -eq 'instance.start.v1' }
 
-            Start-DistroNexusInstance -Name Ubuntu -Confirm:$false | Should -BeTrue
+            $result = Start-DistroNexusInstance -Name Ubuntu -Confirm:$false
+            $result.Succeeded | Should -BeTrue
+            $result.Started | Should -BeTrue
+            $result.KeepAliveEstablished | Should -BeFalse
 
             Should -Invoke Invoke-DistroNexusWorkspaceBridge -Times 1 -Exactly -ParameterFilter { $Operation -eq 'instance.start.v1' -and $Payload.Name -eq 'Ubuntu' }
         }
@@ -16,9 +19,9 @@ Describe 'Instance lifecycle bridge routing and consent' -Tag 'Unit', 'Public', 
 
     It 'maps stop to its fixed bridge operation and payload' {
         InModuleScope DistroNexus {
-            Mock Invoke-DistroNexusWorkspaceBridge { $true } -ParameterFilter { $Operation -eq 'instance.stop.v1' }
+            Mock Invoke-DistroNexusWorkspaceBridge { [PSCustomObject]@{ Succeeded = $true } } -ParameterFilter { $Operation -eq 'instance.stop.v1' }
 
-            Stop-DistroNexusInstance -Name Ubuntu -Confirm:$false | Should -BeTrue
+            (Stop-DistroNexusInstance -Name Ubuntu -Confirm:$false).Succeeded | Should -BeTrue
 
             Should -Invoke Invoke-DistroNexusWorkspaceBridge -Times 1 -Exactly -ParameterFilter { $Operation -eq 'instance.stop.v1' -and $Payload.Name -eq 'Ubuntu' }
         }
@@ -26,9 +29,9 @@ Describe 'Instance lifecycle bridge routing and consent' -Tag 'Unit', 'Public', 
 
     It 'uses the fixed stop route when Force skips confirmation' {
         InModuleScope DistroNexus {
-            Mock Invoke-DistroNexusWorkspaceBridge { $true } -ParameterFilter { $Operation -eq 'instance.stop.v1' }
+            Mock Invoke-DistroNexusWorkspaceBridge { [PSCustomObject]@{ Succeeded = $true } } -ParameterFilter { $Operation -eq 'instance.stop.v1' }
 
-            Stop-DistroNexusInstance -Name Ubuntu -Force | Should -BeTrue
+            (Stop-DistroNexusInstance -Name Ubuntu -Force).Succeeded | Should -BeTrue
 
             Should -Invoke Invoke-DistroNexusWorkspaceBridge -Times 1 -Exactly -ParameterFilter { $Operation -eq 'instance.stop.v1' -and $Payload.Name -eq 'Ubuntu' }
         }
@@ -41,6 +44,16 @@ Describe 'Instance lifecycle bridge routing and consent' -Tag 'Unit', 'Public', 
             Start-DistroNexusInstance -Name Ubuntu -WhatIf | Should -BeFalse
 
             Should -Invoke Invoke-DistroNexusWorkspaceBridge -Times 0 -Exactly
+        }
+    }
+
+    It 'maps KeepAlive only through the fixed start payload' {
+        InModuleScope DistroNexus {
+            Mock Invoke-DistroNexusWorkspaceBridge { [PSCustomObject]@{ Succeeded = $true; Started = $true; KeepAliveEstablished = $true } } -ParameterFilter { $Operation -eq 'instance.start.v1' }
+
+            (Start-DistroNexusInstance -Name Ubuntu -KeepAlive -Confirm:$false).KeepAliveEstablished | Should -BeTrue
+
+            Should -Invoke Invoke-DistroNexusWorkspaceBridge -Times 1 -Exactly -ParameterFilter { $Operation -eq 'instance.start.v1' -and $Payload.Name -eq 'Ubuntu' -and $Payload.KeepAlive }
         }
     }
 

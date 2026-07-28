@@ -95,9 +95,9 @@ public sealed class PowerShellModuleClientTests
     {
         var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
         powerShell.Setup(service => service.ExecuteModuleCmdletAsync(command,
-                It.Is<Dictionary<string, object>>(parameters => (string)parameters["Name"] == "Ubuntu"), null,
+                It.Is<Dictionary<string, object>>(parameters => (string)parameters["Name"] == "Ubuntu"), It.Is<ModuleCallOptions>(options => options.ParseAsJson),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "True" });
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = command.StartsWith("Start", StringComparison.Ordinal) ? "{\"Succeeded\":true,\"Started\":true,\"KeepAliveEstablished\":false}" : "{\"Succeeded\":true}" });
         var client = new PowerShellModuleClient(powerShell.Object);
 
         var result = method == "StartInstanceAsync"
@@ -105,6 +105,21 @@ public sealed class PowerShellModuleClientTests
             : await client.StopInstanceAsync("Ubuntu");
 
         Assert.True(result);
+        powerShell.VerifyAll();
+    }
+
+    [Fact]
+    public async Task StartInstanceWithResultAsync_UsesKeepAliveAndDeserializesSanitizedResult()
+    {
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(service => service.ExecuteModuleCmdletAsync("Start-DistroNexusInstance",
+                It.Is<Dictionary<string, object>>(parameters => (string)parameters["Name"] == "Ubuntu" && (bool)parameters["KeepAlive"]), It.Is<ModuleCallOptions>(options => options.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Succeeded\":true,\"Started\":true,\"KeepAliveEstablished\":true}" });
+        var client = new PowerShellModuleClient(powerShell.Object);
+
+        var result = await client.StartInstanceWithResultAsync("Ubuntu", keepAlive: true);
+
+        Assert.Equal(new InstanceStartResult(true, true, true), result);
         powerShell.VerifyAll();
     }
 
@@ -463,6 +478,7 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.GetInstanceIpAddressAsync),
                 nameof(IPowerShellModuleClient.GetInstanceResourcesAsync),
                 nameof(IPowerShellModuleClient.GetInstancesAsync),
+                nameof(IPowerShellModuleClient.GetInstancesAsync),
                 nameof(IPowerShellModuleClient.GetInstanceSparsePreviewAsync),
                 nameof(IPowerShellModuleClient.GetInstanceTagsAsync),
                 nameof(IPowerShellModuleClient.GetMonitoringProcessActionPreviewAsync),
@@ -533,6 +549,7 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.SetRecoveryRetentionAsync),
                 nameof(IPowerShellModuleClient.SetWslgApplicationPinAsync),
                 nameof(IPowerShellModuleClient.StartInstanceAsync),
+                nameof(IPowerShellModuleClient.StartInstanceWithResultAsync),
                 nameof(IPowerShellModuleClient.StartTerminalAsync),
                 nameof(IPowerShellModuleClient.StopInstanceAsync),
                 nameof(IPowerShellModuleClient.TestCatalogSourceAsync),

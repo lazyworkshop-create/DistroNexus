@@ -21,6 +21,32 @@ public sealed class WslInstanceTagRoutingTests
         Assert.Contains(nameof(IPowerShellModuleClient.GetInstancesAsync), CalledMethodNames(moveNext));
     }
 
+    [Fact]
+    public void MainRefresh_DoesNotBypassTheTypedInstanceList()
+    {
+        var stateMachine = typeof(MainViewModel)
+            .GetNestedTypes(BindingFlags.NonPublic)
+            .Single(type => type.Name.StartsWith("<RefreshAsync>", StringComparison.Ordinal));
+        var methods = CalledMethodNames(stateMachine.GetMethod("MoveNext", BindingFlags.Instance | BindingFlags.NonPublic)!);
+
+        Assert.DoesNotContain("ForceRefreshInstanceAsync", methods);
+    }
+
+    [Theory]
+    [InlineData("ForceRefreshAsync", nameof(IPowerShellModuleClient.GetInstancesAsync), "ForceRefreshInstanceAsync")]
+    [InlineData("StartAsync", nameof(IPowerShellModuleClient.StartInstanceWithResultAsync), "StartInstanceWithKeepAliveAsync")]
+    public void LifecyclePresentationOperations_UseTypedModuleClientWithoutCoveredManagerBypass(string operation, string requiredMethod, string forbiddenMethod)
+    {
+        var stateMachine = typeof(WslInstanceViewModel)
+            .GetNestedTypes(BindingFlags.NonPublic)
+            .Single(type => type.Name.StartsWith($"<{operation}>", StringComparison.Ordinal));
+        var methods = CalledMethodNames(stateMachine.GetMethod("MoveNext", BindingFlags.Instance | BindingFlags.NonPublic)!);
+
+        Assert.Contains(requiredMethod, methods);
+        Assert.DoesNotContain(forbiddenMethod, methods);
+        if (operation == "ForceRefreshAsync") Assert.DoesNotContain("LoadDiskSizeAsync", methods);
+    }
+
     [Theory]
     [InlineData("StopAsync")]
     [InlineData("ExportInstanceAsync")]

@@ -9,9 +9,11 @@ public interface IPowerShellModuleClient
 {
     /// <summary>Gets installed WSL instances through the module contract.</summary>
     Task<IReadOnlyList<WslInstance>> GetInstancesAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<WslInstance>> GetInstancesAsync(InstanceListRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>Starts an instance through the module contract.</summary>
     Task<bool> StartInstanceAsync(string name, CancellationToken cancellationToken = default);
+    Task<InstanceStartResult> StartInstanceWithResultAsync(string name, bool keepAlive, CancellationToken cancellationToken = default);
 
     /// <summary>Stops an instance through the module contract.</summary>
     Task<bool> StopInstanceAsync(string name, CancellationToken cancellationToken = default);
@@ -170,6 +172,9 @@ public interface IPowerShellModuleClient
 }
 
 public sealed record FixedExplorerResult(bool Succeeded, string OutcomeCode);
+public sealed record InstanceListRequest(bool IncludeRelease = false, bool IncludeUser = false, bool SkipDiskSize = false, bool ForceRefresh = false);
+public sealed record InstanceStartResult(bool Succeeded, bool Started, bool KeepAliveEstablished);
+public sealed record InstanceStopResult(bool Succeeded);
 
 public sealed record DistroNexusPodmanUserUnitPreview(string Token, string InstanceName, PodmanUserUnit Unit, SystemdAction Action, IReadOnlyList<string> Effects);
 public sealed record DistroNexusPodmanUserUnitResult(bool Succeeded, string OutcomeCode, string? Guidance = null);
