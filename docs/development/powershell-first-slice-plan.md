@@ -78,7 +78,7 @@ New capability routes and Desktop migration.
 
 ### Status
 
-Planned
+Committed
 
 ### Objective
 

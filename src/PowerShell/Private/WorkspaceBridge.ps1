@@ -1,12 +1,14 @@
 function Resolve-DistroNexusWorkspaceBridge {
     if ($env:DISTRONEXUS_WORKSPACE_BRIDGE_PATH) {
-        throw 'DistroNexus WorkspaceBridge path overrides are not supported. Workspace commands fail closed.'
+        $exception = [System.InvalidOperationException]::new('DistroNexus WorkspaceBridge path overrides are not supported. Workspace commands fail closed.')
+        throw [System.Management.Automation.ErrorRecord]::new($exception, 'DistroNexus.WorkspaceBridgeUnavailable', [System.Management.Automation.ErrorCategory]::ResourceUnavailable, $null)
     }
     $packaged = Join-Path $script:ModuleRoot 'WorkspaceBridge\DistroNexus.WorkspaceBridge.dll'
     if (Test-Path -LiteralPath $packaged) { return $packaged }
     $development = Join-Path $script:ProjectRoot 'src\Client\DistroNexus.WorkspaceBridge\bin\Debug\net10.0\DistroNexus.WorkspaceBridge.dll'
     if (Test-Path -LiteralPath $development) { return $development }
-    throw 'DistroNexus WorkspaceBridge is required but was not found. Workspace commands fail closed.'
+    $exception = [System.IO.FileNotFoundException]::new('DistroNexus WorkspaceBridge is required but was not found. Workspace commands fail closed.')
+    throw [System.Management.Automation.ErrorRecord]::new($exception, 'DistroNexus.WorkspaceBridgeUnavailable', [System.Management.Automation.ErrorCategory]::ResourceUnavailable, $null)
 }
 
 function Start-DistroNexusWorkspaceBridge {

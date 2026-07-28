@@ -93,6 +93,7 @@ public partial class App : System.Windows.Application
 
                         return new PowerShellService(logger, customModulePath);
                     });
+                    services.AddSingleton<IPowerShellModuleClient, PowerShellModuleClient>();
 
                     // Register other Core services
                     services.AddSingleton<IWslManagerService, WslManagerService>();

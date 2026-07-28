@@ -30,9 +30,8 @@ foreach ($import in $privateFunctions) {
     }
 }
 
-# Workspace cmdlets are intentionally Core-owned. Resolve their bridge at import time so a
-# partially packaged module cannot silently fall back to a separate JSON implementation.
-$script:WorkspaceBridgePath = Resolve-DistroNexusWorkspaceBridge
+# Workspace cmdlets are intentionally Core-owned. The bridge is resolved when a bridge-backed
+# cmdlet runs so module-only commands remain usable in installations without bridge artifacts.
 $ExecutionContext.SessionState.Module.OnRemove = { Stop-DistroNexusWorkspaceBridge }
 
 # Import public cmdlet functions

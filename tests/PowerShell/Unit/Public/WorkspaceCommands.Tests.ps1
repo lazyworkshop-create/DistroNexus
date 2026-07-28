@@ -138,12 +138,14 @@ Describe 'Workspace commands use the Core WorkspaceBridge' {
     }
   }
 
-  It 'fails closed when an unavailable bridge path is selected' {
+  It 'imports and runs a non-bridge command when an unavailable bridge path is selected' {
     Remove-Module DistroNexus -Force -ErrorAction SilentlyContinue
     $old = $env:DISTRONEXUS_WORKSPACE_BRIDGE_PATH
     try {
       $env:DISTRONEXUS_WORKSPACE_BRIDGE_PATH = Join-Path $TestDrive 'missing-bridge.dll'
-      { Import-Module "$PSScriptRoot/../../../../src/PowerShell/DistroNexus.psd1" -Force } | Should -Throw '*WorkspaceBridge*'
+      { Import-Module "$PSScriptRoot/../../../../src/PowerShell/DistroNexus.psd1" -Force } | Should -Not -Throw
+      (Get-DistroNexusInstanceTag -Name '__distronexus_s02_bridge_unavailable__').Name | Should -Be '__distronexus_s02_bridge_unavailable__'
+      try { Get-DistroNexusWorkspace; throw 'Expected WorkspaceBridge failure.' } catch { $_.FullyQualifiedErrorId | Should -Be 'DistroNexus.WorkspaceBridgeUnavailable' }
     } finally {
       if ($null -eq $old) { Remove-Item Env:DISTRONEXUS_WORKSPACE_BRIDGE_PATH -ErrorAction SilentlyContinue } else { $env:DISTRONEXUS_WORKSPACE_BRIDGE_PATH = $old }
       Import-Module "$PSScriptRoot/../../../../src/PowerShell/DistroNexus.psd1" -Force
@@ -162,7 +164,8 @@ Describe 'Workspace commands use the Core WorkspaceBridge' {
 "@ | Set-Content -LiteralPath $fake -Encoding utf8
     try {
       $env:DISTRONEXUS_WORKSPACE_BRIDGE_PATH = $fake
-      { Import-Module "$PSScriptRoot/../../../../src/PowerShell/DistroNexus.psd1" -Force } | Should -Throw '*path overrides are not supported*'
+      { Import-Module "$PSScriptRoot/../../../../src/PowerShell/DistroNexus.psd1" -Force } | Should -Not -Throw
+      { Get-DistroNexusWorkspace } | Should -Throw '*path overrides are not supported*'
       Test-Path -LiteralPath $log | Should -BeFalse
     } finally {
       Remove-Module DistroNexus -Force -ErrorAction SilentlyContinue
