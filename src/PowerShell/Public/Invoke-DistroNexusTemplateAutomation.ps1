@@ -786,13 +786,10 @@ function Invoke-DistroNexusTemplateAutomation {
                 $item.Reason = $gate.Reason
             }
             elseif (-not $DryRun) {
-                Apply-DistroNexusTemplate -InstanceName $executionDistro -TemplateId $template.Id -Force -ErrorAction Stop | Out-Null
-                $probe = Test-TemplateProbe -Template $template -TargetDistro $executionDistro
-                $item.ProbeResults = @($probe.Results)
-                if (-not $probe.Success) {
-                    $item.Status = 'Fail'
-                    $item.Reason = 'Runtime probe failed.'
-                }
+                # Automation has no consent/token surface.  It must never fall back to the
+                # retired mutable-template executor; a caller must use the reviewed v1 flow.
+                $item.Status = 'Blocked'
+                $item.Reason = 'Template execution requires the reviewed preview/execute contract.'
             }
             else {
                 $item.Status = 'Pass'

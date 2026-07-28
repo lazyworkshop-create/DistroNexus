@@ -62,7 +62,6 @@ Describe "Invoke-DistroNexusTemplateAutomation" -Tag 'Unit', 'Public' {
                     $global:LASTEXITCODE = 0
                     return 'ok'
                 } -ModuleName DistroNexus
-                Mock Apply-DistroNexusTemplate { } -ModuleName DistroNexus
 
                 $outputRoot = Join-Path $TestDrive 'results'
                 $result = Invoke-DistroNexusTemplateAutomation -Mode SelectedTemplates -TemplateIds 'dotnet-dev,nodejs-dev' -Distro 'Ubuntu-22.04' -DryRun -OutputRoot $outputRoot
@@ -71,7 +70,6 @@ Describe "Invoke-DistroNexusTemplateAutomation" -Tag 'Unit', 'Public' {
                 Test-Path $result.ManifestPath | Should -BeTrue
                 Test-Path $result.SummaryPath | Should -BeTrue
                 Test-Path $result.TestResultPath | Should -BeTrue
-                Assert-MockCalled Apply-DistroNexusTemplate -Times 0 -ModuleName DistroNexus
                 }
                 finally {
                     $env:CI = $previousCi
@@ -94,14 +92,12 @@ Describe "Invoke-DistroNexusTemplateAutomation" -Tag 'Unit', 'Public' {
                         $global:LASTEXITCODE = 0
                         return 'ok'
                     } -ModuleName DistroNexus
-                    Mock Apply-DistroNexusTemplate { } -ModuleName DistroNexus
 
                     $outputRoot = Join-Path $TestDrive 'results3'
                     $result = Invoke-DistroNexusTemplateAutomation -Mode SelectedTemplates -TemplateIds 'ai-ml-gpu-dev' -Distro 'Ubuntu-22.04' -DryRun -CapabilityProfile CpuOnly -OutputRoot $outputRoot
 
                     $result.Blocked | Should -Be 1
                     $result.Results[0].Reason | Should -Match 'Capability profile'
-                    Assert-MockCalled Apply-DistroNexusTemplate -Times 0 -ModuleName DistroNexus
                 }
                 finally {
                     $env:CI = $previousCi
@@ -129,7 +125,6 @@ Describe "Invoke-DistroNexusTemplateAutomation" -Tag 'Unit', 'Public' {
                             [pscustomobject]@{ Capability = 'Gpu'; Status = 'Pass'; Reason = 'ok'; Details = @{} }
                         )
                     } -ModuleName DistroNexus
-                    Mock Apply-DistroNexusTemplate { } -ModuleName DistroNexus
 
                     $outputRoot = Join-Path $TestDrive 'results4'
                     $result = Invoke-DistroNexusTemplateAutomation -Mode SelectedTemplates -TemplateIds 'ai-ml-gpu-dev' -Distro 'Ubuntu-22.04' -DryRun -CapabilityProfile GpuCapable -OutputRoot $outputRoot
@@ -145,7 +140,7 @@ Describe "Invoke-DistroNexusTemplateAutomation" -Tag 'Unit', 'Public' {
             }
         }
 
-        It "Should execute apply and runtime probes in non-dry-run mode" {
+        It "Should block non-dry-run execution until the reviewed apply contract is available" {
             InModuleScope DistroNexus {
                 $previousCi = $env:CI
                 $env:CI = $null
@@ -160,14 +155,13 @@ Describe "Invoke-DistroNexusTemplateAutomation" -Tag 'Unit', 'Public' {
                     $global:LASTEXITCODE = 0
                     return 'ok'
                 } -ModuleName DistroNexus
-                Mock Apply-DistroNexusTemplate { } -ModuleName DistroNexus
 
                 $outputRoot = Join-Path $TestDrive 'results2'
                 $result = Invoke-DistroNexusTemplateAutomation -Mode SelectedTemplates -TemplateIds 'dotnet-dev' -Distro 'Ubuntu-22.04' -OutputRoot $outputRoot
 
                 $result.Total | Should -Be 1
-                $result.Pass | Should -Be 1
-                Assert-MockCalled Apply-DistroNexusTemplate -Times 1 -ModuleName DistroNexus
+                $result.Blocked | Should -Be 1
+                $result.Results[0].Reason | Should -Match 'reviewed preview/execute contract'
                 }
                 finally {
                     $env:CI = $previousCi
