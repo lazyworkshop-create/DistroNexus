@@ -37,7 +37,12 @@ public sealed class CatalogServicePackageCacheTests : IDisposable
         var tokens = await Task.WhenAll(
             Task.Run(() => first.GetCacheUsageAsync()),
             Task.Run(() => second.GetCacheUsageAsync()));
-        Assert.Equal(Assert.Single(tokens[0].CachedPackages).CacheEntryId, Assert.Single(tokens[1].CachedPackages).CacheEntryId);
+        var firstToken = Assert.Single(tokens[0].CachedPackages).CacheEntryId;
+        Assert.False(string.IsNullOrWhiteSpace(Assert.Single(tokens[1].CachedPackages).CacheEntryId));
+        // Token bytes include a time-based expiry, so equality is not the interoperability
+        // contract. The peer service must verify and delete the current contained entry.
+        Assert.True((await second.DeletePackageCacheEntryAsync(firstToken)).Deleted);
+        Assert.False(File.Exists(Path.Combine(cache, "ubuntu.wsl")));
     }
 
     [Fact]
