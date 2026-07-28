@@ -219,8 +219,10 @@ while ((line = Console.ReadLine()) is not null)
             "network.mode.get.v1" => await NetworkModeV1Async(request),
             "network.mode.preview.v1" => await NetworkModePreviewV1Async(request),
             "network.mode.set.v1" => await NetworkModeSetV1Async(request),
+            "network.settings.get.v1" => await NetworkSettingsGetV1Async(request),
             "network.settings.preview.v1" => await NetworkSettingsPreviewV1Async(request),
             "network.settings.set.v1" => await NetworkSettingsSetV1Async(request),
+            "browser.loopback.v1" => OpenLoopbackV1(request),
             "firewall.list.v1" => await FirewallListV1Async(request),
             "firewall.preview-create.v1" => await FirewallPreviewCreateV1Async(request),
             "firewall.create.v1" => await FirewallCreateV1Async(request),
@@ -362,9 +364,16 @@ async Task<IReadOnlyList<PortMapping>> NetworkPortMappingsV1Async(BridgeRequest 
 async Task<NetworkProbeResult> NetworkProbeV1Async(BridgeRequest request) { ValidatePayload(request, ["Request"], ["Request"]); return await networkDiagnostics.ProbeAsync(ParsePayload<NetworkProbePayload>(request).Request); }
 async Task<NetworkingModeGuidance> NetworkModeV1Async(BridgeRequest request) { ValidatePayload(request, ["Mode"], ["Mode"]); return await networkConfiguration.GetGuidanceAsync(ParsePayload<NetworkModePayload>(request).Mode); }
 async Task<NetworkModePreview> NetworkModePreviewV1Async(BridgeRequest request) { ValidatePayload(request, ["Mode"], ["Mode"]); return await networkConfiguration.PreviewModeAsync(ParsePayload<NetworkModePayload>(request).Mode); }
-async Task<ConfigurationSaveResult> NetworkModeSetV1Async(BridgeRequest request) { ValidatePayload(request, ["Mode"], ["Mode"]); var p = ParsePayload<NetworkModePayload>(request); return await networkConfiguration.ApplyModeAsync(p.Mode, request.Token ?? throw new ArgumentException("Network mode preview token is required.")); }
+async Task<ConfigurationSaveResult> NetworkModeSetV1Async(BridgeRequest request) { ValidateEmptyPayload(request); return await networkConfiguration.ApplyModeAsync(request.Token ?? throw new ArgumentException("Network mode preview token is required.")); }
+async Task<NetworkSettings> NetworkSettingsGetV1Async(BridgeRequest request) { ValidateEmptyPayload(request); return await networkConfiguration.ReadSettingsAsync(); }
 async Task<NetworkSettingsPreview> NetworkSettingsPreviewV1Async(BridgeRequest request) { ValidatePayload(request, ["Settings"], ["Settings"]); return await networkConfiguration.PreviewSettingsAsync(ParsePayload<NetworkSettingsPayload>(request).Settings); }
-async Task<ConfigurationSaveResult> NetworkSettingsSetV1Async(BridgeRequest request) { ValidatePayload(request, ["Settings"], ["Settings"]); var p = ParsePayload<NetworkSettingsPayload>(request); return await networkConfiguration.ApplySettingsAsync(p.Settings, request.Token ?? throw new ArgumentException("Network settings preview token is required.")); }
+async Task<ConfigurationSaveResult> NetworkSettingsSetV1Async(BridgeRequest request) { ValidateEmptyPayload(request); return await networkConfiguration.ApplySettingsAsync(request.Token ?? throw new ArgumentException("Network settings preview token is required.")); }
+FixedExplorerResult OpenLoopbackV1(BridgeRequest request)
+{
+    ValidatePayload(request, ["Host", "Port"], ["Host", "Port"]);
+    var payload = ParsePayload<LoopbackBrowserPayload>(request);
+    return DistroNexus.WorkspaceBridge.FixedLoopbackBrowserHandler.Open(payload.Host, payload.Port);
+}
 async Task<IReadOnlyList<FirewallRuleInfo>> FirewallListV1Async(BridgeRequest request) { ValidateEmptyPayload(request); return await firewall.ListOwnedAsync(); }
 async Task<FirewallOperationPreview> FirewallPreviewCreateV1Async(BridgeRequest request) { ValidatePayload(request, ["Request"], ["Request"]); return await firewall.PreviewCreateAsync(ParsePayload<FirewallRequestPayload>(request).Request); }
 async Task<FirewallOperationResult> FirewallCreateV1Async(BridgeRequest request) { ValidatePayload(request, ["PreviewRuleId"], ["PreviewRuleId"]); return await firewall.CreateAsync(ParsePayload<FirewallCreatePayload>(request).PreviewRuleId); }
@@ -859,6 +868,9 @@ public sealed record NetworkPortMappingPayload(string Name, string? Protocol = n
 public sealed record NetworkProbePayload(NetworkProbeRequest Request);
 public sealed record NetworkModePayload(WslNetworkingMode Mode);
 public sealed record NetworkSettingsPayload(NetworkSettings Settings);
+public sealed record LoopbackBrowserPayload(string Host, int Port);
+
+/// <summary>Single fixed-loopback launch boundary; tests may replace it without accepting arbitrary executables.</summary>
 public sealed record FirewallRequestPayload(FirewallRuleRequest Request);
 public sealed record FirewallCreatePayload(string PreviewRuleId);
 public sealed record FirewallRemovePreviewPayload(string RuleId);

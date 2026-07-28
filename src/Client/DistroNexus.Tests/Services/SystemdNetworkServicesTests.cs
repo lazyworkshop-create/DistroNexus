@@ -41,6 +41,138 @@ public sealed class SystemdNetworkServicesTests
     }
 
     [Fact]
+    public async Task NetworkConfiguration_DurableModeGrantSucceedsAcrossFreshServices()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "dn-network-grant-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var config = NetworkConfiguration("fp");
+            var clock = new TestClock(DateTimeOffset.UtcNow);
+            var first = NewNetworkConfigurationService(config.Object, root, clock);
+            var preview = await first.PreviewModeAsync(WslNetworkingMode.Nat);
+
+            var result = await NewNetworkConfigurationService(config.Object, root, clock).ApplyModeAsync(preview.Token);
+
+            Assert.Equal("new", result.Fingerprint);
+            config.Verify(x => x.SaveAsync(It.Is<IReadOnlyDictionary<string, string?>>(v => v["wsl2.networkingMode"] == "nat"), "fp", It.IsAny<IReadOnlySet<string>>(), It.IsAny<CancellationToken>()), Times.Once);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public async Task NetworkConfiguration_DurableGrantsRejectCorruptionExpiryReplaySidAndBoundMismatchWithoutSaving()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "dn-network-reject-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var config = NetworkConfiguration("fp");
+            var clock = new TestClock(DateTimeOffset.UtcNow);
+            NetworkConfigurationService New(string sid = "sid-a", Func<byte[], byte[]>? unprotect = null) => NewNetworkConfigurationService(config.Object, root, clock, sid, unprotect);
+            var forged = new string('a', 32);
+            var forgedPath = Path.Combine(root, Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(forged))) + ".bin");
+            File.WriteAllText(forgedPath, "not-json");
+            await Assert.ThrowsAsync<InvalidOperationException>(() => New().ApplyModeAsync(forged));
+            File.WriteAllText(forgedPath, "protected-record");
+            await Assert.ThrowsAsync<InvalidOperationException>(() => New(unprotect: _ => throw new CryptographicException()).ApplyModeAsync(forged));
+
+            var expired = await New().PreviewModeAsync(WslNetworkingMode.Nat);
+            clock.Advance(TimeSpan.FromMinutes(3));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => New().ApplyModeAsync(expired.Token));
+            clock.Advance(TimeSpan.FromMinutes(-3));
+
+            var replay = await New().PreviewSettingsAsync(new NetworkSettings(DnsTunneling: true));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => New().ApplyModeAsync(replay.Token));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => New().ApplySettingsAsync(replay.Token));
+
+            var foreign = await New().PreviewModeAsync(WslNetworkingMode.Nat);
+            await Assert.ThrowsAsync<InvalidOperationException>(() => New("sid-b").ApplyModeAsync(foreign.Token));
+
+            var bound = await New().PreviewSettingsAsync(new NetworkSettings(DnsTunneling: true));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => New().ApplySettingsAsync(new NetworkSettings(AutoProxy: true), bound.Token));
+
+            config.Verify(x => x.SaveAsync(It.IsAny<IReadOnlyDictionary<string, string?>>(), It.IsAny<string>(), It.IsAny<IReadOnlySet<string>>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public async Task NetworkConfiguration_DurableGrantsRejectFingerprintDriftAndParallelReplayWithOneSave()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "dn-network-drift-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var fingerprint = "fp";
+            var config = NetworkConfiguration(() => fingerprint);
+            var clock = new TestClock(DateTimeOffset.UtcNow);
+            NetworkConfigurationService New() => NewNetworkConfigurationService(config.Object, root, clock);
+            var stale = await New().PreviewSettingsAsync(new NetworkSettings(DnsTunneling: true));
+            fingerprint = "changed";
+            await Assert.ThrowsAsync<InvalidOperationException>(() => New().ApplySettingsAsync(stale.Token));
+            config.Verify(x => x.SaveAsync(It.IsAny<IReadOnlyDictionary<string, string?>>(), It.IsAny<string>(), It.IsAny<IReadOnlySet<string>>(), It.IsAny<CancellationToken>()), Times.Never);
+
+            fingerprint = "fp";
+            var preview = await New().PreviewModeAsync(WslNetworkingMode.Nat);
+            var results = await Task.WhenAll(CaptureAsync(() => New().ApplyModeAsync(preview.Token)), CaptureAsync(() => New().ApplyModeAsync(preview.Token)));
+            Assert.Equal(1, results.Count(x => x is null));
+            Assert.Equal(1, results.Count(x => x is InvalidOperationException));
+            config.Verify(x => x.SaveAsync(It.IsAny<IReadOnlyDictionary<string, string?>>(), "fp", It.IsAny<IReadOnlySet<string>>(), It.IsAny<CancellationToken>()), Times.Once);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public async Task NetworkConfiguration_GrantCleanupIsBoundedAndRemovesExpiredCorruptRecords()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "dn-network-cleanup-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var files = Enumerable.Range(0, 257).Select(i => Path.Combine(root, $"{i:D3}.bin")).ToArray();
+            foreach (var file in files)
+            {
+                File.WriteAllText(file, "corrupt");
+                File.SetLastWriteTimeUtc(file, DateTime.UtcNow.AddMinutes(-11));
+            }
+
+            await NewNetworkConfigurationService(NetworkConfiguration("fp").Object, root, new TestClock(DateTimeOffset.UtcNow)).PreviewSettingsAsync(new NetworkSettings(DnsTunneling: true));
+
+            Assert.All(files[..256], file => Assert.False(File.Exists(file)));
+            Assert.True(File.Exists(files[256]));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public async Task NetworkConfiguration_GrantCleanupRemovesStaleCorruptAndUndecryptableConsumedRecords()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "dn-network-consumed-cleanup-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var config = NetworkConfiguration("fp");
+            var clock = new TestClock(DateTimeOffset.UtcNow);
+            var corruptToken = new string('b', 32);
+            var protectedToken = new string('c', 32);
+            File.WriteAllText(Path.Combine(root, Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(corruptToken))) + ".bin"), "corrupt");
+            File.WriteAllText(Path.Combine(root, Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(protectedToken))) + ".bin"), "protected");
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() => NewNetworkConfigurationService(config.Object, root, clock).ApplyModeAsync(corruptToken));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => NewNetworkConfigurationService(config.Object, root, clock, unprotect: _ => throw new CryptographicException()).ApplyModeAsync(protectedToken));
+            var consumed = Directory.EnumerateFiles(root, "*.consumed.*").ToArray();
+            Assert.Equal(2, consumed.Length);
+            foreach (var file in consumed) File.SetLastWriteTimeUtc(file, clock.GetUtcNow().UtcDateTime.AddMinutes(-11));
+
+            await NewNetworkConfigurationService(config.Object, root, clock).PreviewSettingsAsync(new NetworkSettings(DnsTunneling: true));
+
+            Assert.Empty(Directory.EnumerateFiles(root, "*.consumed.*"));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
     public async Task NetworkSettings_ReadsCurrentValuesWithoutProjectingMissingKeys()
     {
         var config = new Mock<IWslConfigurationService>();
@@ -344,5 +476,22 @@ public sealed class SystemdNetworkServicesTests
         var mock = new Mock<IPlatformCapabilityService>(); var now = DateTimeOffset.UtcNow;
         mock.Setup(x => x.GetHostSnapshotAsync(false, It.IsAny<CancellationToken>())).ReturnsAsync(new PlatformCapabilitySnapshot(new("", new Version(10, 0), "x64", false, null, null, null, null, null), new Dictionary<CapabilityId, CapabilityResult> { [id] = new(id, status, "test", CapabilitySource.WslCli, now) }, new Dictionary<CapabilityId, CapabilityResult>(), now));
         return mock.Object;
+    }
+    private static Mock<IWslConfigurationService> NetworkConfiguration(string fingerprint) => NetworkConfiguration(() => fingerprint);
+    private static Mock<IWslConfigurationService> NetworkConfiguration(Func<string> fingerprint)
+    {
+        var config = new Mock<IWslConfigurationService>();
+        var source = LosslessIniDocument.Parse(Encoding.UTF8.GetBytes("[wsl2]\n"));
+        config.Setup(x => x.ReadAsync(It.IsAny<CancellationToken>())).ReturnsAsync(() => new ConfigurationDocument<WslConfigurationSettings>(new(new Dictionary<string, string>()), source, [], 0, fingerprint(), RestartScope.Wsl, source.ToString()));
+        config.Setup(x => x.PreviewAsync(It.IsAny<IReadOnlyDictionary<string, string?>>(), It.IsAny<string>(), It.IsAny<IReadOnlySet<string>>(), It.IsAny<CancellationToken>())).ReturnsAsync(new ConfigurationPreview("", "", [], RestartScope.Wsl));
+        config.Setup(x => x.SaveAsync(It.IsAny<IReadOnlyDictionary<string, string?>>(), It.IsAny<string>(), It.IsAny<IReadOnlySet<string>>(), It.IsAny<CancellationToken>())).ReturnsAsync(new ConfigurationSaveResult("new", null, RestartScope.Wsl));
+        return config;
+    }
+    private static NetworkConfigurationService NewNetworkConfigurationService(IWslConfigurationService configuration, string root, TimeProvider clock, string sid = "sid-a", Func<byte[], byte[]>? unprotect = null)
+        => new(configuration, HostCapabilities(CapabilityId.MirroredNetworking, CapabilityStatus.Supported), new NetworkDiagnosticsService(), root, clock, () => sid, x => x, unprotect ?? (x => x));
+    private static async Task<Exception?> CaptureAsync(Func<Task> action)
+    {
+        try { await action(); return null; }
+        catch (Exception ex) { return ex; }
     }
 }

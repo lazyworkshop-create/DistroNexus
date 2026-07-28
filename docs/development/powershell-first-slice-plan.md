@@ -12,7 +12,7 @@
 
 ## Dependency Order
 
-S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S18 -> S19 -> S20 -> S21 -> S22 -> S23 -> S24 -> {S25 blocked, S26 -> S27 -> S28 -> S29} -> S06 -> S07 -> S08
+S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S18 -> S19 -> S20 -> S21 -> S22 -> S23 -> S24 -> {S25 blocked, S26 -> S27 -> S28 -> S29 -> S30} -> S06 -> S07 -> S08
 
 ## Slice S01: Verified module contract and migration baseline
 
@@ -1559,6 +1559,66 @@ One accepted durable systemd module/presentation migration slice.
 ### Out of Scope
 
 Network/resource changes, systemd installation/repair, real WSL UAT, deployment and publishing.
+
+## Slice S30: Network module and presentation-client migration
+
+### Status
+
+Planned
+
+### Objective
+
+Route NetworkTab fixed reads, probes, configuration and loopback launch through PowerShell while retaining firewall mutation as an explicit helper-integration closure item.
+
+### Sources
+
+Requirements FR-001 and FR-003 through FR-007; Network durable configuration and loopback-launch contract amendment.
+
+### Dependencies
+
+S29
+
+### Allowed Paths
+
+Narrow network configuration durable grant support, WorkspaceBridge Program, network/firewall public commands and manifest, typed module client, NetworkTab and constructor composition support, narrow fixed loopback helper, focused Core/Bridge/client/view-model/Pester tests, design and plan.
+
+### Excluded Paths
+
+Generic URL/process/network command APIs, firewall elevation/helper signing implementation, arbitrary firewall mutation, Services/Resources/USB/application update, release/publishing.
+
+### Contract and Documentation
+
+Use fixed existing network routes plus no-payload `network.settings.get.v1`, token-only mode/settings set routes, and exact `browser.loopback.v1 {Host,Port}`. Firewall mutations report existing unavailable state until helper closure.
+
+### Implementation Scope
+
+Create durable mode/settings grants, typed fixed client methods and NetworkTab migration. Replace WPF browser launching with constrained loopback route; do not change firewall elevation trust.
+
+### Test Scope
+
+Cover strict payloads, read/probe bounds, grants across fresh instances, expiry/replay/SID/fingerprint, WhatIf/decline, loopback allow-list/rejection and no direct WPF Core/browser execution.
+
+### Acceptance Criteria
+
+- NetworkTab has no direct network/configuration/firewall/browse execution path.
+- Network execute consumes only Core token and fails closed on state drift.
+- Loopback launch cannot become an arbitrary browser/URI route; firewall mutation remains explicitly unavailable until signed helper integration.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Network|FullyQualifiedName~PowerShellModuleClient|FullyQualifiedName~WorkspaceBridgeProtocol"
+pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Unit
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+One accepted network module/presentation migration slice excluding firewall helper implementation.
+
+### Out of Scope
+
+Firewall helper signing/elevation integration, actual firewall mutation UAT, arbitrary browser launch, and every other remaining product family.
 
 ## Slice S06: Platform-integrated command parity
 

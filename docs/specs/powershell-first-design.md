@@ -155,6 +155,14 @@ No route accepts a program, command line, Windows path, URI, environment expansi
 
 `IPowerShellModuleClient` exposes only typed list/details/journal/preview/invoke methods. ServicesTab uses those methods, retains presentation/filter/clipboard state only, confirms returned effects/preconditions, executes the returned token then refreshes. Public command mutations retain `ShouldProcess`; convenience commands remain thin preview/invoke facades. Exact v1 payload validation rejects unknown fields, invalid names/units/search/line bounds, forged/expired/reused/foreign tokens and no action occurs on rejection. No generic WSL command, shell text, arbitrary unit type expansion or credential storage is introduced.
 
+### Network durable configuration and loopback-launch contract amendment
+
+`NetworkTabViewModel` directly invokes network, diagnostics, configuration and firewall Core services plus a browser launcher. Slice S30 migrates all fixed read/probe behavior, network mode/settings preview/execute behavior, and fixed loopback browsing through the module. Mode/settings previews become same-user protected, hash-addressed, short-lived, atomically consumed grants bound to desired configuration and current fingerprint/capabilities; execute accepts only `PreviewToken` and revalidates immediately before save. `network.settings.get.v1` is a no-payload modeled settings read route; no generic settings/document input is added.
+
+`browser.loopback.v1` accepts exactly Host in `{localhost,127.0.0.1,::1}` and Port in `1..65535`; it rebuilds only an `http` loopback URI and uses user-consented fixed shell launch. It accepts no scheme, path, query, executable, browser arguments or arbitrary URL. The typed client and NetworkTab use this closed contract.
+
+Firewall list/status/preview may be represented through existing fixed contracts, but firewall create/remove cannot be claimed executable until a signed/elevated helper is integrated: current bridge composition has no helper and its in-memory preview cannot cross module processes. S30 must surface the existing stable unavailable outcome without weakening elevation trust; a later helper-owned slice is required for actual mutation.
+
 ## Data and Execution Semantics
 
 - Data ownership and retention: Core owns settings, cache, catalog, backup, recovery, templates, and configuration persistence. Desktop never writes those stores. Existing retention and cleanup policies remain unchanged.

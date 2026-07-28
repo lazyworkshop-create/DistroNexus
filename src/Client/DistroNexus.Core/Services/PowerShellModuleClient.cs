@@ -62,6 +62,22 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string InvokeSystemdCommand = "Invoke-DistroNexusSystemdService";
     private const string OpenWslConfigFileCommand = "Open-DistroNexusWslConfigFile";
     private const string OpenRecoveryPointFolderCommand = "Open-DistroNexusRecoveryPointFolder";
+    private const string GetNetworkStatusCommand = "Get-DistroNexusNetworkStatus";
+    private const string GetInstanceIpAddressCommand = "Get-DistroNexusInstanceIpAddress";
+    private const string GetPortMappingsCommand = "Get-DistroNexusPortMapping";
+    private const string ProbeNetworkCommand = "Test-DistroNexusNetworkProbe";
+    private const string GetNetworkModeCommand = "Get-DistroNexusNetworkMode";
+    private const string GetNetworkModePreviewCommand = "Get-DistroNexusNetworkModePreview";
+    private const string SetNetworkModeCommand = "Set-DistroNexusNetworkMode";
+    private const string GetNetworkSettingsCommand = "Get-DistroNexusNetworkSettings";
+    private const string GetNetworkSettingsPreviewCommand = "Get-DistroNexusNetworkSettingsPreview";
+    private const string SetNetworkSettingsCommand = "Set-DistroNexusNetworkSettings";
+    private const string OpenNetworkLoopbackCommand = "Open-DistroNexusNetworkLoopback";
+    private const string GetFirewallRulesCommand = "Get-DistroNexusFirewallRule";
+    private const string GetFirewallCreatePreviewCommand = "Get-DistroNexusFirewallRuleCreatePreview";
+    private const string CreateFirewallRuleCommand = "New-DistroNexusFirewallRule";
+    private const string GetFirewallRemovePreviewCommand = "Get-DistroNexusFirewallRuleRemovePreview";
+    private const string RemoveFirewallRuleCommand = "Remove-DistroNexusFirewallRule";
     private readonly IPowerShellService _powerShellService;
 
     public PowerShellModuleClient(IPowerShellService powerShellService)
@@ -423,6 +439,23 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     { ValidateName(name, nameof(name)); return ExecuteJsonAsync<SystemdOperationPreview>(GetSystemdPreviewCommand, new() { ["Name"] = name, ["Unit"] = unit.Value, ["Action"] = action.ToString(), ["Scope"] = scope.ToString() }, cancellationToken); }
     public Task<SystemdOperationResult> InvokeSystemdServiceAsync(string previewToken, CancellationToken cancellationToken = default)
     { ValidateToken(previewToken, nameof(previewToken)); return ExecuteJsonAsync<SystemdOperationResult>(InvokeSystemdCommand, new() { ["PreviewToken"] = previewToken }, cancellationToken); }
+    public Task<FirewallStatus> GetNetworkStatusAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<FirewallStatus>(GetNetworkStatusCommand, [], cancellationToken);
+    public Task<string?> GetInstanceIpAddressAsync(string name, CancellationToken cancellationToken = default) { ValidateName(name, nameof(name)); return ExecuteJsonAsync<string?>(GetInstanceIpAddressCommand, new() { ["Name"] = name }, cancellationToken); }
+    public Task<IReadOnlyList<PortMapping>> GetPortMappingsAsync(string name, string? protocol = null, CancellationToken cancellationToken = default) { ValidateName(name, nameof(name)); var p = new Dictionary<string, object> { ["Name"] = name }; if (protocol is not null) p["Protocol"] = protocol; return ExecuteJsonAsync<IReadOnlyList<PortMapping>>(GetPortMappingsCommand, p, cancellationToken); }
+    public Task<NetworkProbeResult> ProbeNetworkAsync(NetworkProbeRequest request, CancellationToken cancellationToken = default) => ExecuteJsonAsync<NetworkProbeResult>(ProbeNetworkCommand, new() { ["Kind"] = request.Kind.ToString(), ["TargetHost"] = request.Host, ["Port"] = request.Port ?? 0, ["TimeoutSeconds"] = (int)(request.Timeout ?? TimeSpan.FromSeconds(5)).TotalSeconds, ["DistributionName"] = request.DistributionName ?? string.Empty }, cancellationToken);
+    public Task<NetworkingModeGuidance> GetNetworkModeAsync(WslNetworkingMode mode, CancellationToken cancellationToken = default) => ExecuteJsonAsync<NetworkingModeGuidance>(GetNetworkModeCommand, new() { ["Mode"] = mode.ToString() }, cancellationToken);
+    public Task<NetworkModePreview> GetNetworkModePreviewAsync(WslNetworkingMode mode, CancellationToken cancellationToken = default) => ExecuteJsonAsync<NetworkModePreview>(GetNetworkModePreviewCommand, new() { ["Mode"] = mode.ToString() }, cancellationToken);
+    public Task<ConfigurationSaveResult> SetNetworkModeAsync(string previewToken, CancellationToken cancellationToken = default) { ValidateToken(previewToken, nameof(previewToken)); return ExecuteJsonAsync<ConfigurationSaveResult>(SetNetworkModeCommand, new() { ["PreviewToken"] = previewToken }, cancellationToken); }
+    public Task<NetworkSettings> GetNetworkSettingsAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<NetworkSettings>(GetNetworkSettingsCommand, [], cancellationToken);
+    public Task<NetworkSettingsPreview> GetNetworkSettingsPreviewAsync(NetworkSettings settings, CancellationToken cancellationToken = default) => ExecuteJsonAsync<NetworkSettingsPreview>(GetNetworkSettingsPreviewCommand, SettingsParameters(settings), cancellationToken);
+    public Task<ConfigurationSaveResult> SetNetworkSettingsAsync(string previewToken, CancellationToken cancellationToken = default) { ValidateToken(previewToken, nameof(previewToken)); return ExecuteJsonAsync<ConfigurationSaveResult>(SetNetworkSettingsCommand, new() { ["PreviewToken"] = previewToken }, cancellationToken); }
+    public Task<FixedExplorerResult> OpenNetworkLoopbackAsync(string host, int port, CancellationToken cancellationToken = default) { if (host is not ("localhost" or "127.0.0.1" or "::1") || port is < 1 or > 65535) throw new ArgumentException("Only a loopback HTTP endpoint may be opened."); return ExecuteJsonAsync<FixedExplorerResult>(OpenNetworkLoopbackCommand, new() { ["Host"] = host, ["Port"] = port }, cancellationToken); }
+    public Task<IReadOnlyList<FirewallRuleInfo>> GetFirewallRulesAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<IReadOnlyList<FirewallRuleInfo>>(GetFirewallRulesCommand, [], cancellationToken);
+    public Task<FirewallOperationPreview> GetFirewallCreatePreviewAsync(FirewallRuleRequest request, CancellationToken cancellationToken = default) => ExecuteJsonAsync<FirewallOperationPreview>(GetFirewallCreatePreviewCommand, new() { ["Direction"] = request.Direction.ToString(), ["Protocol"] = request.Protocol.ToString(), ["Port"] = request.Port, ["Profiles"] = request.Profiles.ToArray(), ["RemoteScope"] = request.RemoteScope ?? string.Empty, ["ExecutableScope"] = request.ExecutableScope ?? string.Empty }, cancellationToken);
+    public Task<FirewallOperationResult> CreateFirewallRuleAsync(string previewRuleId, CancellationToken cancellationToken = default) => ExecuteJsonAsync<FirewallOperationResult>(CreateFirewallRuleCommand, new() { ["PreviewRuleId"] = previewRuleId }, cancellationToken);
+    public Task<FirewallRemovalPreview> GetFirewallRemovePreviewAsync(string ruleId, CancellationToken cancellationToken = default) => ExecuteJsonAsync<FirewallRemovalPreview>(GetFirewallRemovePreviewCommand, new() { ["RuleId"] = ruleId }, cancellationToken);
+    public Task<FirewallOperationResult> RemoveFirewallRuleAsync(string previewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<FirewallOperationResult>(RemoveFirewallRuleCommand, new() { ["PreviewToken"] = previewToken }, cancellationToken);
+    private static Dictionary<string, object> SettingsParameters(NetworkSettings s) { var p = new Dictionary<string, object>(); if (s.DnsTunneling.HasValue) p["DnsTunneling"] = s.DnsTunneling.Value; if (s.AutoProxy.HasValue) p["AutoProxy"] = s.AutoProxy.Value; if (s.Firewall.HasValue) p["Firewall"] = s.Firewall.Value; if (s.HostAddressLoopback.HasValue) p["HostAddressLoopback"] = s.HostAddressLoopback.Value; if (s.BestEffortDnsParsing.HasValue) p["BestEffortDnsParsing"] = s.BestEffortDnsParsing.Value; if (s.IgnoredPorts is not null) p["IgnoredPorts"] = s.IgnoredPorts; return p; }
     public Task<FixedExplorerResult> OpenWslConfigFileAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<FixedExplorerResult>(OpenWslConfigFileCommand, null, cancellationToken);
     public Task<FixedExplorerResult> OpenRecoveryPointFolderAsync(Guid id, CancellationToken cancellationToken = default)
     { if (id == Guid.Empty) throw new ArgumentException("A recovery point id is required.", nameof(id)); return ExecuteJsonAsync<FixedExplorerResult>(OpenRecoveryPointFolderCommand, new() { ["Id"] = id }, cancellationToken); }

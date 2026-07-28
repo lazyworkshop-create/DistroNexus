@@ -29,9 +29,11 @@ public interface INetworkConfigurationService
     Task<NetworkingModeGuidance> GetGuidanceAsync(WslNetworkingMode mode, CancellationToken cancellationToken = default);
     Task<NetworkModePreview> PreviewModeAsync(WslNetworkingMode mode, CancellationToken cancellationToken = default);
     Task<ConfigurationSaveResult> ApplyModeAsync(WslNetworkingMode mode, string previewToken, CancellationToken cancellationToken = default);
+    Task<ConfigurationSaveResult> ApplyModeAsync(string previewToken, CancellationToken cancellationToken = default);
     Task<NetworkSettings> ReadSettingsAsync(CancellationToken cancellationToken = default);
     Task<NetworkSettingsPreview> PreviewSettingsAsync(NetworkSettings settings, CancellationToken cancellationToken = default);
     Task<ConfigurationSaveResult> ApplySettingsAsync(NetworkSettings settings, string previewToken, CancellationToken cancellationToken = default);
+    Task<ConfigurationSaveResult> ApplySettingsAsync(string previewToken, CancellationToken cancellationToken = default);
 }
 
 public enum FirewallStatusAvailability { Available, Unavailable }

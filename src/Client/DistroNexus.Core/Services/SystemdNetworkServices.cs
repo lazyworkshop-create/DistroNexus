@@ -271,23 +271,29 @@ public sealed class NetworkConfigurationService : INetworkConfigurationService
     private readonly IWslConfigurationService _configuration;
     private readonly IPlatformCapabilityService _capabilities;
     private readonly INetworkDiagnosticsService _diagnostics;
-    private readonly Dictionary<string, (WslNetworkingMode? Mode, NetworkSettings? Settings, string Fingerprint, IReadOnlySet<string> Capabilities)> _previews = new(StringComparer.Ordinal);
-    public NetworkConfigurationService(IWslConfigurationService configuration, IPlatformCapabilityService capabilities, INetworkDiagnosticsService diagnostics) => (_configuration, _capabilities, _diagnostics) = (configuration, capabilities, diagnostics);
+    private readonly string _grantRoot;
+    private readonly TimeProvider _clock;
+    private readonly Func<string> _sid;
+    private readonly Func<byte[], byte[]> _protect;
+    private readonly Func<byte[], byte[]> _unprotect;
+    public NetworkConfigurationService(IWslConfigurationService configuration, IPlatformCapabilityService capabilities, INetworkDiagnosticsService diagnostics, string? grantRoot = null, TimeProvider? clock = null, Func<string>? sid = null, Func<byte[], byte[]>? protect = null, Func<byte[], byte[]>? unprotect = null)
+    { (_configuration, _capabilities, _diagnostics) = (configuration, capabilities, diagnostics); _grantRoot = grantRoot ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DistroNexus", "network-grants"); _clock = clock ?? TimeProvider.System; _sid = sid ?? CurrentSid; _protect = protect ?? Protect; _unprotect = unprotect ?? Unprotect; }
     public async Task<NetworkingModeGuidance> GetGuidanceAsync(WslNetworkingMode mode, CancellationToken cancellationToken = default) => _diagnostics.GetModeGuidance(mode, await _capabilities.GetHostSnapshotAsync(false, cancellationToken));
     public async Task<NetworkModePreview> PreviewModeAsync(WslNetworkingMode mode, CancellationToken cancellationToken = default)
     {
         var guidance = await GetGuidanceAsync(mode, cancellationToken); if (!guidance.IsSupported) throw new ConfigurationValidationException([new(0, "config.unsupported", guidance.CompatibilityNotes.First())]);
         var doc = await _configuration.ReadAsync(cancellationToken); var caps = WslConfigurationSchema.MapCapabilities(await _capabilities.GetHostSnapshotAsync(false, cancellationToken));
         var preview = await _configuration.PreviewAsync(new Dictionary<string, string?> { ["wsl2.networkingMode"] = ToValue(mode) }, doc.Fingerprint, caps, cancellationToken);
-        var token = Guid.NewGuid().ToString("N"); _previews[token] = (mode, null, doc.Fingerprint, caps);
+        var token = Guid.NewGuid().ToString("N"); PersistGrant(new DurableNetworkGrant(token, mode, null, doc.Fingerprint, caps.Order(StringComparer.Ordinal).ToArray(), _clock.GetUtcNow().AddMinutes(2), _sid()));
         return new NetworkModePreview(mode, preview, guidance, token);
     }
     public async Task<ConfigurationSaveResult> ApplyModeAsync(WslNetworkingMode mode, string previewToken, CancellationToken cancellationToken = default)
     {
-        if (!_previews.Remove(previewToken, out var saved) || saved.Mode != mode || saved.Settings is not null) throw new InvalidOperationException("DN-8004: A current networking-mode preview is required.");
-        var guidance = await GetGuidanceAsync(mode, cancellationToken); if (!guidance.IsSupported) throw new ConfigurationValidationException([new(0, "config.unsupported", guidance.CompatibilityNotes.First())]);
-        return await _configuration.SaveAsync(new Dictionary<string, string?> { ["wsl2.networkingMode"] = ToValue(mode) }, saved.Fingerprint, saved.Capabilities, cancellationToken);
+        var grant = ConsumeGrant(previewToken, mode, null); if (grant is null) throw new InvalidOperationException("DN-8004: A current networking-mode preview is required.");
+        return await ApplyModeGrantAsync(grant, cancellationToken);
     }
+    public async Task<ConfigurationSaveResult> ApplyModeAsync(string previewToken, CancellationToken cancellationToken = default)
+    { var grant = ConsumeGrant(previewToken, null, null); if (grant?.Mode is null || grant.Settings is not null) throw new InvalidOperationException("DN-8004: A current networking-mode preview is required."); return await ApplyModeGrantAsync(grant, cancellationToken); }
     public async Task<NetworkSettings> ReadSettingsAsync(CancellationToken cancellationToken = default)
     {
         var values = (await _configuration.ReadAsync(cancellationToken).ConfigureAwait(false)).Settings.Values;
@@ -298,15 +304,34 @@ public sealed class NetworkConfigurationService : INetworkConfigurationService
         var doc = await _configuration.ReadAsync(cancellationToken); var caps = WslConfigurationSchema.MapCapabilities(await _capabilities.GetHostSnapshotAsync(false, cancellationToken));
         var preview = await _configuration.PreviewAsync(ToValues(settings), doc.Fingerprint, caps, cancellationToken);
         var token = Guid.NewGuid().ToString("N");
-        _previews[token] = (null, settings, doc.Fingerprint, caps);
+        PersistGrant(new DurableNetworkGrant(token, null, settings, doc.Fingerprint, caps.Order(StringComparer.Ordinal).ToArray(), _clock.GetUtcNow().AddMinutes(2), _sid()));
         return new NetworkSettingsPreview(settings, preview, token);
     }
     public async Task<ConfigurationSaveResult> ApplySettingsAsync(NetworkSettings settings, string previewToken, CancellationToken cancellationToken = default)
     {
-        if (!_previews.Remove(previewToken, out var saved) || saved.Settings != settings || saved.Mode is not null)
-            throw new InvalidOperationException("DN-8004: A current network-settings preview is required.");
-        return await _configuration.SaveAsync(ToValues(settings), saved.Fingerprint, saved.Capabilities, cancellationToken);
+        var grant = ConsumeGrant(previewToken, null, settings); if (grant is null) throw new InvalidOperationException("DN-8004: A current network-settings preview is required.");
+        return await ApplySettingsGrantAsync(grant, cancellationToken);
     }
+    public async Task<ConfigurationSaveResult> ApplySettingsAsync(string previewToken, CancellationToken cancellationToken = default)
+    { var grant = ConsumeGrant(previewToken, null, null); if (grant?.Settings is null || grant.Mode is not null) throw new InvalidOperationException("DN-8004: A current network-settings preview is required."); return await ApplySettingsGrantAsync(grant, cancellationToken); }
+    private async Task<ConfigurationSaveResult> ApplyModeGrantAsync(DurableNetworkGrant grant, CancellationToken ct)
+    {
+        var guidance = await GetGuidanceAsync(grant.Mode!.Value, ct); if (!guidance.IsSupported) throw new ConfigurationValidationException([new(0, "config.unsupported", guidance.CompatibilityNotes.First())]);
+        var current = await _configuration.ReadAsync(ct); if (!string.Equals(current.Fingerprint, grant.Fingerprint, StringComparison.Ordinal)) throw new InvalidOperationException("DN-8004: The network configuration changed; generate a new preview.");
+        return await _configuration.SaveAsync(new Dictionary<string, string?> { ["wsl2.networkingMode"] = ToValue(grant.Mode.Value) }, grant.Fingerprint, grant.Capabilities.ToHashSet(StringComparer.Ordinal), ct);
+    }
+    private async Task<ConfigurationSaveResult> ApplySettingsGrantAsync(DurableNetworkGrant grant, CancellationToken ct)
+    { var current = await _configuration.ReadAsync(ct); if (!string.Equals(current.Fingerprint, grant.Fingerprint, StringComparison.Ordinal)) throw new InvalidOperationException("DN-8004: The network configuration changed; generate a new preview."); return await _configuration.SaveAsync(ToValues(grant.Settings!), grant.Fingerprint, grant.Capabilities.ToHashSet(StringComparer.Ordinal), ct); }
+    private void PersistGrant(DurableNetworkGrant grant)
+    { Directory.CreateDirectory(_grantRoot); CleanupGrants(); var target = GrantPath(grant.Token); var temp = target + "." + Guid.NewGuid().ToString("N") + ".tmp"; File.WriteAllBytes(temp, _protect(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(grant)))); File.Move(temp, target, true); }
+    private DurableNetworkGrant? ConsumeGrant(string token, WslNetworkingMode? mode, NetworkSettings? settings)
+    { if (string.IsNullOrWhiteSpace(token) || token.Length != 32 || token.Any(c => !Uri.IsHexDigit(c))) return null; var path = GrantPath(token); var consumed = path + ".consumed." + Guid.NewGuid().ToString("N"); try { File.Move(path, consumed); var grant = JsonSerializer.Deserialize<DurableNetworkGrant>(Encoding.UTF8.GetString(_unprotect(File.ReadAllBytes(consumed)))); File.Delete(consumed); return grant is not null && grant.ExpiresAt > _clock.GetUtcNow() && grant.Sid == _sid() && grant.Token == token && (mode is null || grant.Mode == mode) && (settings is null || grant.Settings == settings) ? grant : null; } catch (IOException) { return null; } catch (CryptographicException) { return null; } catch (JsonException) { return null; } }
+    private string GrantPath(string token) => Path.Combine(_grantRoot, Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token))) + ".bin");
+    private void CleanupGrants() { try { foreach (var file in Directory.EnumerateFiles(_grantRoot, "*.bin").OrderBy(x => x, StringComparer.Ordinal).Take(256)) if (File.GetLastWriteTimeUtc(file) < _clock.GetUtcNow().UtcDateTime.AddMinutes(-10)) File.Delete(file); foreach (var file in Directory.EnumerateFiles(_grantRoot, "*.consumed.*").Take(256)) if (File.GetLastWriteTimeUtc(file) < _clock.GetUtcNow().UtcDateTime.AddMinutes(-10)) File.Delete(file); } catch (IOException) { } catch (UnauthorizedAccessException) { } }
+    private static byte[] Protect(byte[] bytes) => ProtectedData.Protect(bytes, null, DataProtectionScope.CurrentUser);
+    private static byte[] Unprotect(byte[] bytes) => ProtectedData.Unprotect(bytes, null, DataProtectionScope.CurrentUser);
+    private static string CurrentSid() => WindowsIdentity.GetCurrent().User?.Value ?? throw new InvalidOperationException("Current user identity is unavailable.");
+    private sealed record DurableNetworkGrant(string Token, WslNetworkingMode? Mode, NetworkSettings? Settings, string Fingerprint, string[] Capabilities, DateTimeOffset ExpiresAt, string Sid);
     private static Dictionary<string, string?> ToValues(NetworkSettings settings)
     {
         var values = new Dictionary<string, string?>();

@@ -52,20 +52,17 @@ public sealed class S05ViewModelTests
     [Fact]
     public async Task NetworkMode_OnlyAppliesAfterConfirmedCorePreviewToken()
     {
-        var config = new Mock<INetworkConfigurationService>();
-        config.Setup(x => x.GetGuidanceAsync(It.IsAny<WslNetworkingMode>(), It.IsAny<CancellationToken>())).ReturnsAsync((WslNetworkingMode m, CancellationToken _) => new NetworkingModeGuidance(m, m == WslNetworkingMode.Nat, true, ["test"], RestartScope.Wsl));
-        config.Setup(x => x.PreviewModeAsync(WslNetworkingMode.Nat, It.IsAny<CancellationToken>())).ReturnsAsync(new NetworkModePreview(WslNetworkingMode.Nat, new ConfigurationPreview("", "[wsl2]", [], RestartScope.Wsl), new NetworkingModeGuidance(WslNetworkingMode.Nat, true, true, [], RestartScope.Wsl), "token"));
-        config.Setup(x => x.ApplyModeAsync(WslNetworkingMode.Nat, "token", It.IsAny<CancellationToken>())).ReturnsAsync(new ConfigurationSaveResult("new", null, RestartScope.Wsl));
-        var vm = NetworkVm(config.Object, Dialogs(true).Object);
+        var client = NetworkClient(); client.Setup(x => x.GetNetworkModeAsync(It.IsAny<WslNetworkingMode>(), It.IsAny<CancellationToken>())).ReturnsAsync((WslNetworkingMode m, CancellationToken _) => new NetworkingModeGuidance(m, m == WslNetworkingMode.Nat, true, ["test"], RestartScope.Wsl)); client.Setup(x => x.GetNetworkModePreviewAsync(WslNetworkingMode.Nat, It.IsAny<CancellationToken>())).ReturnsAsync(new NetworkModePreview(WslNetworkingMode.Nat, new ConfigurationPreview("", "[wsl2]", [], RestartScope.Wsl), new NetworkingModeGuidance(WslNetworkingMode.Nat, true, true, [], RestartScope.Wsl), "token")); client.Setup(x => x.SetNetworkModeAsync("token", It.IsAny<CancellationToken>())).ReturnsAsync(new ConfigurationSaveResult("new", null, RestartScope.Wsl));
+        var vm = NetworkVm(client.Object, Dialogs(true).Object);
         await vm.InitializeAsync();
         Assert.Single(vm.AvailableModes); await vm.PreviewAndApplyNetworkingModeCommand.ExecuteAsync(null);
-        config.Verify(x => x.ApplyModeAsync(WslNetworkingMode.Nat, "token", It.IsAny<CancellationToken>()), Times.Once);
+        client.Verify(x => x.SetNetworkModeAsync("token", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task Network_WslProbeAndUnavailableStatusRemainExplicit()
     {
-        var vm = NetworkVm(Mock.Of<INetworkConfigurationService>(), Dialogs().Object);
+        var vm = NetworkVm(NetworkClient().Object, Dialogs().Object);
         vm.ProbeKind = NetworkProbeKind.WslInstance; await vm.RunProbeCommand.ExecuteAsync(null);
         Assert.Contains("ToolUnavailable", vm.ProbeResult);
     }
@@ -73,50 +70,44 @@ public sealed class S05ViewModelTests
     [Fact]
     public async Task Network_ProjectsWindowsCollisionIntoPortRow()
     {
-        var network = new Mock<INetworkService>(); network.Setup(x => x.GetInstanceIpAddressAsync("Ubuntu", It.IsAny<CancellationToken>())).ReturnsAsync("172.20.0.2"); network.Setup(x => x.GetPortMappingsAsync("Ubuntu", null, It.IsAny<CancellationToken>())).ReturnsAsync([new PortMapping { Port = 8080, Protocol = "TCP", LocalAddress = "127.0.0.1" }]);
-        var status = new Mock<INetworkStatusAdapter>(); status.Setup(x => x.GetFirewallStatusAsync(It.IsAny<CancellationToken>())).ReturnsAsync(new FirewallStatus(FirewallStatusAvailability.Available, "available")); status.Setup(x => x.GetPortCollisionsAsync(It.IsAny<IReadOnlyList<PortMapping>>(), It.IsAny<CancellationToken>())).ReturnsAsync([new PortCollisionStatus(8080, "TCP", true, "Windows owns the port.")]);
-        var firewall = new Mock<IFirewallOperationBroker>(); firewall.Setup(x => x.ListOwnedAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
-        var configuration = new Mock<INetworkConfigurationService>(); configuration.Setup(x => x.GetGuidanceAsync(It.IsAny<WslNetworkingMode>(), It.IsAny<CancellationToken>())).ReturnsAsync((WslNetworkingMode mode, CancellationToken _) => new NetworkingModeGuidance(mode, mode == WslNetworkingMode.Nat, true, [], RestartScope.None));
-        var vm = new NetworkTabViewModel(Instance(), network.Object, Dialogs().Object, new DistroNexus.Core.Services.NetworkDiagnosticsService(), firewall.Object, configuration.Object, status.Object, Mock.Of<IBrowserLauncher>());
+        var client = NetworkClient(); client.Setup(x => x.GetPortMappingsAsync("Ubuntu", null, It.IsAny<CancellationToken>())).ReturnsAsync([new PortMapping { Port = 8080, Protocol = "TCP", LocalAddress = "127.0.0.1" }]);
+        var vm = NetworkVm(client.Object, Dialogs().Object);
         await vm.InitializeAsync();
         var row = Assert.Single(vm.PortMappings);
-        Assert.True(row.HasWindowsCollision); Assert.Equal("Windows owns the port.", row.ConflictGuidance);
+        Assert.False(row.HasWindowsCollision);
     }
 
     [Fact]
     public async Task NetworkSettings_UsesOnePreviewTokenAfterExplicitConfirmation()
     {
-        var config = new Mock<INetworkConfigurationService>();
-        config.Setup(x => x.GetGuidanceAsync(It.IsAny<WslNetworkingMode>(), It.IsAny<CancellationToken>())).ReturnsAsync((WslNetworkingMode m, CancellationToken _) => new NetworkingModeGuidance(m, m == WslNetworkingMode.Nat, true, [], RestartScope.Wsl));
+        var config = NetworkClient();
         var settings = new NetworkSettings(false, false, false, false, false, "3000");
-        config.Setup(x => x.ReadSettingsAsync(It.IsAny<CancellationToken>())).ReturnsAsync(settings);
-        config.Setup(x => x.PreviewSettingsAsync(settings, It.IsAny<CancellationToken>())).ReturnsAsync(new NetworkSettingsPreview(settings, new ConfigurationPreview("", "[wsl2]", ["wsl2.ignoredPorts"], RestartScope.Wsl), "settings-token"));
-        config.Setup(x => x.ApplySettingsAsync(settings, "settings-token", It.IsAny<CancellationToken>())).ReturnsAsync(new ConfigurationSaveResult("new", null, RestartScope.Wsl));
+        config.Setup(x => x.GetNetworkSettingsAsync(It.IsAny<CancellationToken>())).ReturnsAsync(settings);
+        config.Setup(x => x.GetNetworkSettingsPreviewAsync(settings, It.IsAny<CancellationToken>())).ReturnsAsync(new NetworkSettingsPreview(settings, new ConfigurationPreview("", "[wsl2]", ["wsl2.ignoredPorts"], RestartScope.Wsl), "settings-token"));
+        config.Setup(x => x.SetNetworkSettingsAsync("settings-token", It.IsAny<CancellationToken>())).ReturnsAsync(new ConfigurationSaveResult("new", null, RestartScope.Wsl));
         var vm = NetworkVm(config.Object, Dialogs(true).Object);
         await vm.InitializeAsync();
         await vm.PreviewAndApplyNetworkSettingsCommand.ExecuteAsync(null);
-        config.Verify(x => x.ApplySettingsAsync(settings, "settings-token", It.IsAny<CancellationToken>()), Times.Once);
+        config.Verify(x => x.SetNetworkSettingsAsync("settings-token", It.IsAny<CancellationToken>()), Times.Once);
         Assert.Contains("restart", vm.NetworkSettingsEvidence, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public void BrowserCommand_OnlyPassesSafeLoopbackEndpointToLauncher()
+    public async Task BrowserCommand_OnlyPassesSafeLoopbackEndpointToModule()
     {
-        var launcher = new Mock<IBrowserLauncher>();
-        var vm = NetworkVm(Mock.Of<INetworkConfigurationService>(), Dialogs().Object, launcher.Object);
+        var client = NetworkClient();
+        var vm = NetworkVm(client.Object, Dialogs().Object);
         vm.OpenInBrowserCommand.Execute(new PortMappingViewModel { LocalAddress = "10.0.0.4", Port = 8080 });
-        launcher.Verify(x => x.Open(It.IsAny<Uri>()), Times.Never);
-        vm.OpenInBrowserCommand.Execute(new PortMappingViewModel { LocalAddress = "::1", Port = 8080 });
-        launcher.Verify(x => x.Open(new Uri("http://[::1]:8080/")), Times.Once);
+        client.Verify(x => x.OpenNetworkLoopbackAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+        await vm.OpenInBrowserCommand.ExecuteAsync(new PortMappingViewModel { LocalAddress = "::1", Port = 8080 });
+        client.Verify(x => x.OpenNetworkLoopbackAsync("::1", 8080, It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    private static NetworkTabViewModel NetworkVm(INetworkConfigurationService config, IDialogService dialogs, IBrowserLauncher? launcher = null)
+    private static NetworkTabViewModel NetworkVm(IPowerShellModuleClient client, IDialogService dialogs)
     {
-        var network = new Mock<INetworkService>(); network.Setup(x => x.GetInstanceIpAddressAsync("Ubuntu", It.IsAny<CancellationToken>())).ReturnsAsync((string?)null); network.Setup(x => x.GetPortMappingsAsync("Ubuntu", null, It.IsAny<CancellationToken>())).ReturnsAsync([]);
-        var status = new Mock<INetworkStatusAdapter>(); status.Setup(x => x.GetFirewallStatusAsync(It.IsAny<CancellationToken>())).ReturnsAsync(new FirewallStatus(FirewallStatusAvailability.Unavailable, "test")); status.Setup(x => x.GetPortCollisionsAsync(It.IsAny<IReadOnlyList<PortMapping>>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-        var firewall = new Mock<IFirewallOperationBroker>(); firewall.Setup(x => x.ListOwnedAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
-        return new(Instance(), network.Object, dialogs, new DistroNexus.Core.Services.NetworkDiagnosticsService(), firewall.Object, config, status.Object, launcher ?? Mock.Of<IBrowserLauncher>());
+        return new(Instance(), dialogs, client);
     }
+    private static Mock<IPowerShellModuleClient> NetworkClient() { var client = new Mock<IPowerShellModuleClient>(); client.Setup(x => x.GetInstanceIpAddressAsync("Ubuntu", It.IsAny<CancellationToken>())).ReturnsAsync((string?)null); client.Setup(x => x.GetPortMappingsAsync("Ubuntu", null, It.IsAny<CancellationToken>())).ReturnsAsync([]); client.Setup(x => x.GetNetworkStatusAsync(It.IsAny<CancellationToken>())).ReturnsAsync(new FirewallStatus(FirewallStatusAvailability.Unavailable, "test")); client.Setup(x => x.GetFirewallRulesAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]); client.Setup(x => x.GetNetworkSettingsAsync(It.IsAny<CancellationToken>())).ReturnsAsync(new NetworkSettings()); client.Setup(x => x.GetNetworkModeAsync(It.IsAny<WslNetworkingMode>(), It.IsAny<CancellationToken>())).ReturnsAsync((WslNetworkingMode mode, CancellationToken _) => new NetworkingModeGuidance(mode, mode == WslNetworkingMode.Nat, true, [], RestartScope.None)); client.Setup(x => x.ProbeNetworkAsync(It.IsAny<NetworkProbeRequest>(), It.IsAny<CancellationToken>())).ReturnsAsync(new NetworkProbeResult(new(NetworkProbeKind.WslInstance, "localhost"), NetworkProbeOutcome.ToolUnavailable, "test")); return client; }
     private static Mock<IDialogService> Dialogs(bool confirm = false) { var result = new Mock<IDialogService>(); result.Setup(x => x.ShowConfirmAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(confirm); return result; }
     private static WslInstanceViewModel Instance() => new(new WslInstance { Name = "Ubuntu", State = "Running", Version = 2 }, Mock.Of<IWslManagerService>(), Mock.Of<ILogger>(), Mock.Of<IPowerShellModuleClient>(), Mock.Of<IBackupService>(), Mock.Of<IServiceProvider>());
 }

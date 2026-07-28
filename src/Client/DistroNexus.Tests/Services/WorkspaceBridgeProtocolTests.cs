@@ -10,6 +10,25 @@ namespace DistroNexus.Tests.Services;
 public sealed class WorkspaceBridgeProtocolTests
 {
     [Fact]
+    public void FixedLoopbackHandler_LaunchesOnlyTheExactValidatedHttpUri()
+    {
+        ProcessStartInfo? captured = null;
+        var prior = DistroNexus.WorkspaceBridge.FixedLoopbackBrowserHandler.Launch; DistroNexus.WorkspaceBridge.FixedLoopbackBrowserHandler.Launch = info => captured = info;
+        var result = DistroNexus.WorkspaceBridge.FixedLoopbackBrowserHandler.Open("::1", 8080); DistroNexus.WorkspaceBridge.FixedLoopbackBrowserHandler.Launch = prior;
+        Assert.True(result.Succeeded); Assert.Equal("http://[::1]:8080/", captured!.FileName); Assert.True(captured.UseShellExecute);
+    }
+    [Theory]
+    [InlineData("10.0.0.4", 80)]
+    [InlineData("localhost", 0)]
+    [InlineData("localhost", 65536)]
+    public void FixedLoopbackHandler_RejectsInvalidTargetsWithoutLaunching(string host, int port)
+    {
+        var launches = 0;
+        var prior = DistroNexus.WorkspaceBridge.FixedLoopbackBrowserHandler.Launch; DistroNexus.WorkspaceBridge.FixedLoopbackBrowserHandler.Launch = _ => launches++;
+        Assert.Throws<ArgumentException>(() => DistroNexus.WorkspaceBridge.FixedLoopbackBrowserHandler.Open(host, port)); DistroNexus.WorkspaceBridge.FixedLoopbackBrowserHandler.Launch = prior;
+        Assert.Equal(0, launches);
+    }
+    [Fact]
     public async Task Lifecycle_UsesCoreStoreAndEnforcesRevisions()
     {
         await using var bridge = await BridgeProcess.StartAsync();

@@ -6,7 +6,7 @@ Describe 'Network and firewall command consent' -Tag 'Unit', 'Public', 'Network'
     It 'does not invoke the network mode route under WhatIf' {
         InModuleScope DistroNexus {
             Mock Invoke-DistroNexusWorkspaceBridge { throw 'must not execute' }
-            Set-DistroNexusNetworkMode -Mode Nat -PreviewToken '0123456789abcdef' -WhatIf
+            Set-DistroNexusNetworkMode -PreviewToken '0123456789abcdef' -WhatIf
             Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 0
         }
     }
@@ -35,6 +35,14 @@ Describe 'Network and firewall command consent' -Tag 'Unit', 'Public', 'Network'
             { New-DistroNexusFirewallRule -PreviewRuleId 'forged' } | Should -Throw
             { Remove-DistroNexusFirewallRule -PreviewToken 'short' } | Should -Throw
             { Get-DistroNexusFirewallRuleCreatePreview -Direction Inbound -Protocol Tcp -Port 443 -Profiles Private -RemoteScope '999.999.999.999/999' } | Should -Throw
+            Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 0
+        }
+    }
+    It 'uses token-only network mutation routes and does not invoke them under WhatIf' {
+        InModuleScope DistroNexus {
+            Mock Invoke-DistroNexusWorkspaceBridge { throw 'must not execute' }
+            Set-DistroNexusNetworkSettings -PreviewToken '0123456789abcdef' -WhatIf
+            Set-DistroNexusNetworkMode -PreviewToken '0123456789abcdef' -WhatIf
             Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 0
         }
     }

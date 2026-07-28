@@ -32,13 +32,8 @@ public class PortMappingViewModel
 public partial class NetworkTabViewModel : ObservableObject
 {
     private readonly WslInstanceViewModel _instance;
-    private readonly INetworkService _networkService;
     private readonly IDialogService _dialogService;
-    private readonly INetworkDiagnosticsService _diagnostics;
-    private readonly IFirewallOperationBroker _firewall;
-    private readonly INetworkConfigurationService _networkConfiguration;
-    private readonly INetworkStatusAdapter _networkStatus;
-    private readonly IBrowserLauncher _browserLauncher;
+    private readonly IPowerShellModuleClient _moduleClient;
 
     private bool _initialized;
 
@@ -81,22 +76,12 @@ public partial class NetworkTabViewModel : ObservableObject
 
     public NetworkTabViewModel(
         WslInstanceViewModel instance,
-        INetworkService networkService,
         IDialogService dialogService,
-        INetworkDiagnosticsService diagnostics,
-        IFirewallOperationBroker firewall,
-        INetworkConfigurationService networkConfiguration,
-        INetworkStatusAdapter networkStatus,
-        IBrowserLauncher browserLauncher)
+        IPowerShellModuleClient moduleClient)
     {
         _instance = instance ?? throw new ArgumentNullException(nameof(instance));
-        _networkService = networkService ?? throw new ArgumentNullException(nameof(networkService));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
-        _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
-        _firewall = firewall ?? throw new ArgumentNullException(nameof(firewall));
-        _networkConfiguration = networkConfiguration ?? throw new ArgumentNullException(nameof(networkConfiguration));
-        _networkStatus = networkStatus ?? throw new ArgumentNullException(nameof(networkStatus));
-        _browserLauncher = browserLauncher ?? throw new ArgumentNullException(nameof(browserLauncher));
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
     }
 
     public async Task InitializeAsync()
@@ -106,7 +91,7 @@ public partial class NetworkTabViewModel : ObservableObject
 
         await RefreshNetworkAsync();
         await RefreshNetworkingModesAsync();
-        var settings = await _networkConfiguration.ReadSettingsAsync() ?? new NetworkSettings();
+        var settings = await _moduleClient.GetNetworkSettingsAsync() ?? new NetworkSettings();
         DnsTunnelingEnabled = settings.DnsTunneling; AutoProxyEnabled = settings.AutoProxy; FirewallEnabled = settings.Firewall; HostAddressLoopbackEnabled = settings.HostAddressLoopback; BestEffortDnsParsingEnabled = settings.BestEffortDnsParsing; IgnoredPorts = settings.IgnoredPorts;
         await RefreshOwnedFirewallRulesAsync();
     }
@@ -125,12 +110,10 @@ public partial class NetworkTabViewModel : ObservableObject
         _instance.IsBusy = true;
         try
         {
-            var ip = await _networkService.GetInstanceIpAddressAsync(_instance.Name);
+            var ip = await _moduleClient.GetInstanceIpAddressAsync(_instance.Name);
             InstanceIp = ip ?? string.Empty;
 
-            var mappings = await _networkService.GetPortMappingsAsync(_instance.Name);
-            var collisions = await _networkStatus.GetPortCollisionsAsync(mappings);
-            var collisionByPort = collisions.ToDictionary(x => (x.Port, x.Protocol), x => x);
+            var mappings = await _moduleClient.GetPortMappingsAsync(_instance.Name);
             PortMappings = new ObservableCollection<PortMappingViewModel>(
                 mappings.Select(m => new PortMappingViewModel
                 {
@@ -140,12 +123,12 @@ public partial class NetworkTabViewModel : ObservableObject
                     ProcessName    = m.ProcessName,
                     HasWindowsProxy = m.HasWindowsProxy,
                     AddressFamily = m.AddressFamily,
-                    HasWindowsCollision = collisionByPort.TryGetValue((m.Port, m.Protocol), out var collision) && collision.IsCollision,
-                    ConflictGuidance = collisionByPort.TryGetValue((m.Port, m.Protocol), out collision) ? collision.Detail : m.ConflictGuidance ?? string.Empty
+                    HasWindowsCollision = false,
+                    ConflictGuidance = m.ConflictGuidance ?? string.Empty
                 }));
-            var firewall = await _networkStatus.GetFirewallStatusAsync();
+            var firewall = await _moduleClient.GetNetworkStatusAsync();
             FirewallStatus = $"{firewall.Availability}: {firewall.Detail}";
-            CollisionStatus = string.Join(Environment.NewLine, collisions.Select(x => $"{x.Protocol}/{x.Port}: {x.Detail}"));
+            CollisionStatus = string.Empty;
         }
         catch (Exception ex)
         {
@@ -169,19 +152,19 @@ public partial class NetworkTabViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void OpenInBrowser(PortMappingViewModel? row)
+    private async Task OpenInBrowserAsync(PortMappingViewModel? row)
     {
         if (row is null) return;
-        var uri = SafeBrowserUri.FromPortMapping(new PortMapping { LocalAddress = row.LocalAddress, Port = row.Port });
-        if (uri is null) { NetworkSettingsEvidence = R("Network_ErrorUnsafeBrowserAddress"); return; }
-        try { _browserLauncher.Open(uri); }
+        var host = row.LocalAddress.Trim('[', ']');
+        if (host is not ("localhost" or "127.0.0.1" or "::1")) { NetworkSettingsEvidence = R("Network_ErrorUnsafeBrowserAddress"); return; }
+        try { await _moduleClient.OpenNetworkLoopbackAsync(host, row.Port); }
         catch (Exception ex) { NetworkSettingsEvidence = ex.Message; }
     }
 
     [RelayCommand]
     private async Task RunProbeAsync()
     {
-        var result = await _diagnostics.ProbeAsync(new NetworkProbeRequest(ProbeKind, ProbeHost, ProbeKind == NetworkProbeKind.Dns ? null : ProbePort, DistributionName: _instance.Name));
+        var result = await _moduleClient.ProbeNetworkAsync(new NetworkProbeRequest(ProbeKind, ProbeHost, ProbeKind == NetworkProbeKind.Dns ? null : ProbePort, DistributionName: _instance.Name));
         ProbeResult = $"{result.Outcome}: {result.Detail}";
     }
 
@@ -190,9 +173,9 @@ public partial class NetworkTabViewModel : ObservableObject
     {
         try
         {
-            var preview = await _firewall.PreviewCreateAsync(new FirewallRuleRequest(FirewallDirection.Inbound, FirewallProtocol.Tcp, ProbePort, ["Private"]));
+            var preview = await _moduleClient.GetFirewallCreatePreviewAsync(new FirewallRuleRequest(FirewallDirection.Inbound, FirewallProtocol.Tcp, ProbePort, ["Private"]));
             if (!await _dialogService.ShowConfirmAsync(R("Network_ConfirmFirewallTitle"), string.Join(Environment.NewLine, preview.Effects))) return;
-            var result = await _firewall.CreateAsync(preview);
+            var result = await _moduleClient.CreateFirewallRuleAsync(preview.RuleId);
             FirewallResult = result.Guidance ?? result.OutcomeCode;
         }
         catch (Exception ex) { FirewallResult = ex.Message; }
@@ -203,9 +186,9 @@ public partial class NetworkTabViewModel : ObservableObject
     {
         try
         {
-            var preview = await _firewall.PreviewRemoveAsync(FirewallRuleId);
+            var preview = await _moduleClient.GetFirewallRemovePreviewAsync(FirewallRuleId);
             if (!await _dialogService.ShowConfirmAsync(R("Network_ConfirmFirewallRemovalTitle"), string.Join(Environment.NewLine, preview.Effects))) return;
-            var result = await _firewall.RemoveAsync(preview);
+            var result = await _moduleClient.RemoveFirewallRuleAsync(preview.Token);
             FirewallResult = result.Guidance ?? result.OutcomeCode;
             await RefreshOwnedFirewallRulesAsync();
         }
@@ -214,7 +197,7 @@ public partial class NetworkTabViewModel : ObservableObject
 
     private async Task RefreshOwnedFirewallRulesAsync()
     {
-        var rules = await _firewall.ListOwnedAsync() ?? [];
+        var rules = await _moduleClient.GetFirewallRulesAsync() ?? [];
         OwnedFirewallRules = string.Join(Environment.NewLine, rules.Select(x => x.RuleId));
     }
 
@@ -224,7 +207,7 @@ public partial class NetworkTabViewModel : ObservableObject
         var supported = new List<WslNetworkingMode>(); var notes = new List<string>();
         foreach (var mode in Enum.GetValues<WslNetworkingMode>())
         {
-            var guidance = await _networkConfiguration.GetGuidanceAsync(mode);
+            var guidance = await _moduleClient.GetNetworkModeAsync(mode);
             if (guidance.IsSupported) supported.Add(mode); else notes.AddRange(guidance.CompatibilityNotes);
         }
         AvailableModes = new ObservableCollection<WslNetworkingMode>(supported);
@@ -239,11 +222,11 @@ public partial class NetworkTabViewModel : ObservableObject
     {
         try
         {
-            var preview = await _networkConfiguration.PreviewModeAsync(SelectedNetworkingMode);
+            var preview = await _moduleClient.GetNetworkModePreviewAsync(SelectedNetworkingMode);
             NetworkingModeRestartImpact = preview.Configuration.RestartScope == RestartScope.Wsl ? R("Network_RestartRequired") : R("Network_NoRestartRequired");
             var message = string.Join(Environment.NewLine, preview.Guidance.CompatibilityNotes.Append(NetworkingModeRestartImpact).Append(preview.Configuration.DesiredRaw));
             if (!await _dialogService.ShowConfirmAsync(R("Network_ConfirmModeTitle"), message)) return;
-            var result = await _networkConfiguration.ApplyModeAsync(SelectedNetworkingMode, preview.Token);
+            var result = await _moduleClient.SetNetworkModeAsync(preview.Token);
             NetworkingModeEvidence = result.RestartScope == RestartScope.Wsl ? R("Network_RestartRequired") : R("Network_ModeApplied");
             await RefreshNetworkingModesAsync();
         }
@@ -256,11 +239,11 @@ public partial class NetworkTabViewModel : ObservableObject
         try
         {
             var settings = new NetworkSettings(DnsTunnelingEnabled, AutoProxyEnabled, FirewallEnabled, HostAddressLoopbackEnabled, BestEffortDnsParsingEnabled, IgnoredPorts);
-            var preview = await _networkConfiguration.PreviewSettingsAsync(settings);
+            var preview = await _moduleClient.GetNetworkSettingsPreviewAsync(settings);
             var restart = preview.Configuration.RestartScope == RestartScope.Wsl ? R("Network_RestartRequired") : R("Network_NoRestartRequired");
             var message = string.Join(Environment.NewLine, preview.Configuration.ChangedSettings.Append(restart).Append(preview.Configuration.DesiredRaw));
             if (!await _dialogService.ShowConfirmAsync(R("Network_ConfirmSettingsTitle"), message)) return;
-            var result = await _networkConfiguration.ApplySettingsAsync(settings, preview.Token);
+            var result = await _moduleClient.SetNetworkSettingsAsync(preview.Token);
             NetworkSettingsEvidence = result.RestartScope == RestartScope.Wsl ? R("Network_SettingsAppliedRestart") : R("Network_SettingsApplied");
         }
         catch (Exception ex) { NetworkSettingsEvidence = ex.Message; }

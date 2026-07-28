@@ -115,6 +115,22 @@ public interface IPowerShellModuleClient
     Task<IReadOnlyList<SystemdJournalEntry>> GetSystemdServiceJournalAsync(string name, SystemdUnitName unit, SystemdScope scope, string? search, int lineLimit, CancellationToken cancellationToken = default);
     Task<SystemdOperationPreview> GetSystemdServicePreviewAsync(string name, SystemdUnitName unit, SystemdAction action, SystemdScope scope, CancellationToken cancellationToken = default);
     Task<SystemdOperationResult> InvokeSystemdServiceAsync(string previewToken, CancellationToken cancellationToken = default);
+    Task<FirewallStatus> GetNetworkStatusAsync(CancellationToken cancellationToken = default);
+    Task<string?> GetInstanceIpAddressAsync(string name, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<PortMapping>> GetPortMappingsAsync(string name, string? protocol = null, CancellationToken cancellationToken = default);
+    Task<NetworkProbeResult> ProbeNetworkAsync(NetworkProbeRequest request, CancellationToken cancellationToken = default);
+    Task<NetworkingModeGuidance> GetNetworkModeAsync(WslNetworkingMode mode, CancellationToken cancellationToken = default);
+    Task<NetworkModePreview> GetNetworkModePreviewAsync(WslNetworkingMode mode, CancellationToken cancellationToken = default);
+    Task<ConfigurationSaveResult> SetNetworkModeAsync(string previewToken, CancellationToken cancellationToken = default);
+    Task<NetworkSettings> GetNetworkSettingsAsync(CancellationToken cancellationToken = default);
+    Task<NetworkSettingsPreview> GetNetworkSettingsPreviewAsync(NetworkSettings settings, CancellationToken cancellationToken = default);
+    Task<ConfigurationSaveResult> SetNetworkSettingsAsync(string previewToken, CancellationToken cancellationToken = default);
+    Task<FixedExplorerResult> OpenNetworkLoopbackAsync(string host, int port, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<FirewallRuleInfo>> GetFirewallRulesAsync(CancellationToken cancellationToken = default);
+    Task<FirewallOperationPreview> GetFirewallCreatePreviewAsync(FirewallRuleRequest request, CancellationToken cancellationToken = default);
+    Task<FirewallOperationResult> CreateFirewallRuleAsync(string previewRuleId, CancellationToken cancellationToken = default);
+    Task<FirewallRemovalPreview> GetFirewallRemovePreviewAsync(string ruleId, CancellationToken cancellationToken = default);
+    Task<FirewallOperationResult> RemoveFirewallRuleAsync(string previewToken, CancellationToken cancellationToken = default);
     Task<FixedExplorerResult> OpenWslConfigFileAsync(CancellationToken cancellationToken = default);
     Task<FixedExplorerResult> OpenRecoveryPointFolderAsync(Guid id, CancellationToken cancellationToken = default);
 }
