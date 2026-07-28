@@ -780,7 +780,7 @@ Download tasks, package installation, and catalog refresh.
 
 ### Status
 
-Planned
+In Progress
 
 ### Objective
 
@@ -2619,7 +2619,7 @@ S42.
 
 ### Allowed Paths
 
-Package Core/Bridge/module/client contracts and tests; `PackageManagerViewModel` and focused tests; requirements/design/plan.
+`docs/specs/powershell-first-remaining-boundaries-requirements.md`, `docs/specs/powershell-first-remaining-boundaries-design.md`, this plan; package-job Core models/interfaces/services and their focused tests; `src/Client/DistroNexus.WorkspaceBridge/Program.cs`; `src/Client/DistroNexus.Core/Interfaces/IPowerShellModuleClient.cs`; `src/Client/DistroNexus.Core/Services/PowerShellModuleClient.cs`; `src/PowerShell/DistroNexus.psd1`; package-job public module commands and Pester tests; `src/Client/DistroNexus.Desktop/App.xaml.cs`; `src/Client/DistroNexus.Desktop/ViewModels/PackageManagerViewModel.cs`; `src/Client/DistroNexus.Desktop/ViewModels/MainViewModel.cs`; `src/Client/DistroNexus.Desktop/MainWindow.xaml`; `src/Client/DistroNexus.Desktop/Views/PackageManagerPage.xaml`; focused xUnit view-model/protocol/client tests.
 
 ### Excluded Paths
 

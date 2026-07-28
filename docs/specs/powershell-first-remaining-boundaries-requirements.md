@@ -37,9 +37,9 @@ Acceptance: no Desktop product-settings read/write or direct `ISettingsService`,
 
 ### FR-102 Package cache, catalog source, and download-job parity
 
-The module must provide fixed typed read/mutation operations for package cache location, custom source mutation, and download-job list/progress/cancel/retry/clear actions. Desktop must not own download task state, handlers, or product cache state.
+The module must provide fixed typed read/mutation operations for package cache location, custom source mutation, and download-job start/list/progress/cancel/retry/clear actions. Starting a job accepts only an allow-listed package identifier; it never accepts a URL, destination path, command text, process handle, or delegate. Desktop must not own download task state, handlers, or product cache state.
 
-Acceptance: package/download presentation uses only typed module methods; cancel/retry/clear use reviewed fixed identifiers and no caller-provided host command or path; status polling has bounded cancellation and disposal.
+Acceptance: package/download presentation uses only typed module methods; start/cancel/retry/clear use reviewed fixed identifiers or opaque reviewed tokens and no caller-provided host command or path; status polling has bounded cancellation and disposal.
 
 ### FR-103 USB module-only capability
 
