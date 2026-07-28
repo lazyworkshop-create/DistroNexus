@@ -400,7 +400,6 @@ public class MonitoringServiceTests
         var runner = new RecordingRunner(new ProcessResult(0, ProbeOutput, "", TimeSpan.Zero, false, false, false, 1));
         await using var session = new MonitoringService(runner).CreateSession(new WslInstance { Name = "d", State = "Running" }, TimeSpan.FromSeconds(1));
         await session.StartAsync();
-        await Task.Delay(50);
         await session.StopAsync();
         Assert.InRange(session.Samples.Count, 1, 300);
         Assert.Equal(2, runner.Requests.Count);
