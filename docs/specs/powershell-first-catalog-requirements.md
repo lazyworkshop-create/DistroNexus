@@ -76,6 +76,12 @@ Every current `ICatalogService` consumer has an explicit fixed-command and typed
 
 Acceptance: a maintained consumer matrix maps Package Manager, Settings, and all wizard catalog flows to named typed operations; Pester proves every accepted legacy parameter and explicit rejection/migration behavior.
 
+### FR-109 Cache-entry identity and bounds
+
+Package-cache usage returns an authenticated opaque `CacheEntryId` for each listed file. Its user-local protected signing key persists across module and bridge processes. Cache deletion accepts that identifier and Core verifies its integrity, current root binding, file identity, expiry, and containment before every operation; caller-provided package names, paths, or filenames are never trusted as cache-file authority. Usage returns at most 1,000 entries and reports whether more eligible entries exist, while totals cover all eligible files.
+
+Acceptance: tests prove a returned identifier deletes only its contained entry in a later module/bridge process, forged/traversal/stale/expired identifiers fail before filesystem mutation with a stable sanitized error, and usage bounds do not hide total usage or permit unbounded memory work.
+
 ## Non-Functional Requirements
 
 - Security: reject unsafe URLs, malformed documents, path traversal, and arbitrary file paths; retain error redaction.

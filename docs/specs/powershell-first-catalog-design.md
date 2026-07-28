@@ -2,7 +2,7 @@
 
 ## Scope and Requirement Traceability
 
-- Requirements: `docs/specs/powershell-first-catalog-requirements.md` FR-101 through FR-108.
+- Requirements: `docs/specs/powershell-first-catalog-requirements.md` FR-101 through FR-109.
 - Parent constraints: `docs/specs/powershell-first-requirements.md` FR-001 through FR-007 and `docs/architecture/powershell-first-decision.md`.
 - Exclusions: arbitrary bridge execution, real-host mutation, and download-task implementation before its contract slice.
 
@@ -16,12 +16,13 @@
 | FR-106 | Architecture and Ownership | Desktop structural and handler-routing tests. |
 | FR-107 | Open Items | Separate accepted task-contract design before code. |
 | FR-108 | Architecture and Ownership; Contracts and Behavior | Consumer matrix, legacy command Pester, and structural routing tests. |
+| FR-109 | Data and Execution Semantics | Cache-entry containment, stale/forged identifier, and bounded usage tests. |
 
 ## Architecture and Ownership
 
 The required request path is `PowerShell caller or WPF -> fixed exported catalog command -> fixed versioned WorkspaceBridge route -> native CatalogService -> typed result`. `CatalogService` receives only explicit settings/source, HTTP, and filesystem dependencies; it does not receive `IPowerShellService` and does not invoke the module. This prevents the prohibited recursive path `module -> bridge -> CatalogService -> module`.
 
-Bridge routes are capability-specific: `catalog.list.v1`, `catalog.search.v1`, `catalog.get.v1`, `catalog.refresh.v1`, `package-cache.location.v1`, `package-cache.usage.v1`, `package-cache.delete.v1`, and `package-cache.clear.v1`. `package-cache.location.v1` returns only the resolved cache root; `package-cache.usage.v1` returns that root, total bytes, package count, and bounded package metadata. Each route accepts and returns a typed JSON envelope. Unknown or malformed payloads return the stable bridge invalid-request error before service execution.
+Bridge routes are capability-specific: `catalog.list.v1`, `catalog.search.v1`, `catalog.get.v1`, `catalog.refresh.v1`, `package-cache.location.v1`, `package-cache.usage.v1`, `package-cache.delete.v1`, and `package-cache.clear.v1`. Location and usage use a pure canonical root resolver that never creates directories, enumerates files, or writes settings. Usage streams all eligible files to calculate totals, retains only the first 1,000 display entries, and returns `HasMoreEntries`. Each entry receives an HMAC capability token bound to canonical root identity, normalized relative path, length, last-write time, and a 15-minute expiry. The signing key is generated once per user, stored in the product settings root protected to the current Windows user, and loaded by every bridge process; it is never returned or logged. Deletion verifies HMAC, expiry, current root, current identity, containment, and no reparse-point escape immediately before delete; forged, expired, and stale tokens fail with stable sanitized `PackageCache.EntryInvalid`. A normal module/bridge restart does not invalidate an otherwise-current token. Clear streams every eligible file without materializing an unbounded list and returns per-file partial outcome totals. Each route accepts and returns a typed JSON envelope. Unknown or malformed payloads return the stable bridge invalid-request error before service execution.
 
 The consumer migration matrix is fixed: Package Manager list/search/refresh/get routes use catalog reads; its legacy URL-only custom-source submission validates the URI, derives the source name from its DNS host, uses an empty description and `IsActive=true`, calls `Add-DistroNexusCatalogSource`, then explicitly calls `Update-DistroNexusCatalog`. Duplicate URLs are rejected by the existing source contract; identical derived names are allowed. Cache path/usage/delete/clear use package-cache routes; Settings uses cache usage/delete/clear only; installation wizard, workflow wizard, and SelectDistribution step use catalog list/get only. PackageManager download destination uses the typed package-cache location result but retains no permission to create or mutate that directory. Main download task state remains outside this matrix until FR-107.
 
@@ -55,13 +56,13 @@ Catalog cache writes serialize a complete validated package set to a temporary f
 
 Cold read precedence is deterministic: first a completed in-memory snapshot, then a durable validated cache, then the bundled `config/catalog.json` fallback, then a typed `Catalog.NotAvailable` empty result. Read operations never fetch the network. Package results include only the modeled package fields already returned by `Get-DistroNexusPackage`; refresh returns `Succeeded`, nullable `SourceId`, `CacheState` (`Updated`, `Preserved`, or `Unavailable`), and a sanitized diagnostic code. Success has `Updated` and a non-null source; a failed refresh with prior cache has `Preserved`; a failed first refresh has `Unavailable` and null source. Queries are limited to 256 characters, source URLs to 2,048 characters, source fetches to 10 seconds and 10 MiB, and parsed package collections to 10,000 records.
 
-Package cache root resolution uses the modeled settings path or the existing product default. Every candidate file is resolved and verified as a child of the cache root before deletion. Clear enumerates bounded files beneath that root, checks cancellation between files, reports successes/failures deterministically, and updates package cache-state projections only for successfully affected files.
+Package cache root resolution uses the modeled settings path or the existing product default. Every candidate file is resolved and verified as a child of the cache root before deletion. A cache-entry identifier is not a path authority: Core rejects malformed, stale, forged, absolute, or traversal-bearing identifiers before filesystem mutation. Clear enumerates bounded files beneath that root, checks cancellation between files, reports successes/failures deterministically, and updates package cache-state projections only for successfully affected files.
 
 Concurrent refreshes serialize cache replacement for one process. Read operations may use the last completed in-memory snapshot while a refresh is in progress. A cancelled or failed refresh does not invalidate a previously completed snapshot.
 
 ## Security and Operations
 
-Only `http` or `https` catalog source URIs are accepted; source fetches use bounded timeout and response size. Parsed package identifiers and downloadable URLs are treated as untrusted data and are validated before cache status projection. No public error exposes credentials, authorization headers, or unredacted filesystem paths.
+Catalog refresh validates every persisted source, legacy `CatalogUrl`, and one-call override before any HTTP: absolute `http`/`https` URI, nonempty host, no userinfo, length at most 2,048, and no fragment. Fetches use a 10-second timeout, 10 MiB response cap, and redirects disabled. Invalid sources are reported as sanitized validation failures and skipped without HTTP while later priority sources remain eligible. Parsed package identifiers and downloadable URLs are treated as untrusted data and are validated before cache status projection. No public error exposes credentials, authorization headers, or unredacted filesystem paths.
 
 Repository verification cannot prove remote-source behavior, proxy/TLS policy, or real user cache recovery. These remain explicit release/UAT evidence, not a substitute for deterministic native tests.
 
