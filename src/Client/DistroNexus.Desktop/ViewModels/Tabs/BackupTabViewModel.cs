@@ -22,9 +22,7 @@ public enum BackupHistoryFilter { All, Scheduled, RecoveryPoints, Failures }
 public partial class BackupTabViewModel : ObservableObject
 {
     private readonly WslInstanceViewModel _instance;
-    private readonly IBackupService _backupService;
     private readonly IDialogService _dialogService;
-    private readonly IRecoveryPointService _recoveryService;
     private readonly IPowerShellModuleClient _moduleClient;
 
     private bool _initialized;
@@ -124,13 +122,10 @@ public partial class BackupTabViewModel : ObservableObject
 
     public BackupTabViewModel(
         WslInstanceViewModel instance,
-        IBackupService backupService,
-        IDialogService dialogService, IRecoveryPointService recoveryService, IPowerShellModuleClient moduleClient)
+        IDialogService dialogService, IPowerShellModuleClient moduleClient)
     {
         _instance = instance ?? throw new ArgumentNullException(nameof(instance));
-        _backupService = backupService ?? throw new ArgumentNullException(nameof(backupService));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
-        _recoveryService = recoveryService ?? throw new ArgumentNullException(nameof(recoveryService));
         _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
     }
 
@@ -145,24 +140,14 @@ public partial class BackupTabViewModel : ObservableObject
         _instance.IsBusy = true;
         try
         {
-            var schedules = await _backupService.GetSchedulesAsync();
-            var schedule = schedules.FirstOrDefault(s =>
-                string.Equals(s.Name, _instance.Name, StringComparison.OrdinalIgnoreCase));
-
-            if (schedule is not null)
-            {
-                HasSchedule = true;
-                ParseFrequency(schedule.Frequency);
-                BackupTimeText = $"{schedule.Time.Hours:D2}:{schedule.Time.Minutes:D2}";
-                DestinationPath = schedule.Destination;
-                RetentionCount = schedule.RetentionCount;
-
-            }
+            var schedules = await _moduleClient.GetBackupSchedulesAsync();
+            var schedule = schedules.FirstOrDefault(s => string.Equals(s.Name, _instance.Name, StringComparison.OrdinalIgnoreCase));
+            if (schedule is not null) { HasSchedule = true; ParseFrequency(schedule.Frequency); BackupTimeText = $"{schedule.Time.Hours:D2}:{schedule.Time.Minutes:D2}"; DestinationPath = schedule.Destination; RetentionCount = schedule.RetentionCount; }
             // History and recovery records are independent of an optional schedule or its
             // destination. A removed schedule must not hide manual recovery evidence.
             await LoadBackupHistoryAsync();
             await LoadRecoveryPointsAsync();
-            RecoveryRetention = await _recoveryService.GetRetentionAsync(_instance.Name) ?? RecoveryRetention;
+            RecoveryRetention = await _moduleClient.GetRecoveryRetentionAsync(_instance.Name) ?? RecoveryRetention;
             await RefreshVhdxCapabilityAsync();
         }
         catch (Exception ex)
@@ -210,7 +195,7 @@ public partial class BackupTabViewModel : ObservableObject
         _instance.IsBusy = true;
         try
         {
-            await _backupService.SaveScheduleAsync(schedule);
+            await _moduleClient.SaveBackupScheduleAsync(schedule);
             HasSchedule = true;
             await _dialogService.ShowAlertAsync(
                 Properties.Resources.SuccessTitle,
@@ -242,7 +227,7 @@ public partial class BackupTabViewModel : ObservableObject
         _instance.IsBusy = true;
         try
         {
-            await _backupService.RemoveScheduleAsync(_instance.Name);
+            await _moduleClient.RemoveBackupScheduleAsync(_instance.Name);
             HasSchedule = false;
             await _dialogService.ShowAlertAsync(
                 Properties.Resources.SuccessTitle,
@@ -277,10 +262,7 @@ public partial class BackupTabViewModel : ObservableObject
         OnPropertyChanged(nameof(IsFormEnabled));
         try
         {
-            await _backupService.InvokeBackupAsync(
-                _instance.Name,
-                DestinationPath,
-                RetentionCount);
+            await _moduleClient.InvokeBackupAsync(_instance.Name, DestinationPath, RetentionCount);
 
             await _dialogService.ShowAlertAsync(
                 Properties.Resources.SuccessTitle,
@@ -310,10 +292,10 @@ public partial class BackupTabViewModel : ObservableObject
         try
         {
             var request = new RecoveryPointCreateRequest(_instance.Name, RecoveryName, DestinationPath, RecoveryFormat, RecoveryDescription, ParseTags(), StopAndRestartForRecovery);
-            var preview = await _recoveryService.PreviewCreateAsync(request, operation.Token);
+            var preview = await _moduleClient.GetRecoveryCreatePreviewAsync(request, operation.Token);
             var warning = preview.Warnings.Count == 0 ? "" : "\n\n" + string.Join("\n", preview.Warnings);
             if (!await _dialogService.ShowConfirmAsync(L("Recovery_CreateTitle"), L("Recovery_CreateConfirm") + warning)) return;
-            await _recoveryService.CreateAsync(request, preview.Token, operation.Token, RecoveryProgress());
+            await _moduleClient.CreateRecoveryPointAsync(preview, request, operation.Token);
             await LoadRecoveryPointsAsync(); await LoadBackupHistoryAsync();
         }
         catch (Exception ex) { await ShowRecoveryErrorAsync(ex); }
@@ -324,7 +306,7 @@ public partial class BackupTabViewModel : ObservableObject
     private async Task VerifyRecoveryPointAsync()
     {
         if (SelectedRecoveryPoint is null) return;
-        var result = await _recoveryService.VerifyAsync(SelectedRecoveryPoint.Manifest.Id);
+        var result = await _moduleClient.VerifyRecoveryPointAsync(SelectedRecoveryPoint.Manifest.Id);
         await _dialogService.ShowAlertAsync(L("Recovery_VerifyTitle"), result.ToString());
         await LoadRecoveryPointsAsync();
     }
@@ -333,10 +315,10 @@ public partial class BackupTabViewModel : ObservableObject
     private async Task DeleteRecoveryPointAsync()
     {
         if (SelectedRecoveryPoint is null) return;
-        var preview = await _recoveryService.PreviewDeleteAsync(SelectedRecoveryPoint.Manifest.Id);
+        var preview = await _moduleClient.GetRecoveryRemovePreviewAsync(SelectedRecoveryPoint.Manifest.Id);
         var confirmation = string.Join(Environment.NewLine, [L("Recovery_DeleteConfirm"), .. preview.Warnings]);
         if (!await _dialogService.ShowConfirmAsync(L("Recovery_DeleteTitle"), confirmation)) return;
-        await _recoveryService.DeleteAsync(SelectedRecoveryPoint.Manifest.Id, preview.Token); await LoadRecoveryPointsAsync(); await LoadBackupHistoryAsync();
+        await _moduleClient.RemoveRecoveryPointAsync(preview, SelectedRecoveryPoint.Manifest.Id); await LoadRecoveryPointsAsync(); await LoadBackupHistoryAsync();
     }
 
     [RelayCommand]
@@ -348,9 +330,9 @@ public partial class BackupTabViewModel : ObservableObject
         try
         {
             var request = new RecoveryRestoreRequest(SelectedRecoveryPoint.Manifest.Id, RecoveryTargetInstance.Trim(), RecoveryImportInPlace ? "" : RecoveryTargetDirectory.Trim(), true, RecoveryImportInPlace);
-            var preview = await _recoveryService.PreviewRestoreAsync(request, operation.Token);
+            var preview = await _moduleClient.GetRecoveryRestorePreviewAsync(request, operation.Token);
             if (!await _dialogService.ShowConfirmAsync(L("Recovery_RestoreTitle"), string.Join("\n", preview.Warnings))) return;
-            await _recoveryService.RestoreAsync(request, preview.Token, operation.Token, RecoveryProgress());
+            await _moduleClient.RestoreRecoveryPointAsync(preview, request, operation.Token);
             await _dialogService.ShowAlertAsync(Properties.Resources.SuccessTitle, L("Recovery_RestoreComplete"));
         }
         catch (Exception ex) { await ShowRecoveryErrorAsync(ex); }
@@ -366,9 +348,9 @@ public partial class BackupTabViewModel : ObservableObject
         try
         {
             var request = new RecoveryCloneRequest(new(_instance.Name, RecoveryName, DestinationPath, RecoveryFormat, RecoveryDescription, ParseTags(), StopAndRestartForRecovery), RecoveryTargetInstance.Trim(), RecoveryImportInPlace ? "" : RecoveryTargetDirectory.Trim(), RecoveryImportInPlace);
-            var preview = await _recoveryService.PreviewCloneAsync(request, operation.Token);
+            var preview = await _moduleClient.GetRecoveryClonePreviewAsync(request, operation.Token);
             if (!await _dialogService.ShowConfirmAsync(L("Recovery_CloneTitle"), string.Join("\n", preview.Warnings))) return;
-            await _recoveryService.RestoreCloneAsync(request, preview.Token, operation.Token, RecoveryProgress());
+            await _moduleClient.CloneRecoveryPointAsync(preview, request, operation.Token);
             await LoadRecoveryPointsAsync(); await LoadBackupHistoryAsync();
         }
         catch (Exception ex) { await ShowRecoveryErrorAsync(ex); }
@@ -379,7 +361,9 @@ public partial class BackupTabViewModel : ObservableObject
     private async Task SaveRecoveryNotesAsync()
     {
         if (SelectedRecoveryPoint is null) return;
-        await _recoveryService.UpdateNotesAsync(SelectedRecoveryPoint.Manifest.Id, RecoveryDescription, ParseTags(), RecoveryPinned);
+        var preview = await _moduleClient.PreviewRecoveryPointNotesAsync(SelectedRecoveryPoint.Manifest.Id, RecoveryDescription, ParseTags(), RecoveryPinned);
+        if (!await _dialogService.ShowConfirmAsync(L("Recovery_Title"), string.Join("\n", preview.Warnings))) return;
+        await _moduleClient.ExecuteRecoveryPointNotesAsync(preview.Token);
         await LoadRecoveryPointsAsync();
     }
 
@@ -387,7 +371,7 @@ public partial class BackupTabViewModel : ObservableObject
     private async Task ApplyRecoveryRetentionAsync()
     {
         if (RecoveryRetention < 1) RecoveryRetention = 1;
-        await _recoveryService.ApplyRetentionAsync(_instance.Name, RecoveryRetention);
+        { var preview = await _moduleClient.GetRecoveryRetentionPreviewAsync(_instance.Name, RecoveryRetention); await _moduleClient.SetRecoveryRetentionAsync(preview); }
         await LoadRecoveryPointsAsync(); await LoadBackupHistoryAsync();
     }
 
@@ -512,7 +496,7 @@ public partial class BackupTabViewModel : ObservableObject
     {
         try
         {
-            var entries = (await _recoveryService.GetHistoryAsync())
+            var entries = (await _moduleClient.GetRecoveryHistoryAsync())
                 .Where(x => string.Equals(x.InstanceName, _instance.Name, StringComparison.OrdinalIgnoreCase))
                 .Select(x => new BackupHistoryEntry { Timestamp = x.CreatedAt, FilePath = x.Location ?? string.Empty,
                     ErrorMessage = x.Kind == "RecoveryPoint" ? L("Recovery_HistoryPoint") : x.Kind == "ScheduledBackup" ? L("Recovery_HistoryScheduled") : x.Status == "Failed" ? L("BackupTab_StatusFailed") : string.Empty,
@@ -541,14 +525,14 @@ public partial class BackupTabViewModel : ObservableObject
 
     private async Task LoadRecoveryPointsAsync()
     {
-        RecoveryPoints = new ObservableCollection<RecoveryPointSummary>((await _recoveryService.ListAsync()).Where(x => string.Equals(x.Manifest.SourceInstance, _instance.Name, StringComparison.OrdinalIgnoreCase)));
+        RecoveryPoints = new ObservableCollection<RecoveryPointSummary>((await _moduleClient.GetRecoveryPointsAsync()).Where(x => string.Equals(x.Manifest.SourceInstance, _instance.Name, StringComparison.OrdinalIgnoreCase)));
     }
     private async Task RefreshVhdxCapabilityAsync()
     {
         if (string.IsNullOrWhiteSpace(DestinationPath)) { DisableVhdxRecoveryOptions(); return; }
         try
         {
-            await _recoveryService.PreviewCreateAsync(new RecoveryPointCreateRequest(_instance.Name, "capability-probe", DestinationPath, RecoveryPointFormat.Vhdx));
+            await _moduleClient.GetRecoveryCreatePreviewAsync(new RecoveryPointCreateRequest(_instance.Name, "capability-probe", DestinationPath, RecoveryPointFormat.Vhdx));
             CanUseVhdx = true;
         }
         catch { DisableVhdxRecoveryOptions(); }

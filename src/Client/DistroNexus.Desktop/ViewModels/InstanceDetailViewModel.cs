@@ -37,8 +37,6 @@ public partial class InstanceDetailViewModel : ObservableObject, IAsyncDisposabl
         WslInstanceViewModel instance,
         IWslManagerService wslManager,
         INetworkService networkService,
-        IBackupService backupService,
-        IRecoveryPointService recoveryPointService,
         IWslConfigService wslConfigService,
         IDialogService dialogService,
         IDistributionConfigurationService distributionConfigurationService,
@@ -57,7 +55,7 @@ public partial class InstanceDetailViewModel : ObservableObject, IAsyncDisposabl
         ResourcesTab = new ResourcesTabViewModel(instance, powerShellModuleClient ?? throw new ArgumentNullException(nameof(powerShellModuleClient)), dialogService);
         IntegrationsTab = new IntegrationsTabViewModel(instance, dialogService, powerShellModuleClient ?? throw new ArgumentNullException(nameof(powerShellModuleClient)));
         NetworkTab = new NetworkTabViewModel(instance, dialogService, powerShellModuleClient ?? throw new ArgumentNullException(nameof(powerShellModuleClient)));
-        BackupTab = new BackupTabViewModel(instance, backupService, dialogService, recoveryPointService, powerShellModuleClient ?? throw new ArgumentNullException(nameof(powerShellModuleClient)));
+        BackupTab = new BackupTabViewModel(instance, dialogService, powerShellModuleClient ?? throw new ArgumentNullException(nameof(powerShellModuleClient)));
         ConfigurationTab = new ConfigurationTabViewModel(instance, distributionConfigurationService, powerShellModuleClient ?? throw new ArgumentNullException(nameof(powerShellModuleClient)), dialogService);
         ServicesTab = new ServicesTabViewModel(instance, powerShellModuleClient ?? throw new ArgumentNullException(nameof(powerShellModuleClient)), dialogService);
         MonitorTab = new MonitorTabViewModel(instance, powerShellModuleClient ?? throw new ArgumentNullException(nameof(powerShellModuleClient)), dialogService);

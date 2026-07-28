@@ -550,6 +550,26 @@ public sealed class WorkspaceBridgeProtocolTests
     }
 
     [Fact]
+    public async Task RecoveryNotesRoutes_AcceptOnlyCanonicalPreviewPayloadAndTokenOnlyExecution()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        var legacyMutable = await bridge.SendAsync("recovery.notes.v1", payload: JsonDocument.Parse("""{"Id":"11111111-1111-1111-1111-111111111111","Description":"forged","Tags":["admin"],"Pinned":true}""").RootElement.Clone());
+        var previewWithAuthority = await bridge.SendAsync("recovery.notes.preview.v1", payload: JsonDocument.Parse("""{"Id":"11111111-1111-1111-1111-111111111111","Description":"note","Tags":[],"Pinned":false,"Path":"C:\\secret"}""").RootElement.Clone());
+        var executeWithNotes = await bridge.SendAsync("recovery.notes.execute.v1", payload: JsonDocument.Parse("""{"PreviewToken":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","Description":"forged"}""").RootElement.Clone());
+        var forgedToken = await bridge.SendAsync("recovery.notes.execute.v1", payload: JsonDocument.Parse("""{"PreviewToken":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}""").RootElement.Clone());
+
+        Assert.False(legacyMutable.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("Workspace.Bridge.Invalid", legacyMutable.GetProperty("ErrorCode").GetString());
+        Assert.Equal(JsonValueKind.Null, legacyMutable.GetProperty("Value").ValueKind);
+        Assert.False(previewWithAuthority.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("Workspace.Bridge.Invalid", previewWithAuthority.GetProperty("ErrorCode").GetString());
+        Assert.False(executeWithNotes.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("Workspace.Bridge.Invalid", executeWithNotes.GetProperty("ErrorCode").GetString());
+        Assert.False(forgedToken.GetProperty("Succeeded").GetBoolean());
+        Assert.DoesNotContain("secret", previewWithAuthority.GetProperty("ErrorMessage").GetString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task WslgRoutes_RejectUnknownPayloadsAndReturnRedactedGrantCodes()
     {
         await using var bridge = await BridgeProcess.StartAsync();

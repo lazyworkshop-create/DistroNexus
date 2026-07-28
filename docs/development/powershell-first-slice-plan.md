@@ -12,7 +12,7 @@
 
 ## Dependency Order
 
-S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S18 -> S19 -> S20 -> S21 -> S22 -> S23 -> S24 -> {S25 blocked, S26 -> S27 -> S28 -> S29 -> S30 -> S31 -> S32 -> S33} -> S06 -> S07 -> S08
+S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S18 -> S19 -> S20 -> S21 -> S22 -> S23 -> S24 -> {S25 blocked, S26 -> S27 -> S28 -> S29 -> S30 -> S31 -> S32 -> S33 -> S34} -> S06 -> S07 -> S08
 
 ## Slice S01: Verified module contract and migration baseline
 
@@ -1800,6 +1800,66 @@ One accepted global WSL configuration module and presentation-client migration s
 ### Out of Scope
 
 Real WSL restart/UAT, per-distribution configuration, arbitrary configuration documents, and all other remaining product families.
+
+## Slice S34: Backup and recovery module migration
+
+### Status
+
+Committed
+
+### Objective
+
+Make module contracts the only product path for backup schedules, reviewed backup/recovery actions, history and pending backup notifications.
+
+### Sources
+
+Requirements FR-001, FR-003 through FR-007 and FR-004B; Backup and recovery durable execution contract amendment; backup/recovery evidence inventory.
+
+### Dependencies
+
+S33
+
+### Allowed Paths
+
+Requirements/design/plan; narrow backup/recovery/pending-notification Core contracts and durable grants; WorkspaceBridge; backup/recovery public commands and manifest; typed module client; `MainViewModel`, `WslInstanceViewModel`, `InstanceDetailViewModel`, `BackupTabViewModel`; focused tests.
+
+### Excluded Paths
+
+Instance lifecycle/import/export, disk/USB/network/templates/catalog/workspaces, arbitrary file/path APIs, Explorer reveal behavior, release/publishing and runtime backup/restore/WSL mutation.
+
+### Contract and Documentation
+
+Define fixed read/preview/execute routes for schedules, manual backup, recovery lifecycle/retention and notification consume. Execute accepts only PreviewToken; public results are path-free.
+
+### Implementation Scope
+
+Replace in-memory recovery previews with durable protected grants, preserve Core path/reservation/journal safeguards, constrain archive retention to Core-owned instance archives, and remove direct WPF service/state-file access.
+
+### Test Scope
+
+Cover strict payloads, consent, fresh-process grants, tamper/SID/expiry/replay/drift/parallel/capacity, path ownership and cross-instance retention safety, typed-client and WPF routing, notification single consume and sanitized failures.
+
+### Acceptance Criteria
+
+- Backup/recovery Desktop consumers contain no direct `IBackupService`, `IRecoveryPointService` or business-state-file operations.
+- Every mutation consumes only a persistent Core-issued token and preserves Core reservation/journal/path checks.
+- Execute/results never accept or expose archive/recovery/state paths; preview may accept only a bounded destination path through the module, with Core as its sole validation and filesystem authority. No caller can cause cross-instance archive deletion.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Backup|FullyQualifiedName~Recovery|FullyQualifiedName~PowerShellModuleClient|FullyQualifiedName~WorkspaceBridgeProtocol"
+pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Unit
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+One accepted backup and recovery module/presentation-client migration slice.
+
+### Out of Scope
+
+Real backup/restore/clone UAT and all non-backup lifecycle capabilities.
 
 ## Slice S06: Platform-integrated command parity
 

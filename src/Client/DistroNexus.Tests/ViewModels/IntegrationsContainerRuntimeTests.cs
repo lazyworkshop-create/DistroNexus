@@ -150,7 +150,7 @@ public sealed class IntegrationsContainerRuntimeTests
     private static ContainerRuntimeSnapshot Empty() => new([new(ContainerRuntimeKind.PodmanWsl, ContainerRuntimeAvailability.Available, "1", null, "socket=inactive;service=inactive", "healthy", "reachable")], new Dictionary<ContainerRuntimeKind, IReadOnlyList<ContainerSummary>>(), new Dictionary<ContainerRuntimeKind, IReadOnlyList<ImageSummary>>(), new Dictionary<ContainerRuntimeKind, IReadOnlyList<ComposeProjectSummary>>(), new Dictionary<ContainerRuntimeKind, string>());
     private static IntegrationsTabViewModel New(IPowerShellModuleClient client, IDialogService dialogs)
     {
-        var instance = new WslInstanceViewModel(new WslInstance { Name = "Ubuntu", State = "Running", Version = 2 }, Mock.Of<IWslManagerService>(), Mock.Of<ILogger>(), Mock.Of<IPowerShellModuleClient>(), Mock.Of<IBackupService>(), Mock.Of<IServiceProvider>());
+        var instance = new WslInstanceViewModel(new WslInstance { Name = "Ubuntu", State = "Running", Version = 2 }, Mock.Of<IWslManagerService>(), Mock.Of<ILogger>(), Mock.Of<IPowerShellModuleClient>(), Mock.Of<IServiceProvider>());
         return new IntegrationsTabViewModel(instance, dialogs, client);
     }
 }

@@ -33,7 +33,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private readonly ILogger<MainViewModel> _logger;
     private readonly IWslEventWatcher _wslEventWatcher;
     private readonly IPowerShellModuleClient _moduleClient;
-    private readonly IBackupService _backupService;
     private readonly IDialogService _dialogService;
 
     [ObservableProperty]
@@ -108,7 +107,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
         ILogger<MainViewModel> logger,
         IWslEventWatcher wslEventWatcher,
         IPowerShellModuleClient moduleClient,
-        IBackupService backupService,
         IDialogService dialogService)
     {
         _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
@@ -118,7 +116,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _wslEventWatcher = wslEventWatcher ?? throw new ArgumentNullException(nameof(wslEventWatcher));
         _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
-        _backupService = backupService ?? throw new ArgumentNullException(nameof(backupService));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
 
         // ICollectionView for filtering/grouping (Design Review #4)
@@ -152,44 +149,21 @@ public partial class MainViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Reads and displays any backup failure notifications persisted by backup-runner.ps1 (E-04-1).
+    /// Reads and displays pending backup failure notifications through the typed module route.
     /// Deletes the notification file after displaying to prevent repeat display.
     /// </summary>
     private async Task ShowPendingBackupNotificationsAsync()
     {
-        var notifPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "DistroNexus", "pending-notifications.json");
-        if (!File.Exists(notifPath))
-            return;
-
         try
         {
-            var json = await File.ReadAllTextAsync(notifPath);
-            var doc = System.Text.Json.JsonDocument.Parse(json);
-            if (!doc.RootElement.TryGetProperty("notifications", out var notifs))
+            foreach (var notification in await _moduleClient.ConsumeBackupNotificationsAsync())
             {
-                // corrupt or unexpected file format — still deleted by finally
-                return;
-            }
-            foreach (var n in notifs.EnumerateArray())
-            {
-                var msg = n.TryGetProperty("message", out var msgEl) ? msgEl.GetString() : "Unknown error";
-                var inst = n.TryGetProperty("instance", out var instEl) ? instEl.GetString() : "Unknown instance";
-                await ShowAlert(Properties.Resources.TitleBackupFailure, string.Format(Properties.Resources.ErrorBackupFailedForInstance, inst, msg));
+                await ShowAlert(Properties.Resources.TitleBackupFailure, string.Format(Properties.Resources.ErrorBackupFailedForInstance, notification.InstanceName, notification.Message));
             }
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to read or display pending backup notifications");
-        }
-        finally
-        {
-            try { File.Delete(notifPath); }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to delete pending-notifications.json after display");
-            }
         }
     }
 
@@ -286,7 +260,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 Instances.Clear();
                 foreach (var instance in instances)
                 {
-                    var vm = new WslInstanceViewModel(instance, _wslManager, _logger, _moduleClient, _backupService, _serviceProvider);
+                    var vm = new WslInstanceViewModel(instance, _wslManager, _logger, _moduleClient, _serviceProvider);
                     vm.RefreshRequested += (s, e) => _ = RefreshAsync();
                     vm.TagsChanged += (s, e) => _ = RefreshAvailableTagsAsync();
                     Instances.Add(vm);

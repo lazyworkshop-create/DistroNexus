@@ -17,7 +17,7 @@ function Get-DistroNexusRecoveryPointCreatePreview {
 function New-DistroNexusRecoveryPoint {
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact='High')]
     param([Parameter(Mandatory, ValueFromPipeline)][psobject]$Preview, [Parameter(Mandatory)][psobject]$Request)
-    process { if (-not $Preview.Token) { throw 'A current Core-issued recovery preview is required.' }; if (-not $PSCmdlet.ShouldProcess($Request.SourceInstance, 'Create recovery point')) { return [pscustomobject]@{ Succeeded=$false; OutcomeCode='WhatIf' } }; Invoke-DistroNexusWorkspaceBridge -Operation 'recovery.create.v1' -Token $Preview.Token -Payload @{ Request=$Request } }
+    process { if (-not $Preview.Token) { throw 'A current Core-issued recovery preview is required.' }; if (-not $PSCmdlet.ShouldProcess($Request.SourceInstance, 'Create recovery point')) { return [pscustomobject]@{ Succeeded=$false; OutcomeCode='WhatIf' } }; Invoke-DistroNexusWorkspaceBridge -Operation 'recovery.create.v1' -Payload @{ PreviewToken=$Preview.Token } }
 }
 function Get-DistroNexusRecoveryPointRestorePreview {
     [CmdletBinding()]
@@ -27,7 +27,7 @@ function Get-DistroNexusRecoveryPointRestorePreview {
 function Restore-DistroNexusRecoveryPoint {
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact='High')]
     param([Parameter(Mandatory, ValueFromPipeline)][psobject]$Preview, [Parameter(Mandatory)][psobject]$Request)
-    process { if (-not $Preview.Token) { throw 'A current Core-issued recovery preview is required.' }; if (-not $PSCmdlet.ShouldProcess($Request.TargetInstance, 'Restore recovery point')) { return [pscustomobject]@{ Succeeded=$false; OutcomeCode='WhatIf' } }; Invoke-DistroNexusWorkspaceBridge -Operation 'recovery.restore.v1' -Token $Preview.Token -Payload @{ Request=$Request } }
+    process { if (-not $Preview.Token) { throw 'A current Core-issued recovery preview is required.' }; if (-not $PSCmdlet.ShouldProcess($Request.TargetInstance, 'Restore recovery point')) { return [pscustomobject]@{ Succeeded=$false; OutcomeCode='WhatIf' } }; Invoke-DistroNexusWorkspaceBridge -Operation 'recovery.restore.v1' -Payload @{ PreviewToken=$Preview.Token } }
 }
 function Get-DistroNexusRecoveryPointRemovePreview {
     [CmdletBinding()]
@@ -40,7 +40,7 @@ function Remove-DistroNexusRecoveryPoint {
     if (-not $Preview) { $Preview = Get-DistroNexusRecoveryPointRemovePreview -Id $Id }
     if (-not $Preview.Token) { throw 'A current Core-issued recovery deletion preview is required.' }
     if (-not $PSCmdlet.ShouldProcess($Id, 'Remove recovery point')) { return $Preview }
-    Invoke-DistroNexusWorkspaceBridge -Operation 'recovery.remove.v1' -Id $Id -Token $Preview.Token
+    Invoke-DistroNexusWorkspaceBridge -Operation 'recovery.remove.v1' -Payload @{ PreviewToken=$Preview.Token }
 }
 
 function Get-DistroNexusRecoveryPointHistory {
@@ -59,7 +59,7 @@ function Set-DistroNexusRecoveryPointRetention {
     param([Parameter(Mandatory)][ValidatePattern('^[^\r\n\0]+$')][string]$Name, [Parameter(Mandatory)][ValidateRange(1, 1000)][int]$Maximum, [Parameter(Mandatory)][psobject]$Preview)
     if (-not $Preview.Token -or $Preview.SourceInstance -ne $Name -or $Preview.Maximum -ne $Maximum) { throw 'A current Core-issued recovery retention preview is required.' }
     if (-not $PSCmdlet.ShouldProcess($Name, "Set recovery retention to $Maximum")) { return [pscustomobject]@{ Succeeded=$false; OutcomeCode='WhatIf' } }
-    Invoke-DistroNexusWorkspaceBridge -Operation 'recovery.retention.set.v1' -Token $Preview.Token -Payload @{ SourceInstance = $Name; Maximum = $Maximum }
+    Invoke-DistroNexusWorkspaceBridge -Operation 'recovery.retention.set.v1' -Payload @{ PreviewToken = $Preview.Token }
 }
 function Get-DistroNexusRecoveryPointRetentionPreview {
     [CmdletBinding()]
@@ -68,17 +68,23 @@ function Get-DistroNexusRecoveryPointRetentionPreview {
 }
 function Set-DistroNexusRecoveryPointMetadata {
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact='High')]
-    param([Parameter(Mandatory)][guid]$Id, [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$Description, [string[]]$Tag = @(), [switch]$Pinned)
-    if (-not $PSCmdlet.ShouldProcess($Id, 'Update recovery point metadata')) { return [pscustomobject]@{ Succeeded=$false; OutcomeCode='WhatIf' } }
-    Invoke-DistroNexusWorkspaceBridge -Operation 'recovery.notes.v1' -Id $Id -Payload @{ Description = $Description; Tags = @($Tag); Pinned = [bool]$Pinned }
+    param([Parameter(Mandatory)][psobject]$Preview)
+    if (-not $Preview.Token) { throw 'A current Core-issued recovery metadata preview is required.' }
+    if (-not $PSCmdlet.ShouldProcess($Preview.RecoveryPointId, 'Update recovery point metadata')) { return [pscustomobject]@{ Succeeded=$false; OutcomeCode='WhatIf' } }
+    Invoke-DistroNexusWorkspaceBridge -Operation 'recovery.notes.execute.v1' -Payload @{ PreviewToken=$Preview.Token }
+}
+function Get-DistroNexusRecoveryPointMetadataPreview {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][guid]$Id,[Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$Description,[string[]]$Tag=@(),[switch]$Pinned)
+    Invoke-DistroNexusWorkspaceBridge -Operation 'recovery.notes.preview.v1' -Payload @{ Id=$Id; Description=$Description; Tags=@($Tag); Pinned=[bool]$Pinned }
 }
 function Get-DistroNexusRecoveryPointClonePreview {
     [CmdletBinding()]
     param([Parameter(Mandatory)][psobject]$Snapshot, [Parameter(Mandatory)][ValidatePattern('^[^\r\n\0]+$')][string]$TargetInstance, [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$TargetDirectory, [switch]$ImportInPlace)
-    Invoke-DistroNexusWorkspaceBridge -Operation 'recovery.clone.v1' -Payload @{ Request = @{ Snapshot = $Snapshot; TargetInstance = $TargetInstance; TargetDirectory = $TargetDirectory; ImportInPlace = [bool]$ImportInPlace } }
+    Invoke-DistroNexusWorkspaceBridge -Operation 'recovery.preview-clone.v1' -Payload @{ Request = @{ Snapshot = $Snapshot; TargetInstance = $TargetInstance; TargetDirectory = $TargetDirectory; ImportInPlace = [bool]$ImportInPlace } }
 }
 function Copy-DistroNexusRecoveryPoint {
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact='High')]
     param([Parameter(Mandatory, ValueFromPipeline)][psobject]$Preview, [Parameter(Mandatory)][psobject]$Request)
-    process { if (-not $Preview.Token) { throw 'A current Core-issued recovery preview is required.' }; if (-not $PSCmdlet.ShouldProcess($Request.TargetInstance, 'Clone recovery point')) { return [pscustomobject]@{ Succeeded=$false; OutcomeCode='WhatIf' } }; Invoke-DistroNexusWorkspaceBridge -Operation 'recovery.clone.v1' -Token $Preview.Token -Payload @{ Request = $Request } }
+    process { if (-not $Preview.Token) { throw 'A current Core-issued recovery preview is required.' }; if (-not $PSCmdlet.ShouldProcess($Request.TargetInstance, 'Clone recovery point')) { return [pscustomobject]@{ Succeeded=$false; OutcomeCode='WhatIf' } }; Invoke-DistroNexusWorkspaceBridge -Operation 'recovery.clone.v1' -Payload @{ PreviewToken=$Preview.Token } }
 }

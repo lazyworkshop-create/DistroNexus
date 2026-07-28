@@ -65,6 +65,27 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string InvokeSystemdCommand = "Invoke-DistroNexusSystemdService";
     private const string OpenWslConfigFileCommand = "Open-DistroNexusWslConfigFile";
     private const string OpenRecoveryPointFolderCommand = "Open-DistroNexusRecoveryPointFolder";
+    private const string GetBackupSchedulesCommand = "Get-DistroNexusBackupSchedule";
+    private const string NewBackupScheduleCommand = "New-DistroNexusBackupSchedule";
+    private const string RemoveBackupScheduleCommand = "Remove-DistroNexusBackupSchedule";
+    private const string InvokeBackupCommand = "Invoke-DistroNexusBackup";
+    private const string ConsumeBackupNotificationsCommand = "Get-DistroNexusBackupNotification";
+    private const string GetRecoveryPointsCommand = "Get-DistroNexusRecoveryPoint";
+    private const string GetRecoveryHistoryCommand = "Get-DistroNexusRecoveryPointHistory";
+    private const string TestRecoveryPointCommand = "Test-DistroNexusRecoveryPoint";
+    private const string GetRecoveryCreatePreviewCommand = "Get-DistroNexusRecoveryPointCreatePreview";
+    private const string NewRecoveryPointCommand = "New-DistroNexusRecoveryPoint";
+    private const string GetRecoveryRemovePreviewCommand = "Get-DistroNexusRecoveryPointRemovePreview";
+    private const string RemoveRecoveryPointCommand = "Remove-DistroNexusRecoveryPoint";
+    private const string GetRecoveryRetentionCommand = "Get-DistroNexusRecoveryPointRetention";
+    private const string GetRecoveryRetentionPreviewCommand = "Get-DistroNexusRecoveryPointRetentionPreview";
+    private const string SetRecoveryRetentionCommand = "Set-DistroNexusRecoveryPointRetention";
+    private const string GetRecoveryRestorePreviewCommand = "Get-DistroNexusRecoveryPointRestorePreview";
+    private const string RestoreRecoveryPointCommand = "Restore-DistroNexusRecoveryPoint";
+    private const string GetRecoveryClonePreviewCommand = "Get-DistroNexusRecoveryPointClonePreview";
+    private const string CopyRecoveryPointCommand = "Copy-DistroNexusRecoveryPoint";
+    private const string GetRecoveryMetadataPreviewCommand = "Get-DistroNexusRecoveryPointMetadataPreview";
+    private const string SetRecoveryMetadataCommand = "Set-DistroNexusRecoveryPointMetadata";
     private const string GetNetworkStatusCommand = "Get-DistroNexusNetworkStatus";
     private const string GetInstanceIpAddressCommand = "Get-DistroNexusInstanceIpAddress";
     private const string GetPortMappingsCommand = "Get-DistroNexusPortMapping";
@@ -489,6 +510,51 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     public Task<FixedExplorerResult> OpenWslConfigFileAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<FixedExplorerResult>(OpenWslConfigFileCommand, null, cancellationToken);
     public Task<FixedExplorerResult> OpenRecoveryPointFolderAsync(Guid id, CancellationToken cancellationToken = default)
     { if (id == Guid.Empty) throw new ArgumentException("A recovery point id is required.", nameof(id)); return ExecuteJsonAsync<FixedExplorerResult>(OpenRecoveryPointFolderCommand, new() { ["Id"] = id }, cancellationToken); }
+    public Task<IReadOnlyList<BackupSchedule>> GetBackupSchedulesAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<IReadOnlyList<BackupSchedule>>(GetBackupSchedulesCommand, new() { ["AsJson"] = true }, cancellationToken);
+    public async Task SaveBackupScheduleAsync(BackupSchedule schedule, CancellationToken cancellationToken = default)
+    { ArgumentNullException.ThrowIfNull(schedule); ValidateName(schedule.Name, nameof(schedule)); if (schedule.RetentionCount is < 1 or > 30) throw new ArgumentException("The backup schedule is invalid.", nameof(schedule)); await ExecuteJsonAsync<object>(NewBackupScheduleCommand, new() { ["Name"] = schedule.Name, ["Frequency"] = schedule.Frequency, ["RetentionCount"] = schedule.RetentionCount, ["Time"] = schedule.Time, ["Confirm"] = false }, cancellationToken); }
+    public async Task RemoveBackupScheduleAsync(string instanceName, CancellationToken cancellationToken = default)
+    { ValidateName(instanceName, nameof(instanceName)); await ExecuteJsonAsync<object>(RemoveBackupScheduleCommand, new() { ["Name"] = instanceName, ["Confirm"] = false }, cancellationToken); }
+    public async Task InvokeBackupAsync(string instanceName, string destination, int retentionCount, CancellationToken cancellationToken = default)
+    { ValidateName(instanceName, nameof(instanceName)); if (retentionCount is < 1 or > 30) throw new ArgumentException("The backup request is invalid."); await ExecuteJsonAsync<object>(InvokeBackupCommand, new() { ["Name"] = instanceName, ["RetentionCount"] = retentionCount, ["Confirm"] = false }, cancellationToken); }
+    public Task<IReadOnlyList<BackupNotification>> ConsumeBackupNotificationsAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<IReadOnlyList<BackupNotification>>(ConsumeBackupNotificationsCommand, new() { ["AsJson"] = true }, cancellationToken);
+    public Task<IReadOnlyList<RecoveryPointSummary>> GetRecoveryPointsAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<IReadOnlyList<RecoveryPointSummary>>(GetRecoveryPointsCommand, new() { ["AsJson"] = true }, cancellationToken);
+    public Task<IReadOnlyList<RecoveryHistoryEntry>> GetRecoveryHistoryAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<IReadOnlyList<RecoveryHistoryEntry>>(GetRecoveryHistoryCommand, new() { ["AsJson"] = true }, cancellationToken);
+    public Task<RecoveryPointVerification> VerifyRecoveryPointAsync(Guid id, CancellationToken cancellationToken = default)
+    { if (id == Guid.Empty) throw new ArgumentException("A recovery point id is required.", nameof(id)); return ExecuteJsonAsync<RecoveryPointVerification>(TestRecoveryPointCommand, new() { ["Id"] = id }, cancellationToken); }
+    public Task<RecoveryOperationPreview> GetRecoveryCreatePreviewAsync(RecoveryPointCreateRequest request, CancellationToken cancellationToken = default)
+    { ArgumentNullException.ThrowIfNull(request); ValidateName(request.SourceInstance, nameof(request)); return ExecuteJsonAsync<RecoveryOperationPreview>(GetRecoveryCreatePreviewCommand, new() { ["Name"] = request.SourceInstance, ["RecoveryName"] = request.Name, ["DestinationRoot"] = request.DestinationRoot, ["Format"] = request.Format.ToString() }, cancellationToken); }
+    public Task<RecoveryPointSummary> CreateRecoveryPointAsync(RecoveryOperationPreview preview, RecoveryPointCreateRequest request, CancellationToken cancellationToken = default)
+    { ArgumentNullException.ThrowIfNull(preview); ArgumentNullException.ThrowIfNull(request); ValidateRecoveryToken(preview.Token); return ExecuteJsonAsync<RecoveryPointSummary>(NewRecoveryPointCommand, new() { ["Preview"] = preview, ["Request"] = request, ["Confirm"] = false }, cancellationToken); }
+    public Task<RecoveryOperationPreview> GetRecoveryRemovePreviewAsync(Guid id, CancellationToken cancellationToken = default)
+    { if (id == Guid.Empty) throw new ArgumentException("A recovery point id is required.", nameof(id)); return ExecuteJsonAsync<RecoveryOperationPreview>(GetRecoveryRemovePreviewCommand, new() { ["Id"] = id }, cancellationToken); }
+    public async Task RemoveRecoveryPointAsync(RecoveryOperationPreview preview, Guid id, CancellationToken cancellationToken = default)
+    { ArgumentNullException.ThrowIfNull(preview); if (id == Guid.Empty || preview.RecoveryPointId != id) throw new ArgumentException("A matching recovery preview is required."); ValidateRecoveryToken(preview.Token); await ExecuteJsonAsync<object>(RemoveRecoveryPointCommand, new() { ["Id"] = id, ["Preview"] = preview, ["Confirm"] = false }, cancellationToken); }
+    public Task<int?> GetRecoveryRetentionAsync(string instanceName, CancellationToken cancellationToken = default)
+    { ValidateName(instanceName, nameof(instanceName)); return ExecuteJsonAsync<int?>(GetRecoveryRetentionCommand, new() { ["Name"] = instanceName }, cancellationToken); }
+    public Task<RecoveryRetentionPreview> GetRecoveryRetentionPreviewAsync(string instanceName, int maximum, CancellationToken cancellationToken = default)
+    { ValidateName(instanceName, nameof(instanceName)); if (maximum is < 1 or > 1000) throw new ArgumentOutOfRangeException(nameof(maximum)); return ExecuteJsonAsync<RecoveryRetentionPreview>(GetRecoveryRetentionPreviewCommand, new() { ["Name"] = instanceName, ["Maximum"] = maximum }, cancellationToken); }
+    public async Task SetRecoveryRetentionAsync(RecoveryRetentionPreview preview, CancellationToken cancellationToken = default)
+    { ArgumentNullException.ThrowIfNull(preview); ValidateRecoveryToken(preview.Token); await ExecuteJsonAsync<object>(SetRecoveryRetentionCommand, new() { ["Name"] = preview.SourceInstance, ["Maximum"] = preview.Maximum, ["Preview"] = preview, ["Confirm"] = false }, cancellationToken); }
+    public Task<RecoveryOperationPreview> GetRecoveryRestorePreviewAsync(RecoveryRestoreRequest request, CancellationToken cancellationToken = default)
+    { ArgumentNullException.ThrowIfNull(request); ValidateName(request.TargetInstance, nameof(request)); return ExecuteJsonAsync<RecoveryOperationPreview>(GetRecoveryRestorePreviewCommand, new() { ["Id"] = request.RecoveryPointId, ["TargetInstance"] = request.TargetInstance, ["TargetDirectory"] = request.TargetDirectory }, cancellationToken); }
+    public async Task RestoreRecoveryPointAsync(RecoveryOperationPreview preview, RecoveryRestoreRequest request, CancellationToken cancellationToken = default)
+    { ArgumentNullException.ThrowIfNull(preview); ArgumentNullException.ThrowIfNull(request); ValidateRecoveryToken(preview.Token); await ExecuteJsonAsync<object>(RestoreRecoveryPointCommand, new() { ["Preview"] = preview, ["Request"] = request, ["Confirm"] = false }, cancellationToken); }
+    public Task<RecoveryOperationPreview> GetRecoveryClonePreviewAsync(RecoveryCloneRequest request, CancellationToken cancellationToken = default)
+    { ArgumentNullException.ThrowIfNull(request); ValidateName(request.TargetInstance, nameof(request)); return ExecuteJsonAsync<RecoveryOperationPreview>(GetRecoveryClonePreviewCommand, new() { ["Snapshot"] = request.Snapshot, ["TargetInstance"] = request.TargetInstance, ["TargetDirectory"] = request.TargetDirectory, ["ImportInPlace"] = request.ImportInPlace }, cancellationToken); }
+    public async Task CloneRecoveryPointAsync(RecoveryOperationPreview preview, RecoveryCloneRequest request, CancellationToken cancellationToken = default)
+    { ArgumentNullException.ThrowIfNull(preview); ArgumentNullException.ThrowIfNull(request); ValidateRecoveryToken(preview.Token); await ExecuteJsonAsync<object>(CopyRecoveryPointCommand, new() { ["Preview"] = preview, ["Request"] = request, ["Confirm"] = false }, cancellationToken); }
+    public Task<RecoveryOperationPreview> PreviewRecoveryPointNotesAsync(Guid id, string description, IReadOnlyList<string> tags, bool pinned, CancellationToken cancellationToken = default)
+    {
+        if (id == Guid.Empty || description is null || description.Length > 4096 || tags is null || tags.Count > 32 || tags.Any(x => string.IsNullOrWhiteSpace(x) || x.Length > 128))
+            throw new ArgumentException("Recovery metadata is invalid.");
+        return ExecuteJsonAsync<RecoveryOperationPreview>(GetRecoveryMetadataPreviewCommand, new() { ["Id"] = id, ["Description"] = description, ["Tag"] = tags.ToArray(), ["Pinned"] = pinned }, cancellationToken);
+    }
+    public async Task ExecuteRecoveryPointNotesAsync(string previewToken, CancellationToken cancellationToken = default)
+    {
+        ValidateRecoveryToken(previewToken);
+        await ExecuteJsonAsync<object>(SetRecoveryMetadataCommand, new() { ["Preview"] = new { Token = previewToken }, ["Confirm"] = false }, cancellationToken);
+    }
     public Task<HealthScanResult> ScanHealthAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<HealthScanResult>(ScanHealthCommand, new() { ["AsJson"] = true }, cancellationToken);
     public Task<IReadOnlyList<HealthHistoryEntry>> GetHealthHistoryAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<IReadOnlyList<HealthHistoryEntry>>(GetHealthHistoryCommand, new() { ["AsJson"] = true }, cancellationToken);
     public Task<RepairPreview> GetHealthRepairPreviewAsync(HealthFinding finding, CancellationToken cancellationToken = default)
@@ -532,6 +598,10 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private static void ValidateToken(string value, string parameterName)
     {
         if (string.IsNullOrWhiteSpace(value) || value.Length != 64 || value.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("A Core-issued monitoring token is required.", parameterName);
+    }
+    private static void ValidateRecoveryToken(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length != 32 || value.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("A Core-issued recovery preview token is required.", nameof(value));
     }
 
     private static void ValidatePodmanUnitAction(PodmanUserUnit unit, SystemdAction action)

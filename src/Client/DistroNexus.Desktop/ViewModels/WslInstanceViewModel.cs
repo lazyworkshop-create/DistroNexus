@@ -22,7 +22,6 @@ public partial class WslInstanceViewModel : ObservableObject
     private readonly IWslManagerService _wslManager;
     private readonly ILogger _logger;
     private readonly IPowerShellModuleClient _moduleClient;
-    private readonly IBackupService _backupService;
     private readonly IServiceProvider _serviceProvider;
 
     /// <summary>
@@ -106,7 +105,6 @@ public partial class WslInstanceViewModel : ObservableObject
         IWslManagerService wslManager,
         ILogger logger,
         IPowerShellModuleClient moduleClient,
-        IBackupService backupService,
         IServiceProvider serviceProvider)
     {
         _instance = instance;
@@ -114,7 +112,6 @@ public partial class WslInstanceViewModel : ObservableObject
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
-        _backupService = backupService ?? throw new ArgumentNullException(nameof(backupService));
     }
 
     private static string FormatFileSize(long bytes)
@@ -361,12 +358,10 @@ public partial class WslInstanceViewModel : ObservableObject
         var instanceName = Name;
 
         // Check if a backup schedule exists and offer cleanup (P5-4 / D-01-6)
-        string? backupDestination = null;
         bool removeBackupTask = false;
-        bool deleteBackupFiles = false;
         try
         {
-            var schedules = await _backupService.GetSchedulesAsync();
+            var schedules = await _moduleClient.GetBackupSchedulesAsync();
             var schedule = schedules.FirstOrDefault(s =>
                 string.Equals(s.Name, instanceName, StringComparison.OrdinalIgnoreCase));
             if (schedule is not null)
@@ -384,22 +379,12 @@ public partial class WslInstanceViewModel : ObservableObject
                     return;
                 }
 
-                backupDestination = schedule.Destination;
-
                 // Ask whether to clean up Task Scheduler task
                 removeBackupTask = ConfirmDialog.Show(
                     Properties.Resources.ConfirmRemoveTitle,
                     Properties.Resources.Remove_DeleteTask,
                     Properties.Resources.ButtonRemove);
 
-                // Ask whether to delete backup files
-                if (!string.IsNullOrWhiteSpace(backupDestination))
-                {
-                    deleteBackupFiles = ConfirmDialog.Show(
-                        Properties.Resources.ConfirmRemoveTitle,
-                        string.Format(Properties.Resources.Remove_DeleteFiles, backupDestination),
-                        Properties.Resources.ButtonRemove);
-                }
             }
         }
         catch (Exception ex)
@@ -416,31 +401,12 @@ public partial class WslInstanceViewModel : ObservableObject
             {
                 try
                 {
-                    await _backupService.RemoveScheduleAsync(instanceName);
+                    await _moduleClient.RemoveBackupScheduleAsync(instanceName);
                     _logger.LogInformation("Backup schedule removed for instance {Name}", instanceName);
                 }
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "Failed to remove backup schedule for instance {Name}", instanceName);
-                }
-            }
-
-            if (deleteBackupFiles && !string.IsNullOrWhiteSpace(backupDestination)
-                && System.IO.Directory.Exists(backupDestination))
-            {
-                try
-                {
-                    foreach (var file in System.IO.Directory.EnumerateFiles(backupDestination)
-                        .Where(f => f.EndsWith(".tar", StringComparison.OrdinalIgnoreCase)
-                                 || f.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase)))
-                    {
-                        System.IO.File.Delete(file);
-                    }
-                    _logger.LogInformation("Deleted backup files for instance {Name} from {Dest}", instanceName, backupDestination);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to delete backup files for instance {Name}", instanceName);
                 }
             }
 
@@ -697,8 +663,6 @@ public partial class WslInstanceViewModel : ObservableObject
     {
         var wslManager = _serviceProvider.GetRequiredService<IWslManagerService>();
         var networkSvc = _serviceProvider.GetRequiredService<INetworkService>();
-        var backupSvc = _serviceProvider.GetRequiredService<IBackupService>();
-        var recoveryPointSvc = _serviceProvider.GetRequiredService<IRecoveryPointService>();
         var wslConfigSvc = _serviceProvider.GetRequiredService<IWslConfigService>();
         var dialogSvc = _serviceProvider.GetRequiredService<IDialogService>();
         var distributionConfigSvc = _serviceProvider.GetRequiredService<IDistributionConfigurationService>();
@@ -708,7 +672,7 @@ public partial class WslInstanceViewModel : ObservableObject
         var networkConfigurationService = _serviceProvider.GetRequiredService<INetworkConfigurationService>();
         var networkStatusAdapter = _serviceProvider.GetRequiredService<INetworkStatusAdapter>();
         var browserLauncher = _serviceProvider.GetRequiredService<IBrowserLauncher>();
-        var vm = new InstanceDetailViewModel(this, wslManager, networkSvc, backupSvc, recoveryPointSvc, wslConfigSvc, dialogSvc, distributionConfigSvc, systemdService, networkDiagnostics, firewallOperationBroker, networkConfigurationService, networkStatusAdapter, browserLauncher, _moduleClient);
+        var vm = new InstanceDetailViewModel(this, wslManager, networkSvc, wslConfigSvc, dialogSvc, distributionConfigSvc, systemdService, networkDiagnostics, firewallOperationBroker, networkConfigurationService, networkStatusAdapter, browserLauncher, _moduleClient);
         var dialog = new InstanceDetailDialog(vm)
         {
             Owner = Application.Current.MainWindow

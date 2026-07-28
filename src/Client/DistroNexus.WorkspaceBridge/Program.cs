@@ -39,6 +39,20 @@ var catalog = new CatalogService(NullLogger<CatalogService>.Instance, settings, 
 var globalConfiguration = new WslConfigService(NullLogger<WslConfigService>.Instance, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
 var globalConfigurationGateway = new GlobalConfigurationService(globalConfiguration, globalConfiguration, capabilities, Path.Combine(applicationRoot, "global-configuration-grants"));
 var backups = new BackupService(bridgePowerShell, NullLogger<BackupService>.Instance, applicationRoot);
+var fixedBackups = new FixedBackupRuntime(instances, processes, applicationRoot);
+if (args.Length > 0)
+{
+    if (args.Length != 2 || !string.Equals(args[0], "--run-backup-schedule", StringComparison.Ordinal) || args[1].Length != 32 || args[1].Any(c => !Uri.IsHexDigit(c)))
+    {
+        Console.Error.WriteLine("Invalid scheduled backup invocation.");
+        Environment.ExitCode = 2;
+        return;
+    }
+
+    var scheduled = await fixedBackups.RunScheduledAsync(args[1]);
+    Environment.ExitCode = scheduled.Succeeded ? 0 : 1;
+    return;
+}
 var templates = new TemplateService(NullLogger<TemplateService>.Instance, settings, bridgePowerShell, new HttpClient());
 var monitoringWarnings = new MonitoringWarningRegistry();
 var healthRuntime = new HealthRuntimeAdapter(processes, globalConfiguration);
@@ -159,11 +173,20 @@ while ((line = Console.ReadLine()) is not null)
             "recovery.restore.v1" => await RestoreRecoveryV1Async(request),
             "recovery.preview-remove.v1" => await RecoveryPreviewRemoveV1Async(request),
             "recovery.remove.v1" => await RemoveRecoveryV1Async(request),
+            "recovery.preview-clone.v1" => await PreviewRecoveryCloneV1Async(request),
             "recovery.clone.v1" => await CloneRecoveryV1Async(request),
-            "recovery.notes.v1" => await UpdateRecoveryNotesV1Async(request),
+            "recovery.notes.v1" => throw new ArgumentException("The legacy recovery notes operation is not supported."),
+            "recovery.notes.preview.v1" => await PreviewRecoveryNotesV1Async(request),
+            "recovery.notes.execute.v1" => await ExecuteRecoveryNotesV1Async(request),
             "recovery.retention.get.v1" => await GetRecoveryRetentionV1Async(request),
             "recovery.retention.preview.v1" => await PreviewRecoveryRetentionV1Async(request),
             "recovery.retention.set.v1" => await SetRecoveryRetentionV1Async(request),
+            "backup.schedule.list.v1" => await fixedBackups.GetSchedulesAsync(),
+            "backup.schedule.preview.v1" => await PreviewBackupScheduleV1Async(request),
+            "backup.schedule.remove.preview.v1" => await PreviewBackupScheduleRemovalV1Async(request),
+            "backup.manual.preview.v1" => await PreviewManualBackupV1Async(request),
+            "backup.execute.v1" => await ExecuteBackupV1Async(request),
+            "backup.notifications.consume.v1" => await fixedBackups.ConsumeNotificationsAsync(),
             "monitoring.snapshot.v1" => await GetMonitoringSnapshotAsync(request),
             "monitoring.process.preview.v1" => await PreviewMonitoringProcessActionAsync(request),
             "monitoring.process.execute.v1" => await ExecuteMonitoringProcessActionAsync(request),
@@ -653,11 +676,6 @@ async Task<object> CloneRecoveryAsync(BridgeRequest request)
     if (string.IsNullOrWhiteSpace(request.Token)) return await recovery.PreviewCloneAsync(p.Request);
     await recovery.RestoreCloneAsync(p.Request, request.Token); return new { };
 }
-async Task<object> UpdateRecoveryNotesAsync(BridgeRequest request)
-{
-    var p = JsonSerializer.Deserialize<RecoveryNotesPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Recovery metadata payload is required.");
-    await recovery.UpdateNotesAsync(request.Id ?? throw new ArgumentException("Recovery id is required."), p.Description, p.Tags, p.Pinned); return new { };
-}
 async Task<object> GetRecoveryRetentionAsync(BridgeRequest request)
 {
     var p = JsonSerializer.Deserialize<RecoveryRetentionPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Recovery retention payload is required.");
@@ -673,16 +691,23 @@ async Task<IReadOnlyList<RecoveryPointSummary>> RecoveryListV1Async(BridgeReques
 async Task<IReadOnlyList<RecoveryHistoryEntry>> RecoveryHistoryV1Async(BridgeRequest request) { ValidateEmptyPayload(request); return await recovery.GetHistoryAsync(); }
 async Task<RecoveryPointVerification> RecoveryVerifyV1Async(BridgeRequest request) { ValidateEmptyPayload(request); return await recovery.VerifyAsync(request.Id ?? throw new ArgumentException("Recovery id is required.")); }
 async Task<RecoveryOperationPreview> PreviewRecoveryCreateV1Async(BridgeRequest request) { ValidatePayload(request, ["Request"], ["Request"]); return await PreviewRecoveryCreateAsync(request); }
-async Task<RecoveryPointSummary> CreateRecoveryV1Async(BridgeRequest request) { ValidatePayload(request, ["Request"], ["Request"]); return await CreateRecoveryAsync(request); }
+async Task<RecoveryPointSummary> CreateRecoveryV1Async(BridgeRequest request) { ValidatePayload(request, ["PreviewToken"], ["PreviewToken"]); var p = ParsePayload<RecoveryExecutePayload>(request); return (await recovery.ExecutePreviewAsync(p.PreviewToken)) as RecoveryPointSummary ?? throw new InvalidOperationException("Recovery create did not produce a recovery point."); }
 async Task<RecoveryOperationPreview> PreviewRecoveryRestoreV1Async(BridgeRequest request) { ValidatePayload(request, ["Request"], ["Request"]); return await PreviewRecoveryRestoreAsync(request); }
-async Task<object> RestoreRecoveryV1Async(BridgeRequest request) { ValidatePayload(request, ["Request"], ["Request"]); return await RestoreRecoveryAsync(request); }
+async Task<object> RestoreRecoveryV1Async(BridgeRequest request) { ValidatePayload(request, ["PreviewToken"], ["PreviewToken"]); await recovery.ExecutePreviewAsync(ParsePayload<RecoveryExecutePayload>(request).PreviewToken); return new { }; }
 async Task<RecoveryOperationPreview> RecoveryPreviewRemoveV1Async(BridgeRequest request) { ValidateEmptyPayload(request); return await recovery.PreviewDeleteAsync(request.Id ?? throw new ArgumentException("Recovery id is required.")); }
-async Task<object> RemoveRecoveryV1Async(BridgeRequest request) { ValidateEmptyPayload(request); return await RemoveRecoveryAsync(request); }
-async Task<object> CloneRecoveryV1Async(BridgeRequest request) { ValidatePayload(request, ["Request"], ["Request"]); return await CloneRecoveryAsync(request); }
-async Task<object> UpdateRecoveryNotesV1Async(BridgeRequest request) { ValidatePayload(request, ["Description", "Tags", "Pinned"], ["Description", "Tags", "Pinned"]); return await UpdateRecoveryNotesAsync(request); }
+async Task<object> RemoveRecoveryV1Async(BridgeRequest request) { ValidatePayload(request, ["PreviewToken"], ["PreviewToken"]); await recovery.ExecutePreviewAsync(ParsePayload<RecoveryExecutePayload>(request).PreviewToken); return new { }; }
+async Task<RecoveryOperationPreview> PreviewRecoveryCloneV1Async(BridgeRequest request) { ValidatePayload(request, ["Request"], ["Request"]); return await recovery.PreviewCloneAsync(ParsePayload<RecoveryClonePayload>(request).Request); }
+async Task<object> CloneRecoveryV1Async(BridgeRequest request) { ValidatePayload(request, ["PreviewToken"], ["PreviewToken"]); await recovery.ExecutePreviewAsync(ParsePayload<RecoveryExecutePayload>(request).PreviewToken); return new { }; }
+async Task<RecoveryOperationPreview> PreviewRecoveryNotesV1Async(BridgeRequest request) { ValidatePayload(request, ["Id", "Description", "Tags", "Pinned"], ["Id", "Description", "Tags", "Pinned"]); var p = ParsePayload<RecoveryNotesPayload>(request); return await recovery.PreviewUpdateNotesAsync(p.Id, p.Description, p.Tags, p.Pinned); }
+async Task<object> ExecuteRecoveryNotesV1Async(BridgeRequest request) { ValidatePayload(request, ["PreviewToken"], ["PreviewToken"]); await recovery.ExecutePreviewAsync(ParsePayload<RecoveryExecutePayload>(request).PreviewToken); return new { }; }
 async Task<object> GetRecoveryRetentionV1Async(BridgeRequest request) { ValidatePayload(request, ["SourceInstance"], ["SourceInstance"]); return await GetRecoveryRetentionAsync(request); }
 async Task<RecoveryRetentionPreview> PreviewRecoveryRetentionV1Async(BridgeRequest request) { ValidatePayload(request, ["SourceInstance", "Maximum"], ["SourceInstance", "Maximum"]); var p = JsonSerializer.Deserialize<RecoveryRetentionPayload>(request.Payload!.Value.GetRawText(), options)!; if (p.Maximum is null) throw new ArgumentException("Recovery retention maximum is required."); return await recovery.PreviewRetentionAsync(p.SourceInstance, p.Maximum.Value); }
-async Task<object> SetRecoveryRetentionV1Async(BridgeRequest request) { ValidatePayload(request, ["SourceInstance", "Maximum"], ["SourceInstance", "Maximum"]); return await SetRecoveryRetentionAsync(request); }
+async Task<object> SetRecoveryRetentionV1Async(BridgeRequest request) { ValidatePayload(request, ["PreviewToken"], ["PreviewToken"]); await recovery.ExecuteRetentionPreviewAsync(ParsePayload<RecoveryExecutePayload>(request).PreviewToken); return new { }; }
+async Task<BackupOperationPreview> PreviewBackupScheduleV1Async(BridgeRequest request) { ValidatePayload(request, ["InstanceName", "Frequency", "RetentionCount", "Time", "Destination"], ["InstanceName", "Frequency", "RetentionCount", "Time"]); return await fixedBackups.PreviewScheduleAsync(ParsePayload<BackupScheduleRequest>(request)); }
+async Task<BackupOperationPreview> PreviewBackupScheduleRemovalV1Async(BridgeRequest request) { ValidatePayload(request, ["InstanceName"], ["InstanceName"]); return await fixedBackups.PreviewScheduleRemovalAsync(ParsePayload<BackupManualPayload>(request).InstanceName); }
+async Task<BackupOperationPreview> PreviewManualBackupV1Async(BridgeRequest request) { ValidatePayload(request, ["InstanceName", "RetentionCount", "Destination"], ["InstanceName", "RetentionCount"]); var p = ParsePayload<BackupManualPayload>(request); ValidateLegacyBackupDestination(p.Destination); return await fixedBackups.PreviewBackupAsync(p.InstanceName, p.RetentionCount); }
+void ValidateLegacyBackupDestination(string? destination) { if (destination is not null && (string.IsNullOrWhiteSpace(destination) || destination.IndexOfAny(['\r', '\n', '\0']) >= 0 || !Path.IsPathFullyQualified(destination))) throw new ArgumentException("The legacy backup destination is invalid."); }
+async Task<BackupOperationResult> ExecuteBackupV1Async(BridgeRequest request) { ValidatePayload(request, ["PreviewToken"], ["PreviewToken"]); return await fixedBackups.ExecuteAsync(ParsePayload<RecoveryExecutePayload>(request).PreviewToken); }
 async Task<HealthScanResult> HealthScanV1Async(BridgeRequest request) { ValidateEmptyPayload(request); return await health.ScanAsync(); }
 async Task<IReadOnlyList<HealthHistoryEntry>> HealthHistoryV1Async(BridgeRequest request) { ValidateEmptyPayload(request); return await health.GetHistoryAsync(); }
 async Task<RepairPreview> PreviewHealthRepairV1Async(BridgeRequest request) { ValidatePayload(request, ["Finding"], ["Finding"]); return await PreviewHealthRepairAsync(request); }
@@ -829,6 +854,8 @@ public sealed record InstanceNamePayload(string Name);
 public sealed record InstanceResourcePayload(string Name);
 public sealed record InstanceSparsePayload(string Name, bool Enabled);
 public sealed record InstanceSparseExecutePayload(string PreviewToken);
+public sealed record RecoveryExecutePayload(string PreviewToken);
+public sealed record BackupManualPayload(string InstanceName, int RetentionCount, string? Destination = null);
 public sealed record GlobalConfigurationPreviewPayload(Dictionary<string, string?> Changes);
 public sealed record GlobalConfigurationExecutePayload(string PreviewToken);
 public sealed record InstanceListPayload(bool IncludeRelease = false, bool IncludeUser = false, bool SkipDiskSize = false);
@@ -936,7 +963,7 @@ public sealed record WslgPinPayload(string DiscoveryToken, string ApplicationId,
 public sealed record RecoveryCreatePayload(RecoveryPointCreateRequest Request);
 public sealed record RecoveryRestorePayload(RecoveryRestoreRequest Request);
 public sealed record RecoveryClonePayload(RecoveryCloneRequest Request);
-public sealed record RecoveryNotesPayload(string Description, IReadOnlyList<string> Tags, bool Pinned);
+public sealed record RecoveryNotesPayload(Guid Id, string Description, IReadOnlyList<string> Tags, bool Pinned);
 public sealed record RecoveryRetentionPayload(string SourceInstance, int? Maximum = null);
 public sealed record MonitoringSnapshotPayload(string Name, int IntervalSeconds);
 public sealed record MonitoringPreviewPayload(string SnapshotToken, int ProcessId, MonitoringProcessAction Action);

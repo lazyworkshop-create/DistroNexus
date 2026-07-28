@@ -436,10 +436,15 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.AddCatalogSourceAsync),
                 nameof(IPowerShellModuleClient.AddInstanceTagAsync),
                 nameof(IPowerShellModuleClient.ClearPackageCacheAsync),
+                nameof(IPowerShellModuleClient.CloneRecoveryPointAsync),
+                nameof(IPowerShellModuleClient.ConsumeBackupNotificationsAsync),
                 nameof(IPowerShellModuleClient.CreateFirewallRuleAsync),
+                nameof(IPowerShellModuleClient.CreateRecoveryPointAsync),
                 nameof(IPowerShellModuleClient.DeletePackageCacheEntryAsync),
                 nameof(IPowerShellModuleClient.DiscoverWslgApplicationsAsync),
+                nameof(IPowerShellModuleClient.ExecuteRecoveryPointNotesAsync),
                 nameof(IPowerShellModuleClient.ExportDiagnosticReportAsync),
+                nameof(IPowerShellModuleClient.GetBackupSchedulesAsync),
                 nameof(IPowerShellModuleClient.GetCatalogSourcesAsync),
                 nameof(IPowerShellModuleClient.GetContainerRuntimeStatusAsync),
                 nameof(IPowerShellModuleClient.GetDockerIntegrationAsync),
@@ -474,6 +479,14 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.GetPodmanConnectionPreviewAsync),
                 nameof(IPowerShellModuleClient.GetPodmanUserUnitPreviewAsync),
                 nameof(IPowerShellModuleClient.GetPortMappingsAsync),
+                nameof(IPowerShellModuleClient.GetRecoveryClonePreviewAsync),
+                nameof(IPowerShellModuleClient.GetRecoveryCreatePreviewAsync),
+                nameof(IPowerShellModuleClient.GetRecoveryHistoryAsync),
+                nameof(IPowerShellModuleClient.GetRecoveryPointsAsync),
+                nameof(IPowerShellModuleClient.GetRecoveryRemovePreviewAsync),
+                nameof(IPowerShellModuleClient.GetRecoveryRestorePreviewAsync),
+                nameof(IPowerShellModuleClient.GetRecoveryRetentionAsync),
+                nameof(IPowerShellModuleClient.GetRecoveryRetentionPreviewAsync),
                 nameof(IPowerShellModuleClient.GetSettingsAsync),
                 nameof(IPowerShellModuleClient.GetSystemdServiceDetailsAsync),
                 nameof(IPowerShellModuleClient.GetSystemdServiceJournalAsync),
@@ -481,6 +494,7 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.GetSystemdServicesAsync),
                 nameof(IPowerShellModuleClient.GetTerminalStatusAsync),
                 nameof(IPowerShellModuleClient.GetWslgStatusAsync),
+                nameof(IPowerShellModuleClient.InvokeBackupAsync),
                 nameof(IPowerShellModuleClient.InvokeMonitoringProcessActionAsync),
                 nameof(IPowerShellModuleClient.InvokePodmanConnectionAsync),
                 nameof(IPowerShellModuleClient.InvokePodmanUserUnitAsync),
@@ -490,17 +504,22 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.OpenPackageCacheFolderAsync),
                 nameof(IPowerShellModuleClient.OpenRecoveryPointFolderAsync),
                 nameof(IPowerShellModuleClient.OpenWslConfigFileAsync),
+                nameof(IPowerShellModuleClient.PreviewRecoveryPointNotesAsync),
                 nameof(IPowerShellModuleClient.ProbeNetworkAsync),
                 nameof(IPowerShellModuleClient.RefreshCatalogAsync),
                 nameof(IPowerShellModuleClient.RemoveCatalogSourceAsync),
+                nameof(IPowerShellModuleClient.RemoveBackupScheduleAsync),
                 nameof(IPowerShellModuleClient.RemoveFirewallRuleAsync),
                 nameof(IPowerShellModuleClient.RemoveInstanceTagAsync),
+                nameof(IPowerShellModuleClient.RemoveRecoveryPointAsync),
                 nameof(IPowerShellModuleClient.RepairHealthAsync),
                 nameof(IPowerShellModuleClient.RenameInstanceTagsAsync),
                 nameof(IPowerShellModuleClient.ReorderCatalogSourcesAsync),
                 nameof(IPowerShellModuleClient.ResetCatalogSourcesAsync),
                 nameof(IPowerShellModuleClient.ResetSettingsAsync),
                 nameof(IPowerShellModuleClient.RevealWslgApplicationAsync),
+                nameof(IPowerShellModuleClient.RestoreRecoveryPointAsync),
+                nameof(IPowerShellModuleClient.SaveBackupScheduleAsync),
                 nameof(IPowerShellModuleClient.SaveSettingsAsync),
                 nameof(IPowerShellModuleClient.SearchPackagesAsync),
                 nameof(IPowerShellModuleClient.ScanHealthAsync),
@@ -511,12 +530,14 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.SetInstanceTagsAsync),
                 nameof(IPowerShellModuleClient.SetNetworkModeAsync),
                 nameof(IPowerShellModuleClient.SetNetworkSettingsAsync),
+                nameof(IPowerShellModuleClient.SetRecoveryRetentionAsync),
                 nameof(IPowerShellModuleClient.SetWslgApplicationPinAsync),
                 nameof(IPowerShellModuleClient.StartInstanceAsync),
                 nameof(IPowerShellModuleClient.StartTerminalAsync),
                 nameof(IPowerShellModuleClient.StopInstanceAsync),
                 nameof(IPowerShellModuleClient.TestCatalogSourceAsync),
-                nameof(IPowerShellModuleClient.UpdateCatalogSourceAsync)
+                nameof(IPowerShellModuleClient.UpdateCatalogSourceAsync),
+                nameof(IPowerShellModuleClient.VerifyRecoveryPointAsync)
             }.Order(),
             methods.Select(method => method.Name).Order());
         Assert.DoesNotContain(methods, method => method.Name.Contains("Script", StringComparison.OrdinalIgnoreCase));
@@ -561,6 +582,37 @@ public sealed class PowerShellModuleClientTests
         await Assert.ThrowsAsync<ArgumentException>(() => client.OpenRecoveryPointFolderAsync(Guid.Empty));
         powerShell.VerifyAll();
     }
+
+    [Fact]
+    public async Task RecoveryMetadataClient_PreviewsCanonicalNotesAndExecutesOnlyTheToken()
+    {
+        var id = Guid.NewGuid();
+        var token = new string('a', 32);
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync(
+                "Get-DistroNexusRecoveryPointMetadataPreview",
+                It.Is<Dictionary<string, object>>(p => p.Count == 4 && (Guid)p["Id"] == id && (string)p["Description"] == "note" && ((string[])p["Tag"]).Length == 1 && ((string[])p["Tag"])[0] == "safe" && (bool)p["Pinned"]),
+                It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = $$"""{"Token":"{{token}}","Operation":"Notes","RecoveryPointId":"{{id}}","SourceInstance":"Ubuntu","TargetInstance":"","TargetDirectory":"","Format":"Tar","RequiresStop":false,"ImportInPlace":false,"Warnings":[],"EstimatedBytes":1}""" });
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync(
+                "Set-DistroNexusRecoveryPointMetadata",
+                It.Is<Dictionary<string, object>>(p => p.Count == 2 && HasOnlyRecoveryToken(p["Preview"], token) && p.ContainsKey("Confirm") && !(bool)p["Confirm"]),
+                It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{}" });
+
+        var client = new PowerShellModuleClient(powerShell.Object);
+        var preview = await client.PreviewRecoveryPointNotesAsync(id, "note", ["safe"], true);
+        await client.ExecuteRecoveryPointNotesAsync(preview.Token);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => client.ExecuteRecoveryPointNotesAsync("forged"));
+        powerShell.VerifyAll();
+    }
+
+    private static bool HasOnlyRecoveryToken(object value, string token) =>
+        value.GetType().GetProperties() is var properties
+        && properties.Length == 1
+        && properties[0].Name == "Token"
+        && properties[0].GetValue(value) as string == token;
 
     [Fact]
     public async Task ContainerAndCapabilityQueries_UseOnlyTheirFixedCmdlets()

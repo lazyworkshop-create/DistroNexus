@@ -59,6 +59,12 @@ The public module must expose the complete supported global `.wslconfig` field s
 
 Acceptance: a caller can read the modeled global configuration and constraints, request a validated preview from an allow-listed change map, and save only through a short-lived reviewed token; the desktop editor has no direct `IWslConfigService` or `IWslConfigurationService` execution path.
 
+### FR-004B Backup and recovery parity
+
+The module must expose supported backup schedules, reviewed manual backup, recovery-point lifecycle, retention, history, and pending-notification consumption. Desktop must use these contracts and must not enumerate/delete backup archives or read/delete backup business-state files.
+
+Acceptance: mutations execute only a same-user reviewed token, archive retention deletes only Core-owned instance-named archives, and backup/recovery view models have no direct `IBackupService` or `IRecoveryPointService` execution path.
+
 ### FR-005 WPF presentation-only behavior
 
 The desktop client may own visual state, rendering, navigation, input dialogs, and user-initiated presentation actions such as opening a returned local result in the shell. It must not create, delete, edit, validate-for-write, download, configure, or execute product business state independently.

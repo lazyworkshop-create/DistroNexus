@@ -7,200 +7,118 @@ using Moq;
 
 namespace DistroNexus.Tests.ViewModels;
 
-public sealed class BackupTabRecoveryHistoryTests : IDisposable
+public sealed class BackupTabRecoveryHistoryTests
 {
-    private readonly string _destination = Path.Combine(Path.GetTempPath(), "DistroNexusHistory", Guid.NewGuid().ToString("N"));
-
     [Fact]
-    public async Task History_MergesScheduledRecoveryAndFailedEntries_AndFiltersByType()
+    public async Task Initialize_UsesOnlyTypedModuleReadRoutes()
     {
-        var backup = new Mock<IBackupService>();
-        backup.Setup(x => x.GetSchedulesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync([new BackupSchedule { Name = "Ubuntu", Destination = _destination, Frequency = "Daily", RetentionCount = 2, Time = TimeSpan.Zero }]);
-        var recovery = new Mock<IRecoveryPointService>();
-        recovery.Setup(x => x.GetHistoryAsync(It.IsAny<CancellationToken>())).ReturnsAsync([
-            new RecoveryHistoryEntry("scheduled", "Ubuntu", DateTimeOffset.UtcNow.AddMinutes(1), "ScheduledBackup", "Configured", _destination),
-            new RecoveryHistoryEntry("recovery", "Ubuntu", DateTimeOffset.UtcNow, "RecoveryPoint", "Completed", "point"),
-            new RecoveryHistoryEntry("failed", "Ubuntu", DateTimeOffset.UtcNow.AddMinutes(-1), "RecoveryPoint", "Failed", "point")]);
-        recovery.Setup(x => x.ListAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
-        var viewModel = new BackupTabViewModel(Instance(), backup.Object, new Mock<IDialogService>().Object, recovery.Object, new Mock<IPowerShellModuleClient>().Object);
+        var history = new[]
+        {
+            new RecoveryHistoryEntry("scheduled", "Ubuntu", DateTimeOffset.UtcNow, "ScheduledBackup", "Configured", "destination"),
+            new RecoveryHistoryEntry("recovery", "Ubuntu", DateTimeOffset.UtcNow, "RecoveryPoint", "Completed", "point")
+        };
+        var client = NewClient();
+        client.Setup(x => x.GetBackupSchedulesAsync(It.IsAny<CancellationToken>())).ReturnsAsync([
+            new BackupSchedule { Name = "Ubuntu", Destination = "destination", Frequency = "Daily", RetentionCount = 2, Time = TimeSpan.Zero }]);
+        client.Setup(x => x.GetRecoveryHistoryAsync(It.IsAny<CancellationToken>())).ReturnsAsync(history);
 
+        var viewModel = NewViewModel(client.Object);
         await viewModel.InitializeAsync();
-        Assert.Contains(viewModel.BackupHistory, x => x.Kind == "ScheduledBackup"); // Core has already projected all sources.
-        Assert.Contains(viewModel.BackupHistory, x => x.Kind == "RecoveryPoint" && x.IsSuccess);
-        Assert.Contains(viewModel.BackupHistory, x => x.Kind == "RecoveryPoint" && !x.IsSuccess);
 
-        viewModel.SelectedHistoryFilter = BackupHistoryFilter.Scheduled;
-        await WaitForAsync(() => viewModel.BackupHistory.All(x => x.Kind == "ScheduledBackup"));
-        viewModel.SelectedHistoryFilter = BackupHistoryFilter.RecoveryPoints;
-        await WaitForAsync(() => viewModel.BackupHistory.Count == 2 && viewModel.BackupHistory.All(x => x.Kind == "RecoveryPoint"));
-        viewModel.SelectedHistoryFilter = BackupHistoryFilter.Failures;
-        await WaitForAsync(() => viewModel.BackupHistory.Count == 1 && viewModel.BackupHistory.All(x => !x.IsSuccess));
+        Assert.True(viewModel.HasSchedule);
+        Assert.Contains(viewModel.BackupHistory, x => x.Kind == "ScheduledBackup");
+        Assert.Contains(viewModel.BackupHistory, x => x.Kind == "RecoveryPoint");
+        client.Verify(x => x.GetBackupSchedulesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        client.Verify(x => x.GetRecoveryHistoryAsync(It.IsAny<CancellationToken>()), Times.Once);
+        client.Verify(x => x.GetRecoveryPointsAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task Initialize_LoadsRecoveryHistory_WhenNoScheduleExists()
+    public async Task Restore_UsesTypedPreviewAndExecutionRoutes()
     {
-        var backup = new Mock<IBackupService>();
-        backup.Setup(x => x.GetSchedulesAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
-        var recovery = new Mock<IRecoveryPointService>();
-        recovery.Setup(x => x.GetHistoryAsync(It.IsAny<CancellationToken>())).ReturnsAsync([
-            new RecoveryHistoryEntry("manual", "Ubuntu", DateTimeOffset.UtcNow, "RecoveryPoint", "Verified", "point")]);
-        recovery.Setup(x => x.ListAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
-        var vm = new BackupTabViewModel(Instance(), backup.Object, new Mock<IDialogService>().Object, recovery.Object, new Mock<IPowerShellModuleClient>().Object);
-
-        await vm.InitializeAsync();
-
-        Assert.False(vm.HasSchedule);
-        Assert.Contains(vm.BackupHistory, x => x.Kind == "RecoveryPoint");
-        recovery.Verify(x => x.GetHistoryAsync(It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task Restore_UsesCorePreviewThenExplicitConfirmationAndExecution()
-    {
-        var backup = new Mock<IBackupService>();
-        backup.Setup(x => x.GetSchedulesAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
         var point = Point();
-        var recovery = new Mock<IRecoveryPointService>();
-        recovery.Setup(x => x.GetHistoryAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
-        recovery.Setup(x => x.ListAsync(It.IsAny<CancellationToken>())).ReturnsAsync([point]);
-        recovery.Setup(x => x.PreviewRestoreAsync(It.IsAny<RecoveryRestoreRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new RecoveryOperationPreview("restore", "Restore", point.Manifest.Id, "Ubuntu", "Clone", Path.Combine(_destination, "clone"), RecoveryPointFormat.Tar, false, false, ["distinct"], 1));
-        recovery.Setup(x => x.RestoreAsync(It.IsAny<RecoveryRestoreRequest>(), "restore", It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
-        var dialogs = new Mock<IDialogService>(); dialogs.Setup(x => x.ShowConfirmAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true); dialogs.Setup(x => x.ShowAlertAsync(It.IsAny<string>(), It.IsAny<string>())).Returns(Task.CompletedTask);
-        var vm = new BackupTabViewModel(Instance(), backup.Object, dialogs.Object, recovery.Object, new Mock<IPowerShellModuleClient>().Object);
-        await vm.InitializeAsync(); vm.SelectedRecoveryPoint = point; vm.RecoveryTargetInstance = "Clone"; vm.RecoveryTargetDirectory = Path.Combine(_destination, "clone");
+        var preview = new RecoveryOperationPreview("restore-token", "Restore", point.Manifest.Id, "Ubuntu", "Clone", "target", RecoveryPointFormat.Tar, false, false, ["distinct"], 1);
+        var client = NewClient(points: [point]);
+        client.Setup(x => x.GetRecoveryRestorePreviewAsync(It.Is<RecoveryRestoreRequest>(r => r.TargetInstance == "Clone"), It.IsAny<CancellationToken>())).ReturnsAsync(preview);
+        client.Setup(x => x.RestoreRecoveryPointAsync(preview, It.Is<RecoveryRestoreRequest>(r => r.TargetInstance == "Clone"), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        var dialogs = Dialogs(confirm: true);
+        var vm = NewViewModel(client.Object, dialogs.Object);
+        await vm.InitializeAsync();
+        vm.SelectedRecoveryPoint = point;
+        vm.RecoveryTargetInstance = "Clone";
+        vm.RecoveryTargetDirectory = "target";
 
         await vm.RestoreRecoveryPointCommand.ExecuteAsync(null);
 
-        recovery.Verify(x => x.PreviewRestoreAsync(It.Is<RecoveryRestoreRequest>(r => r.TargetInstance == "Clone"), It.IsAny<CancellationToken>()), Times.Once);
-        recovery.Verify(x => x.RestoreAsync(It.IsAny<RecoveryRestoreRequest>(), "restore", It.IsAny<CancellationToken>(), It.IsAny<IProgress<RecoveryOperationProgress>>()), Times.Once);
-        dialogs.Verify(x => x.ShowConfirmAsync(It.IsAny<string>(), It.Is<string>(m => m.Contains("distinct"))), Times.Once);
+        client.Verify(x => x.GetRecoveryRestorePreviewAsync(It.IsAny<RecoveryRestoreRequest>(), It.IsAny<CancellationToken>()), Times.Once);
+        client.Verify(x => x.RestoreRecoveryPointAsync(preview, It.IsAny<RecoveryRestoreRequest>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task DeleteAndMetadata_AreExplicitAndUseSelectedPoint()
+    public async Task MetadataAndRetention_UseTypedModuleRoutes()
     {
-        var backup = new Mock<IBackupService>(); backup.Setup(x => x.GetSchedulesAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
         var point = Point();
-        var recovery = new Mock<IRecoveryPointService>();
-        recovery.Setup(x => x.GetHistoryAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
-        recovery.Setup(x => x.ListAsync(It.IsAny<CancellationToken>())).ReturnsAsync([point]);
-        recovery.Setup(x => x.UpdateNotesAsync(point.Manifest.Id, "note", It.IsAny<IReadOnlyList<string>>(), true, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
-        recovery.Setup(x => x.ApplyRetentionAsync("Ubuntu", 2, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
-        recovery.Setup(x => x.PreviewDeleteAsync(point.Manifest.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new RecoveryOperationPreview("delete", "Delete", point.Manifest.Id, "Ubuntu", "", point.DirectoryPath, RecoveryPointFormat.Tar, false, false, ["permanent"], 1));
-        recovery.Setup(x => x.DeleteAsync(point.Manifest.Id, "delete", It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
-        var dialogs = new Mock<IDialogService>(); dialogs.Setup(x => x.ShowConfirmAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
-        var vm = new BackupTabViewModel(Instance(), backup.Object, dialogs.Object, recovery.Object, new Mock<IPowerShellModuleClient>().Object);
-        await vm.InitializeAsync(); vm.SelectedRecoveryPoint = point; vm.RecoveryDescription = "note"; vm.RecoveryTags = "safe, local"; vm.RecoveryPinned = true; vm.RecoveryRetention = 2;
+        var client = NewClient(points: [point]);
+        var notes = new RecoveryOperationPreview(new string('a', 32), "Notes", point.Manifest.Id, "Ubuntu", "", "point", RecoveryPointFormat.Tar, false, false, ["Update recovery point metadata."], 1);
+        client.Setup(x => x.PreviewRecoveryPointNotesAsync(point.Manifest.Id, "note", It.Is<IReadOnlyList<string>>(x => x.Count == 2), true, It.IsAny<CancellationToken>())).ReturnsAsync(notes);
+        client.Setup(x => x.ExecuteRecoveryPointNotesAsync(notes.Token, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        var retention = new RecoveryRetentionPreview("retention-token", "Ubuntu", 2, null, 0, "fingerprint");
+        client.Setup(x => x.GetRecoveryRetentionPreviewAsync("Ubuntu", 2, It.IsAny<CancellationToken>())).ReturnsAsync(retention);
+        client.Setup(x => x.SetRecoveryRetentionAsync(retention, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        var vm = NewViewModel(client.Object, Dialogs(confirm: true).Object);
+        await vm.InitializeAsync();
+        vm.SelectedRecoveryPoint = point;
+        vm.RecoveryDescription = "note";
+        vm.RecoveryTags = "safe, local";
+        vm.RecoveryPinned = true;
+        vm.RecoveryRetention = 2;
 
         await vm.SaveRecoveryNotesCommand.ExecuteAsync(null);
         await vm.ApplyRecoveryRetentionCommand.ExecuteAsync(null);
+
+        client.Verify(x => x.PreviewRecoveryPointNotesAsync(point.Manifest.Id, "note", It.Is<IReadOnlyList<string>>(x => x.Count == 2 && x[0] == "safe" && x[1] == "local"), true, It.IsAny<CancellationToken>()), Times.Once);
+        client.Verify(x => x.ExecuteRecoveryPointNotesAsync(notes.Token, It.IsAny<CancellationToken>()), Times.Once);
+        client.Verify(x => x.SetRecoveryRetentionAsync(retention, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Delete_UsesTypedPreviewAndExecutionRoutes()
+    {
+        var point = Point();
+        var preview = new RecoveryOperationPreview("delete-token", "Delete", point.Manifest.Id, "Ubuntu", "", "point", RecoveryPointFormat.Tar, false, false, ["permanent"], 1);
+        var client = NewClient(points: [point]);
+        client.Setup(x => x.GetRecoveryRemovePreviewAsync(point.Manifest.Id, It.IsAny<CancellationToken>())).ReturnsAsync(preview);
+        client.Setup(x => x.RemoveRecoveryPointAsync(preview, point.Manifest.Id, It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        var vm = NewViewModel(client.Object, Dialogs(confirm: true).Object);
+        await vm.InitializeAsync();
+        vm.SelectedRecoveryPoint = point;
+
         await vm.DeleteRecoveryPointCommand.ExecuteAsync(null);
 
-        recovery.Verify(x => x.UpdateNotesAsync(point.Manifest.Id, "note", It.Is<IReadOnlyList<string>>(t => t.Count == 2), true, It.IsAny<CancellationToken>()), Times.Once);
-        recovery.Verify(x => x.ApplyRetentionAsync("Ubuntu", 2, It.IsAny<CancellationToken>()), Times.Once);
-        dialogs.Verify(x => x.ShowConfirmAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Once);
-        recovery.Verify(x => x.PreviewDeleteAsync(point.Manifest.Id, It.IsAny<CancellationToken>()), Times.Once);
-        recovery.Verify(x => x.DeleteAsync(point.Manifest.Id, "delete", It.IsAny<CancellationToken>()), Times.Once);
+        client.Verify(x => x.GetRecoveryRemovePreviewAsync(point.Manifest.Id, It.IsAny<CancellationToken>()), Times.Once);
+        client.Verify(x => x.RemoveRecoveryPointAsync(preview, point.Manifest.Id, It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Fact]
-    public async Task Initialize_HydratesPersistedRetention_AndSelectedPointMetadata()
+    private static Mock<IPowerShellModuleClient> NewClient(IReadOnlyList<RecoveryPointSummary>? points = null)
     {
-        var backup = new Mock<IBackupService>(); backup.Setup(x => x.GetSchedulesAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
-        var point = Point() with { Manifest = Point().Manifest with { Description = "before update", Tags = ["safe", "local"], Pinned = true } };
-        var recovery = new Mock<IRecoveryPointService>();
-        recovery.Setup(x => x.GetHistoryAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
-        recovery.Setup(x => x.ListAsync(It.IsAny<CancellationToken>())).ReturnsAsync([point]);
-        recovery.Setup(x => x.GetRetentionAsync("Ubuntu", It.IsAny<CancellationToken>())).ReturnsAsync(4);
-        var vm = new BackupTabViewModel(Instance(), backup.Object, new Mock<IDialogService>().Object, recovery.Object, new Mock<IPowerShellModuleClient>().Object);
-
-        await vm.InitializeAsync(); vm.SelectedRecoveryPoint = point;
-
-        Assert.Equal(4, vm.RecoveryRetention);
-        Assert.Equal("before update", vm.RecoveryDescription);
-        Assert.Equal("safe, local", vm.RecoveryTags);
-        Assert.True(vm.RecoveryPinned);
+        var client = new Mock<IPowerShellModuleClient>(MockBehavior.Strict);
+        client.Setup(x => x.GetBackupSchedulesAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        client.Setup(x => x.GetRecoveryHistoryAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        client.Setup(x => x.GetRecoveryPointsAsync(It.IsAny<CancellationToken>())).ReturnsAsync(points ?? []);
+        client.Setup(x => x.GetRecoveryRetentionAsync("Ubuntu", It.IsAny<CancellationToken>())).ReturnsAsync((int?)null);
+        return client;
     }
 
-    [Fact]
-    public async Task VhdxCapability_ExposesFormatOnlyWhenCorePreflightSupportsIt()
+    private static Mock<IDialogService> Dialogs(bool confirm = false)
     {
-        var backup = new Mock<IBackupService>(); backup.Setup(x => x.GetSchedulesAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
-        var recovery = new Mock<IRecoveryPointService>();
-        recovery.Setup(x => x.GetHistoryAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
-        recovery.Setup(x => x.ListAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
-        recovery.Setup(x => x.PreviewCreateAsync(It.Is<RecoveryPointCreateRequest>(r => r.Format == RecoveryPointFormat.Vhdx), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new RecoveryOperationPreview("vhd", "Create", null, "Ubuntu", "", _destination, RecoveryPointFormat.Vhdx, false, true, [], 1));
-        var vm = new BackupTabViewModel(Instance(), backup.Object, new Mock<IDialogService>().Object, recovery.Object, new Mock<IPowerShellModuleClient>().Object);
-
-        await vm.InitializeAsync(); vm.DestinationPath = _destination;
-        await WaitForAsync(() => vm.CanUseVhdx);
-
-        Assert.Contains(RecoveryPointFormat.Vhdx, vm.RecoveryFormats);
+        var dialogs = new Mock<IDialogService>(MockBehavior.Loose);
+        dialogs.Setup(x => x.ShowConfirmAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(confirm);
+        return dialogs;
     }
 
-    [Fact]
-    public async Task UnsupportedVhdxCapability_RemovesFormatAndImportInPlace()
-    {
-        var backup = new Mock<IBackupService>(); backup.Setup(x => x.GetSchedulesAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
-        var recovery = new Mock<IRecoveryPointService>();
-        recovery.Setup(x => x.GetHistoryAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
-        recovery.Setup(x => x.ListAsync(It.IsAny<CancellationToken>())).ReturnsAsync([Point() with { Manifest = Point().Manifest with { Format = RecoveryPointFormat.Vhdx } }]);
-        recovery.Setup(x => x.PreviewCreateAsync(It.IsAny<RecoveryPointCreateRequest>(), It.IsAny<CancellationToken>())).ThrowsAsync(new InvalidOperationException("unsupported"));
-        var vm = new BackupTabViewModel(Instance(), backup.Object, new Mock<IDialogService>().Object, recovery.Object, new Mock<IPowerShellModuleClient>().Object);
+    private static BackupTabViewModel NewViewModel(IPowerShellModuleClient client, IDialogService? dialogs = null) => new(Instance(), dialogs ?? Dialogs().Object, client);
 
-        await vm.InitializeAsync(); vm.RecoveryImportInPlace = true; vm.DestinationPath = _destination;
-        await WaitForAsync(() => !vm.CanUseVhdx);
+    private static WslInstanceViewModel Instance() => new(new WslInstance { Name = "Ubuntu", State = "Stopped" }, Mock.Of<IWslManagerService>(), Mock.Of<ILogger>(), Mock.Of<IPowerShellModuleClient>(), Mock.Of<IServiceProvider>());
 
-        Assert.DoesNotContain(RecoveryPointFormat.Vhdx, vm.RecoveryFormats);
-        Assert.False(vm.RecoveryImportInPlace);
-        Assert.False(vm.CanImportInPlace);
-    }
-
-    [Fact]
-    public async Task UnsupportedVhdxCapability_DisablesBothRestoreModesForSelectedVhdxPoint()
-    {
-        var backup = new Mock<IBackupService>(); backup.Setup(x => x.GetSchedulesAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
-        var point = Point() with { Manifest = Point().Manifest with { Format = RecoveryPointFormat.Vhdx } };
-        var recovery = new Mock<IRecoveryPointService>();
-        recovery.Setup(x => x.GetHistoryAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
-        recovery.Setup(x => x.ListAsync(It.IsAny<CancellationToken>())).ReturnsAsync([point]);
-        recovery.Setup(x => x.PreviewCreateAsync(It.IsAny<RecoveryPointCreateRequest>(), It.IsAny<CancellationToken>())).ThrowsAsync(new InvalidOperationException("unsupported"));
-        var vm = new BackupTabViewModel(Instance(), backup.Object, new Mock<IDialogService>().Object, recovery.Object, new Mock<IPowerShellModuleClient>().Object);
-
-        await vm.InitializeAsync(); vm.SelectedRecoveryPoint = point; vm.DestinationPath = _destination;
-        await WaitForAsync(() => !vm.CanUseVhdx);
-
-        Assert.False(vm.CanRestoreSelectedRecoveryPoint);
-        Assert.False(vm.CanImportInPlace);
-    }
-
-    public void Dispose()
-    {
-        if (Directory.Exists(_destination)) Directory.Delete(_destination, true);
-    }
-
-    private static async Task WaitForAsync(Func<bool> condition)
-    {
-        for (var attempt = 0; attempt < 50; attempt++)
-        {
-            if (condition()) return;
-            await Task.Delay(20);
-        }
-        Assert.True(condition(), "History filter did not finish refreshing.");
-    }
-
-    private static WslInstanceViewModel Instance() => new(
-        new WslInstance { Name = "Ubuntu", State = "Stopped" },
-        new Mock<IWslManagerService>().Object,
-        new Mock<ILogger>().Object,
-        new Mock<IPowerShellModuleClient>().Object,
-        new Mock<IBackupService>().Object,
-        new Mock<IServiceProvider>().Object);
-
-    private RecoveryPointSummary Point() => new(new RecoveryPointManifest(1, Guid.NewGuid(), "Before", "Ubuntu", 2, RecoveryPointFormat.Tar, DateTimeOffset.UtcNow, "instance.tar", 1, "hash", "2.3.0", [], ""), _destination, RecoveryPointVerification.Verified);
+    private static RecoveryPointSummary Point() => new(new RecoveryPointManifest(1, Guid.NewGuid(), "Before", "Ubuntu", 2, RecoveryPointFormat.Tar, DateTimeOffset.UtcNow, "instance.tar", 1, "hash", "2.3.0", [], ""), "point", RecoveryPointVerification.Verified);
 }

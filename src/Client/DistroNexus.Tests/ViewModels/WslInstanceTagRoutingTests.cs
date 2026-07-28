@@ -109,7 +109,6 @@ public sealed class WslInstanceTagRoutingTests
         Mock.Of<ILogger<MainViewModel>>(),
         Mock.Of<IWslEventWatcher>(),
         moduleClient,
-        Mock.Of<IBackupService>(),
         Mock.Of<IDialogService>());
 
     private static IEnumerable<string> CalledMethodNames(MethodInfo method)

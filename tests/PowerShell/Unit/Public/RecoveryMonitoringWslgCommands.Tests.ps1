@@ -19,9 +19,11 @@ Describe 'Recovery, monitoring and WSLg PowerShell bridge adapters' -Tag 'Unit',
     }
     It 'requires a Core-issued token to execute recovery deletion' {
         $preview = [pscustomobject]@{ Token='delete-preview'; Operation='Delete'; RecoveryPointId='11111111-1111-1111-1111-111111111111' }
-        Mock Invoke-DistroNexusWorkspaceBridge { [pscustomobject]@{ Succeeded=$true } }
-        Remove-DistroNexusRecoveryPoint -Id '11111111-1111-1111-1111-111111111111' -Preview $preview -Confirm:$false
-        Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -ParameterFilter { $Operation -eq 'recovery.remove.v1' -and $Token -eq 'delete-preview' } -Times 1
+        Mock Invoke-DistroNexusWorkspaceBridge { [pscustomobject]@{ Operation=$Operation; Payload=$Payload } }
+        $executed = Remove-DistroNexusRecoveryPoint -Id '11111111-1111-1111-1111-111111111111' -Preview $preview -Confirm:$false
+        $executed.Operation | Should -Be 'recovery.remove.v1'
+        @($executed.Payload.Keys) | Should -Be @('PreviewToken')
+        $executed.Payload.PreviewToken | Should -Be 'delete-preview'
     }
     It 'uses versioned typed recovery history and retention routes' {
         Mock Invoke-DistroNexusWorkspaceBridge {
@@ -31,8 +33,10 @@ Describe 'Recovery, monitoring and WSLg PowerShell bridge adapters' -Tag 'Unit',
         (Get-DistroNexusRecoveryPointHistory).Operation | Should -Be 'recovery.history.v1'
         (Get-DistroNexusRecoveryPointRetention -Name Ubuntu).Operation | Should -Be 'recovery.retention.get.v1'
         $preview = Get-DistroNexusRecoveryPointRetentionPreview -Name Ubuntu -Maximum 3
-        (Set-DistroNexusRecoveryPointRetention -Name Ubuntu -Maximum 3 -Preview $preview -Confirm:$false).Operation | Should -Be 'recovery.retention.set.v1'
-        Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 1 -ParameterFilter { $Operation -eq 'recovery.retention.set.v1' -and $Payload.Maximum -eq 3 -and $Token -eq $preview.Token }
+        $executed = Set-DistroNexusRecoveryPointRetention -Name Ubuntu -Maximum 3 -Preview $preview -Confirm:$false
+        $executed.Operation | Should -Be 'recovery.retention.set.v1'
+        @($executed.Payload.Keys) | Should -Be @('PreviewToken')
+        $executed.Payload.PreviewToken | Should -Be $preview.Token
     }
     It 'does not call the bridge for invalid, WhatIf, or declined retention updates' {
         Mock Invoke-DistroNexusWorkspaceBridge { throw 'must not execute' }
@@ -42,6 +46,33 @@ Describe 'Recovery, monitoring and WSLg PowerShell bridge adapters' -Tag 'Unit',
         $root = Split-Path (Split-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) -Parent) -Parent
         $modulePath = Join-Path $root 'src\PowerShell\DistroNexus.psd1'
         $declined = 'N' | & pwsh -NoProfile -Command "& { Import-Module '$modulePath' -Force -DisableNameChecking; `$env:DISTRONEXUS_WORKSPACE_BRIDGE_PATH = 'invalid'; Set-DistroNexusRecoveryPointRetention -Name Ubuntu -Maximum 3 -Preview ([pscustomobject]@{ Token='retention-preview'; SourceInstance='Ubuntu'; Maximum=3 }) -Confirm }" 2>&1
+        ($declined | Out-String) | Should -Not -Match 'WorkspaceBridgeUnavailable'
+    }
+    It 'uses a strict notes preview and executes only its Core-issued token' {
+        $id = [guid]::NewGuid()
+        Mock Invoke-DistroNexusWorkspaceBridge {
+            if ($Operation -eq 'recovery.notes.preview.v1') { return [pscustomobject]@{ Token=('a' * 32); RecoveryPointId=$id; Operation=$Operation; Payload=$Payload } }
+            [pscustomobject]@{ Operation=$Operation; Payload=$Payload }
+        }
+        $preview = Get-DistroNexusRecoveryPointMetadataPreview -Id $id -Description 'note' -Tag safe -Pinned
+        $preview.Operation | Should -Be 'recovery.notes.preview.v1'
+        $preview.Payload.Id | Should -Be $id
+        $preview.Payload.Description | Should -Be 'note'
+        $preview.Payload.Tags | Should -Be @('safe')
+        $preview.Payload.Pinned | Should -BeTrue
+        $executed = Set-DistroNexusRecoveryPointMetadata -Preview $preview -Confirm:$false
+        $executed.Operation | Should -Be 'recovery.notes.execute.v1'
+        @($executed.Payload.Keys) | Should -Be @('PreviewToken')
+        $executed.Payload.PreviewToken | Should -Be ('a' * 32)
+    }
+    It 'does not execute notes mutation for WhatIf or a declined confirmation' {
+        Mock Invoke-DistroNexusWorkspaceBridge { throw 'must not execute' }
+        $preview = [pscustomobject]@{ Token=('a' * 32); RecoveryPointId=([guid]::NewGuid()); Operation='Notes' }
+        Set-DistroNexusRecoveryPointMetadata -Preview $preview -WhatIf | Should -Not -BeNullOrEmpty
+        Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 0
+        $root = Split-Path (Split-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) -Parent) -Parent
+        $modulePath = Join-Path $root 'src\PowerShell\DistroNexus.psd1'
+        $declined = 'N' | & pwsh -NoProfile -Command "& { Import-Module '$modulePath' -Force -DisableNameChecking; `$env:DISTRONEXUS_WORKSPACE_BRIDGE_PATH = 'invalid'; Set-DistroNexusRecoveryPointMetadata -Preview ([pscustomobject]@{ Token=('a' * 32); RecoveryPointId=([guid]::NewGuid()) }) -Confirm }" 2>&1
         ($declined | Out-String) | Should -Not -Match 'WorkspaceBridgeUnavailable'
     }
     It 'uses fixed versioned monitoring routes and does not expose raw process authority' {

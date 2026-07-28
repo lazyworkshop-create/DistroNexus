@@ -5,6 +5,7 @@ using DistroNexus.Core.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace DistroNexus.Tests.Services;
 
@@ -33,6 +34,94 @@ public sealed class RecoveryPointServiceTests : IDisposable
         var preview = await service.PreviewCreateAsync(request);
         await Assert.ThrowsAsync<IOException>(() => service.CreateAsync(request, preview.Token));
         Assert.Empty(await service.ListAsync());
+    }
+
+    [Fact]
+    public async Task PreviewGrant_SurvivesFreshService_AndIsSingleUse()
+    {
+        var request = new RecoveryPointCreateRequest("Ubuntu", "durable", Path.Combine(_root, "payloads"));
+        var first = Service();
+        var preview = await first.PreviewCreateAsync(request);
+
+        var fresh = Service();
+        var point = await fresh.CreateAsync(request, preview.Token);
+
+        Assert.Equal("durable", point.Manifest.Name);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Service().CreateAsync(request, preview.Token));
+    }
+
+    [Fact]
+    public async Task PreviewGrant_RejectsDifferentSameMachineUser()
+    {
+        var request = new RecoveryPointCreateRequest("Ubuntu", "identity", Path.Combine(_root, "payloads"));
+        var protect = new Func<byte[], byte[]>(x => x);
+        var first = new RecoveryPointService(_runtime, root: Path.Combine(_root, "recovery"), sid: () => "S-1-test-a", protect: protect, unprotect: protect);
+        var preview = await first.PreviewCreateAsync(request);
+        var other = new RecoveryPointService(_runtime, root: Path.Combine(_root, "recovery"), sid: () => "S-1-test-b", protect: protect, unprotect: protect);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => other.CreateAsync(request, preview.Token));
+    }
+
+    [Fact]
+    public async Task NotesPreviewGrant_SurvivesFreshService_ExecutesCanonicalData_AndCannotReplay()
+    {
+        var first = Service();
+        var point = await Create(first, "notes", Path.Combine(_root, "payloads"));
+        var preview = await first.PreviewUpdateNotesAsync(point.Manifest.Id, "updated", ["safe", "local"], true);
+
+        await Service().ExecutePreviewAsync(preview.Token);
+
+        var updated = Assert.Single(await Service().ListAsync());
+        Assert.Equal("updated", updated.Manifest.Description);
+        Assert.Equal(["safe", "local"], updated.Manifest.Tags);
+        Assert.True(updated.Manifest.Pinned);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Service().ExecutePreviewAsync(preview.Token));
+    }
+
+    [Fact]
+    public async Task NotesPreviewGrant_RejectsTamperForeignSidAndParallelReplay()
+    {
+        var protect = new Func<byte[], byte[]>(x => x);
+        var root = Path.Combine(_root, "notes-grants");
+        var first = new RecoveryPointService(_runtime, root: root, sid: () => "S-1-test-a", protect: protect, unprotect: protect);
+        var point = await Create(first, "notes", Path.Combine(_root, "payloads"));
+        var tampered = await first.PreviewUpdateNotesAsync(point.Manifest.Id, "tampered", [], false);
+        var grant = Directory.EnumerateFiles(Path.Combine(root, "grants"), "*.grant").Single();
+        await File.WriteAllTextAsync(grant, "not-a-grant");
+        await Assert.ThrowsAsync<InvalidOperationException>(() => first.ExecutePreviewAsync(tampered.Token));
+
+        var preview = await first.PreviewUpdateNotesAsync(point.Manifest.Id, "updated", [], false);
+        var foreign = new RecoveryPointService(_runtime, root: root, sid: () => "S-1-test-b", protect: protect, unprotect: protect);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => foreign.ExecutePreviewAsync(preview.Token));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => first.ExecutePreviewAsync(preview.Token));
+
+        var parallel = await first.PreviewUpdateNotesAsync(point.Manifest.Id, "parallel", [], false);
+        var executions = await Task.WhenAll(
+            ExecuteOutcomeAsync(first, parallel.Token),
+            ExecuteOutcomeAsync(new RecoveryPointService(_runtime, root: root, sid: () => "S-1-test-a", protect: protect, unprotect: protect), parallel.Token));
+        Assert.Equal(1, executions.Count(x => x));
+    }
+
+    [Fact]
+    public async Task NotesPreviewGrant_RejectsExpiry_AndPreviewSweepRemovesStaleConsumedArtifacts()
+    {
+        var protect = new Func<byte[], byte[]>(x => x);
+        var root = Path.Combine(_root, "notes-expiry");
+        var service = new RecoveryPointService(_runtime, root: root, sid: () => "S-1-test", protect: protect, unprotect: protect);
+        var point = await Create(service, "notes", Path.Combine(_root, "payloads"));
+        var preview = await service.PreviewUpdateNotesAsync(point.Manifest.Id, "expired", [], false);
+        var grantRoot = Path.Combine(root, "grants");
+        var grant = Directory.EnumerateFiles(grantRoot, "*.grant").Single();
+        var envelope = JsonNode.Parse(await File.ReadAllTextAsync(grant))!.AsObject();
+        envelope["ExpiresAt"] = DateTimeOffset.UtcNow.AddMinutes(-1);
+        await File.WriteAllTextAsync(grant, envelope.ToJsonString());
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.ExecutePreviewAsync(preview.Token));
+
+        var stale = Path.Combine(grantRoot, "orphan.grant.consumed.stale");
+        await File.WriteAllTextAsync(stale, "stale");
+        File.SetLastWriteTimeUtc(stale, DateTime.UtcNow.AddMinutes(-11));
+        await service.PreviewUpdateNotesAsync(point.Manifest.Id, "fresh", [], false);
+        Assert.False(File.Exists(stale));
     }
 
     [Fact]
@@ -356,6 +445,8 @@ public sealed class RecoveryPointServiceTests : IDisposable
 
     private async Task<RecoveryPointSummary> Create(RecoveryPointService service, string name, string destination)
     { var request = new RecoveryPointCreateRequest("Ubuntu", name, destination); var preview = await service.PreviewCreateAsync(request); return await service.CreateAsync(request, preview.Token); }
+    private static async Task<bool> ExecuteOutcomeAsync(RecoveryPointService service, string token)
+    { try { await service.ExecutePreviewAsync(token); return true; } catch (InvalidOperationException) { return false; } }
     private RecoveryPointService Service() => new(_runtime, root: Path.Combine(_root, "recovery"));
 
     private sealed class InlineProgress(List<RecoveryOperationProgress> updates) : IProgress<RecoveryOperationProgress>
