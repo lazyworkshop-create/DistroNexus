@@ -83,6 +83,8 @@
         'Get-DistroNexusHealthHistory',
         'Get-DistroNexusHealthRepairPreview',
         'Repair-DistroNexusHealthFinding',
+        'Get-DistroNexusDiagnosticReportPreview',
+        'Export-DistroNexusDiagnosticReport',
         'Get-DistroNexusPodmanUserUnitPreview',
         'Invoke-DistroNexusPodmanUserUnit',
         'Get-DistroNexusPodmanConnectionPreview',

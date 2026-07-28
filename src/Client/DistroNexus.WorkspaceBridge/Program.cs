@@ -64,6 +64,8 @@ var healthRepairs = new HealthRepairService([
         finding => string.IsNullOrWhiteSpace(finding.InstanceName) ? null : new ProcessRequest("wsl.exe", ["--distribution", finding.InstanceName, "--", "sudo", "--non-interactive", "fstrim", "-av"], TimeSpan.FromMinutes(2)), processes,
         finding => string.IsNullOrWhiteSpace(finding.InstanceName) ? null : new ProcessRequest("wsl.exe", ["--distribution", finding.InstanceName, "--", "sh", "-lc", "df -Pk /"], TimeSpan.FromSeconds(30)))
 ]);
+var diagnosticLogs = new ApplicationDiagnosticLogProvider(settings);
+var diagnosticReports = new DiagnosticReportService(health, capabilities, diagnosticLogs, new StructuredFileErrorProvider(diagnosticLogs), Path.Combine(applicationRoot, "diagnostics"));
 var runtime = new WorkspaceRuntime(instances, processes);
 var gate = new WorkspaceActionCapabilityGate(capabilities);
 var handlers = Enum.GetValues<WorkspaceActionType>()
@@ -80,11 +82,12 @@ string? line;
 while ((line = Console.ReadLine()) is not null)
 {
     BridgeResponse response;
+    BridgeRequest? request = null;
     try
     {
-        var request = JsonSerializer.Deserialize<BridgeRequest>(line, options) ?? throw new ArgumentException("Bridge request is invalid.");
+        request = JsonSerializer.Deserialize<BridgeRequest>(line, options) ?? throw new ArgumentException("Bridge request is invalid.");
         var payload = request.Payload?.GetRawText() ?? string.Empty;
-        object value = request.Operation switch
+        object? value = request.Operation! switch
         {
             "list" => await service.ListAsync(),
             "save" => await service.SaveAsync(ParseDefinition(payload, options), request.ExpectedRevision ?? throw new ArgumentException("Expected revision is required.")),
@@ -154,6 +157,8 @@ while ((line = Console.ReadLine()) is not null)
             "health.history.v1" => await HealthHistoryV1Async(request),
             "health.repair-preview.v1" => await PreviewHealthRepairV1Async(request),
             "health.repair.v1" => await ExecuteHealthRepairV1Async(request),
+            "diagnostics.preview.v1" => await PreviewDiagnosticsV1Async(request),
+            "diagnostics.export.v1" => await ExportDiagnosticsV1Async(request),
             "marketplaceListSources" => await marketplace.GetSourcesAsync(),
             "marketplaceStatus" => await GetMarketplaceStatusAsync(request),
             "marketplaceAddSource" => await AddMarketplaceSourceAsync(request),
@@ -209,6 +214,7 @@ while ((line = Console.ReadLine()) is not null)
     }
     catch (DistroNexus.Core.Exceptions.WslOperationFailedException ex) { response = new(false, null, ex.Code.ToString(), ex.Message); }
     catch (InvalidOperationException ex) when (string.Equals(ex.Message, "PackageCache.EntryInvalid", StringComparison.Ordinal)) { response = new(false, null, "PackageCache.EntryInvalid", "Package cache entry is invalid."); }
+    catch (Exception ex) when (request?.Operation.StartsWith("diagnostics.", StringComparison.Ordinal) == true) { response = new(false, null, "Diagnostic.ExportInvalid", SensitiveDataRedactor.Redact(ex.Message)); }
     catch (Exception ex) { response = new(false, null, ex is InvalidOperationException ? "Workspace.ConflictOrState" : "Workspace.Bridge.Invalid", ex.Message); }
     WriteFrame(response);
 }
@@ -568,6 +574,32 @@ async Task<HealthScanResult> HealthScanV1Async(BridgeRequest request) { Validate
 async Task<IReadOnlyList<HealthHistoryEntry>> HealthHistoryV1Async(BridgeRequest request) { ValidateEmptyPayload(request); return await health.GetHistoryAsync(); }
 async Task<RepairPreview> PreviewHealthRepairV1Async(BridgeRequest request) { ValidatePayload(request, ["Finding"], ["Finding"]); return await PreviewHealthRepairAsync(request); }
 async Task<RepairResult> ExecuteHealthRepairV1Async(BridgeRequest request) { ValidatePayload(request, ["Finding", "Confirmed"], ["Finding", "Confirmed"]); return await ExecuteHealthRepairAsync(request); }
+async Task<DiagnosticReportPreview> PreviewDiagnosticsV1Async(BridgeRequest request)
+{
+    ValidatePayload(request, ["Format", "SelectedLogIds", "DeadlineMilliseconds"], ["Format"]);
+    var payload = ParsePayload<DiagnosticPreviewPayload>(request);
+    if (!Enum.IsDefined(payload.Format)) throw new ArgumentException("Diagnostic report format is invalid.");
+    if (payload.SelectedLogIds is { Count: > 32 } || payload.SelectedLogIds?.Any(string.IsNullOrWhiteSpace) == true)
+        throw new ArgumentException("Diagnostic log selection is invalid.");
+    using var cancellation = CreateDiagnosticCancellation(payload.DeadlineMilliseconds);
+    return await diagnosticReports.PreviewAsync(new DiagnosticReportRequest(payload.Format, true, payload.SelectedLogIds), cancellation.Token);
+}
+async Task<DiagnosticReportExportResult> ExportDiagnosticsV1Async(BridgeRequest request)
+{
+    ValidatePayload(request, ["DestinationFileName", "DeadlineMilliseconds"], ["DestinationFileName"]);
+    if (string.IsNullOrWhiteSpace(request.Token)) throw new ArgumentException("Diagnostic preview token is required.");
+    var payload = ParsePayload<DiagnosticExportPayload>(request);
+    using var cancellation = CreateDiagnosticCancellation(payload.DeadlineMilliseconds);
+    return await diagnosticReports.ExportAsync(new DiagnosticReportExportRequest(request.Token, payload.DestinationFileName), cancellation.Token);
+}
+static CancellationTokenSource CreateDiagnosticCancellation(int? deadlineMilliseconds)
+{
+    var cancellation = new CancellationTokenSource();
+    if (deadlineMilliseconds is null) return cancellation;
+    if (deadlineMilliseconds is < 1 or > 30_000) throw new ArgumentException("Diagnostic request deadline must be between 1 and 30000 milliseconds.");
+    cancellation.CancelAfter(TimeSpan.FromMilliseconds(deadlineMilliseconds.Value));
+    return cancellation;
+}
 async Task<MonitoringSample> GetMonitoringSnapshotAsync(BridgeRequest request)
 {
     var p = JsonSerializer.Deserialize<MonitoringPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Monitoring payload is required.");
@@ -657,6 +689,8 @@ public sealed record RecoveryRetentionPayload(string SourceInstance, int? Maximu
 public sealed record MonitoringPayload(string InstanceName);
 public sealed record HealthFindingPayload(HealthFinding Finding);
 public sealed record HealthRepairPayload(HealthFinding Finding, bool Confirmed);
+public sealed record DiagnosticPreviewPayload(DiagnosticReportFormat Format, IReadOnlyList<string>? SelectedLogIds = null, int? DeadlineMilliseconds = null);
+public sealed record DiagnosticExportPayload(string DestinationFileName, int? DeadlineMilliseconds = null);
 public sealed record MarketplaceSourcePayload(string Url, TemplateSourceKind Kind, bool ExplicitlyAcceptedNonHttps);
 public sealed record MarketplaceSourceIdPayload(string SourceId);
 public sealed record MarketplaceStatusPayload(string SourceId, string? TemplateId = null, string? ManifestDigest = null);

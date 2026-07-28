@@ -330,12 +330,18 @@ public sealed class DiagnosticReportService : IDiagnosticReportService
     private readonly IPlatformCapabilityService _capabilities;
     private readonly IDiagnosticLogProvider _logs;
     private readonly IStructuredErrorProvider _errors;
+    private readonly string _exportDirectory;
     private readonly Dictionary<string, CachedReport> _snapshots = new(StringComparer.Ordinal);
     private readonly object _snapshotSync = new();
     private static readonly TimeSpan SnapshotLifetime = TimeSpan.FromMinutes(10);
-    public DiagnosticReportService(IHealthOrchestrator health, IPlatformCapabilityService capabilities, IDiagnosticLogProvider logs, IStructuredErrorProvider errors) => (_health, _capabilities, _logs, _errors) = (health, capabilities, logs, errors);
+    public DiagnosticReportService(IHealthOrchestrator health, IPlatformCapabilityService capabilities, IDiagnosticLogProvider logs, IStructuredErrorProvider errors, string? exportDirectory = null)
+    {
+        (_health, _capabilities, _logs, _errors) = (health, capabilities, logs, errors);
+        _exportDirectory = Path.GetFullPath(exportDirectory ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DistroNexus", "Diagnostics"));
+    }
     public async Task<DiagnosticReportPreview> PreviewAsync(DiagnosticReportRequest request, CancellationToken cancellationToken = default)
     {
+        if (!request.Redact) throw new InvalidOperationException("DN-7007: Diagnostic reports must use redaction.");
         var host = await _capabilities.GetHostSnapshotAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
         var scan = await _health.ScanAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
         var selected = (request.SelectedLogs ?? []).Distinct(StringComparer.Ordinal).ToArray();
@@ -346,8 +352,8 @@ public sealed class DiagnosticReportService : IDiagnosticReportService
         var errors = await _errors.GetRecentAsync(100, cancellationToken).ConfigureAwait(false);
         var payload = new { generatedAt = DateTimeOffset.UtcNow, host = new { host.Host.WindowsVersion, host.Host.Architecture, host.Host.WslVersion, host.Host.KernelVersion, host.Host.WslgVersion }, capabilities = host.Capabilities.Values.Select(x => new { x.Id, x.Status, x.ReasonCode }), findings = scan.Findings.Select(x => new { x.Id, x.Severity, x.Scope, x.Title, Detail = x.Detail, x.InstanceName }), recentErrors = errors.Select(x => new { x.OccurredAt, x.Code, x.Operation, Message = SensitiveDataRedactor.RedactSecrets(x.Message) }), logs };
         var content = request.Format == DiagnosticReportFormat.Json ? JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }) : Markdown(payload);
-        // Secrets are never exported. Path and user redaction remains a user-visible report option.
-        content = request.Redact ? SensitiveDataRedactor.Redact(content) : SensitiveDataRedactor.RedactSecrets(content);
+        // The public export contract is redacted; secrets, paths, and user identifiers never leave Core.
+        content = SensitiveDataRedactor.Redact(content);
         var token = Guid.NewGuid().ToString("N");
         lock (_snapshotSync)
         {
@@ -355,22 +361,40 @@ public sealed class DiagnosticReportService : IDiagnosticReportService
             foreach (var expired in _snapshots.Where(x => x.Value.ExpiresAt <= now).Select(x => x.Key).ToArray()) _snapshots.Remove(expired);
             _snapshots[token] = new CachedReport(request.Format, content, now.Add(SnapshotLifetime));
         }
-        return new DiagnosticReportPreview(request.Format, content, ["versions", "capabilities", "findings", "recent structured errors", "selected logs"], token);
+        return new DiagnosticReportPreview(request.Format, content, ["versions", "capabilities", "findings", "recent structured errors", "selected logs"], token,
+            new DiagnosticReportSelectionMetadata(true, selected));
     }
     public async Task<string> ExportAsync(DiagnosticReportRequest request, string path, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.PreviewToken)) throw new InvalidOperationException("DN-7008: Preview the diagnostic report before exporting it.");
+        if (!request.Redact) throw new InvalidOperationException("DN-7007: Diagnostic reports must use redaction.");
+        await ExportSnapshotAsync(request.PreviewToken, path, request.Format, cancellationToken).ConfigureAwait(false);
+        return Path.GetFileName(path);
+    }
+    /// <summary>Exports a cached preview without trusting a caller-supplied format or selection.</summary>
+    public async Task<DiagnosticReportExportResult> ExportAsync(DiagnosticReportExportRequest request, CancellationToken cancellationToken = default)
+    {
+        await ExportSnapshotAsync(request.PreviewToken, request.DestinationFileName, expectedFormat: null, cancellationToken).ConfigureAwait(false);
+        return new DiagnosticReportExportResult(request.DestinationFileName);
+    }
+    private async Task<string> ExportSnapshotAsync(string previewToken, string path, DiagnosticReportFormat? expectedFormat, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(previewToken)) throw new InvalidOperationException("DN-7008: Preview the diagnostic report before exporting it.");
+        if (string.IsNullOrWhiteSpace(path) || Path.IsPathRooted(path) || path.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 ||
+            !string.Equals(path, Path.GetFileName(path), StringComparison.Ordinal))
+            throw new InvalidOperationException("DN-7007: Diagnostic destination must be a file name in the DistroNexus diagnostic export directory.");
         CachedReport preview;
         lock (_snapshotSync)
         {
-            if (!_snapshots.Remove(request.PreviewToken, out preview!) || preview.ExpiresAt <= DateTimeOffset.UtcNow)
+            if (!_snapshots.TryGetValue(previewToken, out preview!) || preview.ExpiresAt <= DateTimeOffset.UtcNow)
                 throw new InvalidOperationException("DN-7008: The diagnostic preview is missing or expired. Preview the report again before exporting.");
+            var expected = preview.Format == DiagnosticReportFormat.Json ? ".json" : ".md";
+            if (!string.Equals(Path.GetExtension(path), expected, StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("DN-7007: Export path extension does not match report format.");
+            if (expectedFormat is not null && preview.Format != expectedFormat) throw new InvalidOperationException("DN-7008: The diagnostic preview format no longer matches the requested export.");
+            _snapshots.Remove(previewToken);
         }
-        var fullPath = Path.GetFullPath(path);
-        var expected = request.Format == DiagnosticReportFormat.Json ? ".json" : ".md";
-        if (!string.Equals(Path.GetExtension(fullPath), expected, StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("DN-7007: Export path extension does not match report format.");
-        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-        if (preview.Format != request.Format) throw new InvalidOperationException("DN-7008: The diagnostic preview format no longer matches the requested export.");
+        var fullPath = Path.Combine(_exportDirectory, path);
+        Directory.CreateDirectory(_exportDirectory);
         await File.WriteAllTextAsync(fullPath, preview.Content, new UTF8Encoding(false), cancellationToken).ConfigureAwait(false); return fullPath;
     }
     private static string Markdown(object payload) => "# DistroNexus diagnostic report\n\n```json\n" + JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }) + "\n```\n";

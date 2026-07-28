@@ -448,17 +448,44 @@ public sealed class HealthInitialAndRepairTests
         var capabilities = new Mock<IPlatformCapabilityService>(); capabilities.Setup(x => x.GetHostSnapshotAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>())).ReturnsAsync(Host());
         var logs = new Mock<IDiagnosticLogProvider>(); logs.SetupGet(x => x.AllowedLogIds).Returns(["app:test"]); logs.Setup(x => x.ReadAsync("app:test", It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync("token=private /home/alice/.config");
         var errors = new Mock<IStructuredErrorProvider>(); errors.Setup(x => x.GetRecentAsync(It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync([new StructuredErrorRecord(DateTimeOffset.UtcNow, "DN-7005", "repair", "password=private C:\\Users\\alice")]);
-        var report = new DiagnosticReportService(health.Object, capabilities.Object, logs.Object, errors.Object);
-        var path = Path.Combine(Path.GetTempPath(), "DistroNexus-report-" + Guid.NewGuid().ToString("N") + ".json");
+        var exportDirectory = Path.Combine(Path.GetTempPath(), "DistroNexus-report-" + Guid.NewGuid().ToString("N"));
+        var report = new DiagnosticReportService(health.Object, capabilities.Object, logs.Object, errors.Object, exportDirectory);
+        var fileName = "report.json";
+        var path = Path.Combine(exportDirectory, fileName);
         try
         {
             var preview = await report.PreviewAsync(new DiagnosticReportRequest(DiagnosticReportFormat.Json, true, ["app:test"]));
-            var exported = await report.ExportAsync(new DiagnosticReportRequest(DiagnosticReportFormat.Json, true, ["app:test"], preview.SnapshotToken), path);
+            var exported = await report.ExportAsync(new DiagnosticReportRequest(DiagnosticReportFormat.Json, true, ["app:test"], preview.SnapshotToken), fileName);
             Assert.DoesNotContain("private", preview.Content); Assert.DoesNotContain("alice", preview.Content); Assert.DoesNotContain("C:\\Users", preview.Content);
-            Assert.Equal(path, exported); Assert.Equal(preview.Content, await File.ReadAllTextAsync(path));
-            await Assert.ThrowsAsync<InvalidOperationException>(() => report.ExportAsync(new DiagnosticReportRequest(DiagnosticReportFormat.Json, true), path + ".md"));
+            Assert.True(preview.Selection!.IsRedacted); Assert.Equal(["app:test"], preview.Selection.SelectedLogIds);
+            Assert.Equal(fileName, exported); Assert.DoesNotContain(exportDirectory, exported, StringComparison.OrdinalIgnoreCase); Assert.Equal(preview.Content, await File.ReadAllTextAsync(path));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => report.ExportAsync(new DiagnosticReportExportRequest(preview.SnapshotToken, fileName)));
+            var unsafePreview = await report.PreviewAsync(new DiagnosticReportRequest(DiagnosticReportFormat.Json, true));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => report.ExportAsync(new DiagnosticReportExportRequest(unsafePreview.SnapshotToken, "..\\outside.json")));
+            var extensionPreview = await report.PreviewAsync(new DiagnosticReportRequest(DiagnosticReportFormat.Json, true));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => report.ExportAsync(new DiagnosticReportExportRequest(extensionPreview.SnapshotToken, "report.md")));
+            var replaySafe = await report.ExportAsync(new DiagnosticReportExportRequest(extensionPreview.SnapshotToken, "report.json"));
+            Assert.Equal("report.json", replaySafe.DestinationFileName); Assert.Equal("DistroNexusDiagnostics", replaySafe.Location);
+            await Assert.ThrowsAsync<InvalidOperationException>(() => report.ExportAsync(new DiagnosticReportRequest(DiagnosticReportFormat.Json, true), "report.md"));
         }
-        finally { if (File.Exists(path)) File.Delete(path); }
+        finally { if (Directory.Exists(exportDirectory)) Directory.Delete(exportDirectory, true); }
+    }
+
+    [Fact]
+    public async Task DiagnosticReport_PreviewForwardsCancellationToCoreProviders()
+    {
+        using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
+        var health = new Mock<IHealthOrchestrator>();
+        var capabilities = new Mock<IPlatformCapabilityService>();
+        capabilities.Setup(x => x.GetHostSnapshotAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .Returns<bool, CancellationToken>((_, token) => Task.FromCanceled<PlatformCapabilitySnapshot>(token));
+        var logs = new Mock<IDiagnosticLogProvider>(); logs.SetupGet(x => x.AllowedLogIds).Returns([]);
+        var errors = new Mock<IStructuredErrorProvider>();
+        var report = new DiagnosticReportService(health.Object, capabilities.Object, logs.Object, errors.Object);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => report.PreviewAsync(new DiagnosticReportRequest(DiagnosticReportFormat.Json, true), cancellation.Token));
+        capabilities.Verify(x => x.GetHostSnapshotAsync(It.IsAny<bool>(), cancellation.Token), Times.Once);
+        health.Verify(x => x.ScanAsync(It.IsAny<IProgress<HealthFinding>>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

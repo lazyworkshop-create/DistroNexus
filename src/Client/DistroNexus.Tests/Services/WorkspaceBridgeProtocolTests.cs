@@ -56,6 +56,31 @@ public sealed class WorkspaceBridgeProtocolTests
     }
 
     [Fact]
+    public async Task DiagnosticExport_RejectsInvalidPayloadAndSanitizesTokenFailures()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        var invalid = await bridge.SendAsync("diagnostics.export.v1", payload: JsonDocument.Parse("{\"DestinationFileName\":\"report.json\",\"Script\":\"x\"}").RootElement.Clone(), token: "C:\\Users\\alice\\private-token");
+        var stale = await bridge.SendAsync("diagnostics.export.v1", payload: JsonDocument.Parse("{\"DestinationFileName\":\"report.json\"}").RootElement.Clone(), token: "C:\\Users\\alice\\private-token");
+
+        Assert.False(invalid.GetProperty("Succeeded").GetBoolean());
+        Assert.False(stale.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("Diagnostic.ExportInvalid", stale.GetProperty("ErrorCode").GetString());
+        Assert.DoesNotContain("alice", stale.GetProperty("ErrorMessage").GetString(), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("private-token", stale.GetProperty("ErrorMessage").GetString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task DiagnosticPreview_DeadlineCancelsTheFixedRequestBeforeExportCanBeAuthorized()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        var cancelled = await bridge.SendAsync("diagnostics.preview.v1", payload: JsonDocument.Parse("{\"Format\":\"Json\",\"DeadlineMilliseconds\":1}").RootElement.Clone());
+
+        Assert.False(cancelled.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("Diagnostic.ExportInvalid", cancelled.GetProperty("ErrorCode").GetString());
+        Assert.DoesNotContain("C:\\Users", cancelled.GetProperty("ErrorMessage").GetString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task InstanceList_UsesItsFixedVersionedBridgeRouteAndReturnsAProtocolFrame()
     {
         await using var bridge = await BridgeProcess.StartAsync();

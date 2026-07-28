@@ -45,4 +45,12 @@ public sealed record RepairExecutionRequest(string PreviewToken, bool Confirmed)
 public enum DiagnosticReportFormat { Markdown, Json }
 /// <summary>The preview token pins an exact, already-redacted report snapshot for export.</summary>
 public sealed record DiagnosticReportRequest(DiagnosticReportFormat Format, bool Redact, IReadOnlyList<string>? SelectedLogs = null, string? PreviewToken = null);
-public sealed record DiagnosticReportPreview(DiagnosticReportFormat Format, string Content, IReadOnlyList<string> IncludedSections, string SnapshotToken);
+/// <summary>Safe selection information returned with a diagnostic preview. Log identifiers are
+/// allow-listed product identifiers, never paths or host-provided names.</summary>
+public sealed record DiagnosticReportSelectionMetadata(bool IsRedacted, IReadOnlyList<string> SelectedLogIds);
+public sealed record DiagnosticReportPreview(DiagnosticReportFormat Format, string Content, IReadOnlyList<string> IncludedSections, string SnapshotToken,
+    DiagnosticReportSelectionMetadata? Selection = null);
+/// <summary>Consumes one diagnostic preview token and selects a leaf file name in the Core-owned export directory.</summary>
+public sealed record DiagnosticReportExportRequest(string PreviewToken, string DestinationFileName);
+/// <summary>Public export result intentionally omits the Core-owned absolute file path.</summary>
+public sealed record DiagnosticReportExportResult(string DestinationFileName, string Location = "DistroNexusDiagnostics");

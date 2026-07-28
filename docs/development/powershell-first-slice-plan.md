@@ -958,7 +958,7 @@ Desktop migration and live host UAT.
 
 ### Status
 
-Planned
+Committed
 
 ### Objective
 
