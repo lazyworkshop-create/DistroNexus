@@ -96,6 +96,9 @@
         'Get-DistroNexusUsbDevice',
         'Connect-DistroNexusUsbDevice',
         'Disconnect-DistroNexusUsbDevice'
+        ,'Get-DistroNexusSettings'
+        ,'Set-DistroNexusSettings'
+        ,'Reset-DistroNexusSettings'
         ,'Get-DistroNexusWorkspace'
         ,'Export-DistroNexusWorkspace'
         ,'New-DistroNexusWorkspace'

@@ -12,7 +12,7 @@
 
 ## Dependency Order
 
-S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S05 -> S06 -> S07 -> S08
+S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S05 -> S06 -> S07 -> S08
 
 ## Slice S01: Verified module contract and migration baseline
 
@@ -364,6 +364,65 @@ Typed instance list/start/stop client contract and named WPF consumer migration.
 ### Out of Scope
 
 Import/export/install/move/rename/remove/backup lifecycle behavior and their WPF consumers.
+
+## Slice S11: Global settings bridge-backed module contract
+
+### Status
+
+Committed
+
+### Objective
+
+Automation can get, save, and reset typed global DistroNexus settings through exported PowerShell commands backed by fixed WorkspaceBridge operations.
+
+### Sources
+
+FR-001 through FR-007; `ISettingsService.cs`; `SettingsService.cs`; current bridge composition; settings/catalog evidence inventory.
+
+### Dependencies
+
+S02.
+
+### Allowed Paths
+
+`src/Client/DistroNexus.WorkspaceBridge/Program.cs`, `src/PowerShell/DistroNexus.psd1`, `src/PowerShell/Public/Get-DistroNexusSettings.ps1`, `src/PowerShell/Public/Set-DistroNexusSettings.ps1`, `src/PowerShell/Public/Reset-DistroNexusSettings.ps1`, focused WorkspaceBridge xUnit tests, focused PowerShell Pester tests, plan.
+
+### Excluded Paths
+
+Desktop consumers, `SettingsService`/settings schema, catalog/source/package services, private Config scripts, existing package commands, release/publishing surfaces.
+
+### Contract and Documentation
+
+Define fixed versioned `settings.get.v1`, `settings.save.v1`, and `settings.reset.v1` bridge operations around the typed `GlobalSettings` model. The public setter accepts only modeled fields, not arbitrary JSON; reset and save use `ShouldProcess`.
+
+### Implementation Scope
+
+Add exported Get/Set/Reset settings commands and bridge routes. Preserve settings-service validation/persistence; reject malformed payloads and unknown operations with stable errors.
+
+### Test Scope
+
+Bridge route success/invalid-payload tests; command parameter/mapping/error/WhatIf/decline tests; manifest export contract coverage.
+
+### Acceptance Criteria
+
+- Global settings get/save/reset have fixed exported module commands and fixed bridge operations.
+- Save/reset do not invoke the bridge under `WhatIf` or declined confirmation.
+- No arbitrary settings JSON, script text, or bridge-operation input is exposed.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~WorkspaceBridgeProtocol|FullyQualifiedName~Settings"
+pwsh -NoProfile -Command "Invoke-Pester -Path tests/PowerShell/Unit/Public"
+```
+
+### Commit Boundary
+
+Typed global settings module contract and focused tests.
+
+### Out of Scope
+
+WPF settings page migration, catalog/source/cache, and private Config-script consolidation.
 
 ## Slice S05: Network, systemd, firewall, recovery, health, and diagnostics command parity
 

@@ -138,6 +138,9 @@ while ((line = Console.ReadLine()) is not null)
             "instance.list.v1" => await instances.GetInstanceDetailsAsync(ParseInstanceListOptions(request)),
             "instance.start.v1" => await instances.StartInstanceAsync(ParseInstanceName(request)),
             "instance.stop.v1" => await instances.StopInstanceAsync(ParseInstanceName(request)),
+            "settings.get.v1" => GetSettings(request),
+            "settings.save.v1" => SaveSettings(request),
+            "settings.reset.v1" => ResetSettings(request),
             _ => throw new ArgumentException("Bridge operation is unsupported.")
         };
         response = new(true, value, null, null);
@@ -154,6 +157,35 @@ string ParseInstanceName(BridgeRequest request)
     if (string.IsNullOrWhiteSpace(payload.Name))
         throw new ArgumentException("Instance name is required.");
     return payload.Name;
+}
+
+GlobalSettings GetSettings(BridgeRequest request)
+{
+    RequireNoPayload(request, "Settings get does not accept a payload.");
+    return settings.LoadSettings();
+}
+
+GlobalSettings SaveSettings(BridgeRequest request)
+{
+    var payload = JsonSerializer.Deserialize<SettingsSavePayload>(request.Payload?.GetRawText() ?? string.Empty,
+        new JsonSerializerOptions(options) { UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow })
+        ?? throw new ArgumentException("Settings save payload is required.");
+    ArgumentNullException.ThrowIfNull(payload.Settings);
+    settings.SaveSettings(payload.Settings);
+    return settings.LoadSettings();
+}
+
+GlobalSettings ResetSettings(BridgeRequest request)
+{
+    RequireNoPayload(request, "Settings reset does not accept a payload.");
+    settings.ResetSettings();
+    return settings.LoadSettings();
+}
+
+static void RequireNoPayload(BridgeRequest request, string message)
+{
+    if (request.Payload is not null)
+        throw new ArgumentException(message);
 }
 
 InstanceListOptions ParseInstanceListOptions(BridgeRequest request) =>
@@ -277,6 +309,7 @@ static WorkspaceDefinition ParseDefinition(string payload, JsonSerializerOptions
 public sealed record BridgeRequest(string Operation, Guid? Id, JsonElement? Payload, long? ExpectedRevision, string? Token = null, string? Name = null, Guid? ActionId = null);
 public sealed record InstanceNamePayload(string Name);
 public sealed record InstanceListPayload(bool IncludeRelease = false, bool IncludeUser = false, bool SkipDiskSize = false);
+public sealed record SettingsSavePayload(GlobalSettings Settings);
 public sealed record PodmanUnitPayload(string InstanceName, PodmanUserUnit Unit, SystemdAction Action);
 public sealed record PodmanConnectionPayload(string InstanceName, string Name, string Endpoint);
 public sealed record PodmanStatusPayload(string InstanceName);

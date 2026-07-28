@@ -84,6 +84,44 @@ public sealed class WorkspaceBridgeProtocolTests
     }
 
     [Fact]
+    public async Task Settings_UseFixedVersionedRoutesAndPersistTheTypedModel()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+
+        var initial = await bridge.SendAsync("settings.get.v1");
+        Assert.True(initial.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal(2, initial.GetProperty("Value").GetProperty("DefaultWslVersion").GetInt32());
+
+        var payload = JsonDocument.Parse("""{"Settings":{"DefaultInstallPath":"D:\\WSL","PackageCachePath":"","TerminalStartPath":"~","DefaultWslVersion":1,"DefaultUsername":"root","DefaultDistributionId":"","EnableLogging":true,"LogPath":"","CheckUpdatesOnStartup":true,"CatalogUrl":"https://example.test/catalog.json","Theme":"Dark","Language":"en-US","ShowConfirmationDialogs":true,"MaxConcurrentDownloads":3,"AutoRetryDownloads":true,"MaxRetryAttempts":3,"AutoSaveEnabled":true,"AutoSaveInterval":30,"CustomData":{},"PowerShellModulePath":null,"LocalhostForwardingHealthEndpoint":""}}""").RootElement.Clone();
+        var saved = await bridge.SendAsync("settings.save.v1", payload: payload);
+        Assert.True(saved.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("D:\\WSL", saved.GetProperty("Value").GetProperty("DefaultInstallPath").GetString());
+        Assert.Equal("Dark", saved.GetProperty("Value").GetProperty("Theme").GetString());
+
+        var reset = await bridge.SendAsync("settings.reset.v1");
+        Assert.True(reset.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("C:\\WSL", reset.GetProperty("Value").GetProperty("DefaultInstallPath").GetString());
+        Assert.Equal("Auto", reset.GetProperty("Value").GetProperty("Theme").GetString());
+    }
+
+    [Fact]
+    public async Task Settings_RoutesRejectPayloadsOutsideTheirFixedTypedContract()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+
+        var get = await bridge.SendAsync("settings.get.v1", payload: JsonDocument.Parse("{}").RootElement.Clone());
+        var reset = await bridge.SendAsync("settings.reset.v1", payload: JsonDocument.Parse("{}").RootElement.Clone());
+        var arbitrary = await bridge.SendAsync("settings.save.v1", payload: JsonDocument.Parse("""{"Settings":{"DefaultInstallPath":"D:\\WSL"},"Script":"Get-ChildItem"}""").RootElement.Clone());
+
+        Assert.False(get.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("Workspace.Bridge.Invalid", get.GetProperty("ErrorCode").GetString());
+        Assert.False(reset.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("Workspace.Bridge.Invalid", reset.GetProperty("ErrorCode").GetString());
+        Assert.False(arbitrary.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("Workspace.Bridge.Invalid", arbitrary.GetProperty("ErrorCode").GetString());
+    }
+
+    [Fact]
     public async Task HealthScan_UsesConcreteCoreChecksForEveryAdvertisedCategory()
     {
         await using var bridge = await BridgeProcess.StartAsync();
@@ -207,7 +245,7 @@ public sealed class WorkspaceBridgeProtocolTests
         {
             var root = FindRoot();
             var bridgeDirectory = Path.Combine(root, "src", "Client", "DistroNexus.WorkspaceBridge", "bin");
-            var bridge = new[] { "Release", "Debug" }
+            var bridge = new[] { "Debug", "Release" }
                 .Select(configuration => Path.Combine(bridgeDirectory, configuration, "net10.0", "DistroNexus.WorkspaceBridge.dll"))
                 .FirstOrDefault(File.Exists)
                 ?? throw new InvalidOperationException("Build the WorkspaceBridge project before running protocol tests.");
