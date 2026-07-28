@@ -26,6 +26,10 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string RemoveInstanceTagCommand = "Remove-DistroNexusInstanceTag";
     private const string RenameInstanceTagsCommand = "Rename-DistroNexusInstanceTags";
     private const string GetInstancesCommand = "Get-DistroNexusInstance";
+    private const string PreviewTemplateApplyCommand = "New-DistroNexusTemplateApplyPreview";
+    private const string StartTemplateApplyCommand = "Start-DistroNexusTemplateApply";
+    private const string GetTemplateApplyOperationCommand = "Get-DistroNexusTemplateApplyOperation";
+    private const string StopTemplateApplyCommand = "Stop-DistroNexusTemplateApply";
     private const string StartInstanceCommand = "Start-DistroNexusInstance";
     private const string StopInstanceCommand = "Stop-DistroNexusInstance";
     private const string RemoveInstanceCommand = "Remove-DistroNexusInstance";
@@ -229,6 +233,11 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     }
     public async Task<bool> TestTemplateCompatibilityAsync(string templateId, string distributionName, CancellationToken cancellationToken = default)
     { ValidateTemplateIdentifier(templateId, nameof(templateId)); ValidateName(distributionName, nameof(distributionName)); var result = await ExecuteJsonAsync<TemplateCompatibilityClientResult>(TestTemplateCompatibilityCommand, new() { ["TemplateId"] = templateId, ["DistributionName"] = distributionName }, cancellationToken); return result.IsCompatible; }
+    public Task<TemplateApplyPreviewResult> PreviewTemplateApplyAsync(string instanceName, string templateId, IReadOnlyDictionary<string,string> variables, bool declineRecoveryOffer, CancellationToken cancellationToken = default)
+    { ValidateName(instanceName, nameof(instanceName)); ValidateTemplateIdentifier(templateId, nameof(templateId)); if (variables is null || variables.Count > 64 || variables.Any(x => x.Key.Length > 128 || x.Value.Length > 4096)) throw new ArgumentException("Template variables are invalid.", nameof(variables)); return ExecuteJsonAsync<TemplateApplyPreviewResult>(PreviewTemplateApplyCommand, new() { ["InstanceName"] = instanceName, ["TemplateId"] = templateId, ["Variables"] = variables, ["DeclineRecoveryOffer"] = declineRecoveryOffer, ["Confirm"] = false }, cancellationToken); }
+    public Task<TemplateApplyExecuteResult> StartTemplateApplyAsync(string previewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<TemplateApplyExecuteResult>(StartTemplateApplyCommand, new() { ["PreviewToken"] = ValidateHexToken(previewToken, nameof(previewToken)), ["Confirm"] = false }, cancellationToken);
+    public Task<TemplateApplyOperationStatus> GetTemplateApplyOperationStatusAsync(string operationId, CancellationToken cancellationToken = default) => ExecuteJsonAsync<TemplateApplyOperationStatus>(GetTemplateApplyOperationCommand, new() { ["OperationId"] = ValidateHexToken(operationId, nameof(operationId)) }, cancellationToken);
+    public Task<TemplateApplyCancelResult> CancelTemplateApplyAsync(string operationId, CancellationToken cancellationToken = default) => ExecuteJsonAsync<TemplateApplyCancelResult>(StopTemplateApplyCommand, new() { ["OperationId"] = ValidateHexToken(operationId, nameof(operationId)), ["Confirm"] = false }, cancellationToken);
     public Task<TemplateLocalPreview> PreviewTemplateImportAsync(string content, CancellationToken cancellationToken = default)
     { ValidateTemplateContent(content); return ExecuteJsonAsync<TemplateLocalPreview>(ImportTemplatePreviewCommand, new() { ["Content"] = content }, cancellationToken); }
     public Task<TemplateLocalMutationResult> ImportTemplateAsync(string previewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<TemplateLocalMutationResult>(ImportTemplateCommand, TokenParameters(previewToken), cancellationToken);

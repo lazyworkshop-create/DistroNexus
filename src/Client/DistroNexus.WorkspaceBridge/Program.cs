@@ -62,7 +62,14 @@ if (args.Length > 0 && string.Equals(args[0], "--run-backup-schedule", StringCom
     Environment.ExitCode = scheduled.Succeeded ? 0 : 1;
     return;
 }
-var templates = new TemplateService(NullLogger<TemplateService>.Instance, settings, bridgePowerShell, new HttpClient());
+var marketplace = new TemplateMarketplaceService(root);
+// Template application uses TemplateApplyService's fixed granted runtime. This catalog-only
+// instance is intentionally unable to execute generic PowerShell service calls.
+var templates = new TemplateService(NullLogger<TemplateService>.Instance, settings, new TemplateCatalogPowerShellService(), new HttpClient(), marketplaceService: marketplace);
+var templateApplyGrants = new TemplateApplyGrantStore(Path.Combine(applicationRoot, "template-apply-grants"));
+var templateApplyStagingRoot = Path.Combine(applicationRoot, "template-operation-staging");
+var templateApplyOperations = new TemplateApplyOperationStore(Path.Combine(applicationRoot, "template-operations"), templateApplyStagingRoot);
+var templateApply = new TemplateApplyService(templates, templateApplyGrants, templateApplyOperations, new FixedTemplateGrantedExecutionRuntime(templateApplyOperations), templateApplyStagingRoot, marketplace);
 var templateLocalPreviews = new TemplateLocalPreviewStore(applicationRoot);
 var monitoringWarnings = new MonitoringWarningRegistry();
 var healthRuntime = new HealthRuntimeAdapter(processes, globalConfiguration);
@@ -108,7 +115,11 @@ if (args.Length == 2 && args[0] == "--run-workspace-operation" && args[1].Length
     await service.RunOperationAsync(args[1]);
     return;
 }
-var marketplace = new TemplateMarketplaceService(root);
+if (args.Length == 2 && string.Equals(args[0], "--run-template-operation", StringComparison.Ordinal) && args[1].Length == 64 && args[1].All(Uri.IsHexDigit))
+{
+    await templateApply.RunOperationAsync(args[1]);
+    return;
+}
 var outputGate = new object();
 void WriteFrame(BridgeResponse frame)
 {
@@ -219,6 +230,10 @@ while ((line = Console.ReadLine()) is not null)
             "template.catalog.list.v1" => await TemplateCatalogListV1Async(request),
             "template.catalog.get.v1" => await TemplateCatalogGetV1Async(request),
             "template.compatibility.v1" => await TemplateCompatibilityV1Async(request),
+            "template.apply.preview.v1" => await TemplateApplyPreviewV1Async(request),
+            "template.apply.execute.v1" => await TemplateApplyExecuteV1Async(request),
+            "template.apply.status.v1" => await TemplateApplyStatusV1Async(request),
+            "template.apply.cancel.v1" => await TemplateApplyCancelV1Async(request),
             "template.marketplace.sources.v1" => await TemplateMarketplaceSourcesV1Async(request),
             "template.marketplace.discover.v1" => await TemplateMarketplaceDiscoverV1Async(request),
             "template.marketplace.status.v1" => await TemplateMarketplaceStatusV1Async(request),
@@ -1042,6 +1057,25 @@ async Task<IReadOnlyList<TemplateMarketplaceEntryDisplay>> TemplateMarketplaceDi
 async Task<object> TemplateCatalogListV1Async(BridgeRequest request) { ValidatePayload(request, ["ForceRefresh", "Query", "Category"], []); var p=ParsePayload<TemplateCatalogListPayload>(request); var all=await templates.LoadTemplatesAsync(p.ForceRefresh); IEnumerable<Template> selected=all; if(!string.IsNullOrWhiteSpace(p.Query)) selected=selected.Where(x => x.Name.Contains(p.Query, StringComparison.OrdinalIgnoreCase) || x.Id.Contains(p.Query, StringComparison.OrdinalIgnoreCase)); if(!string.IsNullOrWhiteSpace(p.Category)) selected=selected.Where(x => string.Equals(x.Category,p.Category,StringComparison.OrdinalIgnoreCase)); return new { Templates=selected.Take(500).Select(ToTemplateDisplay).ToArray() }; }
 async Task<object> TemplateCatalogGetV1Async(BridgeRequest request) { ValidatePayload(request,["TemplateId"],["TemplateId"]); var p=ParsePayload<TemplateCatalogGetPayload>(request); return new { Template=(await templates.GetTemplateByIdAsync(p.TemplateId)) is { } template ? ToTemplateDisplay(template) : null }; }
 async Task<object> TemplateCompatibilityV1Async(BridgeRequest request) { ValidatePayload(request,["TemplateId","DistributionName"],["TemplateId","DistributionName"]); var p=ParsePayload<TemplateCompatibilityPayload>(request); var compatible=await templates.IsTemplateCompatibleAsync(p.TemplateId,p.DistributionName); return new { IsCompatible=compatible, Disposition=compatible ? "Compatible" : "Incompatible", Warnings=Array.Empty<string>() }; }
+async Task<TemplateApplyPreviewResult> TemplateApplyPreviewV1Async(BridgeRequest request) { ValidatePayload(request,["InstanceName","TemplateId","Variables","DeclineRecoveryOffer"],["InstanceName","TemplateId","Variables","DeclineRecoveryOffer"]); var p=ParsePayload<TemplateApplyPreviewPayload>(request); return await templateApply.PreviewAsync(p.InstanceName,p.TemplateId,p.Variables,p.DeclineRecoveryOffer); }
+async Task<TemplateApplyExecuteResult> TemplateApplyExecuteV1Async(BridgeRequest request) { ValidatePayload(request,["PreviewToken"],["PreviewToken"]); var result=await templateApply.ExecuteAsync(ParsePayload<TemplateApplyExecutePayload>(request).PreviewToken); await StartTemplateWorkerAsync(result.OperationId); return result; }
+async Task<TemplateApplyOperationStatus> TemplateApplyStatusV1Async(BridgeRequest request) { ValidatePayload(request,["OperationId"],["OperationId"]); return await templateApply.StatusAsync(ParsePayload<TemplateApplyOperationPayload>(request).OperationId); }
+async Task<TemplateApplyCancelResult> TemplateApplyCancelV1Async(BridgeRequest request) { ValidatePayload(request,["OperationId"],["OperationId"]); return await templateApply.CancelAsync(ParsePayload<TemplateApplyOperationPayload>(request).OperationId); }
+async Task StartTemplateWorkerAsync(string operationId)
+{
+    var assembly=Path.Combine(AppContext.BaseDirectory,"TemplateWorker","DistroNexus.TemplateWorker.dll"); var host=Path.ChangeExtension(assembly,".exe");
+    if(!File.Exists(assembly)||!File.Exists(host))
+    {
+        await templateApplyOperations.StartWorkerAsync(operationId, () => throw new InvalidOperationException());
+        return;
+    }
+    try { TemplateWorkerIdentity.EnsureApprovedWorker(System.Reflection.AssemblyName.GetAssemblyName(assembly), System.Reflection.Assembly.GetExecutingAssembly().GetName().Version ?? throw new InvalidOperationException()); }
+    catch { await templateApplyOperations.StartWorkerAsync(operationId, () => throw new InvalidOperationException()); return; }
+    var info=new ProcessStartInfo(host) { UseShellExecute=false, CreateNoWindow=true };
+    info.ArgumentList.Add(operationId);
+    info.Environment["DISTRONEXUS_TEMPLATE_STORE_ROOT"]=applicationRoot;
+    await templateApplyOperations.StartWorkerAsync(operationId, () => Process.Start(info) ?? throw new InvalidOperationException());
+}
 async Task<TemplateMarketplaceStatusDisplay> TemplateMarketplaceStatusV1Async(BridgeRequest request) { ValidatePayload(request,["SourceId","TemplateId","ManifestDigest"],["SourceId","TemplateId","ManifestDigest"]); var p=ParsePayload<MarketplaceExactEntryPayload>(request); return ToMarketplaceStatusDisplay(p.SourceId,p.TemplateId,p.ManifestDigest,await marketplace.GetStatusAsync(p.SourceId,p.TemplateId,p.ManifestDigest)); }
 async Task<TemplateSourceDisplay> TemplateMarketplaceAddSourceV1Async(BridgeRequest request) { ValidatePayload(request,["Url","Kind","AcceptNonHttps"],["Url","Kind","AcceptNonHttps"]); var p=ParsePayload<TemplateMarketplaceAddSourcePayload>(request); return ToTemplateSourceDisplay(await marketplace.AddSourceAsync(p.Url,p.Kind,p.AcceptNonHttps)); }
 async Task<TemplateSourceDisplay> TemplateMarketplaceSetEnabledV1Async(BridgeRequest request) { ValidatePayload(request,["SourceId","Enabled"],["SourceId","Enabled"]); var p=ParsePayload<MarketplaceSourceEnabledPayload>(request); await marketplace.SetSourceEnabledAsync(p.SourceId,p.Enabled); return ToTemplateSourceDisplay((await marketplace.GetSourcesAsync()).Single(x=>x.Id==p.SourceId)); }
@@ -1351,6 +1385,20 @@ public sealed class BridgeReadOnlyPowerShellService : IPowerShellService
     public Task<T?> ExecuteModuleCmdletAsync<T>(string cmdletName, Dictionary<string, object>? parameters = null, ModuleCallOptions? options = null, CancellationToken cancellationToken = default) => Unavailable<T?>();
     public Task<string> GetDiagnosticInfoAsync(CancellationToken cancellationToken = default) => Task.FromResult("Read-only bridge health composition.");
 }
+/// <summary>Catalog/metadata-only template composition; it is never an execution runtime.</summary>
+public sealed class TemplateCatalogPowerShellService : IPowerShellService
+{
+    private static Task<T> No<T>() => Task.FromException<T>(new InvalidOperationException("Template execution requires a granted runtime."));
+    public Task<T?> ExecuteAsync<T>(string cmdlet, Dictionary<string, object>? parameters = null, CancellationToken cancellationToken = default) => No<T?>();
+    public Task<string> ExecuteScriptAsync(string script, CancellationToken cancellationToken = default) => No<string>();
+    public Task<PowerShellScriptResult> ExecuteScriptWithResultAsync(string script, CancellationToken cancellationToken = default) => No<PowerShellScriptResult>();
+    public Task<string> ExecuteScriptStreamingAsync(string script, Action<string>? onOutputLine = null, Action<string>? onErrorLine = null, CancellationToken cancellationToken = default) => No<string>();
+    public Task ImportModuleAsync(string modulePath, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public Task<bool> IsModuleLoadedAsync(CancellationToken cancellationToken = default) => Task.FromResult(false);
+    public Task<PowerShellScriptResult> ExecuteModuleCmdletAsync(string cmdletName, Dictionary<string, object>? parameters = null, ModuleCallOptions? options = null, CancellationToken cancellationToken = default) => No<PowerShellScriptResult>();
+    public Task<T?> ExecuteModuleCmdletAsync<T>(string cmdletName, Dictionary<string, object>? parameters = null, ModuleCallOptions? options = null, CancellationToken cancellationToken = default) => No<T?>();
+    public Task<string> GetDiagnosticInfoAsync(CancellationToken cancellationToken = default) => Task.FromResult("Template catalog composition.");
+}
 public sealed record MarketplaceSourceEnabledPayload(string SourceId, bool Enabled);
 public sealed record MarketplaceSourceRemovePayload(string SourceId);
 public sealed record MarketplaceApprovalPayload(string ReviewToken);
@@ -1363,6 +1411,9 @@ public sealed record MarketplaceArtifactPayload(string TemplateId, string Sha256
 public sealed record TemplateCatalogListPayload(bool ForceRefresh = false, string? Query = null, string? Category = null);
 public sealed record TemplateCatalogGetPayload(string TemplateId);
 public sealed record TemplateCompatibilityPayload(string TemplateId, string DistributionName);
+public sealed record TemplateApplyPreviewPayload(string InstanceName, string TemplateId, Dictionary<string,string> Variables, bool DeclineRecoveryOffer);
+public sealed record TemplateApplyExecutePayload(string PreviewToken);
+public sealed record TemplateApplyOperationPayload(string OperationId);
 public sealed record TemplateMarketplaceAddSourcePayload(string Url, TemplateSourceKind Kind, bool AcceptNonHttps);
 public sealed record TemplateMarketplaceRollbackPayload(string TemplateId, string ArtifactSha256);
 public sealed record TemplateLocalContentPayload(string Content);

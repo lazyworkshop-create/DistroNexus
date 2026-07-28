@@ -844,6 +844,55 @@ public sealed class WorkspaceBridgeProtocolTests
         Assert.Equal("Template.ReviewGrantInvalid", invalidReview.GetProperty("ErrorCode").GetString());
     }
 
+    [Theory]
+    [InlineData("template.apply.preview.v1", "{\"InstanceName\":\"Ubuntu\",\"TemplateId\":\"dev\",\"Variables\":{},\"DeclineRecoveryOffer\":true,\"Script\":\"Get-ChildItem\"}")]
+    [InlineData("template.apply.execute.v1", "{\"PreviewToken\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"Command\":\"cmd.exe\"}")]
+    [InlineData("template.apply.status.v1", "{\"OperationId\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"Path\":\"C:\\\\outside\"}")]
+    [InlineData("template.apply.cancel.v1", "{\"OperationId\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"ProcessId\":1}")]
+    public async Task TemplateApplyRoutes_RejectUnknownPayloadFieldsBeforeAnyExecution(string operation, string json)
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        var response = await bridge.SendAsync(operation, payload: JsonDocument.Parse(json).RootElement.Clone());
+
+        Assert.False(response.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("Template.InvalidRequest", response.GetProperty("ErrorCode").GetString());
+        Assert.DoesNotContain("outside", response.GetRawText(), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Get-ChildItem", response.GetRawText(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task PackagedTemplateWorker_UsesFixedIdentityAndOpaqueOperationHandoff()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "DistroNexus-template-worker-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var id = new string('d', 64);
+            var store = new TemplateApplyOperationStore(Path.Combine(root, "template-operations"));
+            var now = DateTimeOffset.UtcNow;
+            await store.CreateAsync(new TemplateApplyOperationRecord(1, id, TemplateApplyGrantStore.CurrentSid(), "Ubuntu", "missing-template", "1", "", "", "", "", "", true, TemplateOperationState.Queued, now, now.AddMinutes(1), now, 0, 0, null, "Queued", null, [], false));
+            var worker = FindPackagedTemplateWorkerHost();
+            var bridge = FindPackagedBridgeHost();
+            Assert.True(File.Exists(worker), $"The packaged template worker host was not found: {worker}");
+            Assert.True(File.Exists(bridge), $"The packaged bridge host was not found: {bridge}");
+            var workerName = AssemblyName.GetAssemblyName(Path.ChangeExtension(worker, ".dll"));
+            var bridgeName = AssemblyName.GetAssemblyName(Path.ChangeExtension(bridge, ".dll"));
+            Assert.Equal("DistroNexus.TemplateWorker", workerName.Name);
+            Assert.Equal(bridgeName.Version, workerName.Version);
+
+            using var invalid = Process.Start(new ProcessStartInfo(worker) { UseShellExecute = false, ArgumentList = { "--run-template-operation", id } })!;
+            await invalid.WaitForExitAsync();
+            Assert.Equal(2, invalid.ExitCode);
+
+            using var process = Process.Start(new ProcessStartInfo(worker) { UseShellExecute = false, Environment = { ["DISTRONEXUS_TEMPLATE_STORE_ROOT"] = root }, ArgumentList = { id } })!;
+            await process.WaitForExitAsync();
+            Assert.Equal(0, process.ExitCode);
+            var terminal = await store.ReadAsync(id);
+            Assert.True(TemplateApplyOperationStore.Terminal(terminal.State));
+            Assert.NotEqual("Template.WorkerStartFailed", terminal.ErrorCode);
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
     [Fact]
     public async Task TemplateMarketplaceReviewGrant_IsApprovedByAFreshBridgeProcess_AndCannotReplay()
     {
@@ -985,5 +1034,19 @@ public sealed class WorkspaceBridgeProtocolTests
         var configuration = Directory.GetParent(AppContext.BaseDirectory)?.Parent?.Name
             ?? throw new DirectoryNotFoundException("Unable to determine the active test configuration.");
         return Path.Combine(FindRoot(), "src", "Client", "DistroNexus.WorkspaceBridge", "bin", configuration, "net10.0", "WorkspaceWorker", "DistroNexus.WorkspaceWorker.exe");
+    }
+
+    private static string FindPackagedTemplateWorkerHost()
+    {
+        var configuration = Directory.GetParent(AppContext.BaseDirectory)?.Parent?.Name
+            ?? throw new DirectoryNotFoundException("Unable to determine the active test configuration.");
+        return Path.Combine(FindRoot(), "src", "Client", "DistroNexus.WorkspaceBridge", "bin", configuration, "net10.0", "TemplateWorker", "DistroNexus.TemplateWorker.exe");
+    }
+
+    private static string FindPackagedBridgeHost()
+    {
+        var configuration = Directory.GetParent(AppContext.BaseDirectory)?.Parent?.Name
+            ?? throw new DirectoryNotFoundException("Unable to determine the active test configuration.");
+        return Path.Combine(FindRoot(), "src", "Client", "DistroNexus.WorkspaceBridge", "bin", configuration, "net10.0", "DistroNexus.WorkspaceBridge.exe");
     }
 }
