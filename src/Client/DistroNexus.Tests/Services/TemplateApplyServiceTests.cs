@@ -152,7 +152,7 @@ public sealed class TemplateApplyServiceTests : IDisposable
         var pending=new TemplatePendingScriptRecord(0,TemplateScriptType.PowerShell,hash,TemplatePendingScriptState.Claimed,"attempt",now,now,null,null);
         await store.CreateAsync(new TemplateApplyOperationRecord(1,id,TemplateApplyGrantStore.CurrentSid(),"Ubuntu","dev","1","","","",DigestFiles(),"",true,TemplateOperationState.Running,now,now.AddMinutes(1),now,0,1,"setup","Running",null,[],false,pending));
         var task=new FixedTemplateGrantedExecutionRuntime(store).ExecuteAsync(new GrantedTemplateScriptPlan(id,"Ubuntu",0,TemplateScriptType.PowerShell,60,file,hash));
-        await WaitForChildAsync(store,id);
+        await WaitForChildAsync(store,id,task);
         Assert.True(await store.RequestCancelAsync(id));
         var result=await task.WaitAsync(TimeSpan.FromSeconds(10));
         Assert.True(result.Cancelled);
@@ -233,14 +233,29 @@ public sealed class TemplateApplyServiceTests : IDisposable
     }
     private static string DigestFiles() => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Array.Empty<byte>())).ToLowerInvariant();
     private static string Hash(string path) => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant();
-    private static async Task WaitForChildAsync(TemplateApplyOperationStore store, string id)
+    private static async Task WaitForChildAsync(TemplateApplyOperationStore store, string id, Task execution)
     {
-        var until=DateTimeOffset.UtcNow.AddSeconds(5);
-        while(DateTimeOffset.UtcNow < until)
+        using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        while(!timeout.IsCancellationRequested)
         {
-            if ((await store.ReadAsync(id)).PendingScript?.ChildProcessId is not null) return;
-            await Task.Delay(25);
+            try
+            {
+                if ((await store.ReadAsync(id)).PendingScript?.ChildProcessId is not null) return;
+            }
+            catch (IOException)
+            {
+                // The durable record is atomically replaced with an exclusive file handle; a test
+                // observer may briefly race the worker's persistence write.
+            }
+            var completed=await Task.WhenAny(execution,Task.Delay(50,timeout.Token));
+            if(completed==execution)
+            {
+                // Surface a startup error immediately rather than turning it into an unrelated
+                // readiness timeout on slower CI hosts.
+                await execution;
+                throw new InvalidOperationException("The fixed runtime completed before its child process became observable.");
+            }
         }
-        throw new TimeoutException("The fixed runtime did not start its child process.");
+        throw new TimeoutException("The fixed runtime did not persist child readiness within 30 seconds.");
     }
 }
