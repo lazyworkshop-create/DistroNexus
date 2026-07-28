@@ -47,7 +47,7 @@ foreach ($import in $publicFunctions) {
     }
 }
 
-# Export public functions
-Export-ModuleMember -Function $publicFunctions.BaseName
-Export-ModuleMember -Function @('Get-DistroNexusWorkspace','Export-DistroNexusWorkspace','New-DistroNexusWorkspace','Set-DistroNexusWorkspace','Copy-DistroNexusWorkspace','Remove-DistroNexusWorkspace','Get-DistroNexusWorkspaceImportPreview','Import-DistroNexusWorkspace','Get-DistroNexusWorkspaceLaunchPreview','Approve-DistroNexusWorkspaceTrust','Invoke-DistroNexusWorkspace','Get-DistroNexusWorkspaceActionRetryPreview','Retry-DistroNexusWorkspaceAction')
-Export-ModuleMember -Function @('Get-DistroNexusTemplateSource','Add-DistroNexusTemplateSource','Set-DistroNexusTemplateSourceEnabled','Remove-DistroNexusTemplateSource','Approve-DistroNexusTemplateMarketplaceCandidate','Get-DistroNexusTemplateMarketplaceReviewGrant','Save-DistroNexusTemplateMarketplaceArtifact','Get-DistroNexusTemplateMarketplaceArtifactHistory','Get-DistroNexusTemplateMarketplaceScriptDiff','Restore-DistroNexusTemplateMarketplaceArtifact')
+# Export exactly the manifest contract. Some public files contain related commands,
+# so exporting file base names would omit commands defined in composite files.
+$manifest = Import-PowerShellDataFile -Path (Join-Path $PSScriptRoot 'DistroNexus.psd1')
+Export-ModuleMember -Function $manifest.FunctionsToExport

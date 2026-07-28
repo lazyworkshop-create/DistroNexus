@@ -64,6 +64,7 @@
         'New-DistroNexusRecoveryPoint',
         'Get-DistroNexusRecoveryPointRestorePreview',
         'Restore-DistroNexusRecoveryPoint',
+        'Get-DistroNexusRecoveryPointRemovePreview',
         'Remove-DistroNexusRecoveryPoint',
         'Get-DistroNexusMonitoringSnapshot',
         'Invoke-DistroNexusHealthScan',
