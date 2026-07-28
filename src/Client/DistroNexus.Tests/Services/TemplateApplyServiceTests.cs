@@ -159,6 +159,70 @@ public sealed class TemplateApplyServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task OperationStore_AtomicReplacementRetriesTransientAccessFailures()
+    {
+        var root=Path.Combine(_root,"atomic-retry"); var id=new string('3',64); var now=DateTimeOffset.UtcNow;
+        var initial=new TemplateApplyOperationRecord(1,id,TemplateApplyGrantStore.CurrentSid(),"Ubuntu","dev","1","","","",DigestFiles(),"",true,TemplateOperationState.Running,now,now.AddMinutes(1),now,0,1,"setup","Running",null,[],false);
+        var baseline=new TemplateApplyOperationStore(root);
+        await baseline.CreateAsync(initial);
+        var attempts=0;
+        var store=new TemplateApplyOperationStore(root, null, (source,destination,overwrite) =>
+        {
+            if (attempts++ == 0) throw new FileContentionIOException();
+            if (attempts == 2) throw new FileContentionAccessException();
+            File.Move(source,destination,overwrite);
+        });
+
+        await store.WriteAsync(initial with { Message="Updated" });
+
+        Assert.Equal(3,attempts);
+        Assert.Equal("Updated",(await store.ReadAsync(id)).Message);
+        Assert.Empty(Directory.EnumerateFiles(root,"*.tmp-*"));
+    }
+
+    [Fact]
+    public async Task OperationStore_AtomicReplacementDoesNotRetryPermanentAccessOrIoFailures()
+    {
+        var root=Path.Combine(_root,"atomic-no-retry"); var id=new string('4',64); var now=DateTimeOffset.UtcNow;
+        var initial=new TemplateApplyOperationRecord(1,id,TemplateApplyGrantStore.CurrentSid(),"Ubuntu","dev","1","","","",DigestFiles(),"",true,TemplateOperationState.Running,now,now.AddMinutes(1),now,0,1,"setup","Running",null,[],false);
+        var baseline=new TemplateApplyOperationStore(root);
+        await baseline.CreateAsync(initial);
+        var ioAttempts=0;
+        var ioStore=new TemplateApplyOperationStore(root, null, (_,_,_) => { ioAttempts++; throw new PermanentIOException(); });
+
+        await Assert.ThrowsAsync<PermanentIOException>(() => ioStore.WriteAsync(initial with { Message="Updated" }));
+        Assert.Equal(1,ioAttempts);
+
+        var accessAttempts=0;
+        var accessStore=new TemplateApplyOperationStore(root, null, (_,_,_) => { accessAttempts++; throw new AccessDeniedException(); });
+        await Assert.ThrowsAsync<AccessDeniedException>(() => accessStore.WriteAsync(initial with { Message="Updated" }));
+
+        Assert.Equal(1,accessAttempts);
+        Assert.Equal("Running",(await baseline.ReadAsync(id)).Message);
+        Assert.Empty(Directory.EnumerateFiles(root,"*.tmp-*"));
+    }
+
+    [Fact]
+    public async Task OperationStore_AtomicReplacementHonorsCancellationWithoutReplacingRecord()
+    {
+        var root=Path.Combine(_root,"atomic-retry-cancel"); var id=new string('6',64); var now=DateTimeOffset.UtcNow;
+        var initial=new TemplateApplyOperationRecord(1,id,TemplateApplyGrantStore.CurrentSid(),"Ubuntu","dev","1","","","",DigestFiles(),"",true,TemplateOperationState.Running,now,now.AddMinutes(1),now,0,1,"setup","Running",null,[],false);
+        var baseline=new TemplateApplyOperationStore(root);
+        await baseline.CreateAsync(initial);
+        using var cancellation=new CancellationTokenSource();
+        var store=new TemplateApplyOperationStore(root, null, (_,_,_) =>
+        {
+            cancellation.Cancel();
+            throw new FileContentionAccessException();
+        });
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => store.WriteAsync(initial with { Message="Updated" }, cancellation.Token));
+
+        Assert.Equal("Running",(await baseline.ReadAsync(id)).Message);
+        Assert.Empty(Directory.EnumerateFiles(root,"*.tmp-*"));
+    }
+
+    [Fact]
     public async Task RemoteMarketplace_SuccessPromotesExactlyOnce()
     {
         var (template,marketplace)=CreateRemoteMarketplaceTemplate();
@@ -233,6 +297,22 @@ public sealed class TemplateApplyServiceTests : IDisposable
     }
     private static string DigestFiles() => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Array.Empty<byte>())).ToLowerInvariant();
     private static string Hash(string path) => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant();
+    private sealed class FileContentionIOException : IOException
+    {
+        public FileContentionIOException() : base("simulated sharing violation") { HResult=unchecked((int)0x80070020); }
+    }
+    private sealed class FileContentionAccessException : UnauthorizedAccessException
+    {
+        public FileContentionAccessException() : base("simulated sharing violation") { HResult=unchecked((int)0x80070020); }
+    }
+    private sealed class PermanentIOException : IOException
+    {
+        public PermanentIOException() : base("simulated disk full") { HResult=unchecked((int)0x80070070); }
+    }
+    private sealed class AccessDeniedException : UnauthorizedAccessException
+    {
+        public AccessDeniedException() : base("simulated access denied") { HResult=unchecked((int)0x80070005); }
+    }
     private static async Task WaitForChildAsync(TemplateApplyOperationStore store, string id, Task execution)
     {
         using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(30));

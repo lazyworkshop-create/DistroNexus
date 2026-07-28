@@ -63,7 +63,15 @@ public sealed class TemplateApplyOperationStore
     private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("DistroNexus.TemplateApplyOperation.v1");
     private readonly string _root;
     private readonly string? _stagingRoot;
-    public TemplateApplyOperationStore(string root, string? stagingRoot = null) { _root = root; _stagingRoot = stagingRoot is null ? null : Path.GetFullPath(stagingRoot); Directory.CreateDirectory(root); }
+    private readonly Action<string, string, bool> _replaceFile;
+    public TemplateApplyOperationStore(string root, string? stagingRoot = null) : this(root, stagingRoot, File.Move) { }
+    internal TemplateApplyOperationStore(string root, string? stagingRoot, Action<string, string, bool> replaceFile)
+    {
+        _root = root;
+        _stagingRoot = stagingRoot is null ? null : Path.GetFullPath(stagingRoot);
+        _replaceFile = replaceFile ?? throw new ArgumentNullException(nameof(replaceFile));
+        Directory.CreateDirectory(root);
+    }
     public async Task CreateAsync(TemplateApplyOperationRecord record, CancellationToken ct = default) => await WriteAsync(record, ct).ConfigureAwait(false);
     public async Task<TemplateApplyOperationRecord> ReadAsync(string id, CancellationToken ct = default)
     { Validate(id); var path = Path.Combine(_root, id + ".operation"); if (!File.Exists(path)) throw Invalid("Template.OperationNotFound"); return await ReadUnsafeAsync(path, ct).ConfigureAwait(false); }
@@ -73,9 +81,7 @@ public sealed class TemplateApplyOperationStore
         await using var l = await AcquireStateLockAsync(record.OperationId, ct).ConfigureAwait(false);
         var target = Path.Combine(_root, record.OperationId + ".operation");
         if (File.Exists(target)) { var old = await ReadUnsafeAsync(target, ct).ConfigureAwait(false); if (old.CancelRequested) record = record with { CancelRequested = true }; if (record.WorkerPid is null && old.WorkerPid is not null) record = record with { WorkerPid=old.WorkerPid, WorkerStartedAt=old.WorkerStartedAt }; }
-        var tmp = target + ".tmp-" + Guid.NewGuid().ToString("N");
-        await File.WriteAllBytesAsync(tmp, ProtectedData.Protect(JsonSerializer.SerializeToUtf8Bytes(record), Entropy, DataProtectionScope.CurrentUser), ct).ConfigureAwait(false);
-        File.Move(tmp, target, true);
+        await WriteProtectedRecordAsync(target, record, ct).ConfigureAwait(false);
     }
     public async Task<TemplateApplyOperationRecord> UpdateAsync(string id, Func<TemplateApplyOperationRecord, TemplateApplyOperationRecord> update, CancellationToken ct = default)
     { var r = await ReadAsync(id, ct).ConfigureAwait(false); r = update(r) with { UpdatedAt = DateTimeOffset.UtcNow }; await WriteAsync(r, ct).ConfigureAwait(false); return r; }
@@ -179,9 +185,46 @@ public sealed class TemplateApplyOperationStore
     }
     private async Task WriteUnsafeAsync(string target, TemplateApplyOperationRecord record, CancellationToken ct)
     {
+        await WriteProtectedRecordAsync(target, record, ct).ConfigureAwait(false);
+    }
+    private async Task WriteProtectedRecordAsync(string target, TemplateApplyOperationRecord record, CancellationToken ct)
+    {
         var tmp = target + ".tmp-" + Guid.NewGuid().ToString("N");
-        await File.WriteAllBytesAsync(tmp, ProtectedData.Protect(JsonSerializer.SerializeToUtf8Bytes(record), Entropy, DataProtectionScope.CurrentUser), ct).ConfigureAwait(false);
-        File.Move(tmp, target, true);
+        try
+        {
+            await File.WriteAllBytesAsync(tmp, ProtectedData.Protect(JsonSerializer.SerializeToUtf8Bytes(record), Entropy, DataProtectionScope.CurrentUser), ct).ConfigureAwait(false);
+            await ReplaceAtomicallyWithRetryAsync(tmp, target, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            try { File.Delete(tmp); } catch { }
+        }
+    }
+    private async Task ReplaceAtomicallyWithRetryAsync(string source, string destination, CancellationToken ct)
+    {
+        const int maxAttempts = 6;
+        for (var attempt = 0; ; attempt++)
+        {
+            ct.ThrowIfCancellationRequested();
+            try
+            {
+                _replaceFile(source, destination, true);
+                return;
+            }
+            catch (Exception ex) when (attempt < maxAttempts - 1 && IsTransientReplacementContention(ex))
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(10 * (1 << attempt)), ct).ConfigureAwait(false);
+            }
+        }
+    }
+    private static bool IsTransientReplacementContention(Exception exception)
+    {
+        const int sharingViolation = 32;
+        const int lockViolation = 33;
+        var win32Error = exception.HResult & 0xffff;
+        return OperatingSystem.IsWindows()
+            && (exception is IOException || exception is UnauthorizedAccessException)
+            && (win32Error == sharingViolation || win32Error == lockViolation);
     }
     private async Task<FileStream> AcquireStateLockAsync(string id, CancellationToken ct) { var path=Path.Combine(_root,id+".state.lock"); while(true) { ct.ThrowIfCancellationRequested(); try { return new FileStream(path,FileMode.OpenOrCreate,FileAccess.ReadWrite,FileShare.None,1,FileOptions.DeleteOnClose); } catch(IOException) { await Task.Delay(5,ct).ConfigureAwait(false); } } }
     private static void Validate(string id) { if (id.Length != 64 || id.Any(x => !Uri.IsHexDigit(x))) throw Invalid("Template.OperationNotFound"); }
