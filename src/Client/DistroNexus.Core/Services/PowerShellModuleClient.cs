@@ -49,6 +49,9 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string GetDockerIntegrationCommand = "Get-DistroNexusDockerIntegration";
     private const string GetDockerIntegrationPreviewCommand = "Get-DistroNexusDockerIntegrationPreview";
     private const string SetDockerIntegrationCommand = "Set-DistroNexusDockerIntegration";
+    private const string GetMonitoringSnapshotCommand = "Get-DistroNexusMonitoringSnapshot";
+    private const string GetMonitoringProcessActionPreviewCommand = "Get-DistroNexusMonitoringProcessActionPreview";
+    private const string InvokeMonitoringProcessActionCommand = "Invoke-DistroNexusMonitoringProcessAction";
     private readonly IPowerShellService _powerShellService;
 
     public PowerShellModuleClient(IPowerShellService powerShellService)
@@ -379,6 +382,12 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     { ValidateName(name, nameof(name)); return ExecuteJsonAsync<DockerIntegrationPreview>(GetDockerIntegrationPreviewCommand, new() { ["Name"] = name, ["Enabled"] = enabled }, cancellationToken); }
     public Task<DockerIntegrationResult> SetDockerIntegrationAsync(string name, bool enabled, string previewToken, CancellationToken cancellationToken = default)
     { ValidateName(name, nameof(name)); if (string.IsNullOrWhiteSpace(previewToken) || previewToken.Length != 64 || previewToken.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("A Core-issued Docker integration preview token is required.", nameof(previewToken)); return ExecuteJsonAsync<DockerIntegrationResult>(SetDockerIntegrationCommand, new() { ["Name"] = name, ["Enabled"] = enabled, ["Preview"] = previewToken }, cancellationToken); }
+    public Task<MonitoringSnapshotResult> GetMonitoringSnapshotAsync(string name, int intervalSeconds, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); if (intervalSeconds is not (1 or 2 or 5 or 10)) throw new ArgumentOutOfRangeException(nameof(intervalSeconds)); return ExecuteJsonAsync<MonitoringSnapshotResult>(GetMonitoringSnapshotCommand, new() { ["Name"] = name, ["IntervalSeconds"] = intervalSeconds }, cancellationToken); }
+    public Task<MonitoringProcessActionPreview> GetMonitoringProcessActionPreviewAsync(string snapshotToken, int processId, MonitoringProcessAction action, CancellationToken cancellationToken = default)
+    { ValidateToken(snapshotToken, nameof(snapshotToken)); if (processId <= 1 || action is not (MonitoringProcessAction.Terminate or MonitoringProcessAction.Kill or MonitoringProcessAction.Renice)) throw new ArgumentOutOfRangeException(nameof(processId)); return ExecuteJsonAsync<MonitoringProcessActionPreview>(GetMonitoringProcessActionPreviewCommand, new() { ["SnapshotToken"] = snapshotToken, ["ProcessId"] = processId, ["Action"] = action.ToString() }, cancellationToken); }
+    public Task<ProcessActionResult> InvokeMonitoringProcessActionAsync(string previewToken, CancellationToken cancellationToken = default)
+    { ValidateToken(previewToken, nameof(previewToken)); return ExecuteJsonAsync<ProcessActionResult>(InvokeMonitoringProcessActionCommand, new() { ["PreviewToken"] = previewToken }, cancellationToken); }
     private Task<WslgActionResult> ExecuteWslgActionAsync(string command, string token, string applicationId, bool? pinned, CancellationToken ct)
     { if (string.IsNullOrWhiteSpace(token) || token.Length != 64 || token.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("A WSLg discovery token is invalid.", nameof(token)); ValidateName(applicationId, nameof(applicationId)); var parameters = new Dictionary<string, object> { ["DiscoveryToken"] = token, ["ApplicationId"] = applicationId }; if (pinned is not null) parameters["Pinned"] = pinned.Value; return ExecuteJsonAsync<WslgActionResult>(command, parameters, ct); }
 
@@ -406,6 +415,10 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private static void ValidateName(string value, string parameterName)
     {
         if (string.IsNullOrWhiteSpace(value) || value.IndexOfAny(['\r', '\n', '\0']) >= 0) throw new ArgumentException("The instance name is invalid.", parameterName);
+    }
+    private static void ValidateToken(string value, string parameterName)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length != 64 || value.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("A Core-issued monitoring token is required.", parameterName);
     }
 
     private static void ValidatePodmanUnitAction(PodmanUserUnit unit, SystemdAction action)

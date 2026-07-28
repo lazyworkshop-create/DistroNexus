@@ -49,7 +49,6 @@ public partial class InstanceDetailViewModel : ObservableObject, IAsyncDisposabl
         INetworkConfigurationService networkConfigurationService,
         INetworkStatusAdapter networkStatusAdapter,
         IBrowserLauncher browserLauncher,
-        IMonitoringService monitoringService,
         IPowerShellModuleClient? powerShellModuleClient = null)
     {
         _instance = instance ?? throw new ArgumentNullException(nameof(instance));
@@ -62,7 +61,7 @@ public partial class InstanceDetailViewModel : ObservableObject, IAsyncDisposabl
         BackupTab = new BackupTabViewModel(instance, backupService, dialogService, recoveryPointService);
         ConfigurationTab = new ConfigurationTabViewModel(instance, distributionConfigurationService, platformCapabilityService, dialogService);
         ServicesTab = new ServicesTabViewModel(instance, systemdService, dialogService);
-        MonitorTab = new MonitorTabViewModel(instance, monitoringService, dialogService);
+        MonitorTab = new MonitorTabViewModel(instance, powerShellModuleClient ?? throw new ArgumentNullException(nameof(powerShellModuleClient)), dialogService);
     }
 
     partial void OnSelectedTabIndexChanged(int value)

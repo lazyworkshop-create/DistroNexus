@@ -44,10 +44,15 @@ Describe 'Recovery, monitoring and WSLg PowerShell bridge adapters' -Tag 'Unit',
         $declined = 'N' | & pwsh -NoProfile -Command "& { Import-Module '$modulePath' -Force -DisableNameChecking; `$env:DISTRONEXUS_WORKSPACE_BRIDGE_PATH = 'invalid'; Set-DistroNexusRecoveryPointRetention -Name Ubuntu -Maximum 3 -Preview ([pscustomobject]@{ Token='retention-preview'; SourceInstance='Ubuntu'; Maximum=3 }) -Confirm }" 2>&1
         ($declined | Out-String) | Should -Not -Match 'WorkspaceBridgeUnavailable'
     }
-    It 'returns a bounded Core monitoring sample object' {
-        Mock Invoke-DistroNexusWorkspaceBridge { [pscustomobject]@{ CapturedAt='2026-01-01T00:00:00Z'; CpuPercent=2; UnavailableMetrics=@{} } }
+    It 'uses fixed versioned monitoring routes and does not expose raw process authority' {
+        Mock Invoke-DistroNexusWorkspaceBridge { [pscustomobject]@{ CapturedAt='2026-01-01T00:00:00Z'; CpuPercent=2; UnavailableMetrics=@{}; SnapshotToken=('a' * 64) } }
         (Get-DistroNexusMonitoringSnapshot -Name Ubuntu).CpuPercent | Should -Be 2
-        Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -ParameterFilter { $Operation -eq 'monitorSnapshot' -and $Payload.InstanceName -eq 'Ubuntu' } -Times 1
+        Get-DistroNexusMonitoringProcessActionPreview -SnapshotToken ('a' * 64) -ProcessId 22 -Action Terminate | Out-Null
+        Invoke-DistroNexusMonitoringProcessAction -PreviewToken ('b' * 64) -WhatIf | Should -BeNullOrEmpty
+        Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -ParameterFilter { $Operation -eq 'monitoring.snapshot.v1' -and $Payload.Name -eq 'Ubuntu' -and $Payload.IntervalSeconds -eq 2 } -Times 1
+        Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -ParameterFilter { $Operation -eq 'monitoring.process.preview.v1' -and $Payload.ProcessId -eq 22 -and $Payload.Action -eq 'Terminate' } -Times 1
+        Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -ParameterFilter { $Operation -eq 'monitoring.process.execute.v1' } -Times 0
+        { Get-DistroNexusMonitoringProcessActionPreview -SnapshotToken bad -ProcessId 22 -Action Terminate } | Should -Throw
     }
     It 'uses discovery grants and honors WhatIf without invoking the action route' {
         Mock Invoke-DistroNexusWorkspaceBridge { throw 'must not run' }

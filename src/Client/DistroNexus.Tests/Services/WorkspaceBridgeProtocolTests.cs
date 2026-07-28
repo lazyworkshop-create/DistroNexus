@@ -480,6 +480,26 @@ public sealed class WorkspaceBridgeProtocolTests
         Assert.DoesNotContain("secret", forged.GetProperty("ErrorMessage").GetString(), StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task MonitoringRoutes_RejectMalformedAndForgedGrantsWithOnlySafeStableErrors()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        var extra = await bridge.SendAsync("monitoring.snapshot.v1", payload: JsonDocument.Parse("{\"Name\":\"Ubuntu\",\"IntervalSeconds\":1,\"Script\":\"x\"}").RootElement.Clone());
+        var missing = await bridge.SendAsync("monitoring.process.preview.v1", payload: JsonDocument.Parse("{\"SnapshotToken\":\"" + new string('a', 64) + "\",\"ProcessId\":22}").RootElement.Clone());
+        var forged = await bridge.SendAsync("monitoring.process.execute.v1", payload: JsonDocument.Parse("{\"PreviewToken\":\"" + new string('a', 64) + "\"}").RootElement.Clone());
+        foreach (var response in new[] { extra, missing, forged })
+        {
+            Assert.False(response.GetProperty("Succeeded").GetBoolean());
+            var code = response.GetProperty("ErrorCode").GetString();
+            var message = response.GetProperty("ErrorMessage").GetString();
+            Assert.StartsWith("Monitor.", code);
+            Assert.Equal(code, message);
+            Assert.DoesNotContain("Ubuntu", message, StringComparison.OrdinalIgnoreCase);
+        }
+        Assert.Equal("Monitor.InvalidRequest", extra.GetProperty("ErrorCode").GetString());
+        Assert.Equal("Monitor.SnapshotInvalid", forged.GetProperty("ErrorCode").GetString());
+    }
+
     private sealed class BridgeProcess : IAsyncDisposable
     {
         private readonly Process process;

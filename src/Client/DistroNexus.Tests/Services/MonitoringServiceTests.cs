@@ -2,6 +2,9 @@ using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using DistroNexus.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json.Nodes;
 
 namespace DistroNexus.Tests.Services;
 
@@ -412,6 +415,139 @@ public class MonitoringServiceTests
         Assert.Equal(2, runner.Requests.Count);
     }
 
+    [Fact]
+    public async Task Automation_StoppedInstanceReturnsOnlyOfflineSnapshotAndNeverStartsWsl()
+    {
+        var runner = new RecordingRunner();
+        var root = Path.Combine(Path.GetTempPath(), "DistroNexus-monitoring-test-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var automation = new MonitoringAutomationService(new MonitoringService(runner), runner, root);
+            var result = await automation.GetSnapshotAsync(new WslInstance { Name = "d", State = "Stopped", Size = 123 }, TimeSpan.FromSeconds(1));
+            Assert.NotEmpty(result.SnapshotToken);
+            Assert.Empty(result.Sample.Processes);
+            Assert.Equal(123, result.Sample.VhdxPhysicalBytes);
+            Assert.Empty(runner.Requests);
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public async Task Automation_PidIdentityDriftRejectsPreviewBeforeSignal()
+    {
+        var start = DateTime.ParseExact("Tue Jan 02 12:00:00 2024", "ddd MMM dd HH:mm:ss yyyy", System.Globalization.CultureInfo.InvariantCulture).Ticks;
+        var runner = new AutomationRunner(start, drift: true);
+        var root = Path.Combine(Path.GetTempPath(), "DistroNexus-monitoring-test-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var automation = new MonitoringAutomationService(new MonitoringService(runner), runner, root);
+            var snapshot = await automation.GetSnapshotAsync(new WslInstance { Name = "d", State = "Running" }, TimeSpan.FromSeconds(1));
+            var preview = await automation.PreviewAsync(snapshot.SnapshotToken, 44, MonitoringProcessAction.Terminate);
+            var result = await automation.ExecuteAsync(preview.PreviewToken);
+            Assert.False(result.Succeeded);
+            Assert.Equal("Monitor.ProcessIdentityChanged", result.OutcomeCode);
+            Assert.DoesNotContain(runner.Requests, request => request.Arguments.Contains("TERM"));
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public async Task Automation_ExpiredSnapshotAndReplayPreviewHaveStableCodes()
+    {
+        var runner = new AutomationRunner(0, drift: false);
+        var root = Path.Combine(Path.GetTempPath(), "DistroNexus-monitoring-test-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var automation = new MonitoringAutomationService(new MonitoringService(runner), runner, root);
+            var snapshot = await automation.GetSnapshotAsync(new WslInstance { Name = "d", State = "Running" }, TimeSpan.FromSeconds(1));
+            ExpireGrant(root, snapshot.SnapshotToken);
+            var expired = await Assert.ThrowsAsync<InvalidOperationException>(() => automation.PreviewAsync(snapshot.SnapshotToken, 44, MonitoringProcessAction.Renice));
+            Assert.Equal("Monitor.GrantExpired", expired.Message);
+
+            var fresh = await automation.GetSnapshotAsync(new WslInstance { Name = "d", State = "Running" }, TimeSpan.FromSeconds(1));
+            var preview = await automation.PreviewAsync(fresh.SnapshotToken, 44, MonitoringProcessAction.Renice);
+            Assert.True((await automation.ExecuteAsync(preview.PreviewToken)).Succeeded);
+            var replay = await Assert.ThrowsAsync<InvalidOperationException>(() => automation.ExecuteAsync(preview.PreviewToken));
+            Assert.Equal("Monitor.PreviewReplayed", replay.Message);
+            ExpireGrant(root, preview.PreviewToken);
+            await automation.GetSnapshotAsync(new WslInstance { Name = "d", State = "Running" }, TimeSpan.FromSeconds(1));
+            Assert.Empty(Directory.EnumerateFiles(Path.Combine(root, "monitoring-grants"), "*.used"));
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public async Task Automation_ParallelPreviewConsumptionSignalsAtMostOnce()
+    {
+        var runner = new AutomationRunner(0, drift: false);
+        var root = Path.Combine(Path.GetTempPath(), "DistroNexus-monitoring-test-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var automation = new MonitoringAutomationService(new MonitoringService(runner), runner, root);
+            var snapshot = await automation.GetSnapshotAsync(new WslInstance { Name = "d", State = "Running" }, TimeSpan.FromSeconds(1));
+            var preview = await automation.PreviewAsync(snapshot.SnapshotToken, 44, MonitoringProcessAction.Renice);
+            var outcomes = await Task.WhenAll(Enumerable.Range(0, 2).Select(async _ => { try { return (await automation.ExecuteAsync(preview.PreviewToken)).Succeeded; } catch (InvalidOperationException ex) { return ex.Message == "Monitor.PreviewReplayed"; } }));
+            Assert.Equal(2, outcomes.Count(x => x));
+            Assert.Equal(1, runner.Requests.Count(r => r.Arguments.Contains("renice")));
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public async Task Automation_KillRequiresSuccessfulTermAndNewSnapshot()
+    {
+        var runner = new AutomationRunner(0, drift: false);
+        var root = Path.Combine(Path.GetTempPath(), "DistroNexus-monitoring-test-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var automation = new MonitoringAutomationService(new MonitoringService(runner), runner, root);
+            var first = await automation.GetSnapshotAsync(new WslInstance { Name = "d", State = "Running" }, TimeSpan.FromSeconds(1));
+            var blocked = await Assert.ThrowsAsync<InvalidOperationException>(() => automation.PreviewAsync(first.SnapshotToken, 44, MonitoringProcessAction.Kill));
+            Assert.Equal("Monitor.KillRequiresTermAndReprobe", blocked.Message);
+            var term = await automation.PreviewAsync(first.SnapshotToken, 44, MonitoringProcessAction.Terminate);
+            Assert.Equal("Monitor.TermSentProcessStillRunning", (await automation.ExecuteAsync(term.PreviewToken)).OutcomeCode);
+            var second = await automation.GetSnapshotAsync(new WslInstance { Name = "d", State = "Running" }, TimeSpan.FromSeconds(1));
+            var kill = await automation.PreviewAsync(second.SnapshotToken, 44, MonitoringProcessAction.Kill);
+            Assert.True((await automation.ExecuteAsync(kill.PreviewToken)).Succeeded);
+            Assert.Single(runner.Requests.Where(r => r.Arguments.Contains("KILL")));
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public void Automation_PublicProjectionRedactsAndBoundsProcessData()
+    {
+        var processes = Enumerable.Range(2, 25).Select(pid => new MonitoredProcess(pid, pid, "u", 0, 0, "bad\r\n\t" + new string('x', 300), Enumerable.Range(1, 20).ToArray())).ToArray();
+        var ports = Enumerable.Range(1, 130).Select(port => new ListeningPort("TCP", "\t127.0.0.1", port)).ToArray();
+        var sample = new MonitoringSample(DateTimeOffset.UtcNow, null, null, null, null, null, null, null, null, null, null, null, null, null, processes, new Dictionary<string, string>(), CounterState: new Dictionary<string, long> { ["secret"] = 1 }, ListeningPorts: ports);
+        var method = typeof(MonitoringAutomationService).GetMethod("Sanitize", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)!;
+        var publicSample = (MonitoringSample)method.Invoke(null, [sample])!;
+        Assert.Equal(20, publicSample.Processes.Count);
+        Assert.Equal(128, publicSample.ListeningPorts!.Count);
+        Assert.All(publicSample.Processes, process => { Assert.True(process.Command.Length <= 256); Assert.DoesNotContain(process.Command, char.IsControl); Assert.True(process.ListeningPorts.Count <= 16); });
+        Assert.Null(publicSample.CounterState);
+    }
+
+    [Fact]
+    public async Task Automation_TombstonesCountTowardBoundedGrantCapacity()
+    {
+        var runner = new AutomationRunner(0, drift: false);
+        var root = Path.Combine(Path.GetTempPath(), "DistroNexus-monitoring-test-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var automation = new MonitoringAutomationService(new MonitoringService(runner), runner, root);
+            for (var i = 0; i < 64; i++)
+            {
+                var snapshot = await automation.GetSnapshotAsync(new WslInstance { Name = "d", State = "Running" }, TimeSpan.FromSeconds(1));
+                var preview = await automation.PreviewAsync(snapshot.SnapshotToken, 44, MonitoringProcessAction.Renice);
+                await automation.ExecuteAsync(preview.PreviewToken);
+            }
+            var full = await Assert.ThrowsAsync<InvalidOperationException>(() => automation.GetSnapshotAsync(new WslInstance { Name = "d", State = "Running" }, TimeSpan.FromSeconds(1)));
+            Assert.Equal("Monitor.GrantInvalid", full.Message);
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
     private const string ProbeOutput = "cpu  10 0 5 50 0 0 0 0\n__DN_MEM__\nMemTotal: 100 kB\nMemAvailable: 40 kB\nSwapTotal: 20 kB\nSwapFree: 5 kB\n__DN_DISK__\n\n__DN_NET__\n\n__DN_FS__\n/dev/sda 100 30 70 30% /\n__DN_PROC__\n  PID STARTED USER %CPU %MEM COMMAND\n";
     public static IEnumerable<object[]> UnhealthySignalResults()
     {
@@ -488,5 +624,25 @@ public class MonitoringServiceTests
             var number = Interlocked.Increment(ref _number);
             return Task.FromResult(new ProcessResult(0, ProbeOutput.Replace("cpu  10", $"cpu  {number}"), "", TimeSpan.Zero, false, false, false, 1));
         }
+    }
+    private sealed class AutomationRunner(long start, bool drift) : IProcessRunner
+    {
+        public List<ProcessRequest> Requests { get; } = [];
+        public Task<ProcessResult> RunAsync(ProcessRequest request, CancellationToken cancellationToken = default)
+        {
+            Requests.Add(request);
+            if (request.Arguments.SequenceEqual(["--list", "--running", "--quiet"])) return Task.FromResult(new ProcessResult(0, "d\n", "", TimeSpan.Zero, false, false, false, 1));
+            if (request.Arguments.Contains("ps")) return Task.FromResult(new ProcessResult(0, drift ? "Wed Jan 03 12:00:00 2024" : "Tue Jan 02 12:00:00 2024", "", TimeSpan.Zero, false, false, false, 1));
+            const string output = "cpu  10 0 5 50 0 0 0 0\n__DN_MEM__\nMemTotal: 100 kB\nMemAvailable: 40 kB\n__DN_DISK__\n\n__DN_NET__\n\n__DN_FS__\n/dev/sda 100 30 70 30% /\n__DN_PROC__\nPID STARTED USER %CPU %MEM COMMAND\n44 Tue Jan 02 12:00:00 2024 user 0 0 safe\n";
+            return Task.FromResult(new ProcessResult(0, output, "", TimeSpan.Zero, false, false, false, 1));
+        }
+    }
+    private static void ExpireGrant(string root, string token)
+    {
+        var basePath = Path.Combine(root, "monitoring-grants", Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token))) + ".grant");
+        var path = File.Exists(basePath) ? basePath : basePath + ".used";
+        var json = JsonNode.Parse(ProtectedData.Unprotect(File.ReadAllBytes(path), null, DataProtectionScope.CurrentUser))!.AsObject();
+        json["ExpiresAt"] = DateTimeOffset.UtcNow.AddMinutes(-1);
+        File.WriteAllBytes(path, ProtectedData.Protect(Encoding.UTF8.GetBytes(json.ToJsonString()), null, DataProtectionScope.CurrentUser));
     }
 }

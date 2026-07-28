@@ -444,6 +444,8 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.GetInstanceCapabilitiesAsync),
                 nameof(IPowerShellModuleClient.GetInstancesAsync),
                 nameof(IPowerShellModuleClient.GetInstanceTagsAsync),
+                nameof(IPowerShellModuleClient.GetMonitoringProcessActionPreviewAsync),
+                nameof(IPowerShellModuleClient.GetMonitoringSnapshotAsync),
                 nameof(IPowerShellModuleClient.GetPackageAsync),
                 nameof(IPowerShellModuleClient.GetPackageCacheLocationAsync),
                 nameof(IPowerShellModuleClient.GetPackageCacheUsageAsync),
@@ -452,6 +454,7 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.GetPodmanUserUnitPreviewAsync),
                 nameof(IPowerShellModuleClient.GetSettingsAsync),
                 nameof(IPowerShellModuleClient.GetWslgStatusAsync),
+                nameof(IPowerShellModuleClient.InvokeMonitoringProcessActionAsync),
                 nameof(IPowerShellModuleClient.InvokePodmanConnectionAsync),
                 nameof(IPowerShellModuleClient.InvokePodmanUserUnitAsync),
                 nameof(IPowerShellModuleClient.LaunchWslgApplicationAsync),
@@ -477,7 +480,7 @@ public sealed class PowerShellModuleClientTests
             methods.Select(method => method.Name).Order());
         Assert.DoesNotContain(methods, method => method.Name.Contains("Script", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(methods, method => method.Name.Contains("Command", StringComparison.OrdinalIgnoreCase));
-        Assert.DoesNotContain(methods, method => method.Name.Contains("Operation", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(methods, method => method.Name.Equals("ExecuteOperationAsync", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

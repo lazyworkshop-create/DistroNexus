@@ -84,6 +84,8 @@
         'Get-DistroNexusRecoveryPointClonePreview',
         'Copy-DistroNexusRecoveryPoint',
         'Get-DistroNexusMonitoringSnapshot',
+        'Get-DistroNexusMonitoringProcessActionPreview',
+        'Invoke-DistroNexusMonitoringProcessAction',
         'Invoke-DistroNexusHealthScan',
         'Get-DistroNexusHealthHistory',
         'Get-DistroNexusHealthRepairPreview',

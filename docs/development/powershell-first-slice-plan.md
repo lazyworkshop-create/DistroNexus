@@ -12,7 +12,7 @@
 
 ## Dependency Order
 
-S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S18 -> S19 -> S20 -> S21 -> S22 -> S23 -> S06 -> S07 -> S08
+S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S18 -> S19 -> S20 -> S21 -> S22 -> S23 -> S24 -> S06 -> S07 -> S08
 
 ## Slice S01: Verified module contract and migration baseline
 
@@ -1193,6 +1193,67 @@ One accepted Docker integration contract and presentation-client migration slice
 ### Out of Scope
 
 Docker Desktop installation/restart, runtime container/image/project operations, third-party Docker Desktop concurrent-write UAT, and every remaining uncontracted platform family.
+
+## Slice S24: Monitoring pull contract and presentation-client migration
+
+### Status
+
+Planned
+
+### Objective
+
+Make fixed module snapshot and process-action commands the sole monitoring product path, replacing WPF-owned Core sessions.
+
+### Sources
+
+Requirements FR-001 and FR-003 through FR-007; `docs/specs/powershell-first-design.md` Monitoring pull and process-action contract amendment; `docs/architecture/powershell-first-decision.md`.
+
+### Dependencies
+
+S23
+
+### Allowed Paths
+
+`src/Client/DistroNexus.Core/Models/MonitoringModels.cs`, `src/Client/DistroNexus.Core/Interfaces/IMonitoringService.cs`, `src/Client/DistroNexus.Core/Services/MonitoringService.cs`, narrow monitoring automation/grant support, `src/Client/DistroNexus.WorkspaceBridge/Program.cs`, monitoring public command files and `src/PowerShell/DistroNexus.psd1`, `IPowerShellModuleClient`, `PowerShellModuleClient`, `MonitorTabViewModel`, `InstanceDetailViewModel`, `WslInstanceViewModel`, `App.xaml.cs`, focused monitoring/Core/Bridge/module-client/view-model/Pester tests, design, plan.
+
+### Excluded Paths
+
+Persistent bridge daemon, telemetry, WSL start/restart, arbitrary sampling scripts/signals/commands, automatic KILL escalation, system-wide process controls, USB, terminal, release/publishing.
+
+### Contract and Documentation
+
+Define only `monitoring.snapshot.v1`, `monitoring.process.preview.v1`, and `monitoring.process.execute.v1`. Snapshot has a fixed interval and sanitized bounded data plus an opaque grant. Process preview accepts only snapshot token/PID/allow-listed action; execute accepts only a Core preview token and retains `ShouldProcess`.
+
+### Implementation Scope
+
+Create bounded one-request Core session automation with durable same-user snapshot/action/TERM-eligibility grants. Preserve existing fixed probes, stopped-instance guard, PID/start-time revalidation, TERM-before-KILL flow, and bounded output. Replace direct WPF Core session ownership with visible-only module-client polling/cancellation and bounded local display state.
+
+### Test Scope
+
+Cover malformed/unknown payloads, fixed intervals, cancellation/disposal, stopped instances, forged/expired/replayed grants, PID drift, TERM/KILL sequencing, WhatIf/decline, public redaction/bounds, stale UI result suppression, and no direct monitoring service dependency.
+
+### Acceptance Criteria
+
+- MonitorTab has no `IMonitoringService`/Core session dependency and all probes/actions use typed module-client methods.
+- No public endpoint accepts raw commands, signals, process objects, or unbounded probe data.
+- TERM/KILL protections and PID identity revalidation survive the cross-process module boundary through durable Core grants.
+- Polling is visible-only, cancellable, bounded, and never starts a stopped distribution.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Monitoring|FullyQualifiedName~MonitorTabViewModel|FullyQualifiedName~PowerShellModuleClient|FullyQualifiedName~WorkspaceBridgeProtocol"
+pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Unit
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+One accepted monitoring contract and presentation-client migration slice.
+
+### Out of Scope
+
+External monitoring UAT, long-running monitoring persistence, and every other uncontracted platform family.
 
 ## Slice S06: Platform-integrated command parity
 

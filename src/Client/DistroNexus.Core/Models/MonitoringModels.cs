@@ -44,3 +44,7 @@ public enum MonitoringProcessAction { Terminate, Kill, Renice }
 
 public sealed record ProcessActionPreview(Guid Token, string DistributionName, MonitoredProcess Process, MonitoringProcessAction Action, int? NiceValue, string Message, bool RequiresAdditionalWarning);
 public sealed record ProcessActionResult(bool Succeeded, string OutcomeCode, string? Guidance = null);
+
+/// <summary>Bounded public monitoring result. The token is opaque and is the only process authority returned by a snapshot.</summary>
+public sealed record MonitoringSnapshotResult(MonitoringSample Sample, string SnapshotToken, DateTimeOffset ExpiresAt);
+public sealed record MonitoringProcessActionPreview(string PreviewToken, int ProcessId, MonitoringProcessAction Action, string Message, bool RequiresAdditionalWarning, DateTimeOffset ExpiresAt);

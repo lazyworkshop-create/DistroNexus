@@ -27,6 +27,7 @@ var wslg = new WslgApplicationService(processes, capabilities, root);
 var recovery = new RecoveryPointService(new WslRecoveryPointRuntime(processes, capabilities), root: root);
 var monitoring = new MonitoringService(processes);
 var applicationRoot = root ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DistroNexus");
+var monitoringAutomation = new MonitoringAutomationService(monitoring, processes, applicationRoot);
 var bridgePowerShell = new BridgeReadOnlyPowerShellService();
 var settings = new SettingsService(NullLogger<SettingsService>.Instance, Path.Combine(applicationRoot, "settings.json"));
 var catalogSources = new CatalogSourceManager(settings, new HttpClient(), NullLogger<CatalogSourceManager>.Instance);
@@ -155,7 +156,9 @@ while ((line = Console.ReadLine()) is not null)
             "recovery.retention.get.v1" => await GetRecoveryRetentionV1Async(request),
             "recovery.retention.preview.v1" => await PreviewRecoveryRetentionV1Async(request),
             "recovery.retention.set.v1" => await SetRecoveryRetentionV1Async(request),
-            "monitorSnapshot" => await GetMonitoringSnapshotAsync(request),
+            "monitoring.snapshot.v1" => await GetMonitoringSnapshotAsync(request),
+            "monitoring.process.preview.v1" => await PreviewMonitoringProcessActionAsync(request),
+            "monitoring.process.execute.v1" => await ExecuteMonitoringProcessActionAsync(request),
             "healthScan" => await HealthScanV1Async(request),
             "healthRepairPreview" => await PreviewHealthRepairV1Async(request),
             "healthRepairExecute" => await ExecuteHealthRepairV1Async(request),
@@ -218,12 +221,32 @@ while ((line = Console.ReadLine()) is not null)
         };
         response = new(true, value, null, null);
     }
+    catch (DistroNexus.Core.Exceptions.WslOperationFailedException) when (request?.Operation.StartsWith("monitoring.", StringComparison.Ordinal) == true) { response = new(false, null, "Monitor.Failed", "Monitor.Failed"); }
     catch (DistroNexus.Core.Exceptions.WslOperationFailedException ex) { response = new(false, null, ex.Code.ToString(), ex.Message); }
     catch (InvalidOperationException ex) when (ex.Message is "Wslg.DiscoveryGrantInvalid" or "Wslg.DiscoveryGrantExpired" or "Wslg.ApplicationNotFound" or "Wslg.EntryChanged") { response = new(false, null, ex.Message, ex.Message); }
     catch (InvalidOperationException ex) when (string.Equals(ex.Message, "PackageCache.EntryInvalid", StringComparison.Ordinal)) { response = new(false, null, "PackageCache.EntryInvalid", "Package cache entry is invalid."); }
     catch (Exception ex) when (request?.Operation.StartsWith("docker.integration.", StringComparison.Ordinal) == true)
     {
         var code = ex.Message is "DockerIntegration.PreviewInvalid" or "DockerIntegration.PreviewExpired" or "DockerIntegration.PreviewMismatch" or "DockerIntegration.PreviewStale" ? ex.Message : "DockerIntegration.Conflict";
+        response = new(false, null, code, code);
+    }
+    catch (Exception ex) when (request?.Operation.StartsWith("monitoring.", StringComparison.Ordinal) == true)
+    {
+        var code = ex switch
+        {
+            ArgumentException => "Monitor.InvalidRequest",
+            OperationCanceledException => "Monitor.Cancelled",
+            InvalidOperationException when ex.Message is "Monitor.SnapshotGrantInvalid" or "Monitor.GrantInvalid" => "Monitor.SnapshotInvalid",
+            InvalidOperationException when ex.Message is "Monitor.PreviewInvalid" => "Monitor.PreviewInvalid",
+            InvalidOperationException when ex.Message is "Monitor.PreviewReplayed" => "Monitor.PreviewReplayed",
+            InvalidOperationException when ex.Message is "Monitor.GrantExpired" => "Monitor.GrantExpired",
+            InvalidOperationException when ex.Message is "Monitor.KillRequiresTermAndReprobe" => "Monitor.KillRequiresTermAndReprobe",
+            InvalidOperationException when ex.Message is "Monitor.ProcessIdentityChanged" => "Monitor.ProcessIdentityChanged",
+            InvalidOperationException when ex.Message is "Monitor.ProcessNotFound" => "Monitor.ProcessNotFound",
+            InvalidOperationException when ex.Message is "Monitor.InstanceStopped" => "Monitor.InstanceStopped",
+            InvalidOperationException when ex.Message is "Monitor.ProcessActionInvalid" => "Monitor.InvalidRequest",
+            _ => "Monitor.Failed"
+        };
         response = new(false, null, code, code);
     }
     catch (Exception ex) when (request?.Operation.StartsWith("diagnostics.", StringComparison.Ordinal) == true) { response = new(false, null, "Diagnostic.ExportInvalid", SensitiveDataRedactor.Redact(ex.Message)); }
@@ -635,15 +658,26 @@ async Task<DockerIntegrationResult> SetDockerIntegrationAsync(BridgeRequest requ
     var payload = ParsePayload<DockerIntegrationPayload>(request);
     return await dockerIntegration.SetFromPreviewAsync(request.Token, payload.Name, payload.Enabled);
 }
-async Task<MonitoringSample> GetMonitoringSnapshotAsync(BridgeRequest request)
+async Task<MonitoringSnapshotResult> GetMonitoringSnapshotAsync(BridgeRequest request)
 {
-    var p = JsonSerializer.Deserialize<MonitoringPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Monitoring payload is required.");
-    var instance = (await instances.GetInstancesAsync()).FirstOrDefault(x => string.Equals(x.Name, p.InstanceName, StringComparison.OrdinalIgnoreCase)) ?? throw new KeyNotFoundException("WSL instance was not found.");
-    await using var session = monitoring.CreateSession(instance, TimeSpan.FromSeconds(1));
-    await session.StartAsync();
-    await Task.Delay(TimeSpan.FromMilliseconds(1250));
-    await session.StopAsync();
-    return session.Samples.Last();
+    ValidatePayload(request, ["Name", "IntervalSeconds"], ["Name", "IntervalSeconds"]);
+    var p = ParsePayload<MonitoringSnapshotPayload>(request);
+    if (string.IsNullOrWhiteSpace(p.Name) || p.IntervalSeconds is not (1 or 2 or 5 or 10)) throw new ArgumentException("Monitoring request is invalid.");
+    var instance = (await instances.GetInstancesAsync()).FirstOrDefault(x => string.Equals(x.Name, p.Name, StringComparison.OrdinalIgnoreCase)) ?? throw new KeyNotFoundException("WSL instance was not found.");
+    using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(p.IntervalSeconds + 10));
+    return await monitoringAutomation.GetSnapshotAsync(instance, TimeSpan.FromSeconds(p.IntervalSeconds), deadline.Token);
+}
+async Task<MonitoringProcessActionPreview> PreviewMonitoringProcessActionAsync(BridgeRequest request)
+{
+    ValidatePayload(request, ["SnapshotToken", "ProcessId", "Action"], ["SnapshotToken", "ProcessId", "Action"]);
+    var p = ParsePayload<MonitoringPreviewPayload>(request);
+    return await monitoringAutomation.PreviewAsync(p.SnapshotToken, p.ProcessId, p.Action);
+}
+async Task<ProcessActionResult> ExecuteMonitoringProcessActionAsync(BridgeRequest request)
+{
+    ValidatePayload(request, ["PreviewToken"], ["PreviewToken"]);
+    var p = ParsePayload<MonitoringExecutePayload>(request);
+    return await monitoringAutomation.ExecuteAsync(p.PreviewToken);
 }
 async Task<RepairPreview> PreviewHealthRepairAsync(BridgeRequest request)
 {
@@ -723,7 +757,9 @@ public sealed record RecoveryRestorePayload(RecoveryRestoreRequest Request);
 public sealed record RecoveryClonePayload(RecoveryCloneRequest Request);
 public sealed record RecoveryNotesPayload(string Description, IReadOnlyList<string> Tags, bool Pinned);
 public sealed record RecoveryRetentionPayload(string SourceInstance, int? Maximum = null);
-public sealed record MonitoringPayload(string InstanceName);
+public sealed record MonitoringSnapshotPayload(string Name, int IntervalSeconds);
+public sealed record MonitoringPreviewPayload(string SnapshotToken, int ProcessId, MonitoringProcessAction Action);
+public sealed record MonitoringExecutePayload(string PreviewToken);
 public sealed record HealthFindingPayload(HealthFinding Finding);
 public sealed record HealthRepairPayload(HealthFinding Finding, bool Confirmed);
 public sealed record DiagnosticPreviewPayload(DiagnosticReportFormat Format, IReadOnlyList<string>? SelectedLogIds = null, int? DeadlineMilliseconds = null);
