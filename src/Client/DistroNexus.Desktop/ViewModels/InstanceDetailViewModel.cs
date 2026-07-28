@@ -54,7 +54,7 @@ public partial class InstanceDetailViewModel : ObservableObject, IAsyncDisposabl
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
 
         DiskTab = new DiskTabViewModel(instance, wslManager, dialogService);
-        ResourcesTab = new ResourcesTabViewModel(instance, wslManager, wslConfigService, dialogService);
+        ResourcesTab = new ResourcesTabViewModel(instance, powerShellModuleClient ?? throw new ArgumentNullException(nameof(powerShellModuleClient)), dialogService);
         IntegrationsTab = new IntegrationsTabViewModel(instance, dialogService, powerShellModuleClient ?? throw new ArgumentNullException(nameof(powerShellModuleClient)));
         NetworkTab = new NetworkTabViewModel(instance, dialogService, powerShellModuleClient ?? throw new ArgumentNullException(nameof(powerShellModuleClient)));
         BackupTab = new BackupTabViewModel(instance, backupService, dialogService, recoveryPointService, powerShellModuleClient ?? throw new ArgumentNullException(nameof(powerShellModuleClient)));

@@ -12,7 +12,7 @@
 
 ## Dependency Order
 
-S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S18 -> S19 -> S20 -> S21 -> S22 -> S23 -> S24 -> {S25 blocked, S26 -> S27 -> S28 -> S29 -> S30} -> S06 -> S07 -> S08
+S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S18 -> S19 -> S20 -> S21 -> S22 -> S23 -> S24 -> {S25 blocked, S26 -> S27 -> S28 -> S29 -> S30 -> S31} -> S06 -> S07 -> S08
 
 ## Slice S01: Verified module contract and migration baseline
 
@@ -1619,6 +1619,66 @@ One accepted network module/presentation migration slice excluding firewall help
 ### Out of Scope
 
 Firewall helper signing/elevation integration, actual firewall mutation UAT, arbitrary browser launch, and every other remaining product family.
+
+## Slice S31: Instance resources and sparse-mode module migration
+
+### Status
+
+Planned
+
+### Objective
+
+Make typed resource snapshot and durable sparse-mode preview/execute commands the only ResourcesTab product path.
+
+### Sources
+
+Requirements FR-001 and FR-003 through FR-007; Instance resources and sparse-mode contract amendment.
+
+### Dependencies
+
+S30
+
+### Allowed Paths
+
+Narrow resource/sparse Core contracts, registered-instance sparse adapter and grant support, WorkspaceBridge Program, resource public commands/manifest, typed module client, ResourcesTab and composition support, focused Core/Bridge/client/view-model/Pester tests, design and plan.
+
+### Excluded Paths
+
+Disk compaction/VHDX/diskpart/Hyper-V/elevation, raw registry/config-path exposure, generic WSL commands, DiskTab, release/publishing.
+
+### Contract and Documentation
+
+Define `instance.resources.get.v1`, `instance.sparse.preview.v1`, `instance.sparse.execute.v1`; execute accepts exactly PreviewToken. Public mutation uses `ShouldProcess`.
+
+### Implementation Scope
+
+Replace direct untyped config/state calls with sanitized snapshot and durable same-user sparse grants; ResourcesTab confirms and refreshes via typed module client.
+
+### Test Scope
+
+Cover strict payload/name validation, fresh-service grants, forged/expired/replay/SID/identity/state mismatch/parallel/cleanup, WhatIf/decline and module-only tab behavior.
+
+### Acceptance Criteria
+
+- ResourcesTab has no direct WSL manager/configuration dependency.
+- Sparse execute accepts only a Core-issued token and rechecks WSL2/current state.
+- No raw config/registry/VHDX/process authority crosses the public boundary.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Resource|FullyQualifiedName~Sparse|FullyQualifiedName~PowerShellModuleClient|FullyQualifiedName~WorkspaceBridgeProtocol"
+pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Unit
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+One accepted resources/sparse module migration slice.
+
+### Out of Scope
+
+Disk compaction and elevation design, VHDX runtime UAT, and every other remaining capability family.
 
 ## Slice S06: Platform-integrated command parity
 

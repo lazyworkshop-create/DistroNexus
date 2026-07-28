@@ -108,6 +108,8 @@
         'Open-DistroNexusWslConfigFile',
         'Set-DistroNexusWslConfig',
         'Get-DistroNexusInstanceConfig',
+        'Get-DistroNexusInstanceResources',
+        'Get-DistroNexusInstanceSparsePreview',
         'Set-DistroNexusInstanceSparseMode',
         'New-DistroNexusBackupSchedule',
         'Remove-DistroNexusBackupSchedule',

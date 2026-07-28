@@ -14,6 +14,7 @@ var root = Environment.GetEnvironmentVariable("DISTRONEXUS_WORKSPACE_STORE_ROOT"
 // validation, preview tokens, capability checks, and structured process requests.
 var processes = new ProcessRunner();
 var instances = new BridgeWslManagerService(processes);
+var instanceResources = new InstanceResourceService(new RegisteredInstanceSparseAdapter(processes), Path.Combine(root ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DistroNexus"), "instance-sparse-grants"));
 var dockerIntegration = new DockerIntegrationService(NullLogger<DockerIntegrationService>.Instance, instances);
 var capabilities = new PlatformCapabilityService(processes);
 var networkStatus = new WindowsNetworkStatusAdapter();
@@ -189,6 +190,9 @@ while ((line = Console.ReadLine()) is not null)
             "instance.list.v1" => await instances.GetInstanceDetailsAsync(ParseInstanceListOptions(request)),
             "instance.start.v1" => await instances.StartInstanceAsync(ParseInstanceName(request)),
             "instance.stop.v1" => await instances.StopInstanceAsync(ParseInstanceName(request)),
+            "instance.resources.get.v1" => await InstanceResourcesGetV1Async(request),
+            "instance.sparse.preview.v1" => await InstanceSparsePreviewV1Async(request),
+            "instance.sparse.execute.v1" => await InstanceSparseExecuteV1Async(request),
             "settings.get.v1" => GetSettings(request),
             "settings.save.v1" => SaveSettings(request),
             "settings.reset.v1" => ResetSettings(request),
@@ -724,6 +728,22 @@ async Task<DockerIntegrationResult> SetDockerIntegrationAsync(BridgeRequest requ
     var payload = ParsePayload<DockerIntegrationPayload>(request);
     return await dockerIntegration.SetFromPreviewAsync(request.Token, payload.Name, payload.Enabled);
 }
+async Task<InstanceResourceSnapshot> InstanceResourcesGetV1Async(BridgeRequest request)
+{
+    ValidatePayload(request, ["Name"], ["Name"]);
+    return await instanceResources.GetAsync(ParsePayload<InstanceResourcePayload>(request).Name);
+}
+async Task<InstanceSparsePreview> InstanceSparsePreviewV1Async(BridgeRequest request)
+{
+    ValidatePayload(request, ["Name", "Enabled"], ["Name", "Enabled"]);
+    var payload = ParsePayload<InstanceSparsePayload>(request);
+    return await instanceResources.PreviewSparseAsync(payload.Name, payload.Enabled);
+}
+async Task<InstanceSparseOperationResult> InstanceSparseExecuteV1Async(BridgeRequest request)
+{
+    ValidatePayload(request, ["PreviewToken"], ["PreviewToken"]);
+    return await instanceResources.ExecuteSparseAsync(ParsePayload<InstanceSparseExecutePayload>(request).PreviewToken);
+}
 async Task<MonitoringSnapshotResult> GetMonitoringSnapshotAsync(BridgeRequest request)
 {
     ValidatePayload(request, ["Name", "IntervalSeconds"], ["Name", "IntervalSeconds"]);
@@ -786,6 +806,9 @@ static Task<WorkspaceDefinition> DuplicateAsync(IWorkspaceService service, Bridg
 static WorkspaceDefinition ParseDefinition(string payload, JsonSerializerOptions options) => JsonSerializer.Deserialize<WorkspaceDefinition>(payload, options) ?? throw new ArgumentException("Workspace definition is required.");
 public sealed record BridgeRequest(string Operation, Guid? Id, JsonElement? Payload, long? ExpectedRevision, string? Token = null, string? Name = null, Guid? ActionId = null);
 public sealed record InstanceNamePayload(string Name);
+public sealed record InstanceResourcePayload(string Name);
+public sealed record InstanceSparsePayload(string Name, bool Enabled);
+public sealed record InstanceSparseExecutePayload(string PreviewToken);
 public sealed record InstanceListPayload(bool IncludeRelease = false, bool IncludeUser = false, bool SkipDiskSize = false);
 public sealed record SettingsSavePayload(GlobalSettings Settings);
 public sealed record CatalogSourceAddPayload(string Name, string Url, string? Description, bool IsActive);

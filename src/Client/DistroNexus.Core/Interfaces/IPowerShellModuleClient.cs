@@ -15,6 +15,9 @@ public interface IPowerShellModuleClient
 
     /// <summary>Stops an instance through the module contract.</summary>
     Task<bool> StopInstanceAsync(string name, CancellationToken cancellationToken = default);
+    Task<InstanceResourceSnapshot> GetInstanceResourcesAsync(string name, CancellationToken cancellationToken = default);
+    Task<InstanceSparsePreview> GetInstanceSparsePreviewAsync(string name, bool enabled, CancellationToken cancellationToken = default);
+    Task<InstanceSparseOperationResult> SetInstanceSparseModeAsync(string previewToken, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets tags for every instance, or for one instance when <paramref name="name"/> is supplied.

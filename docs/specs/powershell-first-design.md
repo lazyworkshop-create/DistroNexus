@@ -163,6 +163,14 @@ No route accepts a program, command line, Windows path, URI, environment expansi
 
 Firewall list/status/preview may be represented through existing fixed contracts, but firewall create/remove cannot be claimed executable until a signed/elevated helper is integrated: current bridge composition has no helper and its in-memory preview cannot cross module processes. S30 must surface the existing stable unavailable outcome without weakening elevation trust; a later helper-owned slice is required for actual mutation.
 
+### Instance resources and sparse-mode contract amendment
+
+`ResourcesTabViewModel` directly reads untyped WSL/registry configuration and directly invokes sparse-mode mutation. Slice S31 replaces it with `instance.resources.get.v1 {Name}` returning a path-free typed `InstanceResourceSnapshot`, and `instance.sparse.preview.v1 {Name,Enabled}` / `instance.sparse.execute.v1 {PreviewToken}`. Sparse grants are same-user protected, hash-addressed, expiry-bound and atomically single-use; they bind registered WSL2 instance identity, current sparse state and desired target. Execute receives token only and rechecks registration/version/state immediately before the fixed `wsl.exe --manage <name> --set-sparse <true|false>` path. Public sparse mutation uses `ShouldProcess`; WPF confirms returned effects and invokes only the token.
+
+No registry keys, config path/raw document, WSL command, VHDX path, `Force`, diskpart/Hyper-V input or arbitrary process argument crosses the module boundary. Disk compaction is explicitly separate: its current dynamic/elevation-dependent executor requires a dedicated fixed-executor and signed elevation design, and is not implied by S31.
+
+S31 adds a narrow Core-owned registered-instance sparse adapter because the existing Bridge WSL manager intentionally rejects configuration/sparse calls. The adapter may read only the product's registered instance identity and current sparse state, and may execute only the fixed `wsl.exe --manage <registered-name> --set-sparse <true|false>` argument array after Core validation. It does not expose registry values, instance install/VHDX paths, arbitrary `wsl.exe` arguments, a script runner, or a general manager API. This is the final authority used both at preview and immediate pre-execute revalidation.
+
 ## Data and Execution Semantics
 
 - Data ownership and retention: Core owns settings, cache, catalog, backup, recovery, templates, and configuration persistence. Desktop never writes those stores. Existing retention and cleanup policies remain unchanged.

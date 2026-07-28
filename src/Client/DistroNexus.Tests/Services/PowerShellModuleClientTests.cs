@@ -448,7 +448,9 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.GetHostCapabilitiesAsync),
                 nameof(IPowerShellModuleClient.GetInstanceCapabilitiesAsync),
                 nameof(IPowerShellModuleClient.GetInstanceIpAddressAsync),
+                nameof(IPowerShellModuleClient.GetInstanceResourcesAsync),
                 nameof(IPowerShellModuleClient.GetInstancesAsync),
+                nameof(IPowerShellModuleClient.GetInstanceSparsePreviewAsync),
                 nameof(IPowerShellModuleClient.GetInstanceTagsAsync),
                 nameof(IPowerShellModuleClient.GetMonitoringProcessActionPreviewAsync),
                 nameof(IPowerShellModuleClient.GetMonitoringSnapshotAsync),
@@ -494,6 +496,7 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.SearchPackagesAsync),
                 nameof(IPowerShellModuleClient.SetCatalogSourceActiveAsync),
                 nameof(IPowerShellModuleClient.SetDockerIntegrationAsync),
+                nameof(IPowerShellModuleClient.SetInstanceSparseModeAsync),
                 nameof(IPowerShellModuleClient.SetInstanceTagsAsync),
                 nameof(IPowerShellModuleClient.SetNetworkModeAsync),
                 nameof(IPowerShellModuleClient.SetNetworkSettingsAsync),
@@ -541,6 +544,22 @@ public sealed class PowerShellModuleClientTests
         Assert.Empty((await client.GetContainerRuntimeStatusAsync("Ubuntu")).Runtimes);
         Assert.Empty((await client.GetInstanceCapabilitiesAsync("Ubuntu")).Capabilities);
         Assert.Empty((await client.GetHostCapabilitiesAsync()).Capabilities);
+        powerShell.VerifyAll();
+    }
+
+    [Fact]
+    public async Task InstanceResourceOperations_UseFixedCmdletsAndTokenOnlyMutation()
+    {
+        var token = new string('a', 64);
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusInstanceResources", It.Is<Dictionary<string, object>>(p => p.Count == 1 && (string)p["Name"] == "Ubuntu"), It.IsAny<ModuleCallOptions>(), It.IsAny<CancellationToken>())).ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Name\":\"Ubuntu\",\"WslVersion\":2,\"SparseMode\":false}" });
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusInstanceSparsePreview", It.Is<Dictionary<string, object>>(p => p.Count == 2 && (string)p["Name"] == "Ubuntu" && (bool)p["Enabled"]), It.IsAny<ModuleCallOptions>(), It.IsAny<CancellationToken>())).ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"PreviewToken\":\"" + token + "\",\"Name\":\"Ubuntu\",\"Enabled\":true,\"ExpiresAt\":\"2026-07-28T00:02:00Z\",\"Effects\":[\"set\"]}" });
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Set-DistroNexusInstanceSparseMode", It.Is<Dictionary<string, object>>(p => p.Count == 1 && (string)p["PreviewToken"] == token), It.IsAny<ModuleCallOptions>(), It.IsAny<CancellationToken>())).ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Succeeded\":true,\"OutcomeCode\":\"Succeeded\"}" });
+        var client = new PowerShellModuleClient(powerShell.Object);
+        Assert.False((await client.GetInstanceResourcesAsync("Ubuntu")).SparseMode);
+        Assert.Equal(token, (await client.GetInstanceSparsePreviewAsync("Ubuntu", true)).PreviewToken);
+        Assert.True((await client.SetInstanceSparseModeAsync(token)).Succeeded);
+        await Assert.ThrowsAsync<ArgumentException>(() => client.SetInstanceSparseModeAsync("bad"));
         powerShell.VerifyAll();
     }
 

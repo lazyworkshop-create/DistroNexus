@@ -18,6 +18,9 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string GetInstancesCommand = "Get-DistroNexusInstance";
     private const string StartInstanceCommand = "Start-DistroNexusInstance";
     private const string StopInstanceCommand = "Stop-DistroNexusInstance";
+    private const string GetInstanceResourcesCommand = "Get-DistroNexusInstanceResources";
+    private const string GetInstanceSparsePreviewCommand = "Get-DistroNexusInstanceSparsePreview";
+    private const string SetInstanceSparseModeCommand = "Set-DistroNexusInstanceSparseMode";
     private const string GetSettingsCommand = "Get-DistroNexusSettings";
     private const string SetSettingsCommand = "Set-DistroNexusSettings";
     private const string ResetSettingsCommand = "Reset-DistroNexusSettings";
@@ -113,6 +116,13 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     /// <inheritdoc />
     public Task<bool> StopInstanceAsync(string name, CancellationToken cancellationToken = default) =>
         ExecuteInstanceMutationAsync(StopInstanceCommand, name, cancellationToken);
+
+    public Task<InstanceResourceSnapshot> GetInstanceResourcesAsync(string name, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); return ExecuteJsonAsync<InstanceResourceSnapshot>(GetInstanceResourcesCommand, new() { ["Name"] = name }, cancellationToken); }
+    public Task<InstanceSparsePreview> GetInstanceSparsePreviewAsync(string name, bool enabled, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); return ExecuteJsonAsync<InstanceSparsePreview>(GetInstanceSparsePreviewCommand, new() { ["Name"] = name, ["Enabled"] = enabled }, cancellationToken); }
+    public Task<InstanceSparseOperationResult> SetInstanceSparseModeAsync(string previewToken, CancellationToken cancellationToken = default)
+    { if (string.IsNullOrWhiteSpace(previewToken) || previewToken.Length != 64 || previewToken.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("A Core-issued instance sparse preview token is required.", nameof(previewToken)); return ExecuteJsonAsync<InstanceSparseOperationResult>(SetInstanceSparseModeCommand, new() { ["PreviewToken"] = previewToken }, cancellationToken); }
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<DistroNexusInstanceTagResult>> GetInstanceTagsAsync(
