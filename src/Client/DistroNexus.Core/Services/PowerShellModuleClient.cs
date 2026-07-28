@@ -29,6 +29,7 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string SetCatalogSourceOrderCommand = "Set-DistroNexusCatalogSourceOrder";
     private const string ResetCatalogSourcesCommand = "Reset-DistroNexusCatalogSource";
     private const string GetPackagesCommand = "Get-DistroNexusPackage";
+    private const string RefreshCatalogCommand = "Update-DistroNexusCatalog";
     private readonly IPowerShellService _powerShellService;
 
     public PowerShellModuleClient(IPowerShellService powerShellService)
@@ -261,6 +262,15 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     {
         var packages = await ExecutePackagesAsync(new Dictionary<string, object> { ["Id"] = id }, cancellationToken);
         return packages.FirstOrDefault();
+    }
+
+    public async Task<DistroNexusCatalogRefreshResult> RefreshCatalogAsync(string? sourceUrl = null, CancellationToken cancellationToken = default)
+    {
+        Dictionary<string, object>? parameters = string.IsNullOrWhiteSpace(sourceUrl) ? null : new() { ["SourceUrl"] = sourceUrl };
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(RefreshCatalogCommand, parameters, cancellationToken: cancellationToken);
+        ThrowIfFailed(result);
+        return JsonSerializer.Deserialize<DistroNexusCatalogRefreshResult>(result.Output, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+            ?? throw new InvalidOperationException("The DistroNexus module returned an invalid catalog refresh result.");
     }
 
     private async Task<IReadOnlyList<DistroPackage>> ExecutePackagesAsync(Dictionary<string, object>? parameters, CancellationToken cancellationToken)

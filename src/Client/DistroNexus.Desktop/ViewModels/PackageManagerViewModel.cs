@@ -134,7 +134,7 @@ public partial class PackageManagerViewModel : ObservableObject
 
             _logger.LogInformation("Refreshing catalog");
 
-            await _catalogService.RefreshCatalogAsync();
+            await _moduleClient.RefreshCatalogAsync();
             await LoadCatalogAsync();
 
             StatusMessage = Properties.Resources.StatusCatalogRefreshed;
@@ -773,8 +773,8 @@ public partial class PackageManagerViewModel : ObservableObject
         try
         {
             StatusMessage = "Updating sources...";
-            await _catalogService.RefreshCatalogAsync();
-            await RefreshCatalogAsync();
+            await _moduleClient.RefreshCatalogAsync();
+            await LoadCatalogAsync();
             StatusMessage = "Sources updated successfully";
         }
         catch (Exception ex)

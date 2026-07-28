@@ -24,7 +24,8 @@ var applicationRoot = root ?? Path.Combine(Environment.GetFolderPath(Environment
 var bridgePowerShell = new BridgeReadOnlyPowerShellService();
 var settings = new SettingsService(NullLogger<SettingsService>.Instance, Path.Combine(applicationRoot, "settings.json"));
 var catalogSources = new CatalogSourceManager(settings, new HttpClient(), NullLogger<CatalogSourceManager>.Instance);
-var catalog = new CatalogService(NullLogger<CatalogService>.Instance, settings, bridgePowerShell, new HttpClient());
+var catalogHttp = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(10) };
+var catalog = new CatalogService(NullLogger<CatalogService>.Instance, settings, catalogHttp);
 var globalConfiguration = new WslConfigService(NullLogger<WslConfigService>.Instance, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
 var backups = new BackupService(bridgePowerShell, NullLogger<BackupService>.Instance, applicationRoot);
 var templates = new TemplateService(NullLogger<TemplateService>.Instance, settings, bridgePowerShell, new HttpClient());
@@ -155,6 +156,7 @@ while ((line = Console.ReadLine()) is not null)
             "catalog.list.v1" => await ListCatalogAsync(request),
             "catalog.search.v1" => await SearchCatalogAsync(request),
             "catalog.get.v1" => await GetCatalogAsync(request),
+            "catalog.refresh.v1" => await RefreshCatalogAsync(request),
             _ => throw new ArgumentException("Bridge operation is unsupported.")
         };
         response = new(true, value, null, null);
@@ -225,6 +227,14 @@ async Task<DistroPackage?> GetCatalogAsync(BridgeRequest request)
     return await catalog.GetDistributionByIdAsync(payload.Id);
 }
 
+async Task<object> RefreshCatalogAsync(BridgeRequest request)
+{
+    var payload = DeserializeOptionalCatalogPayload<CatalogRefreshPayload>(request);
+    if (payload?.SourceUrl is { } sourceUrl && !IsValidRefreshUrl(sourceUrl))
+        throw new ArgumentException("Catalog source URL is invalid.");
+    return await catalog.RefreshCatalogWithResultAsync(payload?.SourceUrl);
+}
+
 T? DeserializeOptionalCatalogPayload<T>(BridgeRequest request) where T : class
 {
     if (request.Payload is null || request.Payload.Value.ValueKind == JsonValueKind.Null) return null;
@@ -236,6 +246,10 @@ static void ValidateCatalogText(string? value, string name)
     if (string.IsNullOrWhiteSpace(value) || value.Length > 256)
         throw new ArgumentException($"Catalog {name} must be between 1 and 256 characters.");
 }
+
+static bool IsValidRefreshUrl(string value) => value.Length <= 2048 && Uri.TryCreate(value, UriKind.Absolute, out var uri) &&
+    (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps) && !string.IsNullOrWhiteSpace(uri.Host) &&
+    string.IsNullOrEmpty(uri.UserInfo) && string.IsNullOrEmpty(uri.Fragment);
 
 async Task<CatalogSource> AddCatalogSourceAsync(BridgeRequest request)
 {
@@ -457,6 +471,7 @@ public sealed record CatalogSourceReorderPayload(List<string> SourceIds);
 public sealed record CatalogListPayload(string? Family = null, bool ForceReload = false);
 public sealed record CatalogSearchPayload(string Query);
 public sealed record CatalogGetPayload(string Id);
+public sealed record CatalogRefreshPayload(string? SourceUrl = null);
 public sealed record PodmanUnitPayload(string InstanceName, PodmanUserUnit Unit, SystemdAction Action);
 public sealed record PodmanConnectionPayload(string InstanceName, string Name, string Endpoint);
 public sealed record PodmanStatusPayload(string InstanceName);

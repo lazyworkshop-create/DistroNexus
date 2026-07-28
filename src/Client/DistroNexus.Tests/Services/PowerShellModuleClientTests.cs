@@ -42,6 +42,22 @@ public sealed class PowerShellModuleClientTests
     }
 
     [Fact]
+    public async Task RefreshCatalog_UsesTheFixedCmdletAndOptionalSourceUrl()
+    {
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(service => service.ExecuteModuleCmdletAsync(
+                "Update-DistroNexusCatalog", null, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Succeeded\":true,\"SourceId\":\"legacy\",\"CacheState\":\"Updated\",\"DiagnosticCode\":\"Catalog.RefreshUpdated\"}" });
+        powerShell.Setup(service => service.ExecuteModuleCmdletAsync(
+                "Update-DistroNexusCatalog", It.Is<Dictionary<string, object>>(p => p != null && Equals(p["SourceUrl"], "https://example.test/catalog.json")), null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Succeeded\":true,\"SourceId\":\"override\",\"CacheState\":\"Updated\",\"DiagnosticCode\":\"Catalog.RefreshUpdated\"}" });
+        var client = new PowerShellModuleClient(powerShell.Object);
+
+        Assert.Equal("legacy", (await client.RefreshCatalogAsync()).SourceId);
+        Assert.Equal("override", (await client.RefreshCatalogAsync("https://example.test/catalog.json")).SourceId);
+    }
+
+    [Fact]
     public async Task PackageQueries_PropagateFailureAndCancellation()
     {
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
@@ -424,6 +440,7 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.GetPackageAsync),
                 nameof(IPowerShellModuleClient.GetPackagesAsync),
                 nameof(IPowerShellModuleClient.GetSettingsAsync),
+                nameof(IPowerShellModuleClient.RefreshCatalogAsync),
                 nameof(IPowerShellModuleClient.RemoveCatalogSourceAsync),
                 nameof(IPowerShellModuleClient.RemoveInstanceTagAsync),
                 nameof(IPowerShellModuleClient.RenameInstanceTagsAsync),

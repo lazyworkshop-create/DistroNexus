@@ -12,7 +12,7 @@
 
 ## Dependency Order
 
-S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S05 -> S06 -> S07 -> S08
+S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S05 -> S06 -> S07 -> S08
 
 ## Slice S01: Verified module contract and migration baseline
 
@@ -659,6 +659,122 @@ Native catalog read contract and read-only consumer migration.
 ### Out of Scope
 
 Catalog refresh, source persistence, cache mutations, and durable download-task migration.
+
+## Slice S16: Native catalog refresh contract
+
+### Status
+
+Committed
+
+### Objective
+
+Catalog refresh runs natively behind a fixed PowerShell and Bridge contract, removing CatalogService's remaining Core-to-module call.
+
+### Sources
+
+`docs/specs/powershell-first-catalog-requirements.md` FR-101, FR-103, FR-104, FR-108; `docs/specs/powershell-first-catalog-design.md`.
+
+### Dependencies
+
+S15 and accepted S16 cache mutation contract amendment.
+
+### Allowed Paths
+
+Catalog Core implementation/models required for native refresh; WorkspaceBridge `catalog.refresh.v1`; `Update-DistroNexusCatalog`; typed module client; Package Manager refresh consumer; focused C#/Pester tests; plan.
+
+### Excluded Paths
+
+All package-cache routes/commands/UI, download task lifecycle, `Save-DistroNexusPackage`, source-management commands/manager, generic bridge execution, package installation, release/publishing surfaces.
+
+### Contract and Documentation
+
+Implement only `catalog.refresh.v1`. The mutation uses `ShouldProcess`; refresh validates every source before HTTP, disables redirects, and atomically preserves known-good state on failure.
+
+### Implementation Scope
+
+Remove `IPowerShellService` from CatalogService. Add typed source-priority refresh and migrate Package Manager refresh calls.
+
+### Test Scope
+
+Native refresh/source security tests; bridge route and malformed payload tests; Pester compatibility/WhatIf/decline/failure tests; typed-client and Package Manager routing tests; structural test proving CatalogService has no PowerShell dependency.
+
+### Acceptance Criteria
+
+- CatalogService has no PowerShell service dependency or module call.
+- Refresh is callable only through a fixed module contract and honors PowerShell consent.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Catalog|FullyQualifiedName~WorkspaceBridgeProtocol|FullyQualifiedName~PowerShellModuleClient"
+pwsh -NoProfile -Command "Invoke-Pester -Path tests/PowerShell/Unit/Public"
+```
+
+### Commit Boundary
+
+Native catalog refresh module contract and Package Manager refresh migration.
+
+### Out of Scope
+
+Package-cache operations, package download task persistence/progress/retry, package installation, and source manager UI changes.
+
+## Slice S17: Native package-cache mutation contract
+
+### Status
+
+Planned
+
+### Objective
+
+Package-cache location, usage, deletion, and clear run through fixed PowerShell/Bridge contracts with persistent authenticated cache-entry tokens, and remaining Settings/Package Manager cache calls leave Desktop.
+
+### Sources
+
+FR-105, FR-108, FR-109; approved catalog cache design.
+
+### Dependencies
+
+S16.
+
+### Allowed Paths
+
+Catalog cache Core/bridge/module/client/Desktop consumer/test paths required by the approved contract and plan.
+
+### Excluded Paths
+
+Catalog refresh, download task lifecycle, source manager, package installation, and generic bridge execution.
+
+### Contract and Documentation
+
+Implement only package-cache location, usage, delete, and clear routes with persistent protected token verification and `ShouldProcess` mutations.
+
+### Implementation Scope
+
+Add pure root resolution, streaming usage, authenticated cross-process tokens, contained deletion/clear, fixed commands, typed client, and cache UI migration.
+
+### Test Scope
+
+Native token/containment/streaming tests; bridge/Pester consent tests; typed client and WPF routing tests.
+
+### Acceptance Criteria
+
+- No cache mutation occurs outside fixed module commands.
+- Returned cache tokens work in a later module process only for unchanged contained files.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Catalog|FullyQualifiedName~PowerShellModuleClient"
+pwsh -NoProfile -Command "Invoke-Pester -Path tests/PowerShell/Unit/Public"
+```
+
+### Commit Boundary
+
+Native package-cache mutation contract and Desktop cache migration.
+
+### Out of Scope
+
+Download tasks, package installation, and catalog refresh.
 
 ## Slice S05: Network, systemd, firewall, recovery, health, and diagnostics command parity
 

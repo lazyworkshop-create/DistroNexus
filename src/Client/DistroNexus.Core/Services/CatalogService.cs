@@ -13,7 +13,6 @@ public class CatalogService : ICatalogService
 {
     private readonly ILogger<CatalogService> _logger;
     private readonly ISettingsService _settingsService;
-    private readonly IPowerShellService _powerShellService;
     private readonly HttpClient _httpClient;
     private List<DistroPackage>? _cachedCatalog;
     private readonly string _catalogCachePath;
@@ -22,14 +21,12 @@ public class CatalogService : ICatalogService
     public CatalogService(
         ILogger<CatalogService> logger, 
         ISettingsService settingsService,
-        IPowerShellService powerShellService,
         HttpClient httpClient,
         string? catalogCachePath = null,
         string? localCatalogPath = null)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
-        _powerShellService = powerShellService ?? throw new ArgumentNullException(nameof(powerShellService));
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
 
         var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
@@ -71,35 +68,51 @@ public class CatalogService : ICatalogService
     /// <inheritdoc/>
     public async Task RefreshCatalogAsync(CancellationToken cancellationToken = default)
     {
-        try
+        await RefreshCatalogWithResultAsync(null, cancellationToken);
+    }
+
+    /// <summary>Refreshes from a validated one-call override without persisting source state.</summary>
+    public async Task RefreshCatalogAsync(string? sourceUrl, CancellationToken cancellationToken = default)
+    {
+        await RefreshCatalogWithResultAsync(sourceUrl, cancellationToken);
+    }
+
+    /// <summary>Refreshes natively and returns a public-safe outcome without exposing source URLs.</summary>
+    public async Task<CatalogRefreshResult> RefreshCatalogWithResultAsync(string? sourceUrl = null, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var sources = string.IsNullOrWhiteSpace(sourceUrl) ? ResolveRefreshSources() : [new CatalogSource { Id = "override", Url = sourceUrl }];
+        foreach (var source in sources)
         {
-            _logger.LogInformation("Refreshing catalog via PowerShell Update-DistroNexusCatalog");
-            
-            // Call PowerShell module to update catalog
-            var success = await _powerShellService.ExecuteAsync<bool>(
-                "Update-DistroNexusCatalog",
-                null,
-                cancellationToken);
-            
-            if (success)
+            if (!TryValidateSourceUri(source.Url, out var uri))
             {
-                _logger.LogInformation("Catalog updated successfully");
-                
-                // Clear cache to force reload
-                _cachedCatalog = null;
-                
-                // Reload from PowerShell
-                await LoadCatalogAsync(false, cancellationToken);
+                _logger.LogWarning("Skipping invalid catalog source {SourceId}", source.Id);
+                continue;
             }
-            else
+
+            try
             {
-                _logger.LogWarning("Catalog update returned false, using existing catalog");
+                using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+                using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                response.EnsureSuccessStatusCode();
+                if (response.Content.Headers.ContentLength is > 10 * 1024 * 1024)
+                    throw new InvalidDataException("Catalog response exceeds the maximum size.");
+                await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                var packages = await JsonSerializer.DeserializeAsync<List<DistroPackage>>(new BoundedReadStream(stream, 10 * 1024 * 1024), cancellationToken: cancellationToken);
+                if (!IsValidCatalog(packages)) throw new InvalidDataException("Catalog response is invalid.");
+                await ReplaceCatalogAtomicallyAsync(packages!, cancellationToken);
+                _cachedCatalog = ClonePackages(packages!);
+                UpdatePackageCacheStatus(_cachedCatalog);
+                return new CatalogRefreshResult(true, source.Id, "Updated", "Catalog.RefreshUpdated");
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex) when (ex is HttpRequestException or IOException or UnauthorizedAccessException or JsonException or InvalidDataException)
+            {
+                _logger.LogWarning(ex, "Catalog source {SourceId} failed; trying next source", source.Id);
             }
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to refresh catalog via PowerShell module");
-        }
+
+        return new CatalogRefreshResult(false, null, File.Exists(_catalogCachePath) || _cachedCatalog is not null ? "Preserved" : "Unavailable", "Catalog.RefreshFailed");
     }
 
     /// <summary>
@@ -187,7 +200,7 @@ public class CatalogService : ICatalogService
 
         try
         {
-            _logger.LogInformation("Deleting cached package {PackageId} via PowerShell", packageId);
+            _logger.LogInformation("Deleting cached package {PackageId}", packageId);
 
             // Find the package in catalog to get its DefaultName or LocalPath
             var package = _cachedCatalog?.FirstOrDefault(p => p.Id == packageId);
@@ -197,50 +210,14 @@ public class CatalogService : ICatalogService
                 return;
             }
 
-            Dictionary<string, object>? parameters = null;
-            
-            // Use LocalPath if available, otherwise use DefaultName
-            if (!string.IsNullOrWhiteSpace(package.LocalPath) && File.Exists(package.LocalPath))
-            {
-                parameters = new Dictionary<string, object>
-                {
-                    { "LocalPath", package.LocalPath },
-                    { "Force", true }
-                };
-            }
-            else if (!string.IsNullOrWhiteSpace(package.DefaultName))
-            {
-                parameters = new Dictionary<string, object>
-                {
-                    { "DefaultName", package.DefaultName },
-                    { "Force", true }
-                };
-            }
-            else
-            {
-                _logger.LogWarning("Cannot delete package {PackageId}: no LocalPath or DefaultName", packageId);
-                return;
-            }
-
-            // Call PowerShell module to remove package
-            var success = await _powerShellService.ExecuteAsync<bool>(
-                "Remove-DistroNexusPackage",
-                parameters,
-                cancellationToken);
-
-            if (success)
-            {
-                _logger.LogInformation("Successfully deleted cached package {PackageId}", packageId);
-                
-                // Update cached catalog to mark as not cached
-                package.IsCached = false;
-                package.LocalPath = string.Empty;
-                package.FileSize = 0;
-            }
-            else
-            {
-                _logger.LogWarning("Failed to delete cached package {PackageId}", packageId);
-            }
+            var root = Path.GetFullPath(ResolvePackageCachePath());
+            var candidate = string.IsNullOrWhiteSpace(package.LocalPath) ? null : Path.GetFullPath(package.LocalPath);
+            if (candidate is null || !IsChildPath(root, candidate) || !File.Exists(candidate)) return;
+            cancellationToken.ThrowIfCancellationRequested();
+            File.Delete(candidate);
+            package.IsCached = false;
+            package.LocalPath = string.Empty;
+            package.FileSize = 0;
         }
         catch (Exception ex)
         {
@@ -312,11 +289,6 @@ public class CatalogService : ICatalogService
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 "DistroNexus",
                 "packages");
-        }
-
-        if (!Directory.Exists(cachePath))
-        {
-            Directory.CreateDirectory(cachePath);
         }
 
         return cachePath;
@@ -517,6 +489,62 @@ public class CatalogService : ICatalogService
         catch (IOException ex) { _logger.LogWarning(ex, "Could not read catalog at {Path}", path); return null; }
     }
 
+    private IReadOnlyList<CatalogSource> ResolveRefreshSources()
+    {
+        var settings = _settingsService.LoadSettings();
+        if (!settings.CustomData.TryGetValue("CatalogSources", out var serialized))
+            return [new CatalogSource { Id = "legacy", Url = settings.CatalogUrl }];
+
+        try
+        {
+            return (JsonSerializer.Deserialize<List<CatalogSource>>(serialized) ?? [])
+                .Where(s => s.IsActive)
+                .OrderBy(s => s.Priority)
+                .ThenBy(s => s.Id, StringComparer.Ordinal)
+                .ToList();
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+
+    private static bool TryValidateSourceUri(string? value, out Uri uri)
+    {
+        uri = null!;
+        return !string.IsNullOrWhiteSpace(value) && value.Length <= 2048 &&
+               Uri.TryCreate(value, UriKind.Absolute, out uri) &&
+               (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps) &&
+               !string.IsNullOrWhiteSpace(uri.Host) && string.IsNullOrEmpty(uri.UserInfo) && string.IsNullOrEmpty(uri.Fragment);
+    }
+
+    private static bool IsValidCatalog(List<DistroPackage>? packages) =>
+        packages is { Count: > 0 and <= 10000 } && packages.All(p =>
+            !string.IsNullOrWhiteSpace(p.Id) && p.Id.Length <= 256 &&
+            !string.IsNullOrWhiteSpace(p.Name) && p.Name.Length <= 256 &&
+            (string.IsNullOrWhiteSpace(p.DownloadUrl) || Uri.TryCreate(p.DownloadUrl, UriKind.Absolute, out var uri) &&
+                (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)));
+
+    private async Task ReplaceCatalogAtomicallyAsync(List<DistroPackage> packages, CancellationToken cancellationToken)
+    {
+        var directory = Path.GetDirectoryName(_catalogCachePath) ?? throw new InvalidOperationException("Catalog cache path has no parent.");
+        Directory.CreateDirectory(directory);
+        var temporary = Path.Combine(directory, $".{Path.GetFileName(_catalogCachePath)}.{Guid.NewGuid():N}.tmp");
+        try
+        {
+            await using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
+            {
+                await JsonSerializer.SerializeAsync(stream, packages, cancellationToken: cancellationToken);
+                await stream.FlushAsync(cancellationToken);
+            }
+            File.Move(temporary, _catalogCachePath, true);
+        }
+        finally
+        {
+            if (File.Exists(temporary)) File.Delete(temporary);
+        }
+    }
+
     private string ResolvePackageCachePath()
     {
         var configured = _settingsService.LoadSettings().PackageCachePath;
@@ -525,6 +553,25 @@ public class CatalogService : ICatalogService
             : configured;
     }
 
+    private static bool IsChildPath(string root, string candidate)
+    {
+        var normalizedRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root)) + Path.DirectorySeparatorChar;
+        return candidate.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase) &&
+            !new FileInfo(candidate).Attributes.HasFlag(FileAttributes.ReparsePoint);
+    }
+
     private static List<DistroPackage> ClonePackages(IEnumerable<DistroPackage> packages) => packages.Select(ClonePackage).ToList();
     private static DistroPackage ClonePackage(DistroPackage package) => JsonSerializer.Deserialize<DistroPackage>(JsonSerializer.Serialize(package))!;
+
+    private sealed class BoundedReadStream(Stream inner, long maximum) : Stream
+    {
+        private long _read;
+        public override bool CanRead => inner.CanRead; public override bool CanSeek => false; public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException(); public override long Position { get => _read; set => throw new NotSupportedException(); }
+        public override void Flush() => throw new NotSupportedException(); public override Task FlushAsync(CancellationToken token) => throw new NotSupportedException();
+        public override int Read(byte[] buffer, int offset, int count) { var n = inner.Read(buffer, offset, count); Check(n); return n; }
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken token = default) { var n = await inner.ReadAsync(buffer, token); Check(n); return n; }
+        private void Check(int n) { _read += n; if (_read > maximum) throw new InvalidDataException("Catalog response exceeds the maximum size."); }
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException(); public override void SetLength(long value) => throw new NotSupportedException(); public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
 }

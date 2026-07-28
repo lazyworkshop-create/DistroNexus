@@ -80,6 +80,9 @@ public interface IPowerShellModuleClient
 
     /// <summary>Gets one catalog package through the module contract.</summary>
     Task<DistroPackage?> GetPackageAsync(string id, CancellationToken cancellationToken = default);
+
+    /// <summary>Refreshes the catalog through the module contract.</summary>
+    Task<DistroNexusCatalogRefreshResult> RefreshCatalogAsync(string? sourceUrl = null, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -101,6 +104,9 @@ public sealed record DistroNexusCatalogSourceUpdateRequest(
     string Url,
     string? Description = null,
     bool IsActive = true);
+
+/// <summary>Public-safe result returned by the catalog refresh command.</summary>
+public sealed record DistroNexusCatalogRefreshResult(bool Succeeded, string? SourceId, string CacheState, string DiagnosticCode);
 
 /// <summary>
 /// Represents the explicit subset of modeled global settings to update. A null member is not sent
