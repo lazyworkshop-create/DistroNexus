@@ -134,6 +134,9 @@ public interface IPowerShellModuleClient
     Task<FirewallOperationResult> CreateFirewallRuleAsync(string previewRuleId, CancellationToken cancellationToken = default);
     Task<FirewallRemovalPreview> GetFirewallRemovePreviewAsync(string ruleId, CancellationToken cancellationToken = default);
     Task<FirewallOperationResult> RemoveFirewallRuleAsync(string previewToken, CancellationToken cancellationToken = default);
+    Task<GlobalConfigurationSnapshot> GetGlobalConfigurationAsync(CancellationToken cancellationToken = default);
+    Task<GlobalConfigurationPreview> GetGlobalConfigurationPreviewAsync(IReadOnlyDictionary<string, string?> changes, CancellationToken cancellationToken = default);
+    Task<GlobalConfigurationApplyResult> SetGlobalConfigurationAsync(string previewToken, CancellationToken cancellationToken = default);
     Task<FixedExplorerResult> OpenWslConfigFileAsync(CancellationToken cancellationToken = default);
     Task<FixedExplorerResult> OpenRecoveryPointFolderAsync(Guid id, CancellationToken cancellationToken = default);
     Task<HealthScanResult> ScanHealthAsync(CancellationToken cancellationToken = default);

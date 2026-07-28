@@ -12,7 +12,7 @@
 
 ## Dependency Order
 
-S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S18 -> S19 -> S20 -> S21 -> S22 -> S23 -> S24 -> {S25 blocked, S26 -> S27 -> S28 -> S29 -> S30 -> S31 -> S32} -> S06 -> S07 -> S08
+S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S18 -> S19 -> S20 -> S21 -> S22 -> S23 -> S24 -> {S25 blocked, S26 -> S27 -> S28 -> S29 -> S30 -> S31 -> S32 -> S33} -> S06 -> S07 -> S08
 
 ## Slice S01: Verified module contract and migration baseline
 
@@ -1739,6 +1739,67 @@ One accepted health/diagnostics module migration slice.
 ### Out of Scope
 
 UAC/Windows feature/navigation broker, app update, arbitrary report destinations and runtime UAT.
+
+## Slice S33: Global WSL configuration module migration
+
+### Status
+
+Committed
+
+### Objective
+
+Make the complete supported global `.wslconfig` read, reviewed preview, and reviewed save contract available through the module and the only product path used by the desktop configuration editor.
+
+### Sources
+
+Requirements FR-001, FR-003 through FR-007, and FR-004A; Global WSL configuration durable preview contract amendment; Global WSL configuration boundary amendment; `WslConfigSectionViewModel`, `WslConfigService`, and legacy WSL configuration command evidence.
+
+### Dependencies
+
+S32
+
+### Allowed Paths
+
+`docs/specs/powershell-first-requirements.md`, `docs/specs/powershell-first-design.md`, `docs/architecture/powershell-first-decision.md`, this plan; narrow global configuration models/services/grant support; WorkspaceBridge Program; global WSL configuration public commands and manifest; typed module client; `WslConfigSectionViewModel`, `SettingsViewModel` constructor composition; focused Core/Bridge/client/view-model/Pester tests.
+
+### Excluded Paths
+
+Distribution configuration and `ConfigurationTabViewModel`, NetworkTab/network settings, arbitrary INI/file/path APIs, Explorer reveal behavior, WSL shutdown/restart execution, disk/Hyper-V/elevation, catalog/install/wizard, release/publishing, and real-host mutation.
+
+### Contract and Documentation
+
+Define `configuration.global.get.v1`, `configuration.global.preview.v1`, and `configuration.global.execute.v1`; preview accepts only a strictly allow-listed change map and execute accepts only PreviewToken. Retain legacy five-field cmdlets as constrained facades and document the no-path/no-raw-document result boundary.
+
+### Implementation Scope
+
+Use a same-user protected, expiry-bound, atomically single-use global configuration preview grant. Preserve Core lossless save, backup and optimistic conflict semantics while exposing only modeled values, bounded display preview and sanitized results. Replace direct WPF global configuration/host-spec reads, preview and save calls with typed module-client methods.
+
+### Test Scope
+
+Cover strict route payloads, all modeled schema/constraint/capability validation, legacy facade compatibility, `WhatIf`/decline zero grant/write, fresh-service grants, expiry/corruption/SID/replay/fingerprint-capability drift/parallel consumption/cleanup, stable errors/redaction, typed-client shapes, view-model routing and no direct global configuration services.
+
+### Acceptance Criteria
+
+- The module exposes complete modeled global configuration get/preview/execute operations and the legacy five-field commands no longer do direct file I/O.
+- Execute consumes only a Core-issued one-shot token and preserves conflict/capability/fidelity safeguards.
+- `WslConfigSectionViewModel` and its Settings composition contain no direct `IWslConfigService` or `IWslConfigurationService` product operation path.
+- No public/Desktop input can provide a raw document, fingerprint, host path, arbitrary section/key, backup path or restart command.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~WslConfig|FullyQualifiedName~GlobalConfiguration|FullyQualifiedName~PowerShellModuleClient|FullyQualifiedName~WorkspaceBridgeProtocol"
+pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Unit
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+One accepted global WSL configuration module and presentation-client migration slice.
+
+### Out of Scope
+
+Real WSL restart/UAT, per-distribution configuration, arbitrary configuration documents, and all other remaining product families.
 
 ## Slice S06: Platform-integrated command parity
 

@@ -17,10 +17,10 @@ public class ConfigurationViewModelTests
     [MemberData(nameof(GlobalConfigurationFailures))]
     public async Task GlobalConfiguration_SaveFailures_MapToCopyableRedactedAlerts(Exception exception, int expectedCode)
     {
-        var (vm, configuration, dialogs, _) = NewGlobalConfigurationViewModel();
+        var (vm, _, dialogs, module) = NewGlobalConfigurationViewModel();
         await vm.LoadAsync();
         vm.Fields.Single(f => f.Id == "wsl2.memory").Desired = "4GB";
-        configuration.Setup(s => s.PreviewAsync(It.IsAny<IReadOnlyDictionary<string, string?>>(), "fp", It.IsAny<IReadOnlySet<string>>(), It.IsAny<CancellationToken>()))
+        module.Setup(s => s.GetGlobalConfigurationPreviewAsync(It.IsAny<IReadOnlyDictionary<string, string?>>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(exception);
 
         await vm.SaveAndMarkPendingRestartCommand.ExecuteAsync(null);
@@ -31,9 +31,8 @@ public class ConfigurationViewModelTests
     [Fact]
     public async Task GlobalConfiguration_LoadWslOperationFailure_MapsToCopyableRedactedAlert()
     {
-        var wslConfig = new Mock<IWslConfigService>();
-        var (vm, _, dialogs, _) = NewGlobalConfigurationViewModel(wslConfig);
-        wslConfig.Setup(s => s.GetHostSpecsAsync(It.IsAny<CancellationToken>()))
+        var (vm, _, dialogs, module) = NewGlobalConfigurationViewModel();
+        module.Setup(s => s.GetGlobalConfigurationAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new WslOperationFailedException("token=super-secret C:\\Users\\alice", DistroNexusErrorCode.OperationTimeout));
 
         await vm.LoadAsync();
@@ -44,9 +43,8 @@ public class ConfigurationViewModelTests
     [Fact]
     public async Task GlobalConfiguration_LoadWslException_MapsToCopyableRedactedAlert()
     {
-        var legacy = new Mock<IWslConfigService>();
-        var (vm, _, dialogs, _) = NewGlobalConfigurationViewModel(legacy);
-        legacy.Setup(s => s.GetHostSpecsAsync(It.IsAny<CancellationToken>()))
+        var (vm, _, dialogs, module) = NewGlobalConfigurationViewModel();
+        module.Setup(s => s.GetGlobalConfigurationAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new WslException("token=super-secret C:\\Users\\alice", DistroNexusErrorCode.OperationTimeout));
 
         await vm.LoadAsync();
@@ -57,9 +55,9 @@ public class ConfigurationViewModelTests
     [Fact]
     public async Task GlobalConfiguration_PreviewWslException_MapsToCopyableRedactedAlert()
     {
-        var (vm, configuration, dialogs, _) = NewGlobalConfigurationViewModel();
+        var (vm, _, dialogs, module) = NewGlobalConfigurationViewModel();
         await vm.LoadAsync();
-        configuration.Setup(s => s.PreviewAsync(It.IsAny<IReadOnlyDictionary<string, string?>>(), "fp", It.IsAny<IReadOnlySet<string>>(), It.IsAny<CancellationToken>()))
+        module.Setup(s => s.GetGlobalConfigurationPreviewAsync(It.IsAny<IReadOnlyDictionary<string, string?>>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new WslException("token=super-secret C:\\Users\\alice", DistroNexusErrorCode.OperationTimeout));
         vm.Fields.Single(f => f.Id == "wsl2.memory").Desired = "4GB";
 
@@ -71,11 +69,11 @@ public class ConfigurationViewModelTests
     [Fact]
     public async Task GlobalConfiguration_SaveWslException_MapsToCopyableRedactedAlert()
     {
-        var (vm, configuration, dialogs, _) = NewGlobalConfigurationViewModel();
+        var (vm, _, dialogs, module) = NewGlobalConfigurationViewModel();
         await vm.LoadAsync();
-        configuration.Setup(s => s.PreviewAsync(It.IsAny<IReadOnlyDictionary<string, string?>>(), "fp", It.IsAny<IReadOnlySet<string>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ConfigurationPreview(string.Empty, "[wsl2]\\nmemory=4GB\\n", ["wsl2.memory"], RestartScope.Wsl));
-        configuration.Setup(s => s.SaveAsync(It.IsAny<IReadOnlyDictionary<string, string?>>(), "fp", It.IsAny<IReadOnlySet<string>>(), It.IsAny<CancellationToken>()))
+        module.Setup(s => s.GetGlobalConfigurationPreviewAsync(It.IsAny<IReadOnlyDictionary<string, string?>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GlobalConfigurationPreview(new Dictionary<string, string?>(), ["wsl2.memory"], "wsl2.memory=4GB", true, new string('a', 32)));
+        module.Setup(s => s.SetGlobalConfigurationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new WslException("token=super-secret C:\\Users\\alice", DistroNexusErrorCode.OperationTimeout));
         vm.Fields.Single(f => f.Id == "wsl2.memory").Desired = "4GB";
 
@@ -87,12 +85,11 @@ public class ConfigurationViewModelTests
     [Fact]
     public async Task GlobalConfiguration_SaveMarksRestartPendingWithoutShuttingDownWsl()
     {
-        var (vm, configuration, dialogs, moduleClient) = NewGlobalConfigurationViewModel();
-        var preview = new ConfigurationPreview(string.Empty, "[wsl2]\nmemory=4GB\n", ["wsl2.memory"], RestartScope.Wsl);
-        configuration.Setup(s => s.PreviewAsync(It.IsAny<IReadOnlyDictionary<string, string?>>(), "fp", It.IsAny<IReadOnlySet<string>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(preview);
-        configuration.Setup(s => s.SaveAsync(It.IsAny<IReadOnlyDictionary<string, string?>>(), "fp", It.IsAny<IReadOnlySet<string>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ConfigurationSaveResult("new", null, RestartScope.Wsl));
+        var (vm, _, dialogs, moduleClient) = NewGlobalConfigurationViewModel();
+        moduleClient.Setup(s => s.GetGlobalConfigurationPreviewAsync(It.IsAny<IReadOnlyDictionary<string, string?>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GlobalConfigurationPreview(new Dictionary<string, string?>(), ["wsl2.memory"], "wsl2.memory=4GB", true, new string('a', 32)));
+        moduleClient.Setup(s => s.SetGlobalConfigurationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GlobalConfigurationApplyResult(["wsl2.memory"], true));
         moduleClient.Setup(s => s.GetInstancesAsync(It.IsAny<CancellationToken>())).ReturnsAsync([new WslInstance { Name = "Ubuntu", State = "Running" }]);
 
         await vm.LoadAsync();
@@ -340,9 +337,12 @@ public class ConfigurationViewModelTests
         dialogs.Setup(d => d.ShowConfirmAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
         var moduleClient = new Mock<IPowerShellModuleClient>();
         moduleClient.Setup(s => s.GetInstancesAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        moduleClient.Setup(s => s.GetGlobalConfigurationAsync(It.IsAny<CancellationToken>())).ReturnsAsync(new GlobalConfigurationSnapshot(new Dictionary<string, string>(), WslConfigurationSchema.Global.Select(d => $"{d.Section}.{d.Key}").ToArray(), [], string.Empty, true, 16384, 8));
+        moduleClient.Setup(s => s.GetGlobalConfigurationPreviewAsync(It.IsAny<IReadOnlyDictionary<string, string?>>(), It.IsAny<CancellationToken>())).ReturnsAsync(new GlobalConfigurationPreview(new Dictionary<string, string?>(), [], string.Empty, true, new string('a', 32)));
+        moduleClient.Setup(s => s.SetGlobalConfigurationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(new GlobalConfigurationApplyResult([], true));
         moduleClient.Setup(s => s.GetHostCapabilitiesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(new PlatformCapabilitySnapshot(
             new("", new Version(10, 0), "x64", false, null, null, null, null, null), new Dictionary<CapabilityId, CapabilityResult>(), new Dictionary<CapabilityId, CapabilityResult>(), DateTimeOffset.UtcNow));
-        var vm = new WslConfigSectionViewModel(legacyService.Object, moduleClient.Object, dialogs.Object, configuration.Object);
+        var vm = new WslConfigSectionViewModel(moduleClient.Object, dialogs.Object);
         return (vm, configuration, dialogs, moduleClient);
     }
 

@@ -53,6 +53,12 @@ The public module provides parity for supported lifecycle, catalog/source/cache,
 
 Acceptance: the maintained capability inventory has no supported Core or WPF business operation without an exported command and tests cover each command family.
 
+### FR-004A Global WSL configuration parity
+
+The public module must expose the complete supported global `.wslconfig` field set for read, reviewed preview, and reviewed save. The desktop configuration editor must use that same command family and may not read host constraints, configuration documents, or save configuration through Core services.
+
+Acceptance: a caller can read the modeled global configuration and constraints, request a validated preview from an allow-listed change map, and save only through a short-lived reviewed token; the desktop editor has no direct `IWslConfigService` or `IWslConfigurationService` execution path.
+
 ### FR-005 WPF presentation-only behavior
 
 The desktop client may own visual state, rendering, navigation, input dialogs, and user-initiated presentation actions such as opening a returned local result in the shell. It must not create, delete, edit, validate-for-write, download, configure, or execute product business state independently.
@@ -101,3 +107,4 @@ Acceptance: existing security and recovery tests continue to pass, and each chan
 | Module surface | `src/PowerShell/DistroNexus.psd1`, `src/PowerShell/DistroNexus.psm1`, `src/PowerShell/Public` | 94 public definitions, 93 manifest exports, duplicate tag definitions, and unconditional bridge resolution. | Confirmed |
 | Bridge surface | `src/Client/DistroNexus.WorkspaceBridge/Program.cs` | Capability-specific operation routing covers only a subset of Core services. | Confirmed |
 | Desktop/Core execution | `src/Client/DistroNexus.Desktop/ViewModels`, `src/Client/DistroNexus.Core/Services` | WPF directly uses business services while Core owns host I/O and side effects. | Confirmed |
+| Global WSL configuration | `WslConfigSectionViewModel`, `WslConfigService`, legacy `Get/Set-DistroNexusWslConfig` | The editor directly reads/previews/saves a lossless configuration document while legacy commands use a partial direct-file path. | Confirmed |

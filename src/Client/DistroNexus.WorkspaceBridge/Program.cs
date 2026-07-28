@@ -37,6 +37,7 @@ var catalogSources = new CatalogSourceManager(settings, new HttpClient(), NullLo
 var catalogHttp = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(10) };
 var catalog = new CatalogService(NullLogger<CatalogService>.Instance, settings, catalogHttp);
 var globalConfiguration = new WslConfigService(NullLogger<WslConfigService>.Instance, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+var globalConfigurationGateway = new GlobalConfigurationService(globalConfiguration, globalConfiguration, capabilities, Path.Combine(applicationRoot, "global-configuration-grants"));
 var backups = new BackupService(bridgePowerShell, NullLogger<BackupService>.Instance, applicationRoot);
 var templates = new TemplateService(NullLogger<TemplateService>.Instance, settings, bridgePowerShell, new HttpClient());
 var monitoringWarnings = new MonitoringWarningRegistry();
@@ -193,6 +194,9 @@ while ((line = Console.ReadLine()) is not null)
             "instance.resources.get.v1" => await InstanceResourcesGetV1Async(request),
             "instance.sparse.preview.v1" => await InstanceSparsePreviewV1Async(request),
             "instance.sparse.execute.v1" => await InstanceSparseExecuteV1Async(request),
+            "configuration.global.get.v1" => await GetGlobalConfigurationV1Async(request),
+            "configuration.global.preview.v1" => await PreviewGlobalConfigurationV1Async(request),
+            "configuration.global.execute.v1" => await ExecuteGlobalConfigurationV1Async(request),
             "settings.get.v1" => GetSettings(request),
             "settings.save.v1" => SaveSettings(request),
             "settings.reset.v1" => ResetSettings(request),
@@ -745,6 +749,26 @@ async Task<InstanceSparseOperationResult> InstanceSparseExecuteV1Async(BridgeReq
     ValidatePayload(request, ["PreviewToken"], ["PreviewToken"]);
     return await instanceResources.ExecuteSparseAsync(ParsePayload<InstanceSparseExecutePayload>(request).PreviewToken);
 }
+async Task<GlobalConfigurationSnapshot> GetGlobalConfigurationV1Async(BridgeRequest request)
+{ ValidateGlobalConfigurationRequest(request); ValidateEmptyPayload(request); return await globalConfigurationGateway.GetAsync(); }
+async Task<GlobalConfigurationPreview> PreviewGlobalConfigurationV1Async(BridgeRequest request)
+{
+    ValidateGlobalConfigurationRequest(request); ValidatePayload(request, ["Changes"], ["Changes"]);
+    var payload = ParsePayload<GlobalConfigurationPreviewPayload>(request);
+    if (payload.Changes is null) throw new ArgumentException("Global configuration changes are required.");
+    return await globalConfigurationGateway.PreviewAsync(payload.Changes);
+}
+async Task<GlobalConfigurationApplyResult> ExecuteGlobalConfigurationV1Async(BridgeRequest request)
+{
+    ValidateGlobalConfigurationRequest(request); ValidatePayload(request, ["PreviewToken"], ["PreviewToken"]);
+    var payload = ParsePayload<GlobalConfigurationExecutePayload>(request);
+    return await globalConfigurationGateway.ExecuteAsync(payload.PreviewToken);
+}
+static void ValidateGlobalConfigurationRequest(BridgeRequest request)
+{
+    if (request.Id is not null || request.ExpectedRevision is not null || request.Token is not null || request.Name is not null || request.ActionId is not null)
+        throw new ArgumentException("The global configuration request is invalid.");
+}
 async Task<MonitoringSnapshotResult> GetMonitoringSnapshotAsync(BridgeRequest request)
 {
     ValidatePayload(request, ["Name", "IntervalSeconds"], ["Name", "IntervalSeconds"]);
@@ -805,6 +829,8 @@ public sealed record InstanceNamePayload(string Name);
 public sealed record InstanceResourcePayload(string Name);
 public sealed record InstanceSparsePayload(string Name, bool Enabled);
 public sealed record InstanceSparseExecutePayload(string PreviewToken);
+public sealed record GlobalConfigurationPreviewPayload(Dictionary<string, string?> Changes);
+public sealed record GlobalConfigurationExecutePayload(string PreviewToken);
 public sealed record InstanceListPayload(bool IncludeRelease = false, bool IncludeUser = false, bool SkipDiskSize = false);
 public sealed record SettingsSavePayload(GlobalSettings Settings);
 public sealed record CatalogSourceAddPayload(string Name, string Url, string? Description, bool IsActive);

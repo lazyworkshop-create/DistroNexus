@@ -81,6 +81,9 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string CreateFirewallRuleCommand = "New-DistroNexusFirewallRule";
     private const string GetFirewallRemovePreviewCommand = "Get-DistroNexusFirewallRuleRemovePreview";
     private const string RemoveFirewallRuleCommand = "Remove-DistroNexusFirewallRule";
+    private const string GetGlobalConfigurationCommand = "Get-DistroNexusGlobalConfiguration";
+    private const string GetGlobalConfigurationPreviewCommand = "Get-DistroNexusGlobalConfigurationPreview";
+    private const string SetGlobalConfigurationCommand = "Set-DistroNexusGlobalConfiguration";
     private const string ScanHealthCommand = "Invoke-DistroNexusHealthScan";
     private const string GetHealthHistoryCommand = "Get-DistroNexusHealthHistory";
     private const string GetHealthRepairPreviewCommand = "Get-DistroNexusHealthRepairPreview";
@@ -472,6 +475,16 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     public Task<FirewallOperationResult> CreateFirewallRuleAsync(string previewRuleId, CancellationToken cancellationToken = default) => ExecuteJsonAsync<FirewallOperationResult>(CreateFirewallRuleCommand, new() { ["PreviewRuleId"] = previewRuleId }, cancellationToken);
     public Task<FirewallRemovalPreview> GetFirewallRemovePreviewAsync(string ruleId, CancellationToken cancellationToken = default) => ExecuteJsonAsync<FirewallRemovalPreview>(GetFirewallRemovePreviewCommand, new() { ["RuleId"] = ruleId }, cancellationToken);
     public Task<FirewallOperationResult> RemoveFirewallRuleAsync(string previewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<FirewallOperationResult>(RemoveFirewallRuleCommand, new() { ["PreviewToken"] = previewToken }, cancellationToken);
+
+    public Task<GlobalConfigurationSnapshot> GetGlobalConfigurationAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<GlobalConfigurationSnapshot>(GetGlobalConfigurationCommand, new(), cancellationToken);
+    public Task<GlobalConfigurationPreview> GetGlobalConfigurationPreviewAsync(IReadOnlyDictionary<string, string?> changes, CancellationToken cancellationToken = default)
+    {
+        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "wsl2.memory", "wsl2.processors", "wsl2.swap", "wsl2.swapFile", "wsl2.pageReporting", "wsl2.localhostForwarding", "wsl2.networkingMode", "wsl2.dnsTunneling", "wsl2.firewall", "wsl2.autoProxy", "wsl2.hostAddressLoopback", "wsl2.ignoredPorts", "wsl2.bestEffortDnsParsing", "wsl2.initialAutoProxyTimeout", "wsl2.kernel", "wsl2.kernelCommandLine", "wsl2.nestedVirtualization", "experimental.autoMemoryReclaim", "experimental.sparseVhd" };
+        if (changes is null || changes.Count is < 1 or > 19 || changes.Any(x => !allowed.Contains(x.Key) || x.Value?.Length > 512 || x.Value?.IndexOfAny(['\0', '\r', '\n']) >= 0)) throw new ArgumentException("Global configuration changes are invalid.", nameof(changes));
+        return ExecuteJsonAsync<GlobalConfigurationPreview>(GetGlobalConfigurationPreviewCommand, new() { ["Changes"] = changes }, cancellationToken);
+    }
+    public Task<GlobalConfigurationApplyResult> SetGlobalConfigurationAsync(string previewToken, CancellationToken cancellationToken = default)
+    { if (string.IsNullOrWhiteSpace(previewToken) || previewToken.Length != 32 || previewToken.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("A Core-issued global configuration preview token is required.", nameof(previewToken)); return ExecuteJsonAsync<GlobalConfigurationApplyResult>(SetGlobalConfigurationCommand, new() { ["PreviewToken"] = previewToken }, cancellationToken); }
     private static Dictionary<string, object> SettingsParameters(NetworkSettings s) { var p = new Dictionary<string, object>(); if (s.DnsTunneling.HasValue) p["DnsTunneling"] = s.DnsTunneling.Value; if (s.AutoProxy.HasValue) p["AutoProxy"] = s.AutoProxy.Value; if (s.Firewall.HasValue) p["Firewall"] = s.Firewall.Value; if (s.HostAddressLoopback.HasValue) p["HostAddressLoopback"] = s.HostAddressLoopback.Value; if (s.BestEffortDnsParsing.HasValue) p["BestEffortDnsParsing"] = s.BestEffortDnsParsing.Value; if (s.IgnoredPorts is not null) p["IgnoredPorts"] = s.IgnoredPorts; return p; }
     public Task<FixedExplorerResult> OpenWslConfigFileAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<FixedExplorerResult>(OpenWslConfigFileCommand, null, cancellationToken);
     public Task<FixedExplorerResult> OpenRecoveryPointFolderAsync(Guid id, CancellationToken cancellationToken = default)

@@ -449,6 +449,8 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.GetFirewallCreatePreviewAsync),
                 nameof(IPowerShellModuleClient.GetFirewallRemovePreviewAsync),
                 nameof(IPowerShellModuleClient.GetFirewallRulesAsync),
+                nameof(IPowerShellModuleClient.GetGlobalConfigurationAsync),
+                nameof(IPowerShellModuleClient.GetGlobalConfigurationPreviewAsync),
                 nameof(IPowerShellModuleClient.GetHostCapabilitiesAsync),
                 nameof(IPowerShellModuleClient.GetHealthHistoryAsync),
                 nameof(IPowerShellModuleClient.GetHealthRepairPreviewAsync),
@@ -505,6 +507,7 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.SetCatalogSourceActiveAsync),
                 nameof(IPowerShellModuleClient.SetDockerIntegrationAsync),
                 nameof(IPowerShellModuleClient.SetInstanceSparseModeAsync),
+                nameof(IPowerShellModuleClient.SetGlobalConfigurationAsync),
                 nameof(IPowerShellModuleClient.SetInstanceTagsAsync),
                 nameof(IPowerShellModuleClient.SetNetworkModeAsync),
                 nameof(IPowerShellModuleClient.SetNetworkSettingsAsync),
@@ -519,6 +522,28 @@ public sealed class PowerShellModuleClientTests
         Assert.DoesNotContain(methods, method => method.Name.Contains("Script", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(methods, method => method.Name.Contains("Command", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(methods, method => method.Name.Equals("ExecuteOperationAsync", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task GlobalConfigurationClient_UsesExactModeledCmdletsAndNeverForwardsRawAuthority()
+    {
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusGlobalConfiguration", It.Is<Dictionary<string, object>>(p => p.Count == 0), It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Values\":{},\"SupportedFields\":[],\"Capabilities\":[],\"DisplayPreview\":\"\",\"PendingRestart\":false,\"HostRamMb\":1,\"HostCpuCount\":1}" });
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusGlobalConfigurationPreview", It.Is<Dictionary<string, object>>(p => p.Count == 1 && p.ContainsKey("Changes") && !p.ContainsKey("Fingerprint") && !p.ContainsKey("Path")), It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Changes\":{\"wsl2.memory\":\"4GB\"},\"ChangedSettings\":[\"wsl2.memory\"],\"DisplayPreview\":\"\",\"PendingRestart\":true,\"PreviewToken\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}" });
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Set-DistroNexusGlobalConfiguration", It.Is<Dictionary<string, object>>(p => p.Count == 1 && (string)p["PreviewToken"] == new string('a', 32)), It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"ChangedSettings\":[\"wsl2.memory\"],\"PendingRestart\":true}" });
+        var client = new PowerShellModuleClient(powerShell.Object);
+        Assert.Equal(1, (await client.GetGlobalConfigurationAsync()).HostCpuCount);
+        Assert.Equal(new string('a', 32), (await client.GetGlobalConfigurationPreviewAsync(new Dictionary<string, string?> { ["wsl2.memory"] = "4GB" })).PreviewToken);
+        Assert.True((await client.SetGlobalConfigurationAsync(new string('a', 32))).PendingRestart);
+        var invalidPowerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        var invalidClient = new PowerShellModuleClient(invalidPowerShell.Object);
+        await Assert.ThrowsAsync<ArgumentException>(() => invalidClient.GetGlobalConfigurationPreviewAsync(new Dictionary<string, string?> { ["raw.document"] = "x" }));
+        await Assert.ThrowsAsync<ArgumentException>(() => invalidClient.SetGlobalConfigurationAsync("bad"));
+        invalidPowerShell.VerifyNoOtherCalls();
+        powerShell.VerifyAll();
     }
 
     [Fact]

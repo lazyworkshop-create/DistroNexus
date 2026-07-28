@@ -93,6 +93,26 @@ public sealed class WorkspaceBridgeProtocolTests
     }
 
     [Fact]
+    public async Task GlobalConfigurationRoutes_RejectUnexpectedPayloadsAndForgedOrDriftedTokens()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        var getWithPayload = await bridge.SendAsync("configuration.global.get.v1", payload: JsonDocument.Parse("{}").RootElement.Clone());
+        var previewUnknown = await bridge.SendAsync("configuration.global.preview.v1", payload: JsonDocument.Parse("{\"Changes\":{\"wsl2.memory\":\"4GB\"},\"Fingerprint\":\"forged\"}").RootElement.Clone());
+        var previewRawKey = await bridge.SendAsync("configuration.global.preview.v1", payload: JsonDocument.Parse("{\"Changes\":{\"custom.path\":\"C:\\\\secret\"}}").RootElement.Clone());
+        var executeForged = await bridge.SendAsync("configuration.global.execute.v1", payload: JsonDocument.Parse("{\"PreviewToken\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}").RootElement.Clone());
+
+        foreach (var response in new[] { getWithPayload, previewUnknown, previewRawKey })
+        {
+            Assert.False(response.GetProperty("Succeeded").GetBoolean());
+            Assert.Equal("Workspace.Bridge.Invalid", response.GetProperty("ErrorCode").GetString());
+            Assert.DoesNotContain("secret", response.GetProperty("ErrorMessage").GetString(), StringComparison.OrdinalIgnoreCase);
+        }
+        Assert.False(executeForged.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("Workspace.ConflictOrState", executeForged.GetProperty("ErrorCode").GetString());
+        Assert.DoesNotContain("secret", executeForged.GetProperty("ErrorMessage").GetString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task DiagnosticPreview_DeadlineCancelsTheFixedRequestBeforeExportCanBeAuthorized()
     {
         await using var bridge = await BridgeProcess.StartAsync();

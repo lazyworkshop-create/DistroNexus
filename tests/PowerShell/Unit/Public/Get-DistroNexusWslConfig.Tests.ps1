@@ -1,144 +1,79 @@
-# Get-DistroNexusWslConfig.Tests.ps1 / Set-DistroNexusWslConfig.Tests.ps1
-# Unit tests for E-02 .wslconfig Global Configuration Editor
+$rootPath = Resolve-Path "$PSScriptRoot/../../../.."
+$global:DistroNexusGlobalConfigurationTestRoot = $rootPath
+Import-Module (Join-Path $rootPath 'src\PowerShell\DistroNexus.psd1') -Force
 
-BeforeAll {
-    $rootPath = Resolve-Path "$PSScriptRoot/../../../.."
-    $modulePath = Join-Path $rootPath "src\PowerShell"
-    Import-Module (Join-Path $modulePath "DistroNexus.psd1") -Force
-
-    $helpersPath = Join-Path $PSScriptRoot "..\..\Helpers"
-    . (Join-Path $helpersPath "MockHelpers.ps1")
-    . (Join-Path $helpersPath "TestData.ps1")
-
-    $script:originalProfile = $env:USERPROFILE
+function global:Invoke-DeclinedGlobalConfigurationCommand {
+    param([Parameter(Mandatory)][string]$Command, [Parameter(Mandatory)][string]$Sentinel)
+    $getPath = Join-Path $global:DistroNexusGlobalConfigurationTestRoot 'src\PowerShell\Public\Get-DistroNexusWslConfig.ps1'
+    $setPath = Join-Path $global:DistroNexusGlobalConfigurationTestRoot 'src\PowerShell\Public\Set-DistroNexusWslConfig.ps1'
+    $script = "`$sentinel = '$($Sentinel.Replace("'", "''"))'; function Invoke-DistroNexusWorkspaceBridge { New-Item -ItemType File -Force -Path `$sentinel | Out-Null; throw 'Bridge was called.' }; . '$getPath'; . '$setPath'; $Command -Confirm"
+    'N' | & pwsh -NoProfile -Command "& { $script }" | Out-Null
+    $LASTEXITCODE | Should -Be 0
 }
 
-AfterAll {
-    $env:USERPROFILE = $script:originalProfile
-}
-
-Describe "Get-DistroNexusWslConfig" -Tag 'Unit', 'Public', 'WslConfig' {
-
-    BeforeEach {
-        $env:USERPROFILE = $TestDrive
-    }
-
-    Context "Command structure" {
-        It "Should be exported" {
-            Get-Command Get-DistroNexusWslConfig | Should -Not -BeNullOrEmpty
+Describe 'Global WSL configuration module contract' -Tag 'Unit', 'Public', 'WslConfig' {
+    It 'exports the constrained read preview and execute commands' {
+        'Get-DistroNexusWslConfig', 'Set-DistroNexusWslConfig', 'Get-DistroNexusGlobalConfiguration', 'Get-DistroNexusGlobalConfigurationPreview', 'Set-DistroNexusGlobalConfiguration' | ForEach-Object {
+            Get-Command $_ -Module DistroNexus | Should -Not -BeNullOrEmpty
         }
     }
 
-    Context "When .wslconfig does not exist" {
-        It "Should return object with null fields" {
-            $result = Get-DistroNexusWslConfig
-            $result | Should -Not -BeNullOrEmpty
-            $result.Memory     | Should -BeNullOrEmpty
-            $result.Processors | Should -BeNullOrEmpty
-        }
-    }
-
-    Context "When .wslconfig exists with values" {
-        It "Should parse Memory and Processors correctly" {
-            $wslconfigPath = Join-Path $TestDrive ".wslconfig"
-            @"
-[wsl2]
-memory=4GB
-processors=2
-swap=2GB
-localhostForwarding=true
-networkingMode=NAT
-"@ | Set-Content -Path $wslconfigPath -Encoding UTF8
-
-            $result = Get-DistroNexusWslConfig
-            $result.Memory             | Should -Be "4GB"
-            $result.Processors         | Should -Be "2"
-            $result.Swap               | Should -Be "2GB"
-            $result.LocalhostForwarding| Should -Be "true"
-            $result.NetworkingMode     | Should -Be "NAT"
+    InModuleScope DistroNexus {
+        BeforeEach {
+            Mock Invoke-DistroNexusWorkspaceBridge {
+                [pscustomobject]@{ Values = @{ 'wsl2.memory' = '4GB'; 'wsl2.processors' = '2'; 'wsl2.swap' = '1GB'; 'wsl2.localhostForwarding' = 'true'; 'wsl2.networkingMode' = 'nat' } }
+            }
         }
 
-        It "Should ignore lines outside [wsl2] section" {
-            $wslconfigPath = Join-Path $TestDrive ".wslconfig"
-            @"
-[experimental]
-autoMemoryReclaim=gradual
-
-[wsl2]
-memory=8GB
-"@ | Set-Content -Path $wslconfigPath -Encoding UTF8
-
-            $result = Get-DistroNexusWslConfig
-            $result.Memory | Should -Be "8GB"
-        }
-    }
-}
-
-Describe "Set-DistroNexusWslConfig" -Tag 'Unit', 'Public', 'WslConfig' {
-
-    BeforeEach {
-        $env:USERPROFILE = $TestDrive
-    }
-
-    Context "Command structure" {
-        It "Should be exported" {
-            Get-Command Set-DistroNexusWslConfig | Should -Not -BeNullOrEmpty
+        It 'routes the legacy read facade to the fixed global read operation' {
+            $value = Get-DistroNexusWslConfig
+            $value.Memory | Should -Be '4GB'
+            $value.ConfigPath | Should -BeNullOrEmpty
+            Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 1 -ParameterFilter { $Operation -eq 'configuration.global.get.v1' -and $null -eq $Payload }
         }
 
-        It "Should accept Memory, Processors, Swap, LocalhostForwarding, NetworkingMode parameters" {
-            $cmd = Get-Command Set-DistroNexusWslConfig
-            $cmd.Parameters.ContainsKey('Memory') | Should -Be $true
-            $cmd.Parameters.ContainsKey('Processors') | Should -Be $true
-            $cmd.Parameters.ContainsKey('Swap') | Should -Be $true
-        }
-    }
-
-    Context "When writing new config" {
-        It "Should create .wslconfig with specified values" {
-            Set-DistroNexusWslConfig -Memory "4GB" -Processors 2
-
-            $wslconfigPath = Join-Path $TestDrive ".wslconfig"
-            Test-Path $wslconfigPath | Should -Be $true
-
-            $content = Get-Content -Raw -Path $wslconfigPath
-            $content | Should -Match "memory=4GB"
-            $content | Should -Match "processors=2"
+        It 'rejects an empty preview map before opening a bridge operation' {
+            { Get-DistroNexusGlobalConfigurationPreview -Changes @{} } | Should -Throw
+            Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 0
         }
 
-        It "Should preserve existing keys not mentioned" {
-            $wslconfigPath = Join-Path $TestDrive ".wslconfig"
-            @"
-[wsl2]
-memory=2GB
-processors=4
-swap=1GB
-"@ | Set-Content -Path $wslconfigPath -Encoding UTF8
-
-            Set-DistroNexusWslConfig -Memory "8GB"
-
-            $content = Get-Content -Raw -Path $wslconfigPath
-            $content | Should -Match "memory=8GB"
-            $content | Should -Match "processors=4"
-            $content | Should -Match "swap=1GB"
-        }
-    }
-
-    Context "Validation" {
-        It "Should reject non-numeric Processors value" {
-            { Set-DistroNexusWslConfig -Processors -1 } | Should -Throw
+        It 'rejects unknown and malformed modeled changes before opening a bridge operation' {
+            { Get-DistroNexusGlobalConfigurationPreview -Changes @{ 'custom.path' = 'C:\secret' } } | Should -Throw
+            { Get-DistroNexusGlobalConfigurationPreview -Changes @{ 'wsl2.memory' = ("x" * 513) } } | Should -Throw
+            Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 0
         }
 
-        It "rejects processors value of 0" {
-            { Set-DistroNexusWslConfig -Processors 0 } | Should -Throw
+        It 'uses WhatIf without creating a preview grant or write operation' {
+            Set-DistroNexusWslConfig -Memory '4GB' -WhatIf | Out-Null
+            Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 0
         }
 
-        It "rejects processors value exceeding logical CPU count" {
-            $tooMany = [System.Environment]::ProcessorCount + 1
-            { Set-DistroNexusWslConfig -Processors $tooMany } | Should -Throw
+        It 'declines direct public execute without any preview or execute bridge call' {
+            $sentinel = Join-Path $TestDrive 'direct-bridge-called'
+            Invoke-DeclinedGlobalConfigurationCommand -Command "Set-DistroNexusGlobalConfiguration -PreviewToken $('a' * 32)" -Sentinel $sentinel
+            Test-Path -LiteralPath $sentinel | Should -BeFalse
         }
 
-        It "accepts processors value of 1" {
-            { Set-DistroNexusWslConfig -Processors 1 } | Should -Not -Throw
+        It 'declines the legacy Set facade without any preview or execute bridge call' {
+            $sentinel = Join-Path $TestDrive 'legacy-bridge-called'
+            Invoke-DeclinedGlobalConfigurationCommand -Command "Set-DistroNexusWslConfig -Memory 4GB" -Sentinel $sentinel
+            Test-Path -LiteralPath $sentinel | Should -BeFalse
+        }
+
+        It 'routes the legacy write facade through preview then token-only execute' {
+            Mock Invoke-DistroNexusWorkspaceBridge {
+                if ($Operation -eq 'configuration.global.preview.v1') { return [pscustomobject]@{ PreviewToken = ('a' * 32) } }
+                return [pscustomobject]@{ PendingRestart = $true }
+            }
+            Set-DistroNexusWslConfig -Memory '4GB' -Confirm:$false | Out-Null
+            Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 1 -ParameterFilter { $Operation -eq 'configuration.global.preview.v1' -and $Payload.Changes.'wsl2.memory' -eq '4GB' }
+            Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 1 -ParameterFilter { $Operation -eq 'configuration.global.execute.v1' -and $Payload.PreviewToken -eq ('a' * 32) }
+        }
+
+        It 'forwards every modeled field only through the Changes map' {
+            $changes = @{}; @('wsl2.memory','wsl2.processors','wsl2.swap','wsl2.swapFile','wsl2.pageReporting','wsl2.localhostForwarding','wsl2.networkingMode','wsl2.dnsTunneling','wsl2.firewall','wsl2.autoProxy','wsl2.hostAddressLoopback','wsl2.ignoredPorts','wsl2.bestEffortDnsParsing','wsl2.initialAutoProxyTimeout','wsl2.kernel','wsl2.kernelCommandLine','wsl2.nestedVirtualization','experimental.autoMemoryReclaim','experimental.sparseVhd') | ForEach-Object { $changes[$_] = 'x' }
+            Get-DistroNexusGlobalConfigurationPreview -Changes $changes | Out-Null
+            Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 1 -ParameterFilter { $Operation -eq 'configuration.global.preview.v1' -and $Payload.Keys.Count -eq 1 -and $Payload.Changes.Keys.Count -eq 19 -and -not $Payload.ContainsKey('Fingerprint') -and -not $Payload.ContainsKey('Path') }
         }
     }
 }

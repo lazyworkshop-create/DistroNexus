@@ -15,11 +15,8 @@ namespace DistroNexus.Desktop.ViewModels;
 /// </summary>
 public partial class WslConfigSectionViewModel : ObservableObject
 {
-    private readonly IWslConfigService _wslConfigService;
     private readonly IPowerShellModuleClient _moduleClient;
     private readonly IDialogService _dialogService;
-    private readonly IWslConfigurationService _configurationService;
-    private string? _fingerprint;
     private IReadOnlySet<string> _availableCapabilities = new HashSet<string>();
     public ObservableCollection<ConfigurationSettingFieldViewModel> Fields { get; } = [];
     [ObservableProperty] private string _currentRaw = string.Empty;
@@ -121,15 +118,11 @@ public partial class WslConfigSectionViewModel : ObservableObject
     public bool CanSave => !IsLoading && Fields.Any(f => f.IsDirty && f.IsSupported) && Fields.All(f => string.IsNullOrEmpty(f.ValidationError));
 
     public WslConfigSectionViewModel(
-        IWslConfigService wslConfigService,
         IPowerShellModuleClient moduleClient,
-        IDialogService dialogService,
-        IWslConfigurationService configurationService)
+        IDialogService dialogService)
     {
-        _wslConfigService = wslConfigService ?? throw new ArgumentNullException(nameof(wslConfigService));
         _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
-        _configurationService = configurationService;
     }
 
     public async Task LoadAsync()
@@ -140,27 +133,26 @@ public partial class WslConfigSectionViewModel : ObservableObject
         IsLoading = true;
         try
         {
-            var (ramMb, cpuCount) = await _wslConfigService.GetHostSpecsAsync();
+            var snapshot = await _moduleClient.GetGlobalConfigurationAsync();
+            var ramMb = snapshot.HostRamMb; var cpuCount = snapshot.HostCpuCount;
             _hostRamMb = ramMb;
             _hostCpuCount = cpuCount;
             HostInfo = string.Format(Properties.Resources.WslConfig_HostInfo, ramMb, cpuCount);
 
-            var config = await _wslConfigService.GetWslConfigAsync();
-            Memory = config.Memory ?? string.Empty;
-            Processors = config.Processors.HasValue ? config.Processors.Value.ToString() : string.Empty;
-            Swap = config.Swap ?? string.Empty;
-            LocalhostForwarding = config.LocalhostForwarding ?? true;
-            NetworkingMode = config.NetworkingMode ?? "NAT";
-            var document = await _configurationService.ReadAsync();
-            _availableCapabilities = WslConfigurationSchema.MapCapabilities(await _moduleClient.GetHostCapabilitiesAsync());
-            _fingerprint = document.Fingerprint; CurrentRaw = DesiredRaw = document.RawPreview;
+            snapshot.Values.TryGetValue("wsl2.memory", out var memory); Memory = memory ?? string.Empty;
+            snapshot.Values.TryGetValue("wsl2.processors", out var processors); Processors = processors ?? string.Empty;
+            snapshot.Values.TryGetValue("wsl2.swap", out var swap); Swap = swap ?? string.Empty;
+            LocalhostForwarding = snapshot.Values.TryGetValue("wsl2.localhostForwarding", out var forwarding) ? bool.TryParse(forwarding, out var boolForwarding) && boolForwarding : true;
+            snapshot.Values.TryGetValue("wsl2.networkingMode", out var networkingMode); NetworkingMode = networkingMode ?? "NAT";
+            _availableCapabilities = snapshot.Capabilities.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            CurrentRaw = DesiredRaw = snapshot.DisplayPreview;
             PendingRestart = L("Configuration_PendingWslRestart");
             Fields.Clear();
             foreach (var definition in WslConfigurationSchema.Global)
             {
                 var id = $"{definition.Section}.{definition.Key}";
                 var supported = definition.RequiredCapability is null || _availableCapabilities.Contains(definition.RequiredCapability);
-                document.Settings.Values.TryGetValue(id, out var current);
+                snapshot.Values.TryGetValue(id, out var current);
                 var field = new ConfigurationSettingFieldViewModel(definition, current, supported,
                     supported ? string.Empty : L("Configuration_UnsupportedReason"), L("Configuration_Experimental"));
                 field.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(ConfigurationSettingFieldViewModel.Desired)) FieldChanged(field); };
@@ -187,18 +179,18 @@ public partial class WslConfigSectionViewModel : ObservableObject
             var changes = Fields.Where(f => f.IsDirty && f.IsSupported).ToDictionary(f => f.Id,
                 f => string.IsNullOrWhiteSpace(f.Desired) ? null : f.Desired, StringComparer.OrdinalIgnoreCase);
             if (changes.Count == 0) return;
-            var preview = await _configurationService.PreviewAsync(changes, _fingerprint!, _availableCapabilities);
-            DesiredRaw = preview.DesiredRaw;
+            var preview = await _moduleClient.GetGlobalConfigurationPreviewAsync(changes);
+            DesiredRaw = preview.DisplayPreview;
             var running = (await _moduleClient.GetInstancesAsync()).Where(i => i.IsRunning).Select(i => i.Name).ToArray();
             var message = string.Format(L("Configuration_SavePreview"),
                 string.Join(", ", preview.ChangedSettings),
                 running.Length == 0 ? L("Configuration_NoRunningInstances") : string.Join(", ", running),
-                preview.DesiredRaw);
+                preview.DisplayPreview);
             if (!await _dialogService.ShowConfirmAsync(L("WslConfig_SaveAndMarkPendingRestart"), message)) return;
-            var saved = await _configurationService.SaveAsync(changes, _fingerprint!, _availableCapabilities);
-            _fingerprint = saved.Fingerprint; CurrentRaw = DesiredRaw;
+            var saved = await _moduleClient.SetGlobalConfigurationAsync(preview.PreviewToken);
+            CurrentRaw = DesiredRaw;
             foreach (var field in Fields.Where(f => changes.ContainsKey(f.Id))) field.CommitDesired();
-            PendingRestart = saved.RestartScope == RestartScope.Wsl ? L("Configuration_PendingWslRestart") : string.Empty;
+            PendingRestart = saved.PendingRestart ? L("Configuration_PendingWslRestart") : string.Empty;
             OnPropertyChanged(nameof(CanSave)); SaveAndMarkPendingRestartCommand.NotifyCanExecuteChanged();
 
             await _dialogService.ShowAlertAsync(
@@ -208,7 +200,6 @@ public partial class WslConfigSectionViewModel : ObservableObject
         catch (Exception ex) when (IsConfigurationFailure(ex))
         {
             await ShowConfigurationFailureAsync(ex, "write");
-            if (ex is ConfigurationConflictException) _fingerprint = null;
         }
         finally
         {
@@ -273,10 +264,9 @@ public partial class WslConfigSectionViewModel : ObservableObject
 
     private async Task RefreshDesiredPreviewAsync()
     {
-        if (_fingerprint is null) return;
         var changes = Fields.Where(f => f.IsDirty && f.IsSupported).ToDictionary(f => f.Id, f => string.IsNullOrWhiteSpace(f.Desired) ? null : f.Desired, StringComparer.OrdinalIgnoreCase);
         if (changes.Count == 0) { DesiredRaw = CurrentRaw; return; }
-        try { DesiredRaw = (await _configurationService.PreviewAsync(changes, _fingerprint, _availableCapabilities)).DesiredRaw; }
+        try { DesiredRaw = (await _moduleClient.GetGlobalConfigurationPreviewAsync(changes)).DisplayPreview; }
         catch (Exception ex) when (IsConfigurationFailure(ex)) { await ShowConfigurationFailureAsync(ex, "write"); }
     }
 
