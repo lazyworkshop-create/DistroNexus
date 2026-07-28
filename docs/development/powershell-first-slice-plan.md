@@ -12,7 +12,7 @@
 
 ## Dependency Order
 
-S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S18 -> S19 -> S20 -> S21 -> S22 -> S23 -> S24 -> S25 -> S06 -> S07 -> S08
+S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S18 -> S19 -> S20 -> S21 -> S22 -> S23 -> S24 -> {S25 blocked, S26} -> S06 -> S07 -> S08
 
 ## Slice S01: Verified module contract and migration baseline
 
@@ -1319,6 +1319,66 @@ USB driver/usbipd installation, host configuration, signing deployment, real UAC
 ### Blocker
 
 The existing helper deliberately authorizes only the signed `DistroNexus.Desktop.exe` pipe server; Core defaults the publisher pin to empty and `tools/build.ps1` has no signed broker publishing path. A new broker cannot safely serve module Bind/Unbind until a release/security owner supplies a pinned broker signing and packaging contract and explicitly authorizes the required packaging/signing edits. Trusting unsigned broker, PowerShell, dotnet, admin membership, or filename-only identity is prohibited.
+
+## Slice S26: Platform-capability module and presentation-client migration
+
+### Status
+
+In Progress
+
+### Objective
+
+Make explicit versioned PowerShell capability snapshot commands the sole host and instance capability-query path for migrated WPF consumers.
+
+### Sources
+
+Requirements FR-001 and FR-004 through FR-007; `docs/specs/powershell-first-design.md` Platform-capability query contract amendment; `docs/architecture/powershell-first-decision.md`.
+
+### Dependencies
+
+S24
+
+### Allowed Paths
+
+`src/Client/DistroNexus.WorkspaceBridge/Program.cs`, `src/PowerShell/Public/Get-DistroNexusCapability.ps1`, `src/PowerShell/DistroNexus.psd1`, `IPowerShellModuleClient`, `PowerShellModuleClient`, direct `IPlatformCapabilityService` WPF capability consumers and their constructor-composition support, focused Bridge/module-client/view-model/Pester/architecture tests, design and plan.
+
+### Excluded Paths
+
+`PlatformCapabilityService` probe/cache algorithms, Core capability model semantics, WSL update/repair, installation, Windows-feature mutation, arbitrary probes/scripts, terminal/explorer/update/USB, release/publishing surfaces.
+
+### Contract and Documentation
+
+Define only `capability.host.v1` with no payload and `capability.instance.v1` with exact `{ InstanceName }`. `Get-DistroNexusCapability` has explicit Host and Name parameter sets and invokes only v1. The typed client provides fixed host/instance methods; no generic capability name, bridge operation or payload is exposed.
+
+### Implementation Scope
+
+Add strict v1 routing and migrate the bounded direct WPF host/instance snapshot consumers to typed module-client calls. Preserve existing result shapes and read-only Core behavior; leave the legacy private Bridge alias only for compatibility callers not migrated in this slice.
+
+### Test Scope
+
+Cover no/unknown/malformed payload, invalid instance name, module parameter sets, typed command shape, legacy route isolation, module-only view-model routing, and no distribution/process/update action for rejected or read requests.
+
+### Acceptance Criteria
+
+- Migrated WPF capability consumers do not depend on `IPlatformCapabilityService`.
+- All new public and typed calls use only explicit v1 host/instance routes.
+- Capability queries remain bounded read-only snapshots and cannot become a generic host probe or update execution path.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~PlatformCapability|FullyQualifiedName~PowerShellModuleClient|FullyQualifiedName~WorkspaceBridgeProtocol|FullyQualifiedName~ConfigurationTabViewModel|FullyQualifiedName~WslConfigSectionViewModel"
+pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Unit
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+One accepted platform-capability query and presentation-client migration slice.
+
+### Out of Scope
+
+Capability probe algorithm changes, platform mutation, application update, terminal launch, USB elevation, and external runtime UAT.
 
 ## Slice S06: Platform-integrated command parity
 

@@ -6,11 +6,20 @@ Describe 'Capability and systemd PowerShell bridge adapters' -Tag 'Unit', 'Publi
         . (Join-Path $PSScriptRoot '..\..\..\..\src\PowerShell\Public\SystemdServiceCommands.ps1')
     }
 
-    It 'routes instance capability facts only through the Core bridge' {
+    It 'routes explicit host and instance capability facts only through the v1 Core bridge contracts' {
         Mock Invoke-DistroNexusWorkspaceBridge { [pscustomobject]@{ Instance = @{ Name = 'Ubuntu' }; Capabilities = @{} } }
-        $result = Get-DistroNexusCapability -Name Ubuntu -InstanceOnly
+        $result = Get-DistroNexusCapability -Name Ubuntu
         $result.Instance.Name | Should -Be 'Ubuntu'
-        Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 1 -ParameterFilter { $Operation -eq 'capability' -and $Payload.InstanceName -eq 'Ubuntu' -and $Payload.InstanceOnly }
+        Get-DistroNexusCapability -Host | Out-Null
+        Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 1 -ParameterFilter { $Operation -eq 'capability.instance.v1' -and $Payload.Count -eq 1 -and $Payload.InstanceName -eq 'Ubuntu' }
+        Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 1 -ParameterFilter { $Operation -eq 'capability.host.v1' -and $null -eq $Payload }
+    }
+
+    It 'rejects invalid capability names and mixed parameter sets before bridge invocation' {
+        Mock Invoke-DistroNexusWorkspaceBridge { throw 'must not run' }
+        { Get-DistroNexusCapability -Name "bad`nname" } | Should -Throw
+        { Get-DistroNexusCapability -Host -Name Ubuntu } | Should -Throw
+        Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 0
     }
 
     It 'returns a Core generated service preview for WhatIf without mutation' {

@@ -119,6 +119,17 @@ Action grants use a 256-bit base64url token, CurrentUser-protected integrity-che
 
 Discovery may report parseable unavailable state, but Preview/Execute fail closed when usbipd is missing, stopped or unsupported. No route accepts native arguments, device paths, service control, Windows-feature mutation, install/driver setup, a raw USB/IP command, or a persistent watch. Attach preserves the existing VM-wide/storage warning and advisory `lsusb` guidance without starting a distribution. WMI change watching is presentation-only and may only trigger a typed refresh; it has no operation authority. Real signing, UAC, helper/broker packaging and physical-device execution are explicit external UAT gates.
 
+### Platform-capability query contract amendment
+
+`Get-DistroNexusCapability` is already an exported read-only module command, but it invokes an unversioned generic route and several WPF consumers still call `IPlatformCapabilityService` directly. Slice S26 makes the host and instance projections explicit versioned module contracts without changing the Core probe/cache algorithms.
+
+| Requirement | Current evidence | S26 contract and ownership | Verification |
+| --- | --- | --- | --- |
+| FR-001, FR-005 | Integrations uses the typed instance client but Configuration, WSL configuration and supporting WPF consumers still resolve the Core capability service. | The typed module client exposes separate host and instance snapshot methods. Migrated WPF consumers render only those snapshots and retain no Core capability-service dependency. | Structural, typed-command-shape and view-model routing tests. |
+| FR-004, FR-006, FR-007 | The public command calls legacy `capability` with optional fields. | Fixed routes are `capability.host.v1` with no payload and `capability.instance.v1` with exactly `{ InstanceName }`. The exported command has explicit host/instance parameter sets and routes only to v1. Unknown fields, invalid names and unsupported payloads fail before a probe. | Bridge exact-payload/unknown-operation tests and Pester parameter validation. |
+
+Capability results remain the existing bounded, path-free, read-only model. No route accepts probe command text, paths, environment overrides, a WSL version update, repair action or capability mutation. The legacy internal route may remain a private compatibility alias during migration but no module or typed client caller uses it. This slice does not alter Core probe caching, start a distribution, install a component, modify Windows features, or add a generic capability endpoint.
+
 ## Data and Execution Semantics
 
 - Data ownership and retention: Core owns settings, cache, catalog, backup, recovery, templates, and configuration persistence. Desktop never writes those stores. Existing retention and cleanup policies remain unchanged.

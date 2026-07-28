@@ -79,7 +79,7 @@ public sealed class SettingsViewModelRoutingTests
     private static SettingsViewModel NewViewModel(IPowerShellModuleClient client) => new(
         Mock.Of<ICatalogService>(), Mock.Of<ITerminalService>(), Mock.Of<IStoreComplianceModeService>(),
         Mock.Of<ILogger<SettingsViewModel>>(), Mock.Of<IWslConfigService>(), Mock.Of<IWslManagerService>(), client,
-        Mock.Of<IDialogService>(), Mock.Of<IWslConfigurationService>(), Mock.Of<IPlatformCapabilityService>());
+        Mock.Of<IDialogService>(), Mock.Of<IWslConfigurationService>());
 
     private static IEnumerable<string> CalledMethodNames(MethodInfo method)
     {

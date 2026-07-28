@@ -441,6 +441,7 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.GetContainerRuntimeStatusAsync),
                 nameof(IPowerShellModuleClient.GetDockerIntegrationAsync),
                 nameof(IPowerShellModuleClient.GetDockerIntegrationPreviewAsync),
+                nameof(IPowerShellModuleClient.GetHostCapabilitiesAsync),
                 nameof(IPowerShellModuleClient.GetInstanceCapabilitiesAsync),
                 nameof(IPowerShellModuleClient.GetInstancesAsync),
                 nameof(IPowerShellModuleClient.GetInstanceTagsAsync),
@@ -489,12 +490,15 @@ public sealed class PowerShellModuleClientTests
         var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
         powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusContainerRuntimeStatus", It.Is<Dictionary<string, object>>(p => (string)p["Name"] == "Ubuntu"), It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Runtimes\":[],\"Containers\":{},\"Images\":{},\"Projects\":{},\"Failures\":{}}" });
-        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusCapability", It.Is<Dictionary<string, object>>(p => (string)p["Name"] == "Ubuntu" && (bool)p["InstanceOnly"]), It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusCapability", It.Is<Dictionary<string, object>>(p => p.Count == 1 && (string)p["Name"] == "Ubuntu"), It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Instance\":{\"Name\":\"Ubuntu\"},\"Capabilities\":{},\"RefreshedAt\":\"2026-01-01T00:00:00+00:00\"}" });
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusCapability", It.Is<Dictionary<string, object>>(p => p.Count == 1 && p.ContainsKey("Host") && (bool)p["Host"]), It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Host\":{},\"Capabilities\":{},\"RefreshedAt\":\"2026-01-01T00:00:00+00:00\"}" });
         var client = new PowerShellModuleClient(powerShell.Object);
 
         Assert.Empty((await client.GetContainerRuntimeStatusAsync("Ubuntu")).Runtimes);
         Assert.Empty((await client.GetInstanceCapabilitiesAsync("Ubuntu")).Capabilities);
+        Assert.Empty((await client.GetHostCapabilitiesAsync()).Capabilities);
         powerShell.VerifyAll();
     }
 

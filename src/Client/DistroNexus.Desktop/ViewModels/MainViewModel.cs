@@ -571,10 +571,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private async Task ShowApplicationsAsync()
     {
-        var capabilities = _serviceProvider.GetService<IPlatformCapabilityService>();
-        if (capabilities is not null)
+        var moduleClient = _serviceProvider.GetService<IPowerShellModuleClient>();
+        if (moduleClient is not null)
         {
-            var snapshot = await capabilities.GetHostSnapshotAsync();
+            var snapshot = await moduleClient.GetHostCapabilitiesAsync();
             if (!snapshot.Capabilities.TryGetValue(CapabilityId.Wslg, out var wslg) || !wslg.IsSupported)
             {
                 IsApplicationsNavigationAvailable = false;
@@ -590,9 +590,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     public async Task RefreshApplicationsNavigationAsync()
     {
-        var capabilities = _serviceProvider.GetService<IPlatformCapabilityService>();
-        if (capabilities is null) { IsApplicationsNavigationAvailable = true; ApplicationsNavigationReason = string.Empty; return; }
-        var snapshot = await capabilities.GetHostSnapshotAsync();
+        var moduleClient = _serviceProvider.GetService<IPowerShellModuleClient>();
+        if (moduleClient is null) { IsApplicationsNavigationAvailable = true; ApplicationsNavigationReason = string.Empty; return; }
+        var snapshot = await moduleClient.GetHostCapabilitiesAsync();
         IsApplicationsNavigationAvailable = snapshot.Capabilities.TryGetValue(CapabilityId.Wslg, out var wslg) && wslg.IsSupported;
         ApplicationsNavigationReason = IsApplicationsNavigationAvailable ? string.Empty : Properties.Resources.ResourceManager.GetString("Applications_Unavailable") ?? "WSLg is unavailable.";
     }

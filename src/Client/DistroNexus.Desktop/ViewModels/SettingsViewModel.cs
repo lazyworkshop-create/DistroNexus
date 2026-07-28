@@ -131,15 +131,14 @@ public partial class SettingsViewModel : ObservableObject
         IWslManagerService wslManagerService,
         IPowerShellModuleClient moduleClient,
         IDialogService dialogService,
-        IWslConfigurationService configurationService,
-        IPlatformCapabilityService capabilityService)
+        IWslConfigurationService configurationService)
     {
         _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         ArgumentNullException.ThrowIfNull(catalogService); // retained constructor compatibility; cache work uses the typed module client.
         _terminalService = terminalService ?? throw new ArgumentNullException(nameof(terminalService));
         _storeComplianceModeService = storeComplianceModeService ?? throw new ArgumentNullException(nameof(storeComplianceModeService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        WslConfigSection = new WslConfigSectionViewModel(wslConfigService, moduleClient, dialogService, configurationService, capabilityService);
+        WslConfigSection = new WslConfigSectionViewModel(wslConfigService, moduleClient, dialogService, configurationService);
         ManageTags = new ManageTagsViewModel(moduleClient, dialogService);
         
         // Initialize auto-save timer

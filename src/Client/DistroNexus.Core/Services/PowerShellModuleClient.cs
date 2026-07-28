@@ -332,8 +332,11 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     public async Task<InstanceCapabilitySnapshot> GetInstanceCapabilitiesAsync(string name, CancellationToken cancellationToken = default)
     {
         ValidateName(name, nameof(name));
-        return await ExecuteJsonAsync<InstanceCapabilitySnapshot>(GetCapabilityCommand, new() { ["Name"] = name, ["InstanceOnly"] = true }, cancellationToken);
+        return await ExecuteJsonAsync<InstanceCapabilitySnapshot>(GetCapabilityCommand, new() { ["Name"] = name }, cancellationToken);
     }
+
+    public async Task<PlatformCapabilitySnapshot> GetHostCapabilitiesAsync(CancellationToken cancellationToken = default) =>
+        await ExecuteJsonAsync<PlatformCapabilitySnapshot>(GetCapabilityCommand, new() { ["Host"] = true }, cancellationToken);
 
     public async Task<DistroNexusPodmanUserUnitPreview> GetPodmanUserUnitPreviewAsync(string name, PodmanUserUnit unit, SystemdAction action, CancellationToken cancellationToken = default)
     {

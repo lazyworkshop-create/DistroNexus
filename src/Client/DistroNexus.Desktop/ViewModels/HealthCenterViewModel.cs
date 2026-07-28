@@ -36,7 +36,7 @@ public partial class HealthCenterViewModel : ObservableObject, IDisposable
     private readonly IHealthRepairService _repairs;
     private readonly IDiagnosticReportService _reports;
     private readonly IDiagnosticLogProvider _logs;
-    private readonly IPlatformCapabilityService? _capabilities;
+    private readonly IPowerShellModuleClient? _moduleClient;
     private CancellationTokenSource? _scanCts;
     private CancellationTokenSource? _reportCts;
     private CancellationTokenSource? _repairCts;
@@ -64,9 +64,9 @@ public partial class HealthCenterViewModel : ObservableObject, IDisposable
     public string? StatusCode => Regex.Match(Status, @"DN-\d{4}", RegexOptions.CultureInvariant).Success ? Regex.Match(Status, @"DN-\d{4}", RegexOptions.CultureInvariant).Value : null;
     public bool HasStatusCode => StatusCode is not null;
 
-    public HealthCenterViewModel(IHealthOrchestrator health, IHealthRepairService repairs, IDiagnosticReportService reports, IDiagnosticLogProvider logs, IPlatformCapabilityService? capabilities = null)
+    public HealthCenterViewModel(IHealthOrchestrator health, IHealthRepairService repairs, IDiagnosticReportService reports, IDiagnosticLogProvider logs, IPowerShellModuleClient? moduleClient = null)
     {
-        (_health, _repairs, _reports, _logs, _capabilities) = (health, repairs, reports, logs, capabilities);
+        (_health, _repairs, _reports, _logs, _moduleClient) = (health, repairs, reports, logs, moduleClient);
         foreach (var id in logs.AllowedLogIds.Order(StringComparer.Ordinal))
         {
             AvailableLogIds.Add(id);
@@ -87,11 +87,11 @@ public partial class HealthCenterViewModel : ObservableObject, IDisposable
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
-        if (_capabilities is null) return;
+        if (_moduleClient is null) return;
         try
         {
             OperationPhase = L("Health_CheckingCapabilities", "Checking Health prerequisites…");
-            var snapshot = await _capabilities.GetHostSnapshotAsync(cancellationToken: cancellationToken);
+            var snapshot = await _moduleClient.GetHostCapabilitiesAsync(cancellationToken);
             if (!snapshot.Capabilities.TryGetValue(CapabilityId.Wsl, out var wsl) || !wsl.IsSupported)
             {
                 IsHealthAvailable = false;

@@ -90,6 +90,7 @@ public interface IPowerShellModuleClient
     Task<PackageCacheClearResult> ClearPackageCacheAsync(CancellationToken cancellationToken = default);
 
     Task<ContainerRuntimeSnapshot> GetContainerRuntimeStatusAsync(string name, CancellationToken cancellationToken = default);
+    Task<PlatformCapabilitySnapshot> GetHostCapabilitiesAsync(CancellationToken cancellationToken = default);
     Task<InstanceCapabilitySnapshot> GetInstanceCapabilitiesAsync(string name, CancellationToken cancellationToken = default);
     Task<DistroNexusPodmanUserUnitPreview> GetPodmanUserUnitPreviewAsync(string name, PodmanUserUnit unit, SystemdAction action, CancellationToken cancellationToken = default);
     Task<DistroNexusPodmanUserUnitResult> InvokePodmanUserUnitAsync(DistroNexusPodmanUserUnitPreview preview, CancellationToken cancellationToken = default);

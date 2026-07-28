@@ -120,6 +120,8 @@ while ((line = Console.ReadLine()) is not null)
             "docker.integration.preview-set.v1" => await PreviewDockerIntegrationAsync(request),
             "docker.integration.set.v1" => await SetDockerIntegrationAsync(request),
             "capability" => await GetCapabilitiesAsync(request),
+            "capability.host.v1" => await GetHostCapabilitiesV1Async(request),
+            "capability.instance.v1" => await GetInstanceCapabilitiesV1Async(request),
             "systemdList" => await ListSystemdV1Async(request),
             "systemdPreview" => await PreviewSystemdV1Async(request),
             "systemdExecute" => await ExecuteSystemdV1Async(request),
@@ -501,6 +503,19 @@ async Task<object> GetCapabilitiesAsync(BridgeRequest request)
         ? await capabilities.GetHostSnapshotAsync()
         : await capabilities.GetInstanceSnapshotAsync(p.InstanceName);
 }
+async Task<PlatformCapabilitySnapshot> GetHostCapabilitiesV1Async(BridgeRequest request)
+{
+    ValidateEmptyPayload(request);
+    return await capabilities.GetHostSnapshotAsync();
+}
+async Task<InstanceCapabilitySnapshot> GetInstanceCapabilitiesV1Async(BridgeRequest request)
+{
+    ValidatePayload(request, ["InstanceName"], ["InstanceName"]);
+    var payload = ParsePayload<CapabilityInstancePayload>(request);
+    if (string.IsNullOrWhiteSpace(payload.InstanceName) || payload.InstanceName.IndexOfAny(['\r', '\n', '\0']) >= 0)
+        throw new ArgumentException("Instance name is invalid.");
+    return await capabilities.GetInstanceSnapshotAsync(payload.InstanceName);
+}
 async Task<IReadOnlyList<SystemdServiceInfo>> ListSystemdAsync(BridgeRequest request)
 {
     var p = JsonSerializer.Deserialize<SystemdPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("systemd payload is required.");
@@ -746,6 +761,7 @@ public sealed record PodmanConnectionPayload(string InstanceName, string Name, s
 public sealed record PodmanStatusPayload(string InstanceName);
 public sealed record DockerIntegrationPayload(string Name, bool Enabled = false);
 public sealed record CapabilityPayload(string? InstanceName, bool InstanceOnly);
+public sealed record CapabilityInstancePayload(string InstanceName);
 public sealed record SystemdPayload(string InstanceName, string? Unit, SystemdAction? Action, SystemdScope Scope = SystemdScope.User);
 public sealed record SystemdJournalPayload(string InstanceName, string Unit, SystemdScope Scope = SystemdScope.User, string? Search = null, int LineLimit = 200);
 public sealed record SystemdPreviewPayload(SystemdOperationPreview Preview);

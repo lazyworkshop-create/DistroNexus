@@ -20,7 +20,6 @@ public partial class WslConfigSectionViewModel : ObservableObject
     private readonly IPowerShellModuleClient _moduleClient;
     private readonly IDialogService _dialogService;
     private readonly IWslConfigurationService _configurationService;
-    private readonly IPlatformCapabilityService _capabilityService;
     private string? _fingerprint;
     private IReadOnlySet<string> _availableCapabilities = new HashSet<string>();
     public ObservableCollection<ConfigurationSettingFieldViewModel> Fields { get; } = [];
@@ -126,14 +125,12 @@ public partial class WslConfigSectionViewModel : ObservableObject
         IWslConfigService wslConfigService,
         IPowerShellModuleClient moduleClient,
         IDialogService dialogService,
-        IWslConfigurationService configurationService,
-        IPlatformCapabilityService capabilityService)
+        IWslConfigurationService configurationService)
     {
         _wslConfigService = wslConfigService ?? throw new ArgumentNullException(nameof(wslConfigService));
         _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
         _configurationService = configurationService;
-        _capabilityService = capabilityService;
     }
 
     public async Task LoadAsync()
@@ -156,7 +153,7 @@ public partial class WslConfigSectionViewModel : ObservableObject
             LocalhostForwarding = config.LocalhostForwarding ?? true;
             NetworkingMode = config.NetworkingMode ?? "NAT";
             var document = await _configurationService.ReadAsync();
-            _availableCapabilities = WslConfigurationSchema.MapCapabilities(await _capabilityService.GetHostSnapshotAsync());
+            _availableCapabilities = WslConfigurationSchema.MapCapabilities(await _moduleClient.GetHostCapabilitiesAsync());
             _fingerprint = document.Fingerprint; CurrentRaw = DesiredRaw = document.RawPreview;
             PendingRestart = L("Configuration_PendingWslRestart");
             Fields.Clear();

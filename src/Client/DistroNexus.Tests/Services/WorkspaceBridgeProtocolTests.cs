@@ -109,6 +109,24 @@ public sealed class WorkspaceBridgeProtocolTests
     }
 
     [Fact]
+    public async Task CapabilityV1Routes_RejectPayloadsOutsideTheirFixedContractsBeforeProbe()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+
+        var hostWithPayload = await bridge.SendAsync("capability.host.v1", payload: JsonDocument.Parse("{}").RootElement.Clone());
+        var missingInstance = await bridge.SendAsync("capability.instance.v1");
+        var unknownField = await bridge.SendAsync("capability.instance.v1", payload: JsonDocument.Parse("{\"InstanceName\":\"Ubuntu\",\"Script\":\"Get-ChildItem\"}").RootElement.Clone());
+        var invalidName = await bridge.SendAsync("capability.instance.v1", payload: JsonDocument.Parse("{\"InstanceName\":\"bad\\nname\"}").RootElement.Clone());
+        var unknownOperation = await bridge.SendAsync("capability.host.v2");
+
+        foreach (var response in new[] { hostWithPayload, missingInstance, unknownField, invalidName, unknownOperation })
+        {
+            Assert.False(response.GetProperty("Succeeded").GetBoolean());
+            Assert.Equal("Workspace.Bridge.Invalid", response.GetProperty("ErrorCode").GetString());
+        }
+    }
+
+    [Fact]
     public async Task Settings_UseFixedVersionedRoutesAndPersistTheTypedModel()
     {
         await using var bridge = await BridgeProcess.StartAsync();

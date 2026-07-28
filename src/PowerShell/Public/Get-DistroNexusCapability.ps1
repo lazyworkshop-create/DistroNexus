@@ -8,12 +8,20 @@ function Get-DistroNexusCapability {
     #>
     [CmdletBinding()]
     param(
+        [Parameter(Mandatory, ParameterSetName = 'Host')]
+        [Alias('Host')]
+        [switch]$HostSnapshot,
+        [Parameter(Mandatory, ParameterSetName = 'Instance')]
         [ValidatePattern('^[^\r\n\0]+$')]
         [string]$Name,
-        [switch]$InstanceOnly,
         [switch]$AsJson
     )
-    $value = Invoke-DistroNexusWorkspaceBridge -Operation capability -Payload @{ InstanceName = $Name; InstanceOnly = [bool]$InstanceOnly }
+    $value = if ($PSCmdlet.ParameterSetName -eq 'Host') {
+        Invoke-DistroNexusWorkspaceBridge -Operation 'capability.host.v1'
+    }
+    else {
+        Invoke-DistroNexusWorkspaceBridge -Operation 'capability.instance.v1' -Payload @{ InstanceName = $Name }
+    }
     if ($AsJson) { return ($value | ConvertTo-Json -Depth 16) }
     $value
 }

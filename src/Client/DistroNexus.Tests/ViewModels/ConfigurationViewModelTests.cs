@@ -143,7 +143,8 @@ public class ConfigurationViewModelTests
         capability.Setup(c => c.GetHostSnapshotAsync(false, It.IsAny<CancellationToken>())).ReturnsAsync(new PlatformCapabilitySnapshot(
             new("", new Version(10, 0), "x64", false, null, null, null, null, null),
             new Dictionary<CapabilityId, CapabilityResult> { [CapabilityId.Systemd] = hostWsl }, new Dictionary<CapabilityId, CapabilityResult>(), DateTimeOffset.UtcNow));
-        var vm = new ConfigurationTabViewModel(instance, service.Object, capability.Object, Mock.Of<IDialogService>());
+        var moduleClient = ModuleClient(host: await capability.Object.GetHostSnapshotAsync(), instance: await capability.Object.GetInstanceSnapshotAsync("Ubuntu"));
+        var vm = new ConfigurationTabViewModel(instance, service.Object, moduleClient.Object, Mock.Of<IDialogService>());
         await vm.InitializeAsync();
         Assert.Null(vm.Systemd); Assert.Null(vm.AutomountEnabled); Assert.False(vm.IsSystemdSupported);
         Assert.Equal(source.ToString(), vm.DesiredRawPreview);
@@ -176,7 +177,8 @@ public class ConfigurationViewModelTests
         capability.Setup(c => c.GetHostSnapshotAsync(false, It.IsAny<CancellationToken>())).ReturnsAsync(new PlatformCapabilitySnapshot(new("", new Version(10, 0), "x64", false, null, null, null, null, null),
             new Dictionary<CapabilityId, CapabilityResult> { [CapabilityId.Systemd] = new(CapabilityId.Systemd, CapabilityStatus.Supported, "test", CapabilitySource.WslCli, now) }, new Dictionary<CapabilityId, CapabilityResult>(), now));
         var dialogs = new Mock<IDialogService>(); dialogs.Setup(d => d.ShowConfirmAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
-        var vm = new ConfigurationTabViewModel(instance, service.Object, capability.Object, dialogs.Object);
+        var moduleClient = ModuleClient(host: await capability.Object.GetHostSnapshotAsync(), instance: await capability.Object.GetInstanceSnapshotAsync("Ubuntu"));
+        var vm = new ConfigurationTabViewModel(instance, service.Object, moduleClient.Object, dialogs.Object);
         await vm.InitializeAsync(); vm.Systemd = true; await vm.SaveCommand.ExecuteAsync(null);
         Assert.True(vm.IsSystemdSupported); service.Verify(s => s.SaveAsync("Ubuntu", It.Is<IReadOnlyDictionary<string, string?>>(x => x["boot.systemd"] == "true"), "fp", It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -202,7 +204,8 @@ public class ConfigurationViewModelTests
             _ => Result(0, "Usage: wsl.exe --install")
         });
         var dialogs = new Mock<IDialogService>(); dialogs.Setup(d => d.ShowConfirmAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
-        var vm = new ConfigurationTabViewModel(instance, configuration.Object, new PlatformCapabilityService(runner.Object), dialogs.Object);
+        var moduleClient = ModuleClient(host: await new PlatformCapabilityService(runner.Object).GetHostSnapshotAsync(), instance: await new PlatformCapabilityService(runner.Object).GetInstanceSnapshotAsync("Ubuntu"));
+        var vm = new ConfigurationTabViewModel(instance, configuration.Object, moduleClient.Object, dialogs.Object);
 
         await vm.InitializeAsync(); vm.Systemd = true; await vm.SaveCommand.ExecuteAsync(null);
 
@@ -222,7 +225,8 @@ public class ConfigurationViewModelTests
         var dialogs = new Mock<IDialogService>();
         string? alert = null;
         dialogs.Setup(d => d.ShowAlertAsync(It.IsAny<string>(), It.IsAny<string>())).Callback<string, string>((_, message) => alert = message).Returns(Task.CompletedTask);
-        var vm = new ConfigurationTabViewModel(instance, configuration.Object, capability.Object, dialogs.Object);
+        var moduleClient = ModuleClient(host: await capability.Object.GetHostSnapshotAsync(), instance: await capability.Object.GetInstanceSnapshotAsync("Ubuntu"));
+        var vm = new ConfigurationTabViewModel(instance, configuration.Object, moduleClient.Object, dialogs.Object);
 
         await vm.InitializeAsync(); vm.Systemd = true; await vm.SaveCommand.ExecuteAsync(null);
 
@@ -238,7 +242,8 @@ public class ConfigurationViewModelTests
         configuration.Setup(s => s.ReadAsync("Ubuntu", It.IsAny<CancellationToken>())).ThrowsAsync(new ConfigurationTransportException("config.read.timeout", "token=super-secret C:\\Users\\alice"));
         var dialogs = new Mock<IDialogService>(); string? alert = null;
         dialogs.Setup(d => d.ShowAlertAsync(It.IsAny<string>(), It.IsAny<string>())).Callback<string, string>((_, message) => alert = message).Returns(Task.CompletedTask);
-        var vm = new ConfigurationTabViewModel(NewInstance(), configuration.Object, SupportedCapabilities().Object, dialogs.Object);
+        var moduleClient = ModuleClientFrom(SupportedCapabilities());
+        var vm = new ConfigurationTabViewModel(NewInstance(), configuration.Object, moduleClient.Object, dialogs.Object);
 
         await vm.InitializeAsync();
 
@@ -252,7 +257,8 @@ public class ConfigurationViewModelTests
         configuration.Setup(s => s.ReadAsync("Ubuntu", It.IsAny<CancellationToken>()))
             .ThrowsAsync(new WslOperationFailedException("token=super-secret C:\\Users\\alice", DistroNexusErrorCode.OperationTimeout));
         var (dialogs, alert) = AlertCapturingDialogs();
-        var vm = new ConfigurationTabViewModel(NewInstance(), configuration.Object, SupportedCapabilities().Object, dialogs.Object);
+        var moduleClient = ModuleClientFrom(SupportedCapabilities());
+        var vm = new ConfigurationTabViewModel(NewInstance(), configuration.Object, moduleClient.Object, dialogs.Object);
 
         await vm.InitializeAsync();
 
@@ -267,7 +273,8 @@ public class ConfigurationViewModelTests
         configuration.Setup(s => s.PreviewAsync("Ubuntu", It.IsAny<IReadOnlyDictionary<string, string?>>(), "fp", It.IsAny<CancellationToken>()))
             .ThrowsAsync(new WslOperationFailedException("token=super-secret C:\\Users\\alice", DistroNexusErrorCode.OperationTimeout));
         var (dialogs, alert) = AlertCapturingDialogs();
-        var vm = new ConfigurationTabViewModel(NewInstance(), configuration.Object, SupportedCapabilities().Object, dialogs.Object);
+        var moduleClient = ModuleClientFrom(SupportedCapabilities());
+        var vm = new ConfigurationTabViewModel(NewInstance(), configuration.Object, moduleClient.Object, dialogs.Object);
 
         await vm.InitializeAsync(); vm.Systemd = true; await vm.SaveCommand.ExecuteAsync(null);
 
@@ -284,7 +291,8 @@ public class ConfigurationViewModelTests
         configuration.Setup(s => s.SaveAsync("Ubuntu", It.IsAny<IReadOnlyDictionary<string, string?>>(), "fp", It.IsAny<CancellationToken>()))
             .ThrowsAsync(new WslOperationFailedException("token=super-secret C:\\Users\\alice", DistroNexusErrorCode.OperationTimeout));
         var (dialogs, alert) = AlertCapturingDialogs(confirm: true);
-        var vm = new ConfigurationTabViewModel(NewInstance(), configuration.Object, SupportedCapabilities().Object, dialogs.Object);
+        var moduleClient = ModuleClientFrom(SupportedCapabilities());
+        var vm = new ConfigurationTabViewModel(NewInstance(), configuration.Object, moduleClient.Object, dialogs.Object);
 
         await vm.InitializeAsync(); vm.Systemd = true; await vm.SaveCommand.ExecuteAsync(null);
 
@@ -332,8 +340,9 @@ public class ConfigurationViewModelTests
         dialogs.Setup(d => d.ShowConfirmAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
         var moduleClient = new Mock<IPowerShellModuleClient>();
         moduleClient.Setup(s => s.GetInstancesAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
-        var vm = new WslConfigSectionViewModel(legacyService.Object, moduleClient.Object, dialogs.Object,
-            configuration.Object, SupportedGlobalCapabilities().Object);
+        moduleClient.Setup(s => s.GetHostCapabilitiesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(new PlatformCapabilitySnapshot(
+            new("", new Version(10, 0), "x64", false, null, null, null, null, null), new Dictionary<CapabilityId, CapabilityResult>(), new Dictionary<CapabilityId, CapabilityResult>(), DateTimeOffset.UtcNow));
+        var vm = new WslConfigSectionViewModel(legacyService.Object, moduleClient.Object, dialogs.Object, configuration.Object);
         return (vm, configuration, dialogs, moduleClient);
     }
 
@@ -344,6 +353,24 @@ public class ConfigurationViewModelTests
             new PlatformCapabilitySnapshot(new("", new Version(10, 0), "x64", false, null, null, null, null, null),
                 new Dictionary<CapabilityId, CapabilityResult>(), new Dictionary<CapabilityId, CapabilityResult>(), now));
         return capability;
+    }
+
+    private static Mock<IPowerShellModuleClient> ModuleClient(PlatformCapabilitySnapshot host, InstanceCapabilitySnapshot instance)
+    {
+        var moduleClient = new Mock<IPowerShellModuleClient>();
+        moduleClient.Setup(client => client.GetHostCapabilitiesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(host);
+        moduleClient.Setup(client => client.GetInstanceCapabilitiesAsync(instance.Instance.Name, It.IsAny<CancellationToken>())).ReturnsAsync(instance);
+        return moduleClient;
+    }
+
+    private static Mock<IPowerShellModuleClient> ModuleClientFrom(Mock<IPlatformCapabilityService> capabilities)
+    {
+        var moduleClient = new Mock<IPowerShellModuleClient>();
+        moduleClient.Setup(client => client.GetHostCapabilitiesAsync(It.IsAny<CancellationToken>()))
+            .Returns((CancellationToken token) => capabilities.Object.GetHostSnapshotAsync(cancellationToken: token));
+        moduleClient.Setup(client => client.GetInstanceCapabilitiesAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns((string name, CancellationToken token) => capabilities.Object.GetInstanceSnapshotAsync(name, cancellationToken: token));
+        return moduleClient;
     }
 
     private static void AssertAlertIsRedactedAndCoded(Mock<IDialogService> dialogs, int expectedCode)

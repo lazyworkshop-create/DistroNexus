@@ -546,8 +546,8 @@ public sealed class HealthInitialAndRepairTests
         var repairs = new Mock<IHealthRepairService>();
         var reports = new Mock<IDiagnosticReportService>();
         var logs = new Mock<IDiagnosticLogProvider>(); logs.SetupGet(x => x.AllowedLogIds).Returns([]);
-        var capabilities = new Mock<IPlatformCapabilityService>();
-        capabilities.Setup(x => x.GetHostSnapshotAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+        var capabilities = new Mock<IPowerShellModuleClient>();
+        capabilities.Setup(x => x.GetHostCapabilitiesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(HostWithWsl(CapabilityStatus.Unavailable, "Capability.Probe.ExecutableMissing"));
         using var viewModel = new HealthCenterViewModel(health.Object, repairs.Object, reports.Object, logs.Object, capabilities.Object);
 
@@ -632,8 +632,8 @@ public sealed class HealthInitialAndRepairTests
             .ReturnsAsync(new RepairPreview("config.global", "Fix DNS", RepairSafety.Safe, RepairIdempotency.Idempotent, ["Change DNS"], [], PreviewToken: "preview"));
         repairs.Setup(x => x.ExecuteAsync(finding, It.IsAny<RepairExecutionRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new RepairResult("config.global", true, ["fixed"]));
-        var unavailable = new Mock<IPlatformCapabilityService>();
-        unavailable.Setup(x => x.GetHostSnapshotAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>())).ReturnsAsync(HostWithWsl(CapabilityStatus.Unavailable, "missing"));
+        var unavailable = new Mock<IPowerShellModuleClient>();
+        unavailable.Setup(x => x.GetHostCapabilitiesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(HostWithWsl(CapabilityStatus.Unavailable, "missing"));
         using var blocked = CreateViewModel(repairs: repairs, capabilities: unavailable);
         await blocked.InitializeAsync();
         await blocked.RepairCommand.ExecuteAsync(new HealthFindingViewModel(finding));
@@ -672,7 +672,7 @@ public sealed class HealthInitialAndRepairTests
     }
 
     private static HealthCenterViewModel CreateViewModel(Mock<IHealthOrchestrator>? health = null, Mock<IHealthRepairService>? repairs = null,
-        Mock<IDiagnosticReportService>? reports = null, Mock<IDiagnosticLogProvider>? logs = null, Mock<IPlatformCapabilityService>? capabilities = null)
+        Mock<IDiagnosticReportService>? reports = null, Mock<IDiagnosticLogProvider>? logs = null, Mock<IPowerShellModuleClient>? capabilities = null)
     {
         health ??= new Mock<IHealthOrchestrator>();
         repairs ??= new Mock<IHealthRepairService>();
@@ -684,10 +684,10 @@ public sealed class HealthInitialAndRepairTests
         }
         return new HealthCenterViewModel(health.Object, repairs.Object, reports.Object, logs.Object, capabilities?.Object);
     }
-    private static Mock<IPlatformCapabilityService> SupportedCapabilities()
+    private static Mock<IPowerShellModuleClient> SupportedCapabilities()
     {
-        var capabilities = new Mock<IPlatformCapabilityService>();
-        capabilities.Setup(x => x.GetHostSnapshotAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>())).ReturnsAsync(HostWithWsl(CapabilityStatus.Supported, "Capability.Probe.Supported"));
+        var capabilities = new Mock<IPowerShellModuleClient>();
+        capabilities.Setup(x => x.GetHostCapabilitiesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(HostWithWsl(CapabilityStatus.Supported, "Capability.Probe.Supported"));
         return capabilities;
     }
     private static PlatformCapabilitySnapshot HostWithWsl(CapabilityStatus status, string reason) => new(

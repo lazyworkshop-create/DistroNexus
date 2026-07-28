@@ -9,7 +9,7 @@ using System.IO;
 namespace DistroNexus.Desktop.ViewModels.Tabs;
 
 public partial class ConfigurationTabViewModel(WslInstanceViewModel instance, IDistributionConfigurationService service,
-    IPlatformCapabilityService capabilities, IDialogService dialogs) : ObservableObject
+    IPowerShellModuleClient moduleClient, IDialogService dialogs) : ObservableObject
 {
     private string? _fingerprint;
     private Dictionary<string, string> _current = new(StringComparer.OrdinalIgnoreCase);
@@ -49,8 +49,8 @@ public partial class ConfigurationTabViewModel(WslInstanceViewModel instance, ID
             _fingerprint = doc.Fingerprint; RawPreview = DesiredRawPreview = doc.RawPreview;
             Diagnostics = string.Join(Environment.NewLine, doc.Diagnostics.Select(d => string.Format(L("Configuration_LineDiagnostic"), d.Line, d.Message)));
             RestartImpact = L("Configuration_InstanceRestart");
-            var snapshot = await capabilities.GetInstanceSnapshotAsync(instance.Name);
-            var host = await capabilities.GetHostSnapshotAsync();
+            var snapshot = await moduleClient.GetInstanceCapabilitiesAsync(instance.Name);
+            var host = await moduleClient.GetHostCapabilitiesAsync();
             var hostSystemd = host.Capabilities.TryGetValue(CapabilityId.Systemd, out var result) && result.IsSupported;
             IsSystemdSupported = hostSystemd && snapshot.Instance.WslVersion == 2;
             SystemdUnavailableReason = IsSystemdSupported ? string.Empty : result is null ? L("Configuration_UnsupportedReason") : L(result.ReasonCode);
