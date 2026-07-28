@@ -21,6 +21,7 @@ public interface IPowerShellModuleClient
     Task<InstanceResourceSnapshot> GetInstanceResourcesAsync(string name, CancellationToken cancellationToken = default);
     Task<InstanceSparsePreview> GetInstanceSparsePreviewAsync(string name, bool enabled, CancellationToken cancellationToken = default);
     Task<InstanceSparseOperationResult> SetInstanceSparseModeAsync(string previewToken, CancellationToken cancellationToken = default);
+    Task<InstanceCompactionResult> CompactInstanceAsync(string name, CancellationToken cancellationToken = default);
     Task<LifecycleOperationPreview> PreviewRemoveInstanceAsync(string name, bool keepFiles, CancellationToken cancellationToken = default);
     Task<LifecycleOperationPreview> PreviewMoveInstanceAsync(string name, string destination, CancellationToken cancellationToken = default);
     Task<LifecycleOperationPreview> PreviewRenameInstanceAsync(string name, string newName, CancellationToken cancellationToken = default);

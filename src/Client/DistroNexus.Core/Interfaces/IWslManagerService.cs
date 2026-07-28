@@ -99,16 +99,6 @@ public interface IWslManagerService
     Task<WslInstance?> ForceRefreshInstanceAsync(string instanceName, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Compacts the VHDX disk of a WSL instance to reclaim unused space.
-    /// Runs fstrim inside the instance, then compacts the VHDX file using Optimize-VHD or diskpart.
-    /// </summary>
-    /// <param name="instanceName">The name of the instance to compact.</param>
-    /// <param name="progress">Optional progress reporter receiving (percentage, phase message).</param>
-    /// <param name="whatIf">If true, report estimated savings without performing compaction.</param>
-    /// <param name="cancellationToken">Token to cancel the operation.</param>
-    Task CompactInstanceAsync(string instanceName, IProgress<(double Percentage, string Message)>? progress = null, bool whatIf = false, CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Exports a WSL instance to a TAR file.
     /// </summary>
     /// <param name="name">The name of the instance to export.</param>

@@ -168,6 +168,17 @@ public sealed class WorkspaceBridgeProtocolTests
     }
 
     [Theory]
+    [InlineData("instance.compact.preview.v1", "{\"Name\":\"Ubuntu\",\"Method\":\"diskpart\"}")]
+    [InlineData("instance.compact.execute.v1", "{\"PreviewToken\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"Path\":\"C:\\\\unsafe\"}")]
+    public async Task InstanceCompactionRoutes_RejectFieldsOtherThanNameOrPreviewToken(string operation, string json)
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        var response = await bridge.SendAsync(operation, payload: JsonDocument.Parse(json).RootElement.Clone());
+        Assert.False(response.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("Workspace.Bridge.Invalid", response.GetProperty("ErrorCode").GetString());
+    }
+
+    [Theory]
     [InlineData("install.source.resolve.v1", "{\"PackageId\":\"ubuntu\",\"Path\":\"C:\\\\unsafe\"}")]
     [InlineData("package.acquire.preview.v1", "{\"PackageId\":\"ubuntu\",\"Url\":\"https://unsafe.test\"}")]
     [InlineData("package.acquire.execute.v1", "{\"PreviewToken\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"Command\":\"cmd\"}")]

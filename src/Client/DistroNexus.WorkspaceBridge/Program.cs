@@ -18,6 +18,7 @@ var instances = new BridgeWslManagerService(processes, lifecycleRoot);
 var lifecycleRoutes = new LifecyclePathOperationService(instances, lifecycleRoot, new LifecycleMetadataCleanup(lifecycleRoot, processes));
 var credentials = new CredentialOperationService(processes, async (name, cancellation) => (await instances.GetInstancesAsync(cancellation)).Any(instance => string.Equals(instance.Name, name, StringComparison.OrdinalIgnoreCase)), Path.Combine(lifecycleRoot, "credential-grants"), fingerprint: instances.GetCredentialFingerprintAsync);
 var instanceResources = new InstanceResourceService(new RegisteredInstanceSparseAdapter(processes), Path.Combine(root ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DistroNexus"), "instance-sparse-grants"));
+var instanceCompaction = new InstanceCompactionService(new RegisteredInstanceCompactionAdapter(processes), Path.Combine(root ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DistroNexus"), "instance-compaction-grants"));
 var dockerIntegration = new DockerIntegrationService(NullLogger<DockerIntegrationService>.Instance, instances);
 var capabilities = new PlatformCapabilityService(processes);
 var networkStatus = new WindowsNetworkStatusAdapter();
@@ -243,6 +244,8 @@ while ((line = Console.ReadLine()) is not null)
             "instance.resources.get.v1" => await InstanceResourcesGetV1Async(request),
             "instance.sparse.preview.v1" => await InstanceSparsePreviewV1Async(request),
             "instance.sparse.execute.v1" => await InstanceSparseExecuteV1Async(request),
+            "instance.compact.preview.v1" => await InstanceCompactionPreviewV1Async(request),
+            "instance.compact.execute.v1" => await InstanceCompactionExecuteV1Async(request),
             "configuration.global.get.v1" => await GetGlobalConfigurationV1Async(request),
             "configuration.global.preview.v1" => await PreviewGlobalConfigurationV1Async(request),
             "configuration.global.execute.v1" => await ExecuteGlobalConfigurationV1Async(request),
@@ -306,7 +309,7 @@ while ((line = Console.ReadLine()) is not null)
     }
     catch (Exception ex) when (request?.Operation.StartsWith("instance.", StringComparison.Ordinal) == true && (request.Operation.Contains(".preview.", StringComparison.Ordinal) || request.Operation.Contains(".execute.", StringComparison.Ordinal)))
     {
-        var code = ex is ArgumentException ? "Workspace.Bridge.Invalid" : ex is OperationCanceledException ? "Lifecycle.Cancelled" : ex.Message is "Lifecycle.PathInvalid" or "Lifecycle.GrantInvalid" or "Lifecycle.GrantExpired" or "Lifecycle.InstanceStateChanged" or "Lifecycle.KeepFilesUnavailable" or "Lifecycle.CredentialInvalid" or "Lifecycle.CredentialGrantInvalid" or "Lifecycle.CredentialGrantExpired" or "Lifecycle.CredentialStateChanged" or "Lifecycle.CredentialFailed" ? ex.Message : "Lifecycle.Failed";
+        var code = ex is ArgumentException ? "Workspace.Bridge.Invalid" : ex is OperationCanceledException ? "Lifecycle.Cancelled" : ex.Message is "Lifecycle.PathInvalid" or "Lifecycle.GrantInvalid" or "Lifecycle.GrantExpired" or "Lifecycle.InstanceStateChanged" or "Lifecycle.KeepFilesUnavailable" or "Lifecycle.CredentialInvalid" or "Lifecycle.CredentialGrantInvalid" or "Lifecycle.CredentialGrantExpired" or "Lifecycle.CredentialStateChanged" or "Lifecycle.CredentialFailed" or "Lifecycle.CompactionInstanceNotFound" or "Lifecycle.CompactionGrantInvalid" or "Lifecycle.CompactionGrantExpired" or "Lifecycle.CompactionPrivilegeUnavailable" ? ex.Message : "Lifecycle.Failed";
         response = new(false, null, code, code);
     }
     catch (Exception ex) when (request?.Operation.StartsWith("instance.", StringComparison.Ordinal) == true && request.Operation.Contains(".preview.", StringComparison.Ordinal) || request?.Operation.StartsWith("instance.", StringComparison.Ordinal) == true && request.Operation.Contains(".execute.", StringComparison.Ordinal) == true)
@@ -932,6 +935,16 @@ async Task<InstanceSparseOperationResult> InstanceSparseExecuteV1Async(BridgeReq
     ValidatePayload(request, ["PreviewToken"], ["PreviewToken"]);
     return await instanceResources.ExecuteSparseAsync(ParsePayload<InstanceSparseExecutePayload>(request).PreviewToken);
 }
+async Task<InstanceCompactionPreview> InstanceCompactionPreviewV1Async(BridgeRequest request)
+{
+    ValidatePayload(request, ["Name"], ["Name"]);
+    return await instanceCompaction.PreviewAsync(ParsePayload<InstanceCompactionPreviewPayload>(request).Name);
+}
+async Task<InstanceCompactionResult> InstanceCompactionExecuteV1Async(BridgeRequest request)
+{
+    ValidatePayload(request, ["PreviewToken"], ["PreviewToken"]);
+    return await instanceCompaction.ExecuteAsync(ParsePayload<InstanceCompactionExecutePayload>(request).PreviewToken);
+}
 async Task<GlobalConfigurationSnapshot> GetGlobalConfigurationV1Async(BridgeRequest request)
 { ValidateGlobalConfigurationRequest(request); ValidateEmptyPayload(request); return await globalConfigurationGateway.GetAsync(); }
 async Task<GlobalConfigurationPreview> PreviewGlobalConfigurationV1Async(BridgeRequest request)
@@ -1012,6 +1025,8 @@ public sealed record InstanceNamePayload(string Name, bool KeepAlive = false);
 public sealed record InstanceResourcePayload(string Name);
 public sealed record InstanceSparsePayload(string Name, bool Enabled);
 public sealed record InstanceSparseExecutePayload(string PreviewToken);
+public sealed record InstanceCompactionPreviewPayload(string Name);
+public sealed record InstanceCompactionExecutePayload(string PreviewToken);
 public sealed record LifecycleRemovePayload(string Name, bool KeepFiles);
 public sealed record LifecycleMovePayload(string Name, string Destination);
 public sealed record LifecycleRenamePayload(string Name, string NewName);

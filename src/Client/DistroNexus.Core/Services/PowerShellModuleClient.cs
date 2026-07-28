@@ -28,6 +28,7 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string GetInstanceResourcesCommand = "Get-DistroNexusInstanceResources";
     private const string GetInstanceSparsePreviewCommand = "Get-DistroNexusInstanceSparsePreview";
     private const string SetInstanceSparseModeCommand = "Set-DistroNexusInstanceSparseMode";
+    private const string CompactInstanceCommand = "Compress-DistroNexusInstance";
     private const string GetSettingsCommand = "Get-DistroNexusSettings";
     private const string SetSettingsCommand = "Set-DistroNexusSettings";
     private const string ResetSettingsCommand = "Reset-DistroNexusSettings";
@@ -186,6 +187,8 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     { ValidateName(name, nameof(name)); return ExecuteJsonAsync<InstanceSparsePreview>(GetInstanceSparsePreviewCommand, new() { ["Name"] = name, ["Enabled"] = enabled }, cancellationToken); }
     public Task<InstanceSparseOperationResult> SetInstanceSparseModeAsync(string previewToken, CancellationToken cancellationToken = default)
     { if (string.IsNullOrWhiteSpace(previewToken) || previewToken.Length != 64 || previewToken.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("A Core-issued instance sparse preview token is required.", nameof(previewToken)); return ExecuteJsonAsync<InstanceSparseOperationResult>(SetInstanceSparseModeCommand, new() { ["PreviewToken"] = previewToken }, cancellationToken); }
+    public Task<InstanceCompactionResult> CompactInstanceAsync(string name, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); return ExecuteJsonAsync<InstanceCompactionResult>(CompactInstanceCommand, new() { ["Name"] = name }, cancellationToken); }
     public Task<LifecycleOperationPreview> PreviewRemoveInstanceAsync(string name, bool keepFiles, CancellationToken cancellationToken = default) => PreviewLifecycleAsync(RemoveInstanceCommand, new() { ["Name"] = name, ["KeepFiles"] = keepFiles }, cancellationToken);
     public Task<LifecycleOperationPreview> PreviewMoveInstanceAsync(string name, string destination, CancellationToken cancellationToken = default) => PreviewLifecycleAsync(MoveInstanceCommand, new() { ["Name"] = name, ["Destination"] = destination }, cancellationToken);
     public Task<LifecycleOperationPreview> PreviewRenameInstanceAsync(string name, string newName, CancellationToken cancellationToken = default) => PreviewLifecycleAsync(RenameInstanceCommand, new() { ["Name"] = name, ["NewName"] = newName }, cancellationToken);

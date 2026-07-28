@@ -1,212 +1,88 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
-using System.IO;
 
 namespace DistroNexus.Desktop.ViewModels.Tabs;
 
-/// <summary>
-/// ViewModel for the Disk tab of InstanceDetailDialog.
-/// Handles VHDX compaction, disk size display and related operations.
-/// </summary>
+/// <summary>Renders only the fixed, reviewed compaction result returned by the module.</summary>
 public partial class DiskTabViewModel : ObservableObject
 {
     private readonly WslInstanceViewModel _instance;
-    private readonly IWslManagerService _wslManager;
+    private readonly IPowerShellModuleClient _moduleClient;
     private readonly IDialogService _dialogService;
-    private CancellationTokenSource? _cts;
     private bool _initialized;
 
-    [ObservableProperty]
-    private bool _isLoading;
-
-    [ObservableProperty]
-    private bool _isCompacting;
-
-    [ObservableProperty]
-    private string _phaseText = string.Empty;
-
-    [ObservableProperty]
-    private bool _showResult;
-
-    [ObservableProperty]
-    private string _beforeSizeDisplay = string.Empty;
-
-    [ObservableProperty]
-    private string _afterSizeDisplay = string.Empty;
-
-    [ObservableProperty]
-    private string _savedSizeDisplay = string.Empty;
+    [ObservableProperty] private bool _isLoading;
+    [ObservableProperty] private bool _isCompacting;
+    [ObservableProperty] private string _phaseText = string.Empty;
+    [ObservableProperty] private bool _showResult;
+    [ObservableProperty] private string _beforeSizeDisplay = string.Empty;
+    [ObservableProperty] private string _afterSizeDisplay = string.Empty;
+    [ObservableProperty] private string _savedSizeDisplay = string.Empty;
+    [ObservableProperty] private string _estimateKind = "Unknown";
+    [ObservableProperty] private string _warningsDisplay = string.Empty;
+    [ObservableProperty] private string _outcomeCode = string.Empty;
 
     public WslInstanceViewModel Instance => _instance;
-
     public bool IsWslV1 => !_instance.IsWslV2;
 
-    public string VhdxPath => Path.Combine(_instance.InstallPath, "ext4.vhdx");
-
-    public DiskTabViewModel(
-        WslInstanceViewModel instance,
-        IWslManagerService wslManager,
-        IDialogService dialogService)
+    public DiskTabViewModel(WslInstanceViewModel instance, IPowerShellModuleClient moduleClient, IDialogService dialogService)
     {
         _instance = instance ?? throw new ArgumentNullException(nameof(instance));
-        _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
     }
 
-    public async Task InitializeAsync()
+    public Task InitializeAsync()
     {
-        if (_initialized) return;
         _initialized = true;
-
-        if (!_instance.IsWslV2) return;
-
-        IsLoading = true;
-        try
-        {
-            await _instance.LoadDiskSizeAsync();
-        }
-        finally
-        {
-            IsLoading = false;
-        }
+        return Task.CompletedTask;
     }
 
     [RelayCommand]
-    private async Task CompactDiskAsync(CancellationToken ct)
+    private Task CompactDiskAsync(CancellationToken cancellationToken) => RunCompactionAsync(cancellationToken);
+
+    public async Task RunCompactionAsync(CancellationToken cancellationToken = default)
     {
-        if (!_instance.IsWslV2) return;
-
-        // Step 1: whatIf phase to estimate reclaimable space
-        IsCompacting = true;
-        ShowResult = false;
-        PhaseText = Properties.Resources.DiskTab_Estimating;
-        _instance.IsBusy = true;
-
-        string reclaimableEstimate = string.Empty;
-        var estimateSucceeded = false;
-        try
-        {
-            var whatIfProgress = new Progress<(double Percentage, string Message)>(p =>
-            {
-                if (!string.IsNullOrEmpty(p.Message))
-                    reclaimableEstimate = p.Message;
-            });
-
-            _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            await _wslManager.CompactInstanceAsync(_instance.Name, whatIfProgress, whatIf: true, _cts.Token);
-            estimateSucceeded = true;
-        }
-        catch (OperationCanceledException)
-        {
-            return;
-        }
-        catch (WslOperationException ex)
-        {
-            await _dialogService.ShowAlertAsync(
-                Properties.Resources.ErrorTitle,
-                string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
-            return;
-        }
-        catch (Exception ex)
-        {
-            await _dialogService.ShowAlertAsync(
-                Properties.Resources.ErrorTitle,
-                string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
-            return;
-        }
-        finally
-        {
-            if (!estimateSucceeded)
-            {
-                IsCompacting = false;
-                PhaseText = string.Empty;
-                _instance.IsBusy = false;
-            }
-        }
-
-        // Step 2: confirm dialog
-        string confirmMsg = string.IsNullOrEmpty(reclaimableEstimate)
-            ? Properties.Resources.DiskTab_CompactConfirm
-            : string.Format(Properties.Resources.DiskTab_CompactConfirmEstimate, reclaimableEstimate);
-
-        bool confirmed = await _dialogService.ShowConfirmAsync(
-            Properties.Resources.DiskTab_CompactDisk, confirmMsg);
-        if (!confirmed)
-        {
-            IsCompacting = false;
-            _instance.IsBusy = false;
-            return;
-        }
-
-        // Step 3: compaction — record before size then compact
-        await RunCompactionAsync(_cts?.Token ?? ct);
-    }
-
-    /// <summary>
-    /// Runs the actual compaction. Can be called from CompactDiskCommand or from bulk compaction in MainViewModel.
-    /// </summary>
-    public async Task RunCompactionAsync(CancellationToken ct = default)
-    {
+        if (!_instance.IsWslV2 || IsCompacting) return;
         try
         {
             IsCompacting = true;
             _instance.IsBusy = true;
             ShowResult = false;
+            PhaseText = Properties.Resources.DiskTab_PhaseCompact;
+            var result = await _moduleClient.CompactInstanceAsync(_instance.Name, cancellationToken);
+            OutcomeCode = result.OutcomeCode;
+            if (!result.Succeeded) throw new InvalidOperationException(result.OutcomeCode);
 
-            long before = await _wslManager.GetInstanceDiskSizeAsync(_instance.Name, ct);
-
-            var progress = new Progress<(double Percentage, string Message)>(p =>
-            {
-                if (!string.IsNullOrEmpty(p.Message))
-                    PhaseText = p.Message;
-            });
-
-            PhaseText = Properties.Resources.DiskTab_PhaseStop;
-            await _wslManager.CompactInstanceAsync(_instance.Name, progress, whatIf: false, ct);
-
-            long after = await _wslManager.GetInstanceDiskSizeAsync(_instance.Name, ct);
-            _instance.UpdateDiskSize(after);
-
-            BeforeSizeDisplay = FormatBytes(before);
-            AfterSizeDisplay = FormatBytes(after);
-            long saved = Math.Max(0, before - after);
-            SavedSizeDisplay = FormatBytes(saved);
+            BeforeSizeDisplay = FormatBytes(result.BeforeBytes);
+            AfterSizeDisplay = FormatBytes(result.AfterBytes);
+            SavedSizeDisplay = FormatBytes(result.SavedBytes);
+            EstimateKind = result.SavedBytes.HasValue ? "Measured" : "Unknown";
+            WarningsDisplay = result.RecoveryAction == "None" ? string.Empty : result.RecoveryAction;
+            if (result.AfterBytes is long after) _instance.UpdateDiskSize(after);
             ShowResult = true;
-            PhaseText = string.Empty;
         }
-        catch (OperationCanceledException)
-        {
-            PhaseText = string.Empty;
-        }
-        catch (WslOperationException ex)
-        {
-            PhaseText = string.Empty;
-            await _dialogService.ShowAlertAsync(
-                Properties.Resources.ErrorTitle,
-                string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
-        }
+        catch (OperationCanceledException) { OutcomeCode = "Lifecycle.CompactionCancelled"; }
         catch (Exception ex)
         {
-            PhaseText = string.Empty;
-            await _dialogService.ShowAlertAsync(
-                Properties.Resources.ErrorTitle,
+            await _dialogService.ShowAlertAsync(Properties.Resources.ErrorTitle,
                 string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
         }
         finally
         {
+            PhaseText = string.Empty;
             IsCompacting = false;
             _instance.IsBusy = false;
         }
     }
 
+    private static string FormatBytes(long? bytes) => bytes is null ? "Unknown" : FormatBytes(bytes.Value);
     private static string FormatBytes(long bytes)
     {
         if (bytes <= 0) return "0 B";
         string[] units = ["B", "KB", "MB", "GB", "TB"];
-        int order = 0;
-        double size = bytes;
+        var order = 0; double size = bytes;
         while (size >= 1024 && order < units.Length - 1) { size /= 1024; order++; }
         return $"{size:0.##} {units[order]}";
     }

@@ -512,6 +512,7 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.AddInstanceTagAsync),
                 nameof(IPowerShellModuleClient.ClearPackageCacheAsync),
                 nameof(IPowerShellModuleClient.CloneRecoveryPointAsync),
+                nameof(IPowerShellModuleClient.CompactInstanceAsync),
                 nameof(IPowerShellModuleClient.ConsumeBackupNotificationsAsync),
                 nameof(IPowerShellModuleClient.CreateFirewallRuleAsync),
                 nameof(IPowerShellModuleClient.CreateRecoveryPointAsync),
@@ -630,6 +631,24 @@ public sealed class PowerShellModuleClientTests
         Assert.DoesNotContain(methods, method => method.Name.Contains("Script", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(methods, method => method.Name.Contains("Command", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(methods, method => method.Name.Equals("ExecuteOperationAsync", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task CompactInstanceAsync_UsesOnlyTheFixedModuleCmdletAndName()
+    {
+        var ps = new Mock<IPowerShellService>(MockBehavior.Strict);
+        ps.Setup(service => service.ExecuteModuleCmdletAsync(
+                "Compress-DistroNexusInstance",
+                It.Is<Dictionary<string, object>>(parameters => parameters.Count == 1 && (string)parameters["Name"] == "Ubuntu"),
+                It.Is<ModuleCallOptions>(options => options.ParseAsJson),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"succeeded\":true,\"instanceName\":\"Ubuntu\",\"outcomeCode\":\"Lifecycle.Compacted\",\"beforeBytes\":100,\"afterBytes\":50,\"savedBytes\":50,\"method\":\"Diskpart\",\"restarted\":false}" });
+
+        var result = await new PowerShellModuleClient(ps.Object).CompactInstanceAsync("Ubuntu");
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(50, result.SavedBytes);
+        ps.VerifyAll();
     }
 
     [Fact]

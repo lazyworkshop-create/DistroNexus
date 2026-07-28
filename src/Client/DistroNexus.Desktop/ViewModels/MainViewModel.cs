@@ -868,11 +868,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
         var selected = Instances.Where(i => i.IsSelected && i.IsWslV2).ToList();
         if (selected.Count == 0) return;
 
-        var confirmed = await _dialogService.ShowConfirmAsync(
-            Properties.Resources.BulkCompact_ConfirmTitle,
-            string.Format(Properties.Resources.BulkCompact_ConfirmMessage, selected.Count));
-        if (!confirmed) return;
-
         IsBulkCompacting = true;
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         _bulkCompactCts = cts;
@@ -887,7 +882,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 BulkCompactProgressText = string.Format(
                     Properties.Resources.BulkCompact_Counter, i + 1, selected.Count, inst.Name);
 
-                var diskVm = new ViewModels.Tabs.DiskTabViewModel(inst, _wslManager, _dialogService);
+                var diskVm = new ViewModels.Tabs.DiskTabViewModel(inst, _moduleClient, _dialogService);
                 await diskVm.RunCompactionAsync(cts.Token);
             }
         }

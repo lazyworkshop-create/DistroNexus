@@ -142,7 +142,6 @@ internal sealed class BridgeWslManagerService(IProcessRunner processes, string l
     public Task SetCredentialsAsync(string instanceName, string username, System.Security.SecureString password, CancellationToken cancellationToken = default) => Unsupported();
     public Task<long> GetInstanceDiskSizeAsync(string instanceName, CancellationToken cancellationToken = default) => Unsupported<long>();
     public Task<WslInstance?> ForceRefreshInstanceAsync(string instanceName, CancellationToken cancellationToken = default) => Unsupported<WslInstance?>();
-    public Task CompactInstanceAsync(string instanceName, IProgress<(double Percentage, string Message)>? progress = null, bool whatIf = false, CancellationToken cancellationToken = default) => Unsupported();
     public Task ExportInstanceAsync(string name, string destination, bool force = false, CancellationToken cancellationToken = default) => _lifecycle.ExportAsync(name, destination, force, cancellationToken);
     public Task ImportInstanceAsync(string name, string source, string installPath, CancellationToken cancellationToken = default) => _lifecycle.ImportAsync(name, source, installPath, cancellationToken);
     Task ILifecyclePathRuntime.RemoveAsync(string instanceName, bool keepFiles, CancellationToken cancellationToken) => _lifecycle.RemoveAsync(instanceName, keepFiles, cancellationToken);
