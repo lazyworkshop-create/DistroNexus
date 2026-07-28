@@ -26,11 +26,8 @@ namespace DistroNexus.Desktop.ViewModels;
 /// </summary>
 public partial class MainViewModel : ObservableObject, IDisposable
 {
-    private readonly IWslManagerService _wslManager;
-    private readonly INavigationService _navigationService;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<MainViewModel> _logger;
-    private readonly IWslEventWatcher _wslEventWatcher;
     private readonly IPowerShellModuleClient _moduleClient;
     private readonly IDialogService _dialogService;
 
@@ -90,28 +87,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public int ActiveDownloadsCount => DownloadJobs.Count(job => job.State is "Queued" or "Running");
     public string ActiveDownloadsDisplayText => string.Format(Properties.Resources.ActiveDownloadsFormat, ActiveDownloadsCount);
 
-    public MainViewModel(
-        IWslManagerService wslManager,
-        INavigationService navigationService,
-        IServiceProvider serviceProvider,
-        ILogger<MainViewModel> logger,
-        IWslEventWatcher wslEventWatcher,
-        IPowerShellModuleClient moduleClient,
-        IDialogService dialogService)
+    public MainViewModel(IServiceProvider serviceProvider, ILogger<MainViewModel> logger, IPowerShellModuleClient moduleClient, IDialogService dialogService)
     {
-        _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
-        _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _wslEventWatcher = wslEventWatcher ?? throw new ArgumentNullException(nameof(wslEventWatcher));
         _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
 
         // ICollectionView for filtering/grouping (Design Review #4)
         InstancesView = CollectionViewSource.GetDefaultView(_instances);
-
-        // Subscribe to cache invalidation for auto-refresh (E-07-3)
-        _wslEventWatcher.CacheInvalidationRequested += OnCacheInvalidated;
 
         // NOTE: LoadUserPreferencesAsync is now called explicitly from MainWindow.OnLoaded
         // to avoid async operations in constructor which can block DI resolution
@@ -243,7 +227,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 Instances.Clear();
                 foreach (var instance in instances)
                 {
-                    var vm = new WslInstanceViewModel(instance, _wslManager, _logger, _moduleClient, _serviceProvider);
+                    var vm = new WslInstanceViewModel(instance, _logger, _moduleClient, _dialogService);
                     vm.RefreshRequested += (s, e) => _ = RefreshAsync();
                     vm.TagsChanged += (s, e) => _ = RefreshAvailableTagsAsync();
                     Instances.Add(vm);
@@ -489,6 +473,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _logger.LogInformation("Navigated to settings");
     }
 
+
     [RelayCommand]
     private async Task ToggleDownloadPanelAsync()
     {
@@ -723,17 +708,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
             _logger.LogInformation("Generating PowerShell diagnostics");
             StatusMessage = Properties.Resources.StatusGeneratingDiagnostics;
 
-            var powerShellService = _serviceProvider.GetService(typeof(IPowerShellService)) as IPowerShellService;
-            if (powerShellService == null)
-            {
-                await ShowAlert(Properties.Resources.DiagnosticsErrorTitle, Properties.Resources.DiagnosticsServiceUnavailable);
-                return;
-            }
-
-            var diagnostics = await powerShellService.GetDiagnosticInfoAsync();
+            var diagnostics = await _moduleClient.GetDiagnosticSnapshotAsync();
 
             _logger.LogInformation("Diagnostics generated successfully");
-            _logger.LogInformation(diagnostics);
+            _logger.LogInformation("Diagnostic snapshot {OutcomeCode} / {WslState}", diagnostics.OutcomeCode, diagnostics.WslState);
 
             // Show in a message box
             var window = new Window
@@ -747,7 +725,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 {
                     Content = new System.Windows.Controls.TextBox
                     {
-                        Text = diagnostics,
+                        Text = string.Join(Environment.NewLine, new[] { $"Module: {diagnostics.ModuleState}", $"WSL: {diagnostics.WslState}", $"Bridge: {diagnostics.BridgeState}" }.Concat(diagnostics.Notices.Select(n => $"{n.Severity} {n.Code}: {n.Message}"))),
                         IsReadOnly = true,
                         TextWrapping = TextWrapping.Wrap,
                         VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto,
@@ -771,8 +749,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        _wslEventWatcher.CacheInvalidationRequested -= OnCacheInvalidated;
-        _wslEventWatcher.Stop();
     }
 
     /// <summary>
@@ -781,15 +757,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// </summary>
     public void StartEventWatcherAfterLoad()
     {
-        try
-        {
-            _wslEventWatcher.Start();
-            _logger.LogInformation("WSL event watcher started after initial load");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to start WSL event watcher; proactive cache invalidation unavailable");
-        }
+        _logger.LogDebug("Module-backed refresh is active after initial load.");
     }
 
     // ── Multi-select commands (P1-8) ─────────────────────────────────────

@@ -58,5 +58,5 @@ public sealed class MonitoringViewModelTests
     }
 
     private static MonitoringSample Sample() => new(DateTimeOffset.UtcNow, 1, 2, 3, null, null, 2_048, 8_192, null, null, null, null, null, null, [], new Dictionary<string, string>());
-    private static WslInstanceViewModel NewInstance() => new(new WslInstance { Name = "Ubuntu", State = "Running", Version = 2 }, Mock.Of<IWslManagerService>(), Mock.Of<ILogger>(), Mock.Of<IPowerShellModuleClient>(), Mock.Of<IServiceProvider>());
+    private static WslInstanceViewModel NewInstance() => new(new WslInstance { Name = "Ubuntu", State = "Running", Version = 2 }, Mock.Of<ILogger>(), Mock.Of<IPowerShellModuleClient>(), Mock.Of<IDialogService>());
 }

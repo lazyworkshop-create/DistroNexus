@@ -17,20 +17,51 @@ public sealed class S13DesktopCompositionAndLocalizationTests
     }
 
     [Fact]
-    public void DesktopComposition_RegistersEveryV23TopLevelSurfaceAndItsCoreServices()
+    public void DesktopComposition_RetainsOnlyTheTypedModuleTransportForNamedShellSurfaces()
     {
         var root = FindRepositoryRoot();
         var app = File.ReadAllText(Path.Combine(root, "src", "Client", "DistroNexus.Desktop", "App.xaml.cs"));
-        foreach (var registration in new[]
+        Assert.Equal(1, CountOccurrences(app, "IPowerShellService"));
+        Assert.Contains("services.AddSingleton<IPowerShellService>(sp => new PowerShellService", app, StringComparison.Ordinal);
+        Assert.Contains("services.AddSingleton<IPowerShellModuleClient, PowerShellModuleClient>();", app, StringComparison.Ordinal);
+        foreach (var retired in new[]
         {
-            "services.AddPlatformCapabilities()", "services.AddHealthCenter()",
-            "IRecoveryPointService", "IMonitoringService", "IUsbDeviceService", "IWorkspaceService",
-            "IContainerRuntimeService", "IPowerShellModuleClient", "HealthCenterViewModel",
-            "UsbDevicesViewModel", "WorkspacesViewModel", "ApplicationsViewModel", "HealthCenterPage",
-            "UsbDevicesPage", "WorkspacesPage", "ApplicationsPage"
+            "IWslManagerService", "ICatalogService", "IWslConfigService", "INetworkService", "ISystemdService",
+            "INetworkDiagnosticsService", "IFirewallOperationBroker", "INetworkConfigurationService", "IWslEventWatcher"
         })
-            Assert.Contains(registration, app, StringComparison.Ordinal);
-        Assert.DoesNotContain("services.AddWslgApplications()", app, StringComparison.Ordinal);
+            Assert.DoesNotContain(retired, app, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void NamedDesktopSources_HaveNoRawPowerShellOrCoreBusinessServiceDependency()
+    {
+        var root = FindRepositoryRoot();
+        var relative = new[] { "App.xaml.cs", "ViewModels/MainViewModel.cs", "ViewModels/WslInstanceViewModel.cs", "ViewModels/InstanceDetailViewModel.cs", "ViewModels/SettingsViewModel.cs" };
+        var sources = relative.ToDictionary(path => path, path => File.ReadAllText(Path.Combine(root, "src", "Client", "DistroNexus.Desktop", path)));
+        var forbidden = new[] { "IPowerShellService", "IWslManagerService", "ICatalogService", "IWslConfigService", "INetworkService", "ISystemdService", "INetworkDiagnosticsService", "IFirewallOperationBroker", "INetworkConfigurationService", "INetworkStatusAdapter", "IBrowserLauncher", "IWslEventWatcher", "diagnostic.snapshot.v1", "System.IO.", "File.Read", "File.Write", "Directory." };
+        foreach (var (path, source) in sources)
+        {
+            foreach (var prohibited in forbidden)
+            {
+                if (path == "App.xaml.cs" && prohibited == "IPowerShellService") continue;
+                Assert.DoesNotContain(prohibited, source, StringComparison.Ordinal);
+            }
+            Assert.DoesNotContain("GetDiagnosticInfoAsync", source, StringComparison.Ordinal);
+            Assert.DoesNotContain("catch {", source, StringComparison.Ordinal);
+        }
+
+        var outstanding = new Dictionary<string, string>
+        {
+            ["ViewModels/TemplatesViewModel.cs"] = "File.ReadAllTextAsync(dialog.FileName)",
+            ["Wizard/Steps/ProgressStep.cs"] = "Context.LogFilePath = Path.Combine",
+            ["Wizard/Steps/ResultStep.cs"] = "Directory.CreateDirectory(logFolder)",
+            ["Controls/Tabs/IntegrationsTabView.xaml.cs"] = "Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri)"
+        };
+        foreach (var (path, exactPattern) in outstanding)
+        {
+            var source = File.ReadAllText(Path.Combine(root, "src", "Client", "DistroNexus.Desktop", path));
+            Assert.Contains(exactPattern, source, StringComparison.Ordinal);
+        }
     }
 
     [Fact]
@@ -52,6 +83,13 @@ public sealed class S13DesktopCompositionAndLocalizationTests
     private static HashSet<string> ReadNames(string path) => XDocument.Load(path)
         .Root!.Elements("data").Select(x => (string?)x.Attribute("name"))
         .Where(x => !string.IsNullOrWhiteSpace(x)).Cast<string>().ToHashSet(StringComparer.Ordinal);
+
+    private static int CountOccurrences(string value, string pattern)
+    {
+        var count = 0;
+        for (var index = value.IndexOf(pattern, StringComparison.Ordinal); index >= 0; index = value.IndexOf(pattern, index + pattern.Length, StringComparison.Ordinal)) count++;
+        return count;
+    }
 
     private static string FindRepositoryRoot()
     {

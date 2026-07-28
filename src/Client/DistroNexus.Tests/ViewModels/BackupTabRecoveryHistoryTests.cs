@@ -118,7 +118,7 @@ public sealed class BackupTabRecoveryHistoryTests
 
     private static BackupTabViewModel NewViewModel(IPowerShellModuleClient client, IDialogService? dialogs = null) => new(Instance(), dialogs ?? Dialogs().Object, client);
 
-    private static WslInstanceViewModel Instance() => new(new WslInstance { Name = "Ubuntu", State = "Stopped" }, Mock.Of<IWslManagerService>(), Mock.Of<ILogger>(), Mock.Of<IPowerShellModuleClient>(), Mock.Of<IServiceProvider>());
+    private static WslInstanceViewModel Instance() => new(new WslInstance { Name = "Ubuntu", State = "Stopped" }, Mock.Of<ILogger>(), Mock.Of<IPowerShellModuleClient>(), Mock.Of<IDialogService>());
 
     private static RecoveryPointSummary Point() => new(new RecoveryPointManifest(1, Guid.NewGuid(), "Before", "Ubuntu", 2, RecoveryPointFormat.Tar, DateTimeOffset.UtcNow, "instance.tar", 1, "hash", "2.3.0", [], ""), "point", RecoveryPointVerification.Verified);
 }

@@ -63,13 +63,13 @@ Acceptance: both install presentation paths submit the selected path only to the
 
 Every Desktop-visible diagnostic must use a fixed typed module snapshot, preview, or report operation. It must not call `IPowerShellService` directly to obtain raw product diagnostic information.
 
-Acceptance: the raw diagnostic route is retired or represented by a bounded typed result with redaction and cancellation; Desktop contains no direct `IPowerShellService` diagnostic execution.
+Acceptance: the raw diagnostic route is replaced by a bounded, redacted, cancellable typed snapshot with stable outcomes; Desktop contains no direct `IPowerShellService` diagnostic execution. A snapshot contains modeled readiness/status/notices only, never a module path, product path, host command, raw exception, or environment dump.
 
 ### FR-107 Enforced Desktop boundary and composition cleanup
 
-Desktop must not register, resolve, or retain Core business-service interfaces unless they are a documented UI-only adapter. Structural tests must reject direct Core product service, product-state host-I/O, raw process execution, and bridge-protocol access from Desktop.
+Desktop must not register, resolve, or retain Core business-service interfaces unless they are a documented composition-only transport dependency. Structural tests must reject direct Core product service, product-state host-I/O, raw process execution, and bridge-protocol access from Desktop.
 
-Acceptance: each supported Desktop business operation maps to one typed `IPowerShellModuleClient` method and exported command family; stale constructor dependencies and DI registrations are removed; the inventory documents every remaining UI-only exception.
+Acceptance: each supported Desktop business operation maps to one typed `IPowerShellModuleClient` method and exported command family; stale constructor dependencies and DI registrations are removed; the inventory documents and tests every remaining exception. Permitted exceptions are WPF rendering/navigation/dialog/clipboard, picker selection without product parsing, browser/Explorer launch of a module-returned display-safe target, and composition-only construction of `IPowerShellService` for `PowerShellModuleClient`. Direct product settings file reads, module imports, raw diagnostic execution, Core business-service resolution, product-directory creation, and raw process execution are not exceptions.
 
 ## Non-Functional Requirements
 

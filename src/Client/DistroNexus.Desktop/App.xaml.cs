@@ -1,4 +1,3 @@
-using System.IO;
 using System.Net.Http;
 using System.Windows;
 using System.Windows.Threading;
@@ -33,8 +32,9 @@ public partial class App : System.Windows.Application
                 LocalizeDictionary.Instance.Culture = System.Globalization.CultureInfo.GetCultureInfo("en-US");
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"Default localization initialization failed: {ex.Message}");
         }
     }
 
@@ -51,9 +51,6 @@ public partial class App : System.Windows.Application
             ConfigureNLog();
             System.Diagnostics.Debug.WriteLine("NLog configured successfully");
 
-            // Apply language settings early
-            ApplyLanguageFromSettings();
-
             // Set up global exception handlers after NLog
             SetupExceptionHandling();
             System.Diagnostics.Debug.WriteLine("Exception handling setup complete");
@@ -68,56 +65,8 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<IPowerShellService>(sp => new PowerShellService(sp.GetRequiredService<ILogger<PowerShellService>>()));
                     services.AddSingleton<IPowerShellModuleClient, PowerShellModuleClient>();
 
-                    // Register other Core services
-                    services.AddSingleton<IWslManagerService, WslManagerService>();
-                    services.AddSingleton<ICatalogService, CatalogService>();
                     services.AddSingleton<INavigationService, NavigationService>();
-                    services.AddSingleton<IDockerIntegrationService, DockerIntegrationService>();
-                    services.AddSingleton<WslConfigService>();
-                    services.AddSingleton<IWslConfigService>(sp => sp.GetRequiredService<WslConfigService>());
-                    services.AddSingleton<IWslConfigurationService>(sp => sp.GetRequiredService<WslConfigService>());
-                    services.AddSingleton<IDistributionConfigurationService, DistributionConfigurationService>();
-                    services.AddSingleton<IBackupService, BackupService>();
-                    services.AddSingleton<IRecoveryPointRuntime, WslRecoveryPointRuntime>();
-                    services.AddSingleton<IRecoveryPointService>(sp => new RecoveryPointService(sp.GetRequiredService<IRecoveryPointRuntime>(), sp.GetRequiredService<IBackupService>()));
-                    services.AddSingleton<IRecoveryOfferService, RecoveryOfferService>();
-                    services.AddSingleton<INetworkService, NetworkService>();
-                    services.AddSingleton<ISystemdService, SystemdService>();
-                    services.AddSingleton<IWslNetworkDiagnosticsAdapter, WslNetworkDiagnosticsAdapter>();
-                    services.AddSingleton<INetworkDiagnosticsService, NetworkDiagnosticsService>();
-                    services.AddSingleton<INetworkConfigurationService, NetworkConfigurationService>();
-                    services.AddSingleton<INetworkStatusAdapter, WindowsNetworkStatusAdapter>();
-                    services.AddSingleton<IFirewallOperationBroker, GuardedFirewallOperationBroker>();
-                    services.AddSingleton<IBrowserLauncher, BrowserLauncher>();
-                    services.AddSingleton<MonitoringWarningRegistry>();
-                    services.AddSingleton<IMonitoringWarningSource>(sp => sp.GetRequiredService<MonitoringWarningRegistry>());
-                    services.AddSingleton<IMonitoringWarningSink>(sp => sp.GetRequiredService<MonitoringWarningRegistry>());
-                    services.AddSingleton<IMonitoringService, MonitoringService>();
-                    services.AddSingleton<IProcessRunner, ProcessRunner>();
-                    services.AddSingleton<IPodmanDesktopInstallationDetector, WindowsPodmanDesktopInstallationDetector>();
-                    services.AddSingleton<IContainerRuntimeAdapter, DockerDesktopRuntimeAdapter>();
-                    services.AddSingleton<IContainerRuntimeAdapter, PodmanWslRuntimeAdapter>();
-                    services.AddSingleton<IContainerRuntimeAdapter>(sp => new PodmanDesktopRuntimeAdapter(sp.GetRequiredService<IProcessRunner>(), sp.GetRequiredService<IPodmanDesktopInstallationDetector>()));
-                    services.AddSingleton<IContainerRuntimeService, ContainerRuntimeService>();
-                    services.AddSingleton<IWorkspaceRuntime, WorkspaceRuntime>();
-                    services.AddSingleton<IWorkspaceTemplatePrerequisiteChecker, UnavailableWorkspaceTemplatePrerequisiteChecker>();
-                    services.AddSingleton<IWorkspaceActionCapabilityGate, WorkspaceActionCapabilityGate>();
                     services.AddSingleton<WorkspaceStartupRequest>();
-                    services.AddSingleton<IWorkspaceActionHandler>(sp => new WorkspaceActionHandler(WorkspaceActionType.Terminal, sp.GetRequiredService<IWorkspaceRuntime>(), sp.GetRequiredService<IWorkspaceActionCapabilityGate>()));
-                    services.AddSingleton<IWorkspaceActionHandler>(sp => new WorkspaceActionHandler(WorkspaceActionType.VisualStudioCode, sp.GetRequiredService<IWorkspaceRuntime>(), sp.GetRequiredService<IWorkspaceActionCapabilityGate>()));
-                    services.AddSingleton<IWorkspaceActionHandler>(sp => new WorkspaceActionHandler(WorkspaceActionType.Explorer, sp.GetRequiredService<IWorkspaceRuntime>(), sp.GetRequiredService<IWorkspaceActionCapabilityGate>()));
-                    services.AddSingleton<IWorkspaceActionHandler>(sp => new WorkspaceActionHandler(WorkspaceActionType.Browser, sp.GetRequiredService<IWorkspaceRuntime>(), sp.GetRequiredService<IWorkspaceActionCapabilityGate>()));
-                    services.AddSingleton<IWorkspaceActionHandler>(sp => new WorkspaceActionHandler(WorkspaceActionType.LinuxCommand, sp.GetRequiredService<IWorkspaceRuntime>(), sp.GetRequiredService<IWorkspaceActionCapabilityGate>()));
-                    services.AddSingleton<IWorkspaceActionHandler>(sp => new WorkspaceActionHandler(WorkspaceActionType.ShellScript, sp.GetRequiredService<IWorkspaceRuntime>(), sp.GetRequiredService<IWorkspaceActionCapabilityGate>()));
-                    services.AddSingleton<IWorkspaceActionHandler>(sp => new WorkspaceActionHandler(WorkspaceActionType.Systemd, sp.GetRequiredService<IWorkspaceRuntime>(), sp.GetRequiredService<IWorkspaceActionCapabilityGate>()));
-                    services.AddSingleton<IWorkspaceActionHandler>(sp => new WorkspaceActionHandler(WorkspaceActionType.DockerCompose, sp.GetRequiredService<IWorkspaceRuntime>(), sp.GetRequiredService<IWorkspaceActionCapabilityGate>()));
-                    services.AddSingleton<IWorkspaceActionHandler>(sp => new WorkspaceActionHandler(WorkspaceActionType.PodmanCompose, sp.GetRequiredService<IWorkspaceRuntime>(), sp.GetRequiredService<IWorkspaceActionCapabilityGate>()));
-                    services.AddSingleton<IWorkspaceService, WorkspaceService>();
-                    services.AddSingleton<IWorkspaceShortcutWriter, WorkspaceShortcutWriter>();
-                    services.AddSingleton<IWslEventWatcher, WslEventWatcher>();
-                    services.AddSingleton<IWslCliRunner, WslCliRunner>();
-                    services.AddPlatformCapabilities();
-                    services.AddHealthCenter();
                     // Override the Core null navigation sink with the concrete shell bridge.
                     services.AddSingleton<DesktopHealthNavigationBroker>();
                     services.AddSingleton<IHealthNavigationBroker>(sp => sp.GetRequiredService<DesktopHealthNavigationBroker>());
@@ -267,12 +216,12 @@ public partial class App : System.Windows.Application
             // Small delay to ensure window is fully rendered
             await Task.Delay(100);
 
-            // Initialize PowerShell module (non-blocking, runs in background)
-            System.Diagnostics.Debug.WriteLine("Initializing PowerShell module in background...");
-            InitializePowerShellModule();
-
-            // Check for updates (non-blocking)
-            _ = CheckForUpdatesOnStartupAsync();
+            var moduleClient = _host?.Services.GetRequiredService<IPowerShellModuleClient>();
+            if (moduleClient is null) return;
+            // The typed bootstrap operation is the sole product-settings input at startup.
+            var bootstrap = await moduleClient.GetBootstrapSettingsAsync();
+            ApplyBootstrapSettings(bootstrap.Settings);
+            await CheckForUpdatesOnStartupAsync(bootstrap.Settings);
 
             System.Diagnostics.Debug.WriteLine("=== Background Initialization Complete ===");
         }
@@ -286,7 +235,7 @@ public partial class App : System.Windows.Application
     /// <summary>
     /// Checks for application updates on startup if enabled in settings.
     /// </summary>
-    private async Task CheckForUpdatesOnStartupAsync()
+    private async Task CheckForUpdatesOnStartupAsync(GlobalSettings settings)
     {
         try
         {
@@ -299,8 +248,6 @@ public partial class App : System.Windows.Application
                 _logger?.LogInformation("Skipping update check on startup because Store compliance mode is enabled");
                 return;
             }
-
-            var settings = await moduleClient.GetSettingsAsync();
 
             if (!settings.CheckUpdatesOnStartup)
             {
@@ -359,41 +306,16 @@ public partial class App : System.Windows.Application
         _host?.Dispose();
     }
 
-    /// <summary>
-    /// Applies language from settings.
-    /// </summary>
-    private void ApplyLanguageFromSettings()
+    private void ApplyBootstrapSettings(GlobalSettings settings)
     {
         try
         {
-            string language = "en-US";
-            try
-            {
-                var settingsPath = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "DistroNexus",
-                    "settings.json");
-                
-                if (File.Exists(settingsPath))
-                {
-                    var settingsJson = File.ReadAllText(settingsPath);
-                    var settings = System.Text.Json.JsonSerializer.Deserialize<GlobalSettings>(settingsJson);
-                    if (!string.IsNullOrEmpty(settings?.Language))
-                    {
-                        language = settings.Language;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error reading settings for language: {ex.Message}");
-            }
-
+            var language = string.IsNullOrWhiteSpace(settings.Language) ? "en-US" : settings.Language;
             var culture = new System.Globalization.CultureInfo(language);
             System.Threading.Thread.CurrentThread.CurrentUICulture = culture;
             System.Threading.Thread.CurrentThread.CurrentCulture = culture;
             LocalizeDictionary.Instance.Culture = culture;
-            System.Diagnostics.Debug.WriteLine($"Applied language: {language}");
+            _logger?.LogInformation("Applied bootstrap language {Language}", language);
         }
         catch (Exception ex)
         {
@@ -401,115 +323,12 @@ public partial class App : System.Windows.Application
         }
     }
 
-    /// <summary>
-    /// Configures NLog with dynamic log path based on settings.
-    /// </summary>
     private void ConfigureNLog()
     {
         try
         {
-            System.Diagnostics.Debug.WriteLine("=== ConfigureNLog Start ===");
-
-            string logDirectory;
-            bool enableLogging = true;
-
-            try
-            {
-                // Try to load log path from settings (stored in ApplicationData/Roaming)
-                var settingsPath = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "DistroNexus",
-                    "settings.json");
-
-                System.Diagnostics.Debug.WriteLine($"Checking for settings at: {settingsPath}");
-                System.Diagnostics.Debug.WriteLine($"Settings file exists: {File.Exists(settingsPath)}");
-
-                if (File.Exists(settingsPath))
-                {
-                    var settingsJson = File.ReadAllText(settingsPath);
-                    System.Diagnostics.Debug.WriteLine($"Settings JSON length: {settingsJson.Length}");
-
-                    var settings = System.Text.Json.JsonSerializer.Deserialize<GlobalSettings>(settingsJson);
-
-                    if (settings != null)
-                    {
-                        enableLogging = settings.EnableLogging;
-                        
-                        if (!string.IsNullOrWhiteSpace(settings.LogPath))
-                        {
-                            logDirectory = settings.LogPath;
-                            System.Diagnostics.Debug.WriteLine($"Using log path from settings: {logDirectory}");
-                        }
-                        else
-                        {
-                            logDirectory = Path.Combine(
-                                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                                "DistroNexus",
-                                "Logs");
-                        }
-                    }
-                    else
-                    {
-                        logDirectory = Path.Combine(
-                            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                            "DistroNexus",
-                            "Logs");
-                    }
-                }
-                else
-                {
-                    // Settings file doesn't exist, use default
-                    logDirectory = Path.Combine(
-                        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                        "DistroNexus",
-                        "Logs");
-                }
-            }
-            catch (Exception ex)
-            {
-                // If anything fails, use default
-                logDirectory = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "DistroNexus",
-                    "Logs");
-                System.Diagnostics.Debug.WriteLine($"Error loading settings: {ex.Message}");
-            }
-
-            if (!enableLogging)
-            {
-                System.Diagnostics.Debug.WriteLine("Logging is disabled in settings");
-                // Ensure no logging configuration is active
-                LogManager.Configuration = null;
-                return;
-            }
-
-            // Ensure log directory exists
-            System.Diagnostics.Debug.WriteLine($"Creating log directory: {logDirectory}");
-            Directory.CreateDirectory(logDirectory);
-            System.Diagnostics.Debug.WriteLine($"Log directory created/verified");
-
-            // Configure NLog with dynamic log directory
-            var config = LogManager.Configuration ?? new NLog.Config.LoggingConfiguration();
-
-            // Update log directory variable
-            config.Variables["logDirectory"] = logDirectory;
-
-            // Apply configuration
-            LogManager.Configuration = config;
-
-            System.Diagnostics.Debug.WriteLine($"NLog configuration applied");
-
-            // Write a test log entry to verify NLog is working
-            var testLogger = LogManager.GetLogger("DistroNexus.Startup");
-            testLogger.Info($"NLog initialized successfully. Log directory: {logDirectory}");
-            testLogger.Info($"Application starting at: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-
-            System.Diagnostics.Debug.WriteLine($"Test log written");
-            System.Diagnostics.Debug.WriteLine($"=== ConfigureNLog Complete ===");
-            System.Diagnostics.Debug.WriteLine($"Final log path: {logDirectory}");
-
-            // Force flush to ensure test log is written
-            LogManager.Flush();
+            // Product-independent defaults deliberately precede the typed bootstrap call.
+            LogManager.Configuration ??= new NLog.Config.LoggingConfiguration();
         }
         catch (Exception ex)
         {
@@ -570,59 +389,5 @@ public partial class App : System.Windows.Application
         }
     }
 
-    private void InitializePowerShellModule()
-    {
-        // Note: The DistroNexus PowerShell module is optional.
-        // WslManagerService now uses inline PowerShell scripts directly,
-        // so the external module is not required for core functionality.
-        // This method is kept for future extensibility if a module is added.
-        
-        try
-        {
-            var powerShellService = _host?.Services.GetRequiredService<IPowerShellService>();
-            if (powerShellService == null)
-                return;
-
-            // Check for optional PowerShell module in multiple locations
-            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            string[] possiblePaths =
-            [
-                Path.Combine(baseDir, "PowerShell", "DistroNexus.psm1"),
-                Path.Combine(baseDir, @"..\..\..\..\..\PowerShell\DistroNexus.psm1"),
-                Path.Combine(baseDir, @"..\..\..\..\src\PowerShell\DistroNexus.psm1")
-            ];
-
-            foreach (var path in possiblePaths)
-            {
-                var modulePath = Path.GetFullPath(path);
-                if (File.Exists(modulePath))
-                {
-                    // Module found - try to load it (fire and forget, non-blocking)
-                    _ = Task.Run(async () =>
-                    {
-                        try
-                        {
-                            await powerShellService.ImportModuleAsync(modulePath);
-                            _logger?.LogInformation("Optional PowerShell module loaded from {ModulePath}", modulePath);
-                        }
-                        catch (Exception ex)
-                        {
-                            // Module loading is optional, just log the warning
-                            _logger?.LogWarning(ex, "Could not load optional PowerShell module from {ModulePath}", modulePath);
-                        }
-                    });
-                    return;
-                }
-            }
-
-            // No module found - this is fine, core functionality uses inline scripts
-            _logger?.LogDebug("No DistroNexus PowerShell module found. Using inline scripts for WSL operations.");
-        }
-        catch (Exception ex)
-        {
-            // Don't show error dialogs for optional module loading
-            _logger?.LogWarning(ex, "Error during optional PowerShell module initialization");
-        }
-    }
 }
 

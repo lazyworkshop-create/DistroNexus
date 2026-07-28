@@ -20,10 +20,9 @@ namespace DistroNexus.Desktop.ViewModels;
 /// </summary>
 public partial class WslInstanceViewModel : ObservableObject
 {
-    private readonly IWslManagerService _wslManager;
     private readonly ILogger _logger;
     private readonly IPowerShellModuleClient _moduleClient;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IDialogService _dialogService;
 
     /// <summary>
     /// Event raised when the instance requests a refresh of the main list (e.g. after deletion).
@@ -103,17 +102,16 @@ public partial class WslInstanceViewModel : ObservableObject
 
     public WslInstanceViewModel(
         WslInstance instance,
-        IWslManagerService wslManager,
         ILogger logger,
         IPowerShellModuleClient moduleClient,
-        IServiceProvider serviceProvider)
+        IDialogService dialogService)
     {
         _instance = instance;
-        _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
-        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
+        _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
     }
+
 
     private static string FormatFileSize(long bytes)
     {
@@ -604,17 +602,7 @@ public partial class WslInstanceViewModel : ObservableObject
     [RelayCommand]
     private void OpenDetails()
     {
-        var wslManager = _serviceProvider.GetRequiredService<IWslManagerService>();
-        var networkSvc = _serviceProvider.GetRequiredService<INetworkService>();
-        var wslConfigSvc = _serviceProvider.GetRequiredService<IWslConfigService>();
-        var dialogSvc = _serviceProvider.GetRequiredService<IDialogService>();
-        var systemdService = _serviceProvider.GetRequiredService<ISystemdService>();
-        var networkDiagnostics = _serviceProvider.GetRequiredService<INetworkDiagnosticsService>();
-        var firewallOperationBroker = _serviceProvider.GetRequiredService<IFirewallOperationBroker>();
-        var networkConfigurationService = _serviceProvider.GetRequiredService<INetworkConfigurationService>();
-        var networkStatusAdapter = _serviceProvider.GetRequiredService<INetworkStatusAdapter>();
-        var browserLauncher = _serviceProvider.GetRequiredService<IBrowserLauncher>();
-        var vm = new InstanceDetailViewModel(this, wslManager, networkSvc, wslConfigSvc, dialogSvc, systemdService, networkDiagnostics, firewallOperationBroker, networkConfigurationService, networkStatusAdapter, browserLauncher, _moduleClient);
+        var vm = new InstanceDetailViewModel(this, _dialogService, _moduleClient);
         var dialog = new InstanceDetailDialog(vm)
         {
             Owner = Application.Current.MainWindow
@@ -637,7 +625,7 @@ public partial class WslInstanceViewModel : ObservableObject
     [RelayCommand]
     private async Task ExportInstanceAsync()
     {
-        var dialogSvc = _serviceProvider.GetRequiredService<IDialogService>();
+        var dialogSvc = _dialogService;
 
         // Open SaveFileDialog
         var dlg = new SaveFileDialog
@@ -691,18 +679,6 @@ public partial class WslInstanceViewModel : ObservableObject
         {
             progressDialog.Close();
             IsBusy = false;
-        }
-    }
-
-    private static long GetFileLengthOrZero(string path)
-    {
-        try
-        {
-            return System.IO.File.Exists(path) ? new System.IO.FileInfo(path).Length : 0;
-        }
-        catch
-        {
-            return 0;
         }
     }
 

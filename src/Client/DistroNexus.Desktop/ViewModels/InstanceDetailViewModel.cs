@@ -35,29 +35,21 @@ public partial class InstanceDetailViewModel : ObservableObject, IAsyncDisposabl
 
     public InstanceDetailViewModel(
         WslInstanceViewModel instance,
-        IWslManagerService wslManager,
-        INetworkService networkService,
-        IWslConfigService wslConfigService,
         IDialogService dialogService,
-        ISystemdService systemdService,
-        INetworkDiagnosticsService networkDiagnostics,
-        IFirewallOperationBroker firewallOperationBroker,
-        INetworkConfigurationService networkConfigurationService,
-        INetworkStatusAdapter networkStatusAdapter,
-        IBrowserLauncher browserLauncher,
-        IPowerShellModuleClient? powerShellModuleClient = null)
+        IPowerShellModuleClient powerShellModuleClient)
     {
         _instance = instance ?? throw new ArgumentNullException(nameof(instance));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
 
-        DiskTab = new DiskTabViewModel(instance, powerShellModuleClient ?? throw new ArgumentNullException(nameof(powerShellModuleClient)), dialogService);
-        ResourcesTab = new ResourcesTabViewModel(instance, powerShellModuleClient ?? throw new ArgumentNullException(nameof(powerShellModuleClient)), dialogService);
-        IntegrationsTab = new IntegrationsTabViewModel(instance, dialogService, powerShellModuleClient ?? throw new ArgumentNullException(nameof(powerShellModuleClient)));
-        NetworkTab = new NetworkTabViewModel(instance, dialogService, powerShellModuleClient ?? throw new ArgumentNullException(nameof(powerShellModuleClient)));
-        BackupTab = new BackupTabViewModel(instance, dialogService, powerShellModuleClient ?? throw new ArgumentNullException(nameof(powerShellModuleClient)));
-        ConfigurationTab = new ConfigurationTabViewModel(instance, powerShellModuleClient ?? throw new ArgumentNullException(nameof(powerShellModuleClient)), dialogService);
-        ServicesTab = new ServicesTabViewModel(instance, powerShellModuleClient ?? throw new ArgumentNullException(nameof(powerShellModuleClient)), dialogService);
-        MonitorTab = new MonitorTabViewModel(instance, powerShellModuleClient ?? throw new ArgumentNullException(nameof(powerShellModuleClient)), dialogService);
+        ArgumentNullException.ThrowIfNull(powerShellModuleClient);
+        DiskTab = new DiskTabViewModel(instance, powerShellModuleClient, dialogService);
+        ResourcesTab = new ResourcesTabViewModel(instance, powerShellModuleClient, dialogService);
+        IntegrationsTab = new IntegrationsTabViewModel(instance, dialogService, powerShellModuleClient);
+        NetworkTab = new NetworkTabViewModel(instance, dialogService, powerShellModuleClient);
+        BackupTab = new BackupTabViewModel(instance, dialogService, powerShellModuleClient);
+        ConfigurationTab = new ConfigurationTabViewModel(instance, powerShellModuleClient, dialogService);
+        ServicesTab = new ServicesTabViewModel(instance, powerShellModuleClient, dialogService);
+        MonitorTab = new MonitorTabViewModel(instance, powerShellModuleClient, dialogService);
     }
 
     partial void OnSelectedTabIndexChanged(int value)

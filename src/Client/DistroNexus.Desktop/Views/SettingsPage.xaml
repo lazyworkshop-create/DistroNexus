@@ -339,11 +339,6 @@ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                                           Margin="0,0,0,15"/>
                         </Grid>
                         
-                        <TextBlock Text="{lex:Loc LogFilePath}" Margin="0,15,0,5" 
-                                   Visibility="{Binding EnableLogging, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                        <ui:TextBox Text="{Binding LogPath}" 
-                                   IsReadOnly="True"
-                                   Visibility="{Binding EnableLogging, Converter={StaticResource BoolToVisibilityConverter}}"/>
                     </StackPanel>
                 </ui:Card>
 

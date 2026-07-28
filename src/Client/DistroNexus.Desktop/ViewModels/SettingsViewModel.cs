@@ -51,9 +51,6 @@ public partial class SettingsViewModel : ObservableObject
     private bool _enableLogging = true;
 
     [ObservableProperty]
-    private string _logPath = string.Empty;
-
-    [ObservableProperty]
     private bool _checkUpdatesOnStartup = true;
 
     [ObservableProperty]
@@ -118,14 +115,11 @@ public partial class SettingsViewModel : ObservableObject
     public ManageTagsViewModel ManageTags { get; }
 
     public SettingsViewModel(
-        ICatalogService catalogService,
         ILogger<SettingsViewModel> logger,
-        IWslManagerService wslManagerService,
         IPowerShellModuleClient moduleClient,
         IDialogService dialogService)
     {
         _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
-        ArgumentNullException.ThrowIfNull(catalogService); // retained constructor compatibility; cache work uses the typed module client.
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         WslConfigSection = new WslConfigSectionViewModel(moduleClient, dialogService);
         ManageTags = new ManageTagsViewModel(moduleClient, dialogService);
@@ -164,7 +158,6 @@ public partial class SettingsViewModel : ObservableObject
             DefaultWslVersion = settings.DefaultWslVersion;
             DefaultUsername = settings.DefaultUsername;
             EnableLogging = settings.EnableLogging;
-            LogPath = settings.LogPath;
             CheckUpdatesOnStartup = settings.CheckUpdatesOnStartup;
             IsUpdateCheckOnStartupAvailable = !isStoreComplianceMode;
 
@@ -335,22 +328,6 @@ public partial class SettingsViewModel : ObservableObject
         {
             _logger.LogError(ex, "Failed to apply theme");
             await ShowAlert(Properties.Resources.TitleThemeError, string.Format(Properties.Resources.ErrorApplyTheme, MainViewModel.FormatAlertMessage(ex)));
-        }
-    }
-
-    [RelayCommand]
-    private void BrowseLogPath()
-    {
-        var dialog = new Microsoft.Win32.OpenFolderDialog
-        {
-            Title = "Select log file path",
-            InitialDirectory = LogPath
-        };
-
-        if (dialog.ShowDialog() == true)
-        {
-            LogPath = dialog.FolderName;
-            IsDirty = true;
         }
     }
 
@@ -585,6 +562,7 @@ public partial class SettingsViewModel : ObservableObject
         _autoSaveTimer = null;
     }
 
+
     private DistroNexusSettingsUpdate CreateSettingsUpdate() => new(
         DefaultInstallPath,
         PackageCachePath,
@@ -593,7 +571,7 @@ public partial class SettingsViewModel : ObservableObject
         DefaultUsername,
         DefaultDistribution?.Id ?? string.Empty,
         EnableLogging,
-        LogPath,
+        null,
         IsUpdateCheckOnStartupAvailable && CheckUpdatesOnStartup,
         CatalogUrl,
         Theme,

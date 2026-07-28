@@ -52,6 +52,7 @@ public interface IPowerShellModuleClient
     /// <summary>Gets the modeled global settings through the module contract.</summary>
     Task<GlobalSettings> GetSettingsAsync(CancellationToken cancellationToken = default);
     Task<BootstrapSettingsResult> GetBootstrapSettingsAsync(CancellationToken cancellationToken = default);
+    Task<DiagnosticSnapshotResult> GetDiagnosticSnapshotAsync(CancellationToken cancellationToken = default);
     Task<StoreComplianceStatusResult> GetStoreComplianceStatusAsync(CancellationToken cancellationToken = default);
     Task<UpdateStatusResult> GetUpdateStatusAsync(bool includePrerelease = false, CancellationToken cancellationToken = default);
 

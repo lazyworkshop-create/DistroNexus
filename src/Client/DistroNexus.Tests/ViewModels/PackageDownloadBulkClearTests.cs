@@ -20,7 +20,7 @@ public sealed class PackageDownloadBulkClearTests
         client.Setup(x => x.ExecutePackageDownloadJobActionAsync(token, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PackageJobActionResult(jobId, "Package.Cleared"));
         client.Setup(x => x.GetPackageDownloadJobsAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
-        var viewModel = new MainViewModel(Mock.Of<IWslManagerService>(), Mock.Of<INavigationService>(), Mock.Of<IServiceProvider>(), Mock.Of<ILogger<MainViewModel>>(), Mock.Of<IWslEventWatcher>(), client.Object, Mock.Of<IDialogService>());
+        var viewModel = new MainViewModel(Mock.Of<IServiceProvider>(), Mock.Of<ILogger<MainViewModel>>(), client.Object, Mock.Of<IDialogService>());
         viewModel.DownloadJobs.Add(new PackageDownloadJob(jobId, "ubuntu", "Ubuntu", "Interrupted", 0, "Package.Interrupted"));
 
         await viewModel.ClearCompletedDownloadsCommand.ExecuteAsync(null);

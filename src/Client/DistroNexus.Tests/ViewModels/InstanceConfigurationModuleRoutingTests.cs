@@ -20,7 +20,7 @@ public sealed class InstanceConfigurationModuleRoutingTests
         client.Setup(x => x.GetInstanceConfigurationRecoveryOfferAsync("Ubuntu", It.IsAny<CancellationToken>())).ReturnsAsync(new InstanceConfigurationRecoveryResult("Ubuntu", "Unavailable", null, "Instance.ConfigRecoveryUnavailable"));
         client.Setup(x => x.SaveInstanceConfigurationAsync(new string('a', 64), It.IsAny<CancellationToken>())).ReturnsAsync(new InstanceConfigurationSaveResult("Ubuntu", false, "None", "Instance.ConfigSaved"));
         var dialogs = new Mock<IDialogService>(); dialogs.Setup(x => x.ShowConfirmAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
-        var instance = new WslInstanceViewModel(new WslInstance { Name = "Ubuntu", Version = 2 }, Mock.Of<IWslManagerService>(), Mock.Of<ILogger>(), client.Object, Mock.Of<IServiceProvider>());
+        var instance = new WslInstanceViewModel(new WslInstance { Name = "Ubuntu", Version = 2 }, Mock.Of<ILogger>(), client.Object, Mock.Of<IDialogService>());
         var vm = new ConfigurationTabViewModel(instance, client.Object, dialogs.Object);
         await vm.InitializeAsync(); vm.Systemd = true; await vm.SaveCommand.ExecuteAsync(null);
         client.Verify(x => x.PreviewInstanceConfigurationAsync("Ubuntu", It.Is<IReadOnlyDictionary<string, string?>>(c => c["boot.systemd"] == "true"), It.IsAny<CancellationToken>()), Times.Once);

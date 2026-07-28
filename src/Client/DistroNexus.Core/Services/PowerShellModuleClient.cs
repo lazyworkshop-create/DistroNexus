@@ -44,6 +44,7 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string SetInstanceSparseModeCommand = "Set-DistroNexusInstanceSparseMode";
     private const string CompactInstanceCommand = "Compress-DistroNexusInstance";
     private const string GetSettingsCommand = "Get-DistroNexusSettings";
+    private const string GetDiagnosticSnapshotCommand = "Get-DistroNexusDiagnosticSnapshot";
     private const string SetSettingsCommand = "Set-DistroNexusSettings";
     private const string ResetSettingsCommand = "Reset-DistroNexusSettings";
     private const string GetCatalogSourcesCommand = "Get-DistroNexusCatalogSource";
@@ -530,6 +531,33 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
         bootstrap.Settings.PowerShellModulePath = null;
         return bootstrap;
     }
+
+    public async Task<DiagnosticSnapshotResult> GetDiagnosticSnapshotAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(
+            GetDiagnosticSnapshotCommand,
+            options: new ModuleCallOptions { ParseAsJson = true },
+            cancellationToken: cancellationToken);
+        ThrowIfFailed(result);
+        if (result.Output is null || System.Text.Encoding.UTF8.GetByteCount(result.Output) > 16 * 1024)
+            throw new JsonException("Diagnostic snapshot exceeds the maximum envelope size.");
+        using var document = JsonDocument.Parse(result.Output);
+        var allowed = new[] { "ModuleState", "WslState", "BridgeState", "Notices", "OutcomeCode" };
+        if (document.RootElement.ValueKind != JsonValueKind.Object || document.RootElement.EnumerateObject().Any(p => !allowed.Contains(p.Name, StringComparer.Ordinal)))
+            throw new JsonException("Diagnostic snapshot contains unknown fields.");
+        var snapshot = JsonSerializer.Deserialize<DiagnosticSnapshotResult>(result.Output, StrictJsonOptions)
+            ?? throw new JsonException("Invalid diagnostic snapshot.");
+        if (snapshot.ModuleState != "Ready" || snapshot.BridgeState != "Ready" || snapshot.WslState is not ("Ready" or "Unavailable" or "Unknown") ||
+            snapshot.OutcomeCode is not ("Diagnostic.Ready" or "Diagnostic.Degraded") ||
+            (snapshot.WslState == "Ready") != (snapshot.OutcomeCode == "Diagnostic.Ready") || snapshot.Notices is null || snapshot.Notices.Count > 16 ||
+            snapshot.Notices.Any(n => !System.Text.RegularExpressions.Regex.IsMatch(n.Code ?? string.Empty, "^[A-Z][A-Za-z0-9.]{0,63}$") || n.Severity is not ("Info" or "Warning" or "Error") || string.IsNullOrWhiteSpace(n.Message) || n.Message.Length > 256 || n.Message.Any(char.IsControl) || ContainsHostPath(n.Message)))
+            throw new JsonException("Invalid diagnostic snapshot.");
+        return snapshot;
+    }
+
+    private static bool ContainsHostPath(string value) =>
+        System.Text.RegularExpressions.Regex.IsMatch(value, "[A-Za-z]:[\\\\/]") ||
+        System.Text.RegularExpressions.Regex.IsMatch(value, "(^|\\s)(?:\\\\\\\\|//|\\\\\\?\\\\|\\\\\\.\\\\|/)(?:[^\\s]*)");
 
     public async Task<StoreComplianceStatusResult> GetStoreComplianceStatusAsync(CancellationToken cancellationToken = default)
     {

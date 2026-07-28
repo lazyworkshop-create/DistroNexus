@@ -541,6 +541,26 @@ public sealed class PowerShellModuleClientTests
         await Assert.ThrowsAsync<TaskCanceledException>(() => client.RemoveCatalogSourceAsync("source-1", cancellation.Token));
     }
 
+    [Theory]
+    [InlineData("C:\\\\secret")]
+    [InlineData("\\\\server\\share")]
+    [InlineData("\\\\?\\C:\\device")]
+    [InlineData("/var/lib/distronexus")]
+    public async Task DiagnosticSnapshot_UsesClosedCommandAndRejectsUnsafeNotice(string unsafeMessage)
+    {
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(service => service.ExecuteModuleCmdletAsync("Get-DistroNexusDiagnosticSnapshot", null, It.IsAny<ModuleCallOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"ModuleState\":\"Ready\",\"WslState\":\"Ready\",\"BridgeState\":\"Ready\",\"Notices\":[],\"OutcomeCode\":\"Diagnostic.Ready\"}" });
+        var client = new PowerShellModuleClient(powerShell.Object);
+        var snapshot = await client.GetDiagnosticSnapshotAsync();
+        Assert.Equal("Diagnostic.Ready", snapshot.OutcomeCode);
+
+        powerShell.Reset();
+        powerShell.Setup(service => service.ExecuteModuleCmdletAsync("Get-DistroNexusDiagnosticSnapshot", null, It.IsAny<ModuleCallOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = JsonSerializer.Serialize(new { ModuleState = "Ready", WslState = "Ready", BridgeState = "Ready", Notices = new[] { new { Code = "WSL.Path", Severity = "Error", Message = unsafeMessage } }, OutcomeCode = "Diagnostic.Ready" }) });
+        await Assert.ThrowsAsync<JsonException>(() => client.GetDiagnosticSnapshotAsync());
+    }
+
     [Fact]
     public void Interface_ExposesOnlyTheRegisteredTypedOperations()
     {
@@ -573,6 +593,7 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.GetDockerIntegrationPreviewAsync),
                 nameof(IPowerShellModuleClient.GetDiagnosticLogOptionsAsync),
                 nameof(IPowerShellModuleClient.GetDiagnosticReportPreviewAsync),
+                nameof(IPowerShellModuleClient.GetDiagnosticSnapshotAsync),
                 nameof(IPowerShellModuleClient.GetFirewallCreatePreviewAsync),
                 nameof(IPowerShellModuleClient.GetFirewallRemovePreviewAsync),
                 nameof(IPowerShellModuleClient.GetFirewallRulesAsync),

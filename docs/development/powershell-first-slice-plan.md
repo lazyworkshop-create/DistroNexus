@@ -2896,3 +2896,94 @@ Diagnostic replacement plus final composition and structural enforcement.
 ### Out of Scope
 
 USB action migration without authorization, publishing, and live host UAT.
+
+## Slice S46a: Diagnostic snapshot and stale composition retirement
+
+### Status
+
+Committed
+
+### Objective
+
+Replace raw Desktop diagnostics and retire obsolete Desktop Core composition without declaring product host-I/O exceptions.
+
+### Sources
+
+Remaining-boundaries requirements FR-106 and FR-107; design Diagnostics and final Desktop boundary.
+
+### Dependencies
+
+S45a.
+
+### Allowed Paths
+
+`docs/specs/powershell-first-remaining-boundaries-requirements.md`, `docs/specs/powershell-first-remaining-boundaries-design.md`, this plan; `src/Client/DistroNexus.Core/Interfaces/IPowerShellModuleClient.cs`, `src/Client/DistroNexus.Core/Models/DiagnosticSnapshotModels.cs`, `src/Client/DistroNexus.Core/Services/PowerShellModuleClient.cs`; `src/Client/DistroNexus.WorkspaceBridge/Program.cs`; `src/PowerShell/DistroNexus.psd1`, `src/PowerShell/Public/Get-DistroNexusDiagnosticSnapshot.ps1`; `src/Client/DistroNexus.Desktop/App.xaml.cs`, `src/Client/DistroNexus.Desktop/Views/SettingsPage.xaml`, `src/Client/DistroNexus.Desktop/ViewModels/MainViewModel.cs`, `src/Client/DistroNexus.Desktop/ViewModels/WslInstanceViewModel.cs`, `src/Client/DistroNexus.Desktop/ViewModels/InstanceDetailViewModel.cs`, `src/Client/DistroNexus.Desktop/ViewModels/SettingsViewModel.cs`; `src/Client/DistroNexus.Tests/Services/PowerShellModuleClientTests.cs`, `src/Client/DistroNexus.Tests/Services/WorkspaceBridgeProtocolTests.cs`, `src/Client/DistroNexus.Tests/ViewModels/MainViewModelErrorTests.cs`, `src/Client/DistroNexus.Tests/ViewModels/BackupTabRecoveryHistoryTests.cs`, `src/Client/DistroNexus.Tests/ViewModels/ConfigurationViewModelTests.cs`, `src/Client/DistroNexus.Tests/ViewModels/InstanceConfigurationModuleRoutingTests.cs`, `src/Client/DistroNexus.Tests/ViewModels/IntegrationsContainerRuntimeTests.cs`, `src/Client/DistroNexus.Tests/ViewModels/MonitoringViewModelTests.cs`, `src/Client/DistroNexus.Tests/ViewModels/PackageDownloadBulkClearTests.cs`, `src/Client/DistroNexus.Tests/ViewModels/S05ViewModelTests.cs`, `src/Client/DistroNexus.Tests/ViewModels/SettingsViewModelRoutingTests.cs`, `src/Client/DistroNexus.Tests/ViewModels/WslInstanceTagRoutingTests.cs`, and `src/Client/DistroNexus.Tests/Architecture/S13DesktopCompositionAndLocalizationTests.cs`.
+
+### Excluded Paths
+
+Template file-import parsing, product log target creation/reveal, USB actions, release/publishing, and live host mutation.
+
+### Contract and Documentation
+
+Implement only `diagnostic.snapshot.v1 {}` and its closed redacted result. Publish the structural exception inventory and explicit follow-on closure entries.
+
+### Implementation Scope
+
+Remove raw `IPowerShellService` diagnostics, mutable module bootstrap/import, direct product settings reads, stale Core DI registrations, and unused constructor plumbing. `IPowerShellService` may remain only as the private `PowerShellModuleClient` transport dependency.
+
+### Test Scope
+
+Snapshot redaction/bounds/cancellation, closed payload rejection, Main routing, composition cleanup, and source-level forbidden dependency tests for this scope.
+
+### Acceptance Criteria
+
+- No view model resolves `IPowerShellService` or renders raw diagnostic output.
+- Desktop has no stale Core product registration/dependency after the named consumers are removed.
+- Structural tests enumerate the permitted composition/UI exceptions and reject the retired paths.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Diagnostic|FullyQualifiedName~Architecture|FullyQualifiedName~ViewModel|FullyQualifiedName~PowerShellModuleClient"
+pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Unit
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+One diagnostic/composition boundary migration only.
+
+### Out of Scope
+
+Template file-import content, product log target reveal/creation, USB actions, release/publishing, and live host mutation.
+
+## Slice S46b: Remaining Desktop host-I/O closure and global enforcement
+
+### Status
+
+Planned
+
+### Objective
+
+Move every named remaining Desktop product host-I/O path behind a typed module contract and enforce the all-Desktop boundary.
+
+### Sources
+
+FR-107; design Diagnostics and final Desktop boundary; S46a structural inventory.
+
+### Dependencies
+
+S46a.
+
+### Allowed Paths
+
+`docs/specs/powershell-first-remaining-boundaries-requirements.md`, `docs/specs/powershell-first-remaining-boundaries-design.md`, this plan; typed local-template import and product-log target Core models/interfaces/services, `src/Client/DistroNexus.Core/Interfaces/IPowerShellModuleClient.cs`, `src/Client/DistroNexus.Core/Services/PowerShellModuleClient.cs`, `src/Client/DistroNexus.WorkspaceBridge/Program.cs`, `src/PowerShell/DistroNexus.psd1`, exact new public commands; `src/Client/DistroNexus.Desktop/ViewModels/TemplatesViewModel.cs`, `src/Client/DistroNexus.Desktop/Wizard/Steps/ResultStep.cs`, `src/Client/DistroNexus.Desktop/Wizard/Steps/ProgressStep.cs`, `src/Client/DistroNexus.Desktop/Controls/Tabs/IntegrationsTabView.xaml.cs`, the exact UI launcher/picker adapter; and `src/Client/DistroNexus.Tests/Architecture/PowerShellFirstGlobalBoundaryTests.cs` with focused module/client/protocol/view-model tests.
+
+### Excluded Paths
+
+USB action/broker work, generic execution, release/publishing, and live host mutation.
+
+### Acceptance Criteria
+
+- The global structural test has no outstanding direct product host-I/O or Core business-service violation.
+- Every remaining product path is validated/owned by a fixed typed module route; UI invokes only a returned display-safe target.

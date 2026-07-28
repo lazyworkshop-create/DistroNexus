@@ -306,8 +306,8 @@ public class ConfigurationViewModelTests
     }
 
     */
-    private static WslInstanceViewModel NewInstance() => new(new WslInstance { Name = "Ubuntu", State = "Stopped", Version = 2 }, Mock.Of<IWslManagerService>(),
-        Mock.Of<ILogger>(), Mock.Of<IPowerShellModuleClient>(), Mock.Of<IServiceProvider>());
+    private static WslInstanceViewModel NewInstance() => new(new WslInstance { Name = "Ubuntu", State = "Stopped", Version = 2 },
+        Mock.Of<ILogger>(), Mock.Of<IPowerShellModuleClient>(), Mock.Of<IDialogService>());
 
     private static Mock<IDistributionConfigurationService> ReadableConfigurationService(LosslessIniDocument source)
     {

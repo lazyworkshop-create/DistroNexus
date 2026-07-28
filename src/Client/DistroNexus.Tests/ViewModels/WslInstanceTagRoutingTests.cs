@@ -77,10 +77,9 @@ public sealed class WslInstanceTagRoutingTests
             .ReturnsAsync([new WslInstance { Name = "Ubuntu", Size = 2048 }]);
         var viewModel = new WslInstanceViewModel(
             new WslInstance { Name = "Ubuntu", State = "Running" },
-            Mock.Of<IWslManagerService>(),
             Mock.Of<ILogger>(),
             moduleClient.Object,
-            Mock.Of<IServiceProvider>());
+            Mock.Of<IDialogService>());
 
         await viewModel.LoadDiskSizeAsync();
 
@@ -174,13 +173,7 @@ public sealed class WslInstanceTagRoutingTests
     }
 
     private static MainViewModel NewMainViewModel(IPowerShellModuleClient moduleClient) => new(
-        Mock.Of<IWslManagerService>(),
-        Mock.Of<INavigationService>(),
-        Mock.Of<IServiceProvider>(),
-        Mock.Of<ILogger<MainViewModel>>(),
-        Mock.Of<IWslEventWatcher>(),
-        moduleClient,
-        Mock.Of<IDialogService>());
+        Mock.Of<IServiceProvider>(), Mock.Of<ILogger<MainViewModel>>(), moduleClient, Mock.Of<IDialogService>());
 
     private static IEnumerable<string> CalledMethodNames(MethodInfo method)
     {

@@ -229,6 +229,7 @@ while ((line = Console.ReadLine()) is not null)
             "health.scan.v1" => await HealthScanV1Async(request),
             "health.history.v1" => await HealthHistoryV1Async(request),
             "diagnostics.log-options.v1" => DiagnosticLogOptionsV1(request),
+            "diagnostic.snapshot.v1" => await DiagnosticSnapshotV1Async(request),
             "health.repair-preview.v1" => await PreviewHealthRepairV1Async(request),
             "health.repair.v1" => await ExecuteHealthRepairV1Async(request),
             "diagnostics.preview.v1" => await PreviewDiagnosticsV1Async(request),
@@ -1065,6 +1066,25 @@ async Task<IReadOnlyList<HealthHistoryEntry>> HealthHistoryV1Async(BridgeRequest
 async Task<RepairPreview> PreviewHealthRepairV1Async(BridgeRequest request) { ValidatePayload(request, ["Finding"], ["Finding"]); return await PreviewHealthRepairAsync(request); }
 async Task<RepairResult> ExecuteHealthRepairV1Async(BridgeRequest request) { ValidatePayload(request, [], []); if (string.IsNullOrWhiteSpace(request.Token)) throw new ArgumentException("Health repair preview token is required."); return await healthRepairs.ExecuteAsync(request.Token); }
 IReadOnlyList<string> DiagnosticLogOptionsV1(BridgeRequest request) { ValidateEmptyPayload(request); return diagnosticLogs.AllowedLogIds.Order(StringComparer.Ordinal).ToArray(); }
+async Task<DiagnosticSnapshotResult> DiagnosticSnapshotV1Async(BridgeRequest request)
+{
+    ValidateEmptyPayload(request);
+    try
+    {
+        var snapshot = await capabilities.GetHostSnapshotAsync();
+        var wslState = !snapshot.Capabilities.TryGetValue(CapabilityId.Wsl, out var wsl)
+            ? "Unknown"
+            : wsl.Status == CapabilityStatus.Supported ? "Ready"
+            : wsl.Status == CapabilityStatus.Unsupported ? "Unavailable" : "Unknown";
+        var notices = wslState == "Ready" ? Array.Empty<DiagnosticNotice>() :
+            [new DiagnosticNotice("WSL.Capability", wslState == "Unavailable" ? "Warning" : "Error", wslState == "Unavailable" ? "WSL is unavailable on this host." : "WSL capability state could not be determined.")];
+        return new DiagnosticSnapshotResult("Ready", wslState, "Ready", notices, wslState == "Ready" ? "Diagnostic.Ready" : "Diagnostic.Degraded");
+    }
+    catch
+    {
+        return new DiagnosticSnapshotResult("Ready", "Unknown", "Ready", [new DiagnosticNotice("WSL.Capability", "Error", "WSL capability state could not be determined.")], "Diagnostic.Degraded");
+    }
+}
 async Task<DiagnosticReportPreview> PreviewDiagnosticsV1Async(BridgeRequest request)
 {
     ValidatePayload(request, ["Format", "SelectedLogIds", "DeadlineMilliseconds"], ["Format"]);

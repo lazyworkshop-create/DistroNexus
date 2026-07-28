@@ -101,6 +101,7 @@
         'Invoke-DistroNexusHealthScan',
         'Get-DistroNexusHealthHistory',
         'Get-DistroNexusDiagnosticLogOption',
+        'Get-DistroNexusDiagnosticSnapshot',
         'Get-DistroNexusHealthRepairPreview',
         'Repair-DistroNexusHealthFinding',
         'Get-DistroNexusDiagnosticReportPreview',
