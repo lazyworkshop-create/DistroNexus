@@ -98,13 +98,22 @@ public partial class IntegrationsTabViewModel : ObservableObject
         {
             var capabilities = await _powerShellModuleClient.GetInstanceCapabilitiesAsync(_instance.Name);
             IsInstanceSystemdSupported = capabilities.Capabilities.TryGetValue(CapabilityId.InstanceSystemd, out var systemd) && systemd.IsSupported;
-            var docker = await _powerShellModuleClient.GetDockerIntegrationAsync(_instance.Name);
-            IsDockerInstalled = docker.IsAvailable;
-
-            if (IsDockerInstalled && Instance.IsWslV2)
+            try
             {
-                DockerStatus = docker.Status == "Enabled" ? DockerIntegrationStatus.Enabled : docker.Status == "Disabled" ? DockerIntegrationStatus.Disabled : DockerIntegrationStatus.Unavailable;
-                IsDockerEnabled = DockerStatus == DockerIntegrationStatus.Enabled;
+                var docker = await _powerShellModuleClient.GetDockerIntegrationAsync(_instance.Name);
+                IsDockerInstalled = docker.IsAvailable;
+
+                if (IsDockerInstalled && Instance.IsWslV2)
+                {
+                    DockerStatus = docker.Status == "Enabled" ? DockerIntegrationStatus.Enabled : docker.Status == "Disabled" ? DockerIntegrationStatus.Disabled : DockerIntegrationStatus.Unavailable;
+                    IsDockerEnabled = DockerStatus == DockerIntegrationStatus.Enabled;
+                }
+            }
+            catch (Exception ex)
+            {
+                await _dialogService.ShowAlertAsync(
+                    Properties.Resources.ErrorTitle,
+                    string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
             }
             if (_powerShellModuleClient is not null)
             {

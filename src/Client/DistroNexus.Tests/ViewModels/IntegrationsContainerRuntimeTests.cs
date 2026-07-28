@@ -39,6 +39,26 @@ public sealed class IntegrationsContainerRuntimeTests
     }
 
     [Fact]
+    public async Task Initialize_DockerSnapshotFailure_PreservesErrorUxAndInitializesPodman()
+    {
+        var client = Client(Empty());
+        var error = new InvalidOperationException("Docker snapshot unavailable");
+        client.Setup(x => x.GetDockerIntegrationAsync("Ubuntu", It.IsAny<CancellationToken>())).ThrowsAsync(error);
+        var dialogs = new Mock<IDialogService>();
+        var vm = New(client.Object, dialogs.Object);
+
+        await vm.InitializeAsync();
+
+        Assert.False(vm.IsDockerInstalled);
+        Assert.True(vm.IsPodmanServiceControlsEnabled);
+        Assert.True(vm.IsPodmanConnectionEnabled);
+        client.Verify(x => x.GetContainerRuntimeStatusAsync("Ubuntu", It.IsAny<CancellationToken>()), Times.Once);
+        dialogs.Verify(x => x.ShowAlertAsync(
+            DistroNexus.Desktop.Properties.Resources.ErrorTitle,
+            string.Format(DistroNexus.Desktop.Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(error))), Times.Once);
+    }
+
+    [Fact]
     public async Task Initialize_RendersBoundedAndSanitizedRuntimeInventory()
     {
         var containers = Enumerable.Range(0, 12).Select(i => new ContainerSummary($"id{i}", $"web{i}", "nginx", "running", null)).ToArray();
