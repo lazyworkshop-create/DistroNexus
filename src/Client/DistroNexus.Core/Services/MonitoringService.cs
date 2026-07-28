@@ -68,7 +68,11 @@ internal sealed class MonitoringSession : IMonitoringSession
     private readonly SemaphoreSlim _lifecycle = new(1, 1);
     private readonly Channel<MonitoringSample> _stream = Channel.CreateBounded<MonitoringSample>(new BoundedChannelOptions(Capacity) { FullMode = BoundedChannelFullMode.DropOldest, SingleWriter = true, SingleReader = false });
     private CancellationTokenSource? _stop; private Task? _loop; private int _probing; private MonitoringThresholds _thresholds = MonitoringThresholds.Default; private HostResourceLimits? _limits;
-    public MonitoringSession(WslInstance instance, TimeSpan interval, IProcessRunner runner, IWslConfigurationService configuration, IMonitoringWarningSink? warningSink) => (_instance, _interval, _runner, _configuration, _warningSink) = (instance, interval, runner, configuration, warningSink);
+    private readonly Func<CancellationToken, ValueTask<bool>>? _waitForNextTickAsync;
+    public MonitoringSession(WslInstance instance, TimeSpan interval, IProcessRunner runner, IWslConfigurationService configuration, IMonitoringWarningSink? warningSink, Func<CancellationToken, ValueTask<bool>>? waitForNextTickAsync = null)
+    {
+        (_instance, _interval, _runner, _configuration, _warningSink, _waitForNextTickAsync) = (instance, interval, runner, configuration, warningSink, waitForNextTickAsync);
+    }
     public IReadOnlyList<MonitoringSample> Samples { get { lock (_sync) return _samples.ToArray(); } }
     public bool IsRunning => Volatile.Read(ref _loop) is { IsCompleted: false };
     public string? UnavailableReason { get; private set; }
@@ -131,8 +135,9 @@ internal sealed class MonitoringSession : IMonitoringSession
                 try { if (!await ProbeOnceAsync(ct).ConfigureAwait(false)) return; }
                 finally { Volatile.Write(ref _probing, 0); }
             }
-        } while (await timer.WaitForNextTickAsync(ct).ConfigureAwait(false));
+        } while (await WaitForNextTickAsync(timer, ct).ConfigureAwait(false));
     }
+    private ValueTask<bool> WaitForNextTickAsync(PeriodicTimer timer, CancellationToken ct) => _waitForNextTickAsync?.Invoke(ct) ?? timer.WaitForNextTickAsync(ct);
     private async Task<bool> ProbeOnceAsync(CancellationToken ct)
     {
         // A session is tied to one activation.  It must not revive itself if the instance later

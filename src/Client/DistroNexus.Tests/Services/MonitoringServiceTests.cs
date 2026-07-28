@@ -139,7 +139,8 @@ public class MonitoringServiceTests
     {
         var instance = new WslInstance { Name = "d", State = "Running", Size = 100 * 1024 };
         var runner = new StateTransitionRunner();
-        await using var session = new MonitoringService(runner).CreateSession(instance, TimeSpan.FromSeconds(1));
+        var nextTick = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var session = new MonitoringSession(instance, TimeSpan.FromSeconds(1), runner, new TestConfigurationService(), null, cancellationToken => new ValueTask<bool>(nextTick.Task.WaitAsync(cancellationToken)));
         var stopped = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         session.SampleAvailable += (_, sample) =>
         {
@@ -148,7 +149,8 @@ public class MonitoringServiceTests
         };
 
         await session.StartAsync();
-        await stopped.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        nextTick.TrySetResult(true);
+        await stopped.Task.WaitAsync(TimeSpan.FromSeconds(2));
         await session.StopAsync();
 
         Assert.False(session.IsRunning);
