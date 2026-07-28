@@ -48,6 +48,8 @@
         'New-DistroNexusReleaseEvidenceBundle',
         'Compress-DistroNexusInstance',
         'Get-DistroNexusDockerIntegration',
+        'Get-DistroNexusDockerIntegrationPreview',
+        'Set-DistroNexusDockerIntegration',
         'Get-DistroNexusContainerRuntimeStatus',
         'Get-DistroNexusCapability',
         'Get-DistroNexusSystemdService',

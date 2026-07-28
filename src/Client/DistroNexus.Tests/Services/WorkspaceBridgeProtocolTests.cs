@@ -465,6 +465,21 @@ public sealed class WorkspaceBridgeProtocolTests
         Assert.Equal("Wslg.DiscoveryGrantInvalid", forged.GetProperty("ErrorMessage").GetString());
     }
 
+    [Fact]
+    public async Task DockerIntegrationRoutes_RejectUnknownAndMissingPayloadsBeforeExecution()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        var unknown = await bridge.SendAsync("docker.integration.get.v1", payload: JsonDocument.Parse("""{"Name":"Ubuntu","Path":"C:\\secret"}""").RootElement.Clone());
+        var missing = await bridge.SendAsync("docker.integration.preview-set.v1", payload: JsonDocument.Parse("""{"Name":"Ubuntu"}""").RootElement.Clone());
+        var forged = await bridge.SendAsync("docker.integration.set.v1", payload: JsonDocument.Parse("""{"Name":"Ubuntu","Enabled":true}""").RootElement.Clone(), token: new string('a', 64));
+        Assert.False(unknown.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("DockerIntegration.Conflict", unknown.GetProperty("ErrorCode").GetString());
+        Assert.False(missing.GetProperty("Succeeded").GetBoolean());
+        Assert.False(forged.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("DockerIntegration.PreviewInvalid", forged.GetProperty("ErrorCode").GetString());
+        Assert.DoesNotContain("secret", forged.GetProperty("ErrorMessage").GetString(), StringComparison.OrdinalIgnoreCase);
+    }
+
     private sealed class BridgeProcess : IAsyncDisposable
     {
         private readonly Process process;

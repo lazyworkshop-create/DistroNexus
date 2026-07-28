@@ -36,7 +36,6 @@ public partial class InstanceDetailViewModel : ObservableObject, IAsyncDisposabl
     public InstanceDetailViewModel(
         WslInstanceViewModel instance,
         IWslManagerService wslManager,
-        IDockerIntegrationService dockerIntegrationService,
         INetworkService networkService,
         IBackupService backupService,
         IRecoveryPointService recoveryPointService,
@@ -58,7 +57,7 @@ public partial class InstanceDetailViewModel : ObservableObject, IAsyncDisposabl
 
         DiskTab = new DiskTabViewModel(instance, wslManager, dialogService);
         ResourcesTab = new ResourcesTabViewModel(instance, wslManager, wslConfigService, dialogService);
-        IntegrationsTab = new IntegrationsTabViewModel(instance, dockerIntegrationService, dialogService, powerShellModuleClient);
+        IntegrationsTab = new IntegrationsTabViewModel(instance, dialogService, powerShellModuleClient ?? throw new ArgumentNullException(nameof(powerShellModuleClient)));
         NetworkTab = new NetworkTabViewModel(instance, networkService, dialogService, networkDiagnostics, firewallOperationBroker, networkConfigurationService, networkStatusAdapter, browserLauncher);
         BackupTab = new BackupTabViewModel(instance, backupService, dialogService, recoveryPointService);
         ConfigurationTab = new ConfigurationTabViewModel(instance, distributionConfigurationService, platformCapabilityService, dialogService);

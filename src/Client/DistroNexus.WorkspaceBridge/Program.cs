@@ -13,6 +13,7 @@ var root = Environment.GetEnvironmentVariable("DISTRONEXUS_WORKSPACE_STORE_ROOT"
 // validation, preview tokens, capability checks, and structured process requests.
 var processes = new ProcessRunner();
 var instances = new BridgeWslManagerService(processes);
+var dockerIntegration = new DockerIntegrationService(NullLogger<DockerIntegrationService>.Instance, instances);
 var capabilities = new PlatformCapabilityService(processes);
 var networkStatus = new WindowsNetworkStatusAdapter();
 var portMappings = new BridgeNetworkPortMappingService(processes, networkStatus);
@@ -114,6 +115,9 @@ while ((line = Console.ReadLine()) is not null)
             "previewPodmanConnection" => await PreviewPodmanConnectionAsync(request),
             "executePodmanConnection" => await ExecutePodmanConnectionAsync(request),
             "containerRuntimeStatus" => await ContainerRuntimeStatusAsync(request),
+            "docker.integration.get.v1" => await GetDockerIntegrationAsync(request),
+            "docker.integration.preview-set.v1" => await PreviewDockerIntegrationAsync(request),
+            "docker.integration.set.v1" => await SetDockerIntegrationAsync(request),
             "capability" => await GetCapabilitiesAsync(request),
             "systemdList" => await ListSystemdV1Async(request),
             "systemdPreview" => await PreviewSystemdV1Async(request),
@@ -217,6 +221,11 @@ while ((line = Console.ReadLine()) is not null)
     catch (DistroNexus.Core.Exceptions.WslOperationFailedException ex) { response = new(false, null, ex.Code.ToString(), ex.Message); }
     catch (InvalidOperationException ex) when (ex.Message is "Wslg.DiscoveryGrantInvalid" or "Wslg.DiscoveryGrantExpired" or "Wslg.ApplicationNotFound" or "Wslg.EntryChanged") { response = new(false, null, ex.Message, ex.Message); }
     catch (InvalidOperationException ex) when (string.Equals(ex.Message, "PackageCache.EntryInvalid", StringComparison.Ordinal)) { response = new(false, null, "PackageCache.EntryInvalid", "Package cache entry is invalid."); }
+    catch (Exception ex) when (request?.Operation.StartsWith("docker.integration.", StringComparison.Ordinal) == true)
+    {
+        var code = ex.Message is "DockerIntegration.PreviewInvalid" or "DockerIntegration.PreviewExpired" or "DockerIntegration.PreviewMismatch" or "DockerIntegration.PreviewStale" ? ex.Message : "DockerIntegration.Conflict";
+        response = new(false, null, code, code);
+    }
     catch (Exception ex) when (request?.Operation.StartsWith("diagnostics.", StringComparison.Ordinal) == true) { response = new(false, null, "Diagnostic.ExportInvalid", SensitiveDataRedactor.Redact(ex.Message)); }
     catch (Exception ex) { response = new(false, null, ex is InvalidOperationException ? "Workspace.ConflictOrState" : "Workspace.Bridge.Invalid", ex.Message); }
     WriteFrame(response);
@@ -607,6 +616,25 @@ static CancellationTokenSource CreateDiagnosticCancellation(int? deadlineMillise
     cancellation.CancelAfter(TimeSpan.FromMilliseconds(deadlineMilliseconds.Value));
     return cancellation;
 }
+async Task<DockerIntegrationSnapshot> GetDockerIntegrationAsync(BridgeRequest request)
+{
+    ValidatePayload(request, ["Name"], ["Name"]);
+    var payload = ParsePayload<DockerIntegrationPayload>(request);
+    return await dockerIntegration.GetSnapshotAsync(payload.Name);
+}
+async Task<DockerIntegrationPreview> PreviewDockerIntegrationAsync(BridgeRequest request)
+{
+    ValidatePayload(request, ["Name", "Enabled"], ["Name", "Enabled"]);
+    var payload = ParsePayload<DockerIntegrationPayload>(request);
+    return await dockerIntegration.PreviewSetAsync(payload.Name, payload.Enabled);
+}
+async Task<DockerIntegrationResult> SetDockerIntegrationAsync(BridgeRequest request)
+{
+    ValidatePayload(request, ["Name", "Enabled"], ["Name", "Enabled"]);
+    if (string.IsNullOrWhiteSpace(request.Token)) throw new ArgumentException("Docker integration preview token is required.");
+    var payload = ParsePayload<DockerIntegrationPayload>(request);
+    return await dockerIntegration.SetFromPreviewAsync(request.Token, payload.Name, payload.Enabled);
+}
 async Task<MonitoringSample> GetMonitoringSnapshotAsync(BridgeRequest request)
 {
     var p = JsonSerializer.Deserialize<MonitoringPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Monitoring payload is required.");
@@ -682,6 +710,7 @@ public sealed record FirewallRemovePayload(string PreviewToken);
 public sealed record PodmanUnitPayload(string InstanceName, PodmanUserUnit Unit, SystemdAction Action);
 public sealed record PodmanConnectionPayload(string InstanceName, string Name, string Endpoint);
 public sealed record PodmanStatusPayload(string InstanceName);
+public sealed record DockerIntegrationPayload(string Name, bool Enabled = false);
 public sealed record CapabilityPayload(string? InstanceName, bool InstanceOnly);
 public sealed record SystemdPayload(string InstanceName, string? Unit, SystemdAction? Action, SystemdScope Scope = SystemdScope.User);
 public sealed record SystemdJournalPayload(string InstanceName, string Unit, SystemdScope Scope = SystemdScope.User, string? Search = null, int LineLimit = 200);

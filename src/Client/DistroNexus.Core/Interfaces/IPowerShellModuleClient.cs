@@ -100,6 +100,9 @@ public interface IPowerShellModuleClient
     Task<WslgActionResult> LaunchWslgApplicationAsync(string discoveryToken, string applicationId, CancellationToken cancellationToken = default);
     Task<WslgActionResult> RevealWslgApplicationAsync(string discoveryToken, string applicationId, CancellationToken cancellationToken = default);
     Task<WslgActionResult> SetWslgApplicationPinAsync(string discoveryToken, string applicationId, bool pinned, CancellationToken cancellationToken = default);
+    Task<DockerIntegrationSnapshot> GetDockerIntegrationAsync(string name, CancellationToken cancellationToken = default);
+    Task<DockerIntegrationPreview> GetDockerIntegrationPreviewAsync(string name, bool enabled, CancellationToken cancellationToken = default);
+    Task<DockerIntegrationResult> SetDockerIntegrationAsync(string name, bool enabled, string previewToken, CancellationToken cancellationToken = default);
 }
 
 public sealed record DistroNexusPodmanUserUnitPreview(string Token, string InstanceName, PodmanUserUnit Unit, SystemdAction Action, IReadOnlyList<string> Effects);

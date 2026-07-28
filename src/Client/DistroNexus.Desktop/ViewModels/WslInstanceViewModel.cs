@@ -699,7 +699,6 @@ public partial class WslInstanceViewModel : ObservableObject
     private void OpenDetails()
     {
         var wslManager = _serviceProvider.GetRequiredService<IWslManagerService>();
-        var dockerSvc = _serviceProvider.GetRequiredService<IDockerIntegrationService>();
         var networkSvc = _serviceProvider.GetRequiredService<INetworkService>();
         var backupSvc = _serviceProvider.GetRequiredService<IBackupService>();
         var recoveryPointSvc = _serviceProvider.GetRequiredService<IRecoveryPointService>();
@@ -714,7 +713,7 @@ public partial class WslInstanceViewModel : ObservableObject
         var networkStatusAdapter = _serviceProvider.GetRequiredService<INetworkStatusAdapter>();
         var browserLauncher = _serviceProvider.GetRequiredService<IBrowserLauncher>();
         var monitoringService = _serviceProvider.GetRequiredService<IMonitoringService>();
-        var vm = new InstanceDetailViewModel(this, wslManager, dockerSvc, networkSvc, backupSvc, recoveryPointSvc, wslConfigSvc, dialogSvc, distributionConfigSvc, platformCapabilitySvc, systemdService, networkDiagnostics, firewallOperationBroker, networkConfigurationService, networkStatusAdapter, browserLauncher, monitoringService, _moduleClient);
+        var vm = new InstanceDetailViewModel(this, wslManager, networkSvc, backupSvc, recoveryPointSvc, wslConfigSvc, dialogSvc, distributionConfigSvc, platformCapabilitySvc, systemdService, networkDiagnostics, firewallOperationBroker, networkConfigurationService, networkStatusAdapter, browserLauncher, monitoringService, _moduleClient);
         var dialog = new InstanceDetailDialog(vm)
         {
             Owner = Application.Current.MainWindow

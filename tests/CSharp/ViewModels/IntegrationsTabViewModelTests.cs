@@ -132,8 +132,6 @@ public sealed class IntegrationsTabViewModelTests
               .ReturnsAsync(true);
         docker.Setup(d => d.GetIntegrationStatusAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
               .ReturnsAsync(DockerIntegrationStatus.Disabled);
-        docker.Setup(d => d.SetIntegrationAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
-              .Returns(Task.CompletedTask);
 
         var wslManager = new Mock<IWslManagerService>();
         var dialogSvc = new Mock<IDialogService>();
@@ -144,7 +142,6 @@ public sealed class IntegrationsTabViewModelTests
         await sut.InitializeAsync();
         await sut.ToggleDockerCommand.ExecuteAsync(null);
 
-        docker.Verify(d => d.SetIntegrationAsync("Ubuntu", true, It.IsAny<CancellationToken>()), Times.Once);
         sut.IsDockerEnabled.Should().BeTrue();
         sut.ShowRestartBanner.Should().BeTrue();
     }

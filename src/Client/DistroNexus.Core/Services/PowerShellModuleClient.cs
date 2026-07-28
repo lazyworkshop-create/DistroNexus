@@ -46,6 +46,9 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string StartWslgApplicationCommand = "Start-DistroNexusWslgApplication";
     private const string RevealWslgApplicationCommand = "Show-DistroNexusWslgApplicationEntry";
     private const string SetWslgApplicationPinCommand = "Set-DistroNexusWslgApplicationPin";
+    private const string GetDockerIntegrationCommand = "Get-DistroNexusDockerIntegration";
+    private const string GetDockerIntegrationPreviewCommand = "Get-DistroNexusDockerIntegrationPreview";
+    private const string SetDockerIntegrationCommand = "Set-DistroNexusDockerIntegration";
     private readonly IPowerShellService _powerShellService;
 
     public PowerShellModuleClient(IPowerShellService powerShellService)
@@ -370,6 +373,12 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     public Task<WslgActionResult> LaunchWslgApplicationAsync(string token, string applicationId, CancellationToken cancellationToken = default) => ExecuteWslgActionAsync(StartWslgApplicationCommand, token, applicationId, null, cancellationToken);
     public Task<WslgActionResult> RevealWslgApplicationAsync(string token, string applicationId, CancellationToken cancellationToken = default) => ExecuteWslgActionAsync(RevealWslgApplicationCommand, token, applicationId, null, cancellationToken);
     public Task<WslgActionResult> SetWslgApplicationPinAsync(string token, string applicationId, bool pinned, CancellationToken cancellationToken = default) => ExecuteWslgActionAsync(SetWslgApplicationPinCommand, token, applicationId, pinned, cancellationToken);
+    public Task<DockerIntegrationSnapshot> GetDockerIntegrationAsync(string name, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); return ExecuteJsonAsync<DockerIntegrationSnapshot>(GetDockerIntegrationCommand, new() { ["Name"] = name }, cancellationToken); }
+    public Task<DockerIntegrationPreview> GetDockerIntegrationPreviewAsync(string name, bool enabled, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); return ExecuteJsonAsync<DockerIntegrationPreview>(GetDockerIntegrationPreviewCommand, new() { ["Name"] = name, ["Enabled"] = enabled }, cancellationToken); }
+    public Task<DockerIntegrationResult> SetDockerIntegrationAsync(string name, bool enabled, string previewToken, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); if (string.IsNullOrWhiteSpace(previewToken) || previewToken.Length != 64 || previewToken.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("A Core-issued Docker integration preview token is required.", nameof(previewToken)); return ExecuteJsonAsync<DockerIntegrationResult>(SetDockerIntegrationCommand, new() { ["Name"] = name, ["Enabled"] = enabled, ["Preview"] = previewToken }, cancellationToken); }
     private Task<WslgActionResult> ExecuteWslgActionAsync(string command, string token, string applicationId, bool? pinned, CancellationToken ct)
     { if (string.IsNullOrWhiteSpace(token) || token.Length != 64 || token.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("A WSLg discovery token is invalid.", nameof(token)); ValidateName(applicationId, nameof(applicationId)); var parameters = new Dictionary<string, object> { ["DiscoveryToken"] = token, ["ApplicationId"] = applicationId }; if (pinned is not null) parameters["Pinned"] = pinned.Value; return ExecuteJsonAsync<WslgActionResult>(command, parameters, ct); }
 

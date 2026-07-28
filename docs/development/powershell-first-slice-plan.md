@@ -12,7 +12,7 @@
 
 ## Dependency Order
 
-S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S18 -> S19 -> S20 -> S21 -> S22 -> S06 -> S07 -> S08
+S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S18 -> S19 -> S20 -> S21 -> S22 -> S23 -> S06 -> S07 -> S08
 
 ## Slice S01: Verified module contract and migration baseline
 
@@ -1132,6 +1132,67 @@ One accepted WSLg discovery-grant and presentation-client migration slice.
 ### Out of Scope
 
 WSLg runtime installation/repair, Start Menu integration, remote icons, external WSLg UAT, and every other uncontracted platform family.
+
+## Slice S23: Docker Desktop integration contract and presentation-client migration
+
+### Status
+
+Planned
+
+### Objective
+
+Make the exported Docker Desktop integration commands, backed by Core-owned atomic preview/execute semantics, the sole product path for Docker integration status and changes.
+
+### Sources
+
+Requirements FR-001 and FR-003 through FR-007; `docs/specs/powershell-first-design.md` Docker Desktop integration contract amendment; `docs/architecture/powershell-first-decision.md`.
+
+### Dependencies
+
+S22
+
+### Allowed Paths
+
+`src/Client/DistroNexus.Core/Models/DockerIntegrationStatus.cs`, `src/Client/DistroNexus.Core/Interfaces/IDockerIntegrationService.cs`, `src/Client/DistroNexus.Core/Services/DockerIntegrationService.cs`, narrowly scoped Docker settings/grant store support, `src/Client/DistroNexus.WorkspaceBridge/Program.cs`, Docker public command files and `src/PowerShell/DistroNexus.psd1`, `src/Client/DistroNexus.Core/Interfaces/IPowerShellModuleClient.cs`, `src/Client/DistroNexus.Core/Services/PowerShellModuleClient.cs`, `src/Client/DistroNexus.Desktop/ViewModels/Tabs/IntegrationsTabViewModel.cs`, `src/Client/DistroNexus.Desktop/ViewModels/MainViewModel.cs`, `src/Client/DistroNexus.Desktop/ViewModels/InstanceDetailViewModel.cs`, `src/Client/DistroNexus.Desktop/ViewModels/WslInstanceViewModel.cs`, `src/Client/DistroNexus.Tests/ViewModels/MonitoringViewModelTests.cs`, `src/Client/DistroNexus.Tests/ViewModels/WslInstanceTagRoutingTests.cs`, `src/Client/DistroNexus.Tests/ViewModels/IntegrationsContainerRuntimeTests.cs`, focused Docker/Core/Bridge/module-client/view-model/Pester/architecture tests, design, plan.
+
+### Excluded Paths
+
+Container runtime adapters and Podman, Docker installation/restart/lifecycle, Docker CLI/context/machine/storage operations, arbitrary settings paths or environment overrides, release/publishing surfaces.
+
+### Contract and Documentation
+
+Define only `docker.integration.get.v1`, `docker.integration.preview-set.v1`, and `docker.integration.set.v1`. `Get-DistroNexusDockerIntegration` returns a path-free snapshot. `Get-DistroNexusDockerIntegrationPreview -Name -Enabled` returns a short-lived Core-issued preview; `Set-DistroNexusDockerIntegration -Name -Enabled -Preview` is the only execute contract and uses `ShouldProcess`. Existing Enable/Disable commands become thin compatibility facades over those contracts and no longer access settings directly.
+
+### Implementation Scope
+
+Implement strict Docker eligibility, settings identity/fingerprint capture, a protected durable single-use preview grant, and atomic replace of the existing selected settings file only. Preserve unrelated settings and deterministically validate/deduplicate `integratedWslDistros`; reject unprovable WSL2 status, malformed settings, state drift, and file switching. Replace all listed WPF Docker service consumption with typed module-client snapshot/preview/execute calls; WPF only confirms/renders and refreshes a successful result.
+
+### Test Scope
+
+Add Core/Bridge/module tests for rejected blank/reserved/WSL1/missing/malformed input, unknown fields, WhatIf, forged/expired/reused/mismatched/stale previews, and no write on rejection. Prove the writer preserves unrelated JSON, is atomic/conflict-safe, and never creates a settings file. Prove compatibility commands do not read/write settings directly. Add view-model and architecture tests proving no direct Docker service dependency and preview/decline/success behavior.
+
+### Acceptance Criteria
+
+- WPF Docker status and toggle flows invoke only closed typed module-client methods; no migrated view model depends on `IDockerIntegrationService`.
+- Module commands are the sole public Docker integration contract; legacy commands cannot bypass preview, `ShouldProcess`, or Core atomic writing.
+- Every execution is bound to a single-use durable Core-issued preview and current existing settings identity/fingerprint; DistroNexus-detected conflicts fail closed, while concurrent third-party Docker Desktop write behavior is an explicit UAT closure gate.
+- Public results, errors, and UI state never disclose settings paths, raw JSON, registry values, or raw host output.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~DockerIntegration|FullyQualifiedName~IntegrationsTabViewModel|FullyQualifiedName~PowerShellModuleClient|FullyQualifiedName~WorkspaceBridgeProtocol"
+pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Unit
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+One accepted Docker integration contract and presentation-client migration slice.
+
+### Out of Scope
+
+Docker Desktop installation/restart, runtime container/image/project operations, third-party Docker Desktop concurrent-write UAT, and every remaining uncontracted platform family.
 
 ## Slice S06: Platform-integrated command parity
 

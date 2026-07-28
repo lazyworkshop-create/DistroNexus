@@ -35,7 +35,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private readonly IWslEventWatcher _wslEventWatcher;
     private readonly IPowerShellModuleClient _moduleClient;
     private readonly IBackupService _backupService;
-    private readonly IDockerIntegrationService _dockerIntegrationService;
     private readonly IDialogService _dialogService;
 
     [ObservableProperty]
@@ -112,7 +111,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
         IWslEventWatcher wslEventWatcher,
         IPowerShellModuleClient moduleClient,
         IBackupService backupService,
-        IDockerIntegrationService dockerIntegrationService,
         IDialogService dialogService)
     {
         _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
@@ -124,7 +122,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _wslEventWatcher = wslEventWatcher ?? throw new ArgumentNullException(nameof(wslEventWatcher));
         _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _backupService = backupService ?? throw new ArgumentNullException(nameof(backupService));
-        _dockerIntegrationService = dockerIntegrationService ?? throw new ArgumentNullException(nameof(dockerIntegrationService));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
 
         // ICollectionView for filtering/grouping (Design Review #4)
@@ -467,9 +464,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         try
         {
-            bool isInstalled = await _dockerIntegrationService.IsDockerDesktopInstalledAsync(ct);
-            if (!isInstalled) return;
-
             foreach (var vm in snapshot)
             {
                 if (ct.IsCancellationRequested) return;
@@ -480,8 +474,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
                 try
                 {
-                    var status = await _dockerIntegrationService.GetIntegrationStatusAsync(name, ct);
-                    vm.DockerIntegrationEnabled = status == Core.Services.DockerIntegrationStatus.Enabled;
+                    var status = await _moduleClient.GetDockerIntegrationAsync(name, ct);
+                    vm.DockerIntegrationEnabled = status.Status == "Enabled";
                 }
                 catch (Exception ex)
                 {

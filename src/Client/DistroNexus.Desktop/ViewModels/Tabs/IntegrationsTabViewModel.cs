@@ -13,7 +13,6 @@ namespace DistroNexus.Desktop.ViewModels.Tabs;
 public partial class IntegrationsTabViewModel : ObservableObject
 {
     private readonly WslInstanceViewModel _instance;
-    private readonly IDockerIntegrationService _dockerIntegrationService;
     private readonly IDialogService _dialogService;
     private readonly IPowerShellModuleClient? _powerShellModuleClient;
 
@@ -78,14 +77,12 @@ public partial class IntegrationsTabViewModel : ObservableObject
 
     public IntegrationsTabViewModel(
         WslInstanceViewModel instance,
-        IDockerIntegrationService dockerIntegrationService,
         IDialogService dialogService,
-        IPowerShellModuleClient? powerShellModuleClient = null)
+        IPowerShellModuleClient powerShellModuleClient)
     {
         _instance = instance ?? throw new ArgumentNullException(nameof(instance));
-        _dockerIntegrationService = dockerIntegrationService ?? throw new ArgumentNullException(nameof(dockerIntegrationService));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
-        _powerShellModuleClient = powerShellModuleClient;
+        _powerShellModuleClient = powerShellModuleClient ?? throw new ArgumentNullException(nameof(powerShellModuleClient));
     }
 
     public async Task InitializeAsync()
@@ -99,18 +96,14 @@ public partial class IntegrationsTabViewModel : ObservableObject
         _instance.IsBusy = true;
         try
         {
-            if (_powerShellModuleClient is null)
-            {
-                PodmanPrerequisiteMessage = R("IntegrationsTab_PodmanUnavailableService");
-                return;
-            }
             var capabilities = await _powerShellModuleClient.GetInstanceCapabilitiesAsync(_instance.Name);
             IsInstanceSystemdSupported = capabilities.Capabilities.TryGetValue(CapabilityId.InstanceSystemd, out var systemd) && systemd.IsSupported;
-            IsDockerInstalled = await _dockerIntegrationService.IsDockerDesktopInstalledAsync();
+            var docker = await _powerShellModuleClient.GetDockerIntegrationAsync(_instance.Name);
+            IsDockerInstalled = docker.IsAvailable;
 
             if (IsDockerInstalled && Instance.IsWslV2)
             {
-                DockerStatus = await _dockerIntegrationService.GetIntegrationStatusAsync(_instance.Name);
+                DockerStatus = docker.Status == "Enabled" ? DockerIntegrationStatus.Enabled : docker.Status == "Disabled" ? DockerIntegrationStatus.Disabled : DockerIntegrationStatus.Unavailable;
                 IsDockerEnabled = DockerStatus == DockerIntegrationStatus.Enabled;
             }
             if (_powerShellModuleClient is not null)
@@ -164,10 +157,11 @@ public partial class IntegrationsTabViewModel : ObservableObject
         try
         {
             bool target = !IsDockerEnabled;
-            await _dockerIntegrationService.SetIntegrationAsync(_instance.Name, target);
-            IsDockerEnabled = target;
-            DockerStatus = target ? DockerIntegrationStatus.Enabled : DockerIntegrationStatus.Disabled;
-            ShowRestartBanner = true;
+            var preview = await _powerShellModuleClient.GetDockerIntegrationPreviewAsync(_instance.Name, target);
+            if (!await _dialogService.ShowConfirmAsync(R("IntegrationsTab_DockerIntegration"), FormatPreview(preview.Effects))) return;
+            var result = await _powerShellModuleClient.SetDockerIntegrationAsync(_instance.Name, target, preview.Token);
+            if (!result.Succeeded) { await _dialogService.ShowAlertAsync(Properties.Resources.ErrorTitle, result.Guidance ?? result.OutcomeCode); return; }
+            IsDockerEnabled = target; DockerStatus = target ? DockerIntegrationStatus.Enabled : DockerIntegrationStatus.Disabled; ShowRestartBanner = result.RestartRequired;
         }
         catch (Exception ex)
         {
