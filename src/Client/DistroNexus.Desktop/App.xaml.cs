@@ -99,7 +99,6 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<IWslManagerService, WslManagerService>();
                     services.AddSingleton<IDownloadService, DownloadService>();
                     services.AddSingleton<ICatalogService, CatalogService>();
-                    services.AddSingleton<ICatalogSourceManager, CatalogSourceManager>();
                     services.AddSingleton<ITemplateMarketplaceService>(sp => new TemplateMarketplaceService(httpClient: sp.GetRequiredService<IHttpClientFactory>().CreateClient()));
                     services.AddSingleton<ITemplateService, TemplateService>();
                     services.AddSingleton<IStoreComplianceModeService, StoreComplianceModeService>();

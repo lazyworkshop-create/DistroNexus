@@ -565,14 +565,18 @@ public class PowerShellService : IPowerShellService, IDisposable
             {
                 foreach (var param in parameters)
                 {
-                    // Handle switch parameters (boolean true) - don't add value
+                    // Preserve the existing switch form for true while still transmitting an
+                    // explicit false value to cmdlets with Boolean parameters.
                     if (param.Value is bool boolValue)
                     {
                         if (boolValue)
                         {
                             scriptBuilder.Append($" -{param.Key}");
                         }
-                        // If false, don't add the parameter at all
+                        else
+                        {
+                            scriptBuilder.Append($" -{param.Key}:$false");
+                        }
                     }
                     else
                     {

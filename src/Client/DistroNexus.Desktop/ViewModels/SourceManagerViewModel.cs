@@ -13,7 +13,7 @@ namespace DistroNexus.Desktop.ViewModels;
 /// </summary>
 public partial class SourceManagerViewModel : ObservableObject
 {
-    private readonly ICatalogSourceManager _sourceManager;
+    private readonly IPowerShellModuleClient _moduleClient;
     private readonly ILogger<SourceManagerViewModel> _logger;
 
     [ObservableProperty]
@@ -50,10 +50,10 @@ public partial class SourceManagerViewModel : ObservableObject
     private bool _isTestingSource;
 
     public SourceManagerViewModel(
-        ICatalogSourceManager sourceManager,
+        IPowerShellModuleClient moduleClient,
         ILogger<SourceManagerViewModel> logger)
     {
-        _sourceManager = sourceManager ?? throw new ArgumentNullException(nameof(sourceManager));
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -80,7 +80,7 @@ public partial class SourceManagerViewModel : ObservableObject
 
             _logger.LogInformation("Initializing source manager");
 
-            var sources = await _sourceManager.GetSourcesAsync();
+            var sources = await _moduleClient.GetCatalogSourcesAsync();
             
             Sources.Clear();
             foreach (var source in sources.OrderBy(s => s.Priority))
@@ -148,31 +148,15 @@ public partial class SourceManagerViewModel : ObservableObject
 
             if (IsEditing && SelectedSource != null)
             {
-                var updatedSource = new CatalogSource
-                {
-                    Id = SelectedSource.Id,
-                    Name = NewSourceName,
-                    Url = NewSourceUrl,
-                    Description = NewSourceDescription,
-                    IsActive = SelectedSource.IsActive,
-                    Priority = SelectedSource.Priority
-                };
-
-                await _sourceManager.UpdateSourceAsync(updatedSource);
+                await _moduleClient.UpdateCatalogSourceAsync(new DistroNexusCatalogSourceUpdateRequest(
+                    SelectedSource.Id, NewSourceName, NewSourceUrl, NewSourceDescription, SelectedSource.IsActive));
                 await RefreshSourcesAsync();
                 StatusMessage = Properties.Resources.StatusSourceUpdated;
             }
             else
             {
-                var newSource = new CatalogSource
-                {
-                    Name = NewSourceName,
-                    Url = NewSourceUrl,
-                    Description = NewSourceDescription,
-                    IsActive = true
-                };
-
-                await _sourceManager.AddSourceAsync(newSource);
+                await _moduleClient.AddCatalogSourceAsync(new DistroNexusCatalogSourceCreateRequest(
+                    NewSourceName, NewSourceUrl, NewSourceDescription));
                 await RefreshSourcesAsync();
                 StatusMessage = Properties.Resources.StatusSourceAdded;
             }
@@ -216,7 +200,7 @@ public partial class SourceManagerViewModel : ObservableObject
         {
             try
             {
-                await _sourceManager.RemoveSourceAsync(SelectedSource.Id);
+                await _moduleClient.RemoveCatalogSourceAsync(SelectedSource.Id);
                 await RefreshSourcesAsync();
                 StatusMessage = Properties.Resources.StatusSourceRemoved;
             }
@@ -237,7 +221,7 @@ public partial class SourceManagerViewModel : ObservableObject
         try
         {
             var newActiveState = !SelectedSource.IsActive;
-            await _sourceManager.SetSourceActiveAsync(SelectedSource.Id, newActiveState);
+            await _moduleClient.SetCatalogSourceActiveAsync(SelectedSource.Id, newActiveState);
             
             SelectedSource.IsActive = newActiveState;
             StatusMessage = string.Format(Properties.Resources.StatusSourceToggled, newActiveState ? Properties.Resources.StatusSourceEnabled : Properties.Resources.StatusSourceDisabled);
@@ -263,7 +247,7 @@ public partial class SourceManagerViewModel : ObservableObject
             IsTestingSource = true;
             TestResult = Properties.Resources.TestResultTesting;
 
-            var isAccessible = await _sourceManager.TestSourceAsync(NewSourceUrl);
+            var isAccessible = await _moduleClient.TestCatalogSourceAsync(NewSourceUrl);
             
             TestResult = isAccessible ? Properties.Resources.TestResultAccessible : Properties.Resources.TestResultNotAccessible;
             
@@ -288,7 +272,7 @@ public partial class SourceManagerViewModel : ObservableObject
             IsLoading = true;
             StatusMessage = Properties.Resources.StatusRefreshingSources;
 
-            var sources = await _sourceManager.GetSourcesAsync();
+            var sources = await _moduleClient.GetCatalogSourcesAsync();
             
             Sources.Clear();
             foreach (var source in sources.OrderBy(s => s.Priority))
@@ -322,7 +306,7 @@ public partial class SourceManagerViewModel : ObservableObject
         {
             try
             {
-                await _sourceManager.ResetToDefaultsAsync();
+                await _moduleClient.ResetCatalogSourcesAsync();
                 await RefreshSourcesAsync();
                 StatusMessage = Properties.Resources.StatusResetSourcesSuccess;
             }
@@ -352,7 +336,7 @@ public partial class SourceManagerViewModel : ObservableObject
 
             // Update priorities and save
             var sourceIds = Sources.Select(s => s.Id).ToList();
-            await _sourceManager.ReorderSourcesAsync(sourceIds);
+            await _moduleClient.ReorderCatalogSourcesAsync(sourceIds);
 
             StatusMessage = Properties.Resources.StatusSourceMovedUp;
         }
@@ -381,7 +365,7 @@ public partial class SourceManagerViewModel : ObservableObject
 
             // Update priorities and save
             var sourceIds = Sources.Select(s => s.Id).ToList();
-            await _sourceManager.ReorderSourcesAsync(sourceIds);
+            await _moduleClient.ReorderCatalogSourcesAsync(sourceIds);
 
             StatusMessage = Properties.Resources.StatusSourceMovedDown;
         }

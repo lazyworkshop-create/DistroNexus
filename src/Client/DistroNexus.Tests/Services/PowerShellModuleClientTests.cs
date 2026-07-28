@@ -254,6 +254,116 @@ public sealed class PowerShellModuleClientTests
         await Assert.ThrowsAsync<TaskCanceledException>(() => client.ResetSettingsAsync(cancellation.Token));
     }
 
+    [Theory]
+    [InlineData("[{\"Id\":\"one\",\"Name\":\"Official\",\"Url\":\"https://example.test/catalog\",\"Priority\":1}]")]
+    [InlineData("{\"Id\":\"one\",\"Name\":\"Official\",\"Url\":\"https://example.test/catalog\",\"Priority\":1}")]
+    public async Task GetCatalogSourcesAsync_UsesTheFixedCmdletAndHandlesArrayOrSingletonResults(string output)
+    {
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(service => service.ExecuteModuleCmdletAsync(
+                "Get-DistroNexusCatalogSource", null, It.Is<ModuleCallOptions>(options => options.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = output });
+        var client = new PowerShellModuleClient(powerShell.Object);
+
+        var source = Assert.Single(await client.GetCatalogSourcesAsync());
+
+        Assert.Equal("one", source.Id);
+        Assert.Equal("Official", source.Name);
+        powerShell.VerifyAll();
+    }
+
+    [Theory]
+    [InlineData("Add-DistroNexusCatalogSource", "Add")]
+    [InlineData("Set-DistroNexusCatalogSource", "Update")]
+    public async Task CatalogSourceWrite_UsesFixedCmdletParametersAndDeserializesResult(string command, string operation)
+    {
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(service => service.ExecuteModuleCmdletAsync(
+                command,
+                It.Is<Dictionary<string, object>>(parameters =>
+                    (string)parameters["Name"] == "Official" &&
+                    (string)parameters["Url"] == "https://example.test/catalog" &&
+                    (string)parameters["Description"] == "Catalog" &&
+                    (bool)parameters["IsActive"] &&
+                    (operation != "Update" || (string)parameters["SourceId"] == "source-1")),
+                It.Is<ModuleCallOptions>(options => options.ParseAsJson),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Id\":\"source-1\",\"Name\":\"Official\",\"Url\":\"https://example.test/catalog\"}" });
+        var client = new PowerShellModuleClient(powerShell.Object);
+
+        var source = operation == "Add"
+            ? await client.AddCatalogSourceAsync(new DistroNexusCatalogSourceCreateRequest("Official", "https://example.test/catalog", "Catalog"))
+            : await client.UpdateCatalogSourceAsync(new DistroNexusCatalogSourceUpdateRequest("source-1", "Official", "https://example.test/catalog", "Catalog"));
+
+        Assert.Equal("source-1", source.Id);
+        powerShell.VerifyAll();
+    }
+
+    [Theory]
+    [InlineData("Remove-DistroNexusCatalogSource", "Remove")]
+    [InlineData("Test-DistroNexusCatalogSource", "Test")]
+    [InlineData("Set-DistroNexusCatalogSourceActive", "Active")]
+    [InlineData("Set-DistroNexusCatalogSourceOrder", "Order")]
+    [InlineData("Reset-DistroNexusCatalogSource", "Reset")]
+    public async Task CatalogSourceBooleanOperation_UsesFixedCmdletAndReturnsBoolean(string command, string operation)
+    {
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(service => service.ExecuteModuleCmdletAsync(
+                command,
+                It.Is<Dictionary<string, object>?>(parameters => MatchesCatalogBooleanParameters(operation, parameters)),
+                null,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "False" });
+        var client = new PowerShellModuleClient(powerShell.Object);
+
+        var value = operation switch
+        {
+            "Remove" => await client.RemoveCatalogSourceAsync("source-1"),
+            "Test" => await client.TestCatalogSourceAsync("https://example.test/catalog"),
+            "Active" => await client.SetCatalogSourceActiveAsync("source-1", false),
+            "Order" => await client.ReorderCatalogSourcesAsync(["source-1", "source-2"]),
+            "Reset" => await client.ResetCatalogSourcesAsync(),
+            _ => throw new InvalidOperationException()
+        };
+
+        Assert.False(value);
+        powerShell.VerifyAll();
+    }
+
+    [Theory]
+    [InlineData("Remove-DistroNexusCatalogSource")]
+    [InlineData("Test-DistroNexusCatalogSource")]
+    [InlineData("Set-DistroNexusCatalogSourceActive")]
+    [InlineData("Set-DistroNexusCatalogSourceOrder")]
+    [InlineData("Reset-DistroNexusCatalogSource")]
+    public async Task CatalogSourceBooleanOperation_RejectsInvalidResultAndPropagatesModuleFailures(string command)
+    {
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.SetupSequence(service => service.ExecuteModuleCmdletAsync(command, It.IsAny<Dictionary<string, object>?>(), null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "not-a-boolean" })
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 1, Error = "module failure" });
+        var client = new PowerShellModuleClient(powerShell.Object);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => InvokeCatalogBooleanOperation(client, command));
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => InvokeCatalogBooleanOperation(client, command));
+
+        Assert.Equal("module failure", exception.Message);
+    }
+
+    [Fact]
+    public async Task CatalogSourceBooleanOperation_PreservesCancellation()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(service => service.ExecuteModuleCmdletAsync(
+                "Remove-DistroNexusCatalogSource", It.IsAny<Dictionary<string, object>>(), null, cancellation.Token))
+            .Returns(Task.FromCanceled<PowerShellScriptResult>(cancellation.Token));
+        var client = new PowerShellModuleClient(powerShell.Object);
+
+        await Assert.ThrowsAsync<TaskCanceledException>(() => client.RemoveCatalogSourceAsync("source-1", cancellation.Token));
+    }
+
     [Fact]
     public void Interface_ExposesOnlyTheRegisteredTypedOperations()
     {
@@ -261,17 +371,25 @@ public sealed class PowerShellModuleClientTests
 
         Assert.Equal(
             [
+                nameof(IPowerShellModuleClient.AddCatalogSourceAsync),
                 nameof(IPowerShellModuleClient.AddInstanceTagAsync),
+                nameof(IPowerShellModuleClient.GetCatalogSourcesAsync),
                 nameof(IPowerShellModuleClient.GetInstancesAsync),
                 nameof(IPowerShellModuleClient.GetInstanceTagsAsync),
                 nameof(IPowerShellModuleClient.GetSettingsAsync),
+                nameof(IPowerShellModuleClient.RemoveCatalogSourceAsync),
                 nameof(IPowerShellModuleClient.RemoveInstanceTagAsync),
                 nameof(IPowerShellModuleClient.RenameInstanceTagsAsync),
+                nameof(IPowerShellModuleClient.ReorderCatalogSourcesAsync),
+                nameof(IPowerShellModuleClient.ResetCatalogSourcesAsync),
                 nameof(IPowerShellModuleClient.ResetSettingsAsync),
                 nameof(IPowerShellModuleClient.SaveSettingsAsync),
+                nameof(IPowerShellModuleClient.SetCatalogSourceActiveAsync),
                 nameof(IPowerShellModuleClient.SetInstanceTagsAsync),
                 nameof(IPowerShellModuleClient.StartInstanceAsync),
-                nameof(IPowerShellModuleClient.StopInstanceAsync)
+                nameof(IPowerShellModuleClient.StopInstanceAsync),
+                nameof(IPowerShellModuleClient.TestCatalogSourceAsync),
+                nameof(IPowerShellModuleClient.UpdateCatalogSourceAsync)
             ],
             methods.Select(method => method.Name).Order());
         Assert.DoesNotContain(methods, method => method.Name.Contains("Script", StringComparison.OrdinalIgnoreCase));
@@ -290,5 +408,28 @@ public sealed class PowerShellModuleClientTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = output });
         return powerShell;
+    }
+
+    private static Task<bool> InvokeCatalogBooleanOperation(PowerShellModuleClient client, string command) => command switch
+    {
+        "Remove-DistroNexusCatalogSource" => client.RemoveCatalogSourceAsync("source-1"),
+        "Test-DistroNexusCatalogSource" => client.TestCatalogSourceAsync("https://example.test/catalog"),
+        "Set-DistroNexusCatalogSourceActive" => client.SetCatalogSourceActiveAsync("source-1", true),
+        "Set-DistroNexusCatalogSourceOrder" => client.ReorderCatalogSourcesAsync(["source-1"]),
+        "Reset-DistroNexusCatalogSource" => client.ResetCatalogSourcesAsync(),
+        _ => throw new ArgumentOutOfRangeException(nameof(command))
+    };
+
+    private static bool MatchesCatalogBooleanParameters(string operation, Dictionary<string, object>? parameters)
+    {
+        return operation switch
+        {
+            "Remove" => parameters is not null && (string)parameters["SourceId"] == "source-1",
+            "Test" => parameters is not null && (string)parameters["Url"] == "https://example.test/catalog",
+            "Active" => parameters is not null && (string)parameters["SourceId"] == "source-1" && !(bool)parameters["IsActive"],
+            "Order" => parameters is not null && ((string[])parameters["SourceId"]).SequenceEqual(new[] { "source-1", "source-2" }),
+            "Reset" => parameters is null,
+            _ => false
+        };
     }
 }

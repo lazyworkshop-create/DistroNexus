@@ -12,7 +12,7 @@
 
 ## Dependency Order
 
-S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S05 -> S06 -> S07 -> S08
+S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S05 -> S06 -> S07 -> S08
 
 ## Slice S01: Verified module contract and migration baseline
 
@@ -541,6 +541,65 @@ Catalog source module contract and focused tests.
 ### Out of Scope
 
 Desktop source-manager migration, catalog refresh/load/search/package/cache behavior, and source-to-catalog refresh integration.
+
+## Slice S14: Catalog source desktop consumer migration
+
+### Status
+
+Committed
+
+### Objective
+
+The Source Manager presentation flow uses the closed typed PowerShell module client for every catalog-source operation and no longer calls `ICatalogSourceManager` directly.
+
+### Sources
+
+FR-001 through FR-007; S13 catalog-source contract; `SourceManagerViewModel.cs`; `IPowerShellModuleClient.cs`; `PowerShellModuleClient.cs`.
+
+### Dependencies
+
+S13.
+
+### Allowed Paths
+
+`src/Client/DistroNexus.Core/Interfaces/IPowerShellModuleClient.cs`, `src/Client/DistroNexus.Core/Services/PowerShellModuleClient.cs`, `src/Client/DistroNexus.Core/Services/PowerShellService.cs`, `src/Client/DistroNexus.Desktop/ViewModels/SourceManagerViewModel.cs`, `src/Client/DistroNexus.Desktop/App.xaml.cs`, focused module-client, module-parameter formatting, and Source Manager xUnit tests, plan.
+
+### Excluded Paths
+
+PowerShell public commands/manifest, WorkspaceBridge, `ICatalogSourceManager`/`CatalogSourceManager`, catalog/package/cache services, views/XAML/navigation, settings schema, release/publishing surfaces.
+
+### Contract and Documentation
+
+Add only named catalog-source methods and explicit create/update request models to the presentation client. Map each method to its existing fixed module cmdlet and modeled parameters; do not expose command text, scripts, bridge operations, raw JSON, or generic execution APIs.
+
+### Implementation Scope
+
+Map list/singleton results, add/update source results, and boolean mutation results with deterministic invalid-result failures. Preserve explicit Boolean `false` values at the PowerShell module boundary. Migrate Source Manager list/add/update/remove/test/active/reorder/reset calls and remove the now-unused desktop `ICatalogSourceManager` registration.
+
+### Test Scope
+
+Module-client fixed-command/parameter/result/error/cancellation tests; module parameter-formatting tests for explicit Boolean values; Source Manager routing tests covering every command handler; exact typed-client surface assertion.
+
+### Acceptance Criteria
+
+- `SourceManagerViewModel` has no `ICatalogSourceManager` dependency or direct runtime manager call.
+- Every Source Manager operation maps through one named typed client method and its existing fixed module cmdlet.
+- The desktop client remains a closed, typed contract with no generic execution escape hatch.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~PowerShellModuleClientTests|FullyQualifiedName~SourceManagerViewModelRoutingTests"
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+Typed catalog-source desktop client and Source Manager migration with focused tests.
+
+### Out of Scope
+
+Catalog loading/refresh/search/package/cache behavior, source defaults UI, and source-to-catalog refresh integration.
 
 ## Slice S05: Network, systemd, firewall, recovery, health, and diagnostics command parity
 

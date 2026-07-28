@@ -20,6 +20,14 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string GetSettingsCommand = "Get-DistroNexusSettings";
     private const string SetSettingsCommand = "Set-DistroNexusSettings";
     private const string ResetSettingsCommand = "Reset-DistroNexusSettings";
+    private const string GetCatalogSourcesCommand = "Get-DistroNexusCatalogSource";
+    private const string AddCatalogSourceCommand = "Add-DistroNexusCatalogSource";
+    private const string UpdateCatalogSourceCommand = "Set-DistroNexusCatalogSource";
+    private const string RemoveCatalogSourceCommand = "Remove-DistroNexusCatalogSource";
+    private const string TestCatalogSourceCommand = "Test-DistroNexusCatalogSource";
+    private const string SetCatalogSourceActiveCommand = "Set-DistroNexusCatalogSourceActive";
+    private const string SetCatalogSourceOrderCommand = "Set-DistroNexusCatalogSourceOrder";
+    private const string ResetCatalogSourcesCommand = "Reset-DistroNexusCatalogSource";
     private readonly IPowerShellService _powerShellService;
 
     public PowerShellModuleClient(IPowerShellService powerShellService)
@@ -154,6 +162,89 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     public Task ResetSettingsAsync(CancellationToken cancellationToken = default) =>
         ExecuteSettingsMutationAsync(ResetSettingsCommand, null, cancellationToken);
 
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<CatalogSource>> GetCatalogSourcesAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(
+            GetCatalogSourcesCommand,
+            options: new ModuleCallOptions { ParseAsJson = true },
+            cancellationToken: cancellationToken);
+        ThrowIfFailed(result);
+
+        if (string.IsNullOrWhiteSpace(result.Output))
+        {
+            return Array.Empty<CatalogSource>();
+        }
+
+        return DeserializeCatalogSources(result.Output);
+    }
+
+    /// <inheritdoc />
+    public async Task<CatalogSource> AddCatalogSourceAsync(
+        DistroNexusCatalogSourceCreateRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(
+            AddCatalogSourceCommand,
+            new Dictionary<string, object>
+            {
+                ["Name"] = request.Name,
+                ["Url"] = request.Url,
+                ["Description"] = request.Description ?? string.Empty,
+                ["IsActive"] = request.IsActive
+            },
+            new ModuleCallOptions { ParseAsJson = true },
+            cancellationToken);
+        ThrowIfFailed(result);
+        return DeserializeCatalogSource(result.Output);
+    }
+
+    /// <inheritdoc />
+    public async Task<CatalogSource> UpdateCatalogSourceAsync(
+        DistroNexusCatalogSourceUpdateRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(
+            UpdateCatalogSourceCommand,
+            new Dictionary<string, object>
+            {
+                ["SourceId"] = request.SourceId,
+                ["Name"] = request.Name,
+                ["Url"] = request.Url,
+                ["Description"] = request.Description ?? string.Empty,
+                ["IsActive"] = request.IsActive
+            },
+            new ModuleCallOptions { ParseAsJson = true },
+            cancellationToken);
+        ThrowIfFailed(result);
+        return DeserializeCatalogSource(result.Output);
+    }
+
+    /// <inheritdoc />
+    public Task<bool> RemoveCatalogSourceAsync(string sourceId, CancellationToken cancellationToken = default) =>
+        ExecuteCatalogSourceBooleanMutationAsync(RemoveCatalogSourceCommand, new Dictionary<string, object> { ["SourceId"] = sourceId }, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<bool> TestCatalogSourceAsync(string url, CancellationToken cancellationToken = default) =>
+        ExecuteCatalogSourceBooleanMutationAsync(TestCatalogSourceCommand, new Dictionary<string, object> { ["Url"] = url }, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<bool> SetCatalogSourceActiveAsync(string sourceId, bool isActive, CancellationToken cancellationToken = default) =>
+        ExecuteCatalogSourceBooleanMutationAsync(SetCatalogSourceActiveCommand, new Dictionary<string, object> { ["SourceId"] = sourceId, ["IsActive"] = isActive }, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<bool> ReorderCatalogSourcesAsync(IReadOnlyList<string> sourceIds, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(sourceIds);
+        return ExecuteCatalogSourceBooleanMutationAsync(SetCatalogSourceOrderCommand, new Dictionary<string, object> { ["SourceId"] = sourceIds.ToArray() }, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<bool> ResetCatalogSourcesAsync(CancellationToken cancellationToken = default) =>
+        ExecuteCatalogSourceBooleanMutationAsync(ResetCatalogSourcesCommand, null, cancellationToken);
+
     private async Task ExecuteTagMutationAsync(
         string command,
         Dictionary<string, object> parameters,
@@ -172,6 +263,29 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
         CancellationToken cancellationToken)
     {
         var result = await _powerShellService.ExecuteModuleCmdletAsync(command, parameters, cancellationToken: cancellationToken);
+        if (!result.Success)
+        {
+            throw result.Exception ?? new InvalidOperationException(result.Error ?? "The DistroNexus module operation failed.");
+        }
+    }
+
+    private async Task<bool> ExecuteCatalogSourceBooleanMutationAsync(
+        string command,
+        Dictionary<string, object>? parameters,
+        CancellationToken cancellationToken)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(command, parameters, cancellationToken: cancellationToken);
+        ThrowIfFailed(result);
+        if (bool.TryParse(result.Output?.Trim(), out var success))
+        {
+            return success;
+        }
+
+        throw new InvalidOperationException("The DistroNexus module operation returned an invalid catalog source result.");
+    }
+
+    private static void ThrowIfFailed(PowerShellScriptResult result)
+    {
         if (!result.Success)
         {
             throw result.Exception ?? new InvalidOperationException(result.Error ?? "The DistroNexus module operation failed.");
@@ -239,6 +353,29 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
 
         var result = JsonSerializer.Deserialize<DistroNexusInstanceTagResult>(output, options);
         return result is null ? Array.Empty<DistroNexusInstanceTagResult>() : [result];
+    }
+
+    private static IReadOnlyList<CatalogSource> DeserializeCatalogSources(string output)
+    {
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        using var document = JsonDocument.Parse(output);
+        if (document.RootElement.ValueKind == JsonValueKind.Array)
+        {
+            return JsonSerializer.Deserialize<List<CatalogSource>>(output, options) ?? new List<CatalogSource>();
+        }
+
+        return [DeserializeCatalogSource(output)];
+    }
+
+    private static CatalogSource DeserializeCatalogSource(string? output)
+    {
+        if (string.IsNullOrWhiteSpace(output))
+        {
+            throw new InvalidOperationException("The DistroNexus module operation returned no catalog source result.");
+        }
+
+        return JsonSerializer.Deserialize<CatalogSource>(output, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+            ?? throw new InvalidOperationException("The DistroNexus module operation returned an invalid catalog source result.");
     }
 
     private static IReadOnlyList<WslInstance> DeserializeInstances(string output)

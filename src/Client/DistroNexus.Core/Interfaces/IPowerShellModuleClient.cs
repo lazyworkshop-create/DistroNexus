@@ -43,12 +43,55 @@ public interface IPowerShellModuleClient
 
     /// <summary>Resets modeled global settings through the module contract.</summary>
     Task ResetSettingsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Gets catalog sources through the module contract.</summary>
+    Task<IReadOnlyList<CatalogSource>> GetCatalogSourcesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Adds a catalog source through the module contract.</summary>
+    Task<CatalogSource> AddCatalogSourceAsync(
+        DistroNexusCatalogSourceCreateRequest request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Updates a catalog source through the module contract.</summary>
+    Task<CatalogSource> UpdateCatalogSourceAsync(
+        DistroNexusCatalogSourceUpdateRequest request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Removes a catalog source through the module contract.</summary>
+    Task<bool> RemoveCatalogSourceAsync(string sourceId, CancellationToken cancellationToken = default);
+
+    /// <summary>Tests whether a catalog source URL is accessible through the module contract.</summary>
+    Task<bool> TestCatalogSourceAsync(string url, CancellationToken cancellationToken = default);
+
+    /// <summary>Sets a catalog source active state through the module contract.</summary>
+    Task<bool> SetCatalogSourceActiveAsync(string sourceId, bool isActive, CancellationToken cancellationToken = default);
+
+    /// <summary>Reorders catalog sources through the module contract.</summary>
+    Task<bool> ReorderCatalogSourcesAsync(IReadOnlyList<string> sourceIds, CancellationToken cancellationToken = default);
+
+    /// <summary>Resets catalog sources to their defaults through the module contract.</summary>
+    Task<bool> ResetCatalogSourcesAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>
 /// Represents the stable module result for an instance tag query.
 /// </summary>
 public sealed record DistroNexusInstanceTagResult(string Name, IReadOnlyList<string> Tags);
+
+/// <summary>Represents the explicit catalog source fields accepted for creation.</summary>
+public sealed record DistroNexusCatalogSourceCreateRequest(
+    string Name,
+    string Url,
+    string? Description = null,
+    bool IsActive = true);
+
+/// <summary>Represents the explicit catalog source fields accepted for an update.</summary>
+public sealed record DistroNexusCatalogSourceUpdateRequest(
+    string SourceId,
+    string Name,
+    string Url,
+    string? Description = null,
+    bool IsActive = true);
 
 /// <summary>
 /// Represents the explicit subset of modeled global settings to update. A null member is not sent
