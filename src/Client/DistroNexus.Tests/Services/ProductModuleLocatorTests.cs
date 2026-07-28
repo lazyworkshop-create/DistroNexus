@@ -17,7 +17,15 @@ public sealed class ProductModuleLocatorTests
     public void Resolve_UsesDevelopmentFallbackOnlyWhenEnabled()
     {
         var root = CreateRoot(withPackaged: false, withDevelopment: true);
-        try { Assert.NotNull(Resolve(root, true)); Assert.Null(Resolve(root, false)); }
+        try
+        {
+#if DEBUG
+            Assert.NotNull(Resolve(root, true));
+#else
+            Assert.Null(Resolve(root, true));
+#endif
+            Assert.Null(Resolve(root, false));
+        }
         finally { Directory.Delete(root, true); }
     }
 

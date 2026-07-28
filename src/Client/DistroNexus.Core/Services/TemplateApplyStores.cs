@@ -74,7 +74,12 @@ public sealed class TemplateApplyOperationStore
     }
     public async Task CreateAsync(TemplateApplyOperationRecord record, CancellationToken ct = default) => await WriteAsync(record, ct).ConfigureAwait(false);
     public async Task<TemplateApplyOperationRecord> ReadAsync(string id, CancellationToken ct = default)
-    { Validate(id); var path = Path.Combine(_root, id + ".operation"); if (!File.Exists(path)) throw Invalid("Template.OperationNotFound"); return await ReadUnsafeAsync(path, ct).ConfigureAwait(false); }
+    {
+        Validate(id); var path = Path.Combine(_root, id + ".operation");
+        await using var stateLock = await AcquireStateLockAsync(id, ct).ConfigureAwait(false);
+        try { return await ReadUnsafeAsync(path, ct).ConfigureAwait(false); }
+        catch (FileNotFoundException) { throw Invalid("Template.OperationNotFound"); }
+    }
     public async Task WriteAsync(TemplateApplyOperationRecord record, CancellationToken ct = default)
     {
         Validate(record.OperationId); if (record.Sid != TemplateApplyGrantStore.CurrentSid()) throw Invalid("Template.OperationNotFound");
@@ -179,9 +184,21 @@ public sealed class TemplateApplyOperationStore
     public static bool Terminal(TemplateOperationState s) => s is TemplateOperationState.Succeeded or TemplateOperationState.Failed or TemplateOperationState.Cancelled or TemplateOperationState.Interrupted;
     private async Task<TemplateApplyOperationRecord> ReadUnsafeAsync(string path, CancellationToken ct)
     {
-        try { var r = JsonSerializer.Deserialize<TemplateApplyOperationRecord>(ProtectedData.Unprotect(await File.ReadAllBytesAsync(path, ct).ConfigureAwait(false), Entropy, DataProtectionScope.CurrentUser)) ?? throw Invalid("Template.OperationNotFound"); if (r.Sid != TemplateApplyGrantStore.CurrentSid()) throw Invalid("Template.OperationNotFound"); return r; }
+        try { var r = JsonSerializer.Deserialize<TemplateApplyOperationRecord>(ProtectedData.Unprotect(await ReadAllBytesSharedAsync(path, ct).ConfigureAwait(false), Entropy, DataProtectionScope.CurrentUser)) ?? throw Invalid("Template.OperationNotFound"); if (r.Sid != TemplateApplyGrantStore.CurrentSid()) throw Invalid("Template.OperationNotFound"); return r; }
         catch (CryptographicException) { throw Invalid("Template.OperationNotFound"); }
         catch (JsonException) { throw Invalid("Template.OperationNotFound"); }
+    }
+    /// <summary>
+    /// Operation readers must not prevent the atomic replacement used by writers.  In particular,
+    /// Windows requires the reader to opt into delete sharing before <see cref="File.Move"/> can
+    /// replace the state file while a status request is in flight.
+    /// </summary>
+    private static async Task<byte[]> ReadAllBytesSharedAsync(string path, CancellationToken ct)
+    {
+        await using var source = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete, 4096, FileOptions.Asynchronous | FileOptions.SequentialScan);
+        using var buffer = new MemoryStream();
+        await source.CopyToAsync(buffer, ct).ConfigureAwait(false);
+        return buffer.ToArray();
     }
     private async Task WriteUnsafeAsync(string target, TemplateApplyOperationRecord record, CancellationToken ct)
     {
@@ -211,20 +228,20 @@ public sealed class TemplateApplyOperationStore
                 _replaceFile(source, destination, true);
                 return;
             }
-            catch (Exception ex) when (attempt < maxAttempts - 1 && IsTransientReplacementContention(ex))
+            catch (Exception ex) when (attempt < maxAttempts - 1 && IsTransientSharingFailure(ex, destination))
             {
                 await Task.Delay(TimeSpan.FromMilliseconds(10 * (1 << attempt)), ct).ConfigureAwait(false);
             }
         }
     }
-    private static bool IsTransientReplacementContention(Exception exception)
+    internal static bool IsTransientSharingFailure(Exception exception, string destination)
     {
         const int sharingViolation = 32;
         const int lockViolation = 33;
         var win32Error = exception.HResult & 0xffff;
         return OperatingSystem.IsWindows()
-            && (exception is IOException || exception is UnauthorizedAccessException)
-            && (win32Error == sharingViolation || win32Error == lockViolation);
+            && exception is IOException
+            && win32Error is sharingViolation or lockViolation;
     }
     private async Task<FileStream> AcquireStateLockAsync(string id, CancellationToken ct) { var path=Path.Combine(_root,id+".state.lock"); while(true) { ct.ThrowIfCancellationRequested(); try { return new FileStream(path,FileMode.OpenOrCreate,FileAccess.ReadWrite,FileShare.None,1,FileOptions.DeleteOnClose); } catch(IOException) { await Task.Delay(5,ct).ConfigureAwait(false); } } }
     private static void Validate(string id) { if (id.Length != 64 || id.Any(x => !Uri.IsHexDigit(x))) throw Invalid("Template.OperationNotFound"); }

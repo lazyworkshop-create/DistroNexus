@@ -169,15 +169,43 @@ public sealed class TemplateApplyServiceTests : IDisposable
         var store=new TemplateApplyOperationStore(root, null, (source,destination,overwrite) =>
         {
             if (attempts++ == 0) throw new FileContentionIOException();
-            if (attempts == 2) throw new FileContentionAccessException();
             File.Move(source,destination,overwrite);
         });
 
         await store.WriteAsync(initial with { Message="Updated" });
 
-        Assert.Equal(3,attempts);
+        Assert.Equal(2,attempts);
         Assert.Equal("Updated",(await store.ReadAsync(id)).Message);
         Assert.Empty(Directory.EnumerateFiles(root,"*.tmp-*"));
+    }
+
+    [Fact]
+    public async Task OperationStore_StatusReadAndWriteSerializeWithoutTemporaryFiles()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+
+        var root=Path.Combine(_root,"atomic-shared-reader"); var id=new string('7',64); var now=DateTimeOffset.UtcNow;
+        var initial=new TemplateApplyOperationRecord(1,id,TemplateApplyGrantStore.CurrentSid(),"Ubuntu","dev","1","","","",DigestFiles(),"",true,TemplateOperationState.Running,now,now.AddMinutes(1),now,0,1,"setup","Running",null,[],false);
+        var store=new TemplateApplyOperationStore(root);
+        await store.CreateAsync(initial);
+        var reader=store.ReadAsync(id);
+        var write=store.WriteAsync(initial with { Message="Updated" });
+        await Task.WhenAll(reader,write).WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Equal("Updated",(await store.ReadAsync(id)).Message);
+        Assert.Empty(Directory.EnumerateFiles(root,"*.tmp-*"));
+    }
+
+    [Fact]
+    public void OperationStore_AccessDeniedProbeIsNotTransient()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+
+        var destination=Path.Combine(_root,"access-denied-probe");
+        Directory.CreateDirectory(destination);
+        var accessDenied=new AccessDeniedException();
+
+        Assert.False(TemplateApplyOperationStore.IsTransientSharingFailure(accessDenied,destination));
     }
 
     [Fact]
@@ -213,7 +241,7 @@ public sealed class TemplateApplyServiceTests : IDisposable
         var store=new TemplateApplyOperationStore(root, null, (_,_,_) =>
         {
             cancellation.Cancel();
-            throw new FileContentionAccessException();
+            throw new FileContentionIOException();
         });
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => store.WriteAsync(initial with { Message="Updated" }, cancellation.Token));
