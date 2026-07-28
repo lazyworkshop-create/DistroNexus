@@ -135,6 +135,9 @@ while ((line = Console.ReadLine()) is not null)
             "marketplaceArtifactHistory" => await GetMarketplaceArtifactHistoryAsync(request),
             "marketplaceRollback" => await RollbackMarketplaceArtifactAsync(request),
             "marketplaceDownloadArtifact" => await DownloadMarketplaceArtifactAsync(request),
+            "instance.list.v1" => await instances.GetInstanceDetailsAsync(ParseInstanceListOptions(request)),
+            "instance.start.v1" => await instances.StartInstanceAsync(ParseInstanceName(request)),
+            "instance.stop.v1" => await instances.StopInstanceAsync(ParseInstanceName(request)),
             _ => throw new ArgumentException("Bridge operation is unsupported.")
         };
         response = new(true, value, null, null);
@@ -143,6 +146,20 @@ while ((line = Console.ReadLine()) is not null)
     catch (Exception ex) { response = new(false, null, ex is InvalidOperationException ? "Workspace.ConflictOrState" : "Workspace.Bridge.Invalid", ex.Message); }
     WriteFrame(response);
 }
+
+string ParseInstanceName(BridgeRequest request)
+{
+    var payload = JsonSerializer.Deserialize<InstanceNamePayload>(request.Payload?.GetRawText() ?? string.Empty, options)
+        ?? throw new ArgumentException("Instance payload is required.");
+    if (string.IsNullOrWhiteSpace(payload.Name))
+        throw new ArgumentException("Instance name is required.");
+    return payload.Name;
+}
+
+InstanceListOptions ParseInstanceListOptions(BridgeRequest request) =>
+    JsonSerializer.Deserialize<InstanceListPayload>(request.Payload?.GetRawText() ?? "{}", options) is { } payload
+        ? new InstanceListOptions(payload.IncludeRelease, payload.IncludeUser, payload.SkipDiskSize)
+        : new InstanceListOptions(false, false, false);
 
 async Task<object> PreviewPodmanUnitAsync(BridgeRequest request) { var p = JsonSerializer.Deserialize<PodmanUnitPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Podman payload is required."); var preview = await containers.PreviewPodmanUserUnitAsync(p.InstanceName, p.Unit, p.Action); return new { Token = preview.SystemdPreview.PreviewToken, InstanceName = p.InstanceName, Unit = p.Unit, Action = p.Action, Effects = preview.SystemdPreview.Effects }; }
 async Task<object> ExecutePodmanUnitAsync(BridgeRequest request) { var p = JsonSerializer.Deserialize<PodmanUnitPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Podman payload is required."); return await containers.ExecutePodmanUserUnitAsync(request.Token ?? string.Empty, p.InstanceName, p.Unit, p.Action); }
@@ -258,6 +275,8 @@ static async Task<object> RemoveAsync(IWorkspaceService service, BridgeRequest r
 static Task<WorkspaceDefinition> DuplicateAsync(IWorkspaceService service, BridgeRequest request) => service.DuplicateAsync(request.Id ?? throw new ArgumentException("Workspace id is required."), request.Name ?? throw new ArgumentException("Workspace name is required."), request.ExpectedRevision ?? throw new ArgumentException("Expected revision is required."));
 static WorkspaceDefinition ParseDefinition(string payload, JsonSerializerOptions options) => JsonSerializer.Deserialize<WorkspaceDefinition>(payload, options) ?? throw new ArgumentException("Workspace definition is required.");
 public sealed record BridgeRequest(string Operation, Guid? Id, JsonElement? Payload, long? ExpectedRevision, string? Token = null, string? Name = null, Guid? ActionId = null);
+public sealed record InstanceNamePayload(string Name);
+public sealed record InstanceListPayload(bool IncludeRelease = false, bool IncludeUser = false, bool SkipDiskSize = false);
 public sealed record PodmanUnitPayload(string InstanceName, PodmanUserUnit Unit, SystemdAction Action);
 public sealed record PodmanConnectionPayload(string InstanceName, string Name, string Endpoint);
 public sealed record PodmanStatusPayload(string InstanceName);

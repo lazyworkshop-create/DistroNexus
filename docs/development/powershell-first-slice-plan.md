@@ -12,7 +12,7 @@
 
 ## Dependency Order
 
-S01 -> S02 -> S03 -> S04 -> S05 -> S06 -> S07 -> S08
+S01 -> S02 -> S03 -> S04 -> S09 -> S05 -> S06 -> S07 -> S08
 
 ## Slice S01: Verified module contract and migration baseline
 
@@ -246,6 +246,65 @@ Typed tag module-client and named WPF tag-consumer migration.
 ### Out of Scope
 
 Configuration, template, marketplace, workspace, and other WPF capability families.
+
+## Slice S09: Instance list, start, and stop bridge-backed module contract
+
+### Status
+
+Committed
+
+### Objective
+
+PowerShell automation can list, start, and stop WSL instances through typed WorkspaceBridge operations rather than direct cmdlet-side host access.
+
+### Sources
+
+FR-001 through FR-007; `BridgeWslManagerService.cs`; `IWslManagerService.cs`; existing instance cmdlets; lifecycle evidence in `docs/specs/powershell-first-design.md`.
+
+### Dependencies
+
+S02.
+
+### Allowed Paths
+
+`src/Client/DistroNexus.WorkspaceBridge/BridgeWslManagerService.cs`, `src/Client/DistroNexus.WorkspaceBridge/Program.cs`, `src/PowerShell/Public/Get-DistroNexusInstance.ps1`, `src/PowerShell/Public/Start-DistroNexusInstance.ps1`, `src/PowerShell/Public/Stop-DistroNexusInstance.ps1`, focused WorkspaceBridge xUnit tests, focused PowerShell Pester tests, plan.
+
+### Excluded Paths
+
+Desktop consumers/views, lifecycle mutations other than start/stop, manifest changes, Core `WslManagerService`, import/export/install/move/rename/remove commands, release/publishing surfaces.
+
+### Contract and Documentation
+
+Define versioned capability-specific bridge operations for instance list/start/stop; map stable typed payloads and bridge errors without exposing generic command execution.
+
+### Implementation Scope
+
+Expand the bridge adapter only for list/start/stop. Migrate the three cmdlets to invoke those operations; start/stop remain `SupportsShouldProcess` and do not invoke bridge work under `WhatIf` or declined confirmation.
+
+### Test Scope
+
+Bridge route success, unsupported/invalid payload failure, cmdlet fixed operation mapping, list result conversion, and start/stop consent behavior.
+
+### Acceptance Criteria
+
+- Get/Start/Stop-DistroNexusInstance execute through fixed bridge operations, not direct `wsl.exe`/registry calls in their public cmdlet bodies.
+- Start/stop do not initiate bridge operations under `WhatIf` or declined confirmation.
+- No generic script, command, or operation tunnel is introduced.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~WorkspaceBridgeProtocol|FullyQualifiedName~WslManager"
+pwsh -NoProfile -Command "Invoke-Pester -Path tests/PowerShell/Unit/Public"
+```
+
+### Commit Boundary
+
+Bridge-backed list/start/stop instance module contract and focused tests.
+
+### Out of Scope
+
+Desktop lifecycle consumer migration and all other instance lifecycle commands.
 
 ## Slice S05: Network, systemd, firewall, recovery, health, and diagnostics command parity
 

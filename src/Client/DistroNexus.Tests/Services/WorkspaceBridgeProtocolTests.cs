@@ -56,6 +56,34 @@ public sealed class WorkspaceBridgeProtocolTests
     }
 
     [Fact]
+    public async Task InstanceList_UsesItsFixedVersionedBridgeRouteAndReturnsAProtocolFrame()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+
+        var response = await bridge.SendAsync("instance.list.v1");
+
+        Assert.True(response.TryGetProperty("Succeeded", out _));
+        if (response.GetProperty("Succeeded").GetBoolean())
+            Assert.Equal(JsonValueKind.Array, response.GetProperty("Value").ValueKind);
+    }
+
+    [Theory]
+    [InlineData("instance.start.v1")]
+    [InlineData("instance.stop.v1")]
+    public async Task InstanceMutation_RejectsMissingOrInvalidPayloadBeforeHostInvocation(string operation)
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+
+        var missing = await bridge.SendAsync(operation);
+        var empty = await bridge.SendAsync(operation, payload: JsonDocument.Parse("{\"Name\":\"\"}").RootElement.Clone());
+
+        Assert.False(missing.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("Workspace.Bridge.Invalid", missing.GetProperty("ErrorCode").GetString());
+        Assert.False(empty.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("Workspace.Bridge.Invalid", empty.GetProperty("ErrorCode").GetString());
+    }
+
+    [Fact]
     public async Task HealthScan_UsesConcreteCoreChecksForEveryAdvertisedCategory()
     {
         await using var bridge = await BridgeProcess.StartAsync();
