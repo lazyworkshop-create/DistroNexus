@@ -927,19 +927,10 @@ public partial class WslManagerService : IWslManagerService
                 return true;
             }
 
-            // Fallback to inline script if module failed
-            _logger.LogWarning("Module execution failed for RemoveInstanceAsync, falling back to inline script");
-            var escapedName = EscapePowerShellString(instanceName);
-            var script = 
-                $"$result = wsl --unregister {escapedName} 2>&1; " +
-                $"$exitCode = $LASTEXITCODE; " +
-                $"if ($exitCode -ne 0) {{ throw \"Failed to remove WSL instance: $result\" }}; " +
-                "'success'";
-
-            await _powerShellService.ExecuteScriptAsync(script, cancellationToken);
-
-            _logger.LogInformation("WSL instance '{InstanceName}' removed successfully using fallback script", instanceName);
-            return true;
+            // Lifecycle removal is module/Bridge-only.  A failed contract must not
+            // silently switch to a raw WSL command path.
+            _logger.LogWarning("Module execution failed for RemoveInstanceAsync; refusing raw WSL fallback");
+            return false;
         }
         catch (Exception ex)
         {
@@ -991,35 +982,12 @@ public partial class WslManagerService : IWslManagerService
                 return;
             }
 
-            // Fallback to inline script if module failed
-            _logger.LogWarning("Module execution failed for MoveInstanceAsync, falling back to inline script");
-            var escapedName = EscapePowerShellString(instanceName);
-            var escapedPath = EscapePowerShellString(newPath);
-            var tempExportPath = EscapePowerShellString(Path.Combine(Path.GetTempPath(), $"{instanceName}_export.tar"));
-            
-            progress?.Report(10);
-
-            // Export, unregister, and import to new location
-            // Note: WSL outputs UTF-16 text, so we clean null characters
-            var script = 
-                $"$result = wsl --export {escapedName} {tempExportPath} 2>&1; " +
-                $"$exitCode = $LASTEXITCODE; " +
-                $"if ($exitCode -ne 0) {{ throw \"Export failed: $result\" }}; " +
-                $"if (-not (Test-Path {escapedPath})) {{ New-Item -ItemType Directory -Path {escapedPath} -Force | Out-Null }}; " +
-                $"$result = wsl --unregister {escapedName} 2>&1; " +
-                $"$exitCode = $LASTEXITCODE; " +
-                $"if ($exitCode -ne 0) {{ Remove-Item {tempExportPath} -Force -ErrorAction SilentlyContinue; throw \"Unregister failed: $result\" }}; " +
-                $"$result = wsl --import {escapedName} {escapedPath} {tempExportPath} 2>&1; " +
-                $"$exitCode = $LASTEXITCODE; " +
-                $"Remove-Item {tempExportPath} -Force -ErrorAction SilentlyContinue; " +
-                $"if ($exitCode -ne 0) {{ throw \"Import failed: $result\" }}; " +
-                "'success'";
-
-            progress?.Report(50);
-            await _powerShellService.ExecuteScriptAsync(script, cancellationToken);
-
-            _logger.LogInformation("WSL instance '{InstanceName}' moved successfully using fallback script", instanceName);
-            progress?.Report(100);
+            _logger.LogWarning("Module execution failed for MoveInstanceAsync; refusing raw WSL fallback");
+            throw new WslOperationFailedException(
+                "The reviewed lifecycle operation could not be completed.",
+                DistroNexusErrorCode.UnknownError,
+                operation: "MoveInstance",
+                instanceName: instanceName);
         }
         catch (Exception ex)
         {
@@ -1062,39 +1030,12 @@ public partial class WslManagerService : IWslManagerService
                 return;
             }
 
-            // Fallback to inline script if module failed
-            _logger.LogWarning("Module execution failed for RenameInstanceAsync, falling back to inline script");
-
-            // Phase 3 (E-08): resolve install path using C# registry — no PS registry calls.
-            var installPath = GetInstallPathFromRegistry(oldName);
-            if (installPath == null)
-                throw new WslOperationFailedException(
-                    $"Instance '{oldName}' not found in registry.",
-                    DistroNexusErrorCode.InstanceNotFound,
-                    operation: "RenameInstance");
-
-            var escapedOldName = EscapePowerShellString(oldName);
-            var escapedNewName = EscapePowerShellString(newName);
-            var escapedInstallPath = EscapePowerShellString(installPath);
-            var tempExportPath = EscapePowerShellString(Path.Combine(Path.GetTempPath(), $"{oldName}_rename.tar"));
-
-            // Install path already resolved in C# — script does not access the registry.
-            var script =
-                $"$result = wsl --export {escapedOldName} {tempExportPath} 2>&1; " +
-                "$exitCode = $LASTEXITCODE; " +
-                $"if ($exitCode -ne 0) {{ throw \"Export failed: $result\" }}; " +
-                $"$result = wsl --unregister {escapedOldName} 2>&1; " +
-                "$exitCode = $LASTEXITCODE; " +
-                $"if ($exitCode -ne 0) {{ Remove-Item {tempExportPath} -Force -ErrorAction SilentlyContinue; throw \"Unregister failed: $result\" }}; " +
-                $"$result = wsl --import {escapedNewName} {escapedInstallPath} {tempExportPath} 2>&1; " +
-                "$exitCode = $LASTEXITCODE; " +
-                $"Remove-Item {tempExportPath} -Force -ErrorAction SilentlyContinue; " +
-                $"if ($exitCode -ne 0) {{ throw \"Import failed: $result\" }}; " +
-                "'success'";
-
-            await _powerShellService.ExecuteScriptAsync(script, cancellationToken);
-
-            _logger.LogInformation("WSL instance renamed successfully using fallback script");
+            _logger.LogWarning("Module execution failed for RenameInstanceAsync; refusing raw WSL fallback");
+            throw new WslOperationFailedException(
+                "The reviewed lifecycle operation could not be completed.",
+                DistroNexusErrorCode.RenameFailed,
+                operation: "RenameInstance",
+                instanceName: oldName);
         }
         catch (Exception ex)
         {

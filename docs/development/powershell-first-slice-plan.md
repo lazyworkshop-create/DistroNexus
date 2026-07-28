@@ -1983,7 +1983,7 @@ Production WSL/VHDX/elevation UAT and all other capability families.
 
 ### Status
 
-Planned
+Committed
 
 ### Objective
 

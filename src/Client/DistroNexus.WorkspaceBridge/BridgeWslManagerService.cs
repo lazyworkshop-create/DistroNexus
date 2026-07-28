@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Microsoft.Win32;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
+using DistroNexus.Core.Services;
 
 namespace DistroNexus.WorkspaceBridge;
 
@@ -10,10 +11,11 @@ namespace DistroNexus.WorkspaceBridge;
 /// Minimal runtime adapter used only by WorkspaceRuntime. It deliberately exposes
 /// only the list, start, and stop instance lifecycle operations through the bridge.
 /// </summary>
-internal sealed class BridgeWslManagerService(IProcessRunner processes) : IWslManagerService
+internal sealed class BridgeWslManagerService(IProcessRunner processes, string lifecycleRoot = ".") : IWslManagerService, ILifecyclePathRuntime
 {
     private static readonly Regex ListRow = new(@"^\*?\s*(?<name>.+?)\s+(?<state>Running|Stopped)\s+(?<version>[12])\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private readonly IProcessRunner _processes = processes;
+    private readonly FixedLifecyclePathRuntime _lifecycle = new(processes, lifecycleRoot);
 
     public async Task<List<WslInstance>> GetInstancesAsync(CancellationToken cancellationToken = default)
     {
@@ -113,15 +115,20 @@ internal sealed class BridgeWslManagerService(IProcessRunner processes) : IWslMa
     private static Task<bool> UnsupportedBool() => Task.FromException<bool>(new NotSupportedException("WorkspaceBridge does not expose WSL instance management."));
     private static Task<T> Unsupported<T>() => Task.FromException<T>(new NotSupportedException("WorkspaceBridge does not expose WSL instance management."));
     public Task InstallInstanceAsync(InstallOptions options, IProgress<(double Percentage, string Message)>? progress = null, CancellationToken cancellationToken = default) => Unsupported();
-    public Task<bool> RemoveInstanceAsync(string instanceName, CancellationToken cancellationToken = default) => UnsupportedBool();
-    public Task MoveInstanceAsync(string instanceName, string newPath, IProgress<double>? progress = null, CancellationToken cancellationToken = default) => Unsupported();
-    public Task RenameInstanceAsync(string oldName, string newName, CancellationToken cancellationToken = default) => Unsupported();
+    public async Task<bool> RemoveInstanceAsync(string instanceName, CancellationToken cancellationToken = default) { await _lifecycle.RemoveAsync(instanceName, false, cancellationToken); return true; }
+    public Task MoveInstanceAsync(string instanceName, string newPath, IProgress<double>? progress = null, CancellationToken cancellationToken = default) => _lifecycle.MoveAsync(instanceName, newPath, cancellationToken);
+    public Task RenameInstanceAsync(string oldName, string newName, CancellationToken cancellationToken = default) => _lifecycle.RenameAsync(oldName, newName, cancellationToken);
     public Task SetCredentialsAsync(string instanceName, string username, string password, CancellationToken cancellationToken = default) => Unsupported();
     public Task<long> GetInstanceDiskSizeAsync(string instanceName, CancellationToken cancellationToken = default) => Unsupported<long>();
     public Task<WslInstance?> ForceRefreshInstanceAsync(string instanceName, CancellationToken cancellationToken = default) => Unsupported<WslInstance?>();
     public Task CompactInstanceAsync(string instanceName, IProgress<(double Percentage, string Message)>? progress = null, bool whatIf = false, CancellationToken cancellationToken = default) => Unsupported();
-    public Task ExportInstanceAsync(string name, string destination, bool force = false, CancellationToken cancellationToken = default) => Unsupported();
-    public Task ImportInstanceAsync(string name, string source, string installPath, CancellationToken cancellationToken = default) => Unsupported();
+    public Task ExportInstanceAsync(string name, string destination, bool force = false, CancellationToken cancellationToken = default) => _lifecycle.ExportAsync(name, destination, force, cancellationToken);
+    public Task ImportInstanceAsync(string name, string source, string installPath, CancellationToken cancellationToken = default) => _lifecycle.ImportAsync(name, source, installPath, cancellationToken);
+    Task ILifecyclePathRuntime.RemoveAsync(string instanceName, bool keepFiles, CancellationToken cancellationToken) => _lifecycle.RemoveAsync(instanceName, keepFiles, cancellationToken);
+    Task ILifecyclePathRuntime.MoveAsync(string instanceName, string targetDirectory, CancellationToken cancellationToken) => _lifecycle.MoveAsync(instanceName, targetDirectory, cancellationToken);
+    Task ILifecyclePathRuntime.RenameAsync(string instanceName, string newName, CancellationToken cancellationToken) => _lifecycle.RenameAsync(instanceName, newName, cancellationToken);
+    Task ILifecyclePathRuntime.ExportAsync(string instanceName, string destination, bool stopRunning, CancellationToken cancellationToken) => _lifecycle.ExportAsync(instanceName, destination, stopRunning, cancellationToken);
+    Task ILifecyclePathRuntime.ImportAsync(string instanceName, string source, string targetDirectory, CancellationToken cancellationToken) => _lifecycle.ImportAsync(instanceName, source, targetDirectory, cancellationToken);
     public Task<object?> GetInstanceConfigAsync(string name, CancellationToken cancellationToken = default) => Unsupported<object?>();
     public Task SetSparseModeAsync(string name, bool enabled, CancellationToken cancellationToken = default) => Unsupported();
     public Task ShutdownWslAsync(CancellationToken cancellationToken = default) => Unsupported();

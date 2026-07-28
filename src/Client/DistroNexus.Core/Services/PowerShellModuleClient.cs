@@ -18,6 +18,11 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string GetInstancesCommand = "Get-DistroNexusInstance";
     private const string StartInstanceCommand = "Start-DistroNexusInstance";
     private const string StopInstanceCommand = "Stop-DistroNexusInstance";
+    private const string RemoveInstanceCommand = "Remove-DistroNexusInstance";
+    private const string MoveInstanceCommand = "Move-DistroNexusInstance";
+    private const string RenameInstanceCommand = "Rename-DistroNexusInstance";
+    private const string ExportInstanceCommand = "Export-DistroNexusInstance";
+    private const string ImportInstanceCommand = "Import-DistroNexusInstance";
     private const string GetInstanceResourcesCommand = "Get-DistroNexusInstanceResources";
     private const string GetInstanceSparsePreviewCommand = "Get-DistroNexusInstanceSparsePreview";
     private const string SetInstanceSparseModeCommand = "Set-DistroNexusInstanceSparseMode";
@@ -175,6 +180,13 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     { ValidateName(name, nameof(name)); return ExecuteJsonAsync<InstanceSparsePreview>(GetInstanceSparsePreviewCommand, new() { ["Name"] = name, ["Enabled"] = enabled }, cancellationToken); }
     public Task<InstanceSparseOperationResult> SetInstanceSparseModeAsync(string previewToken, CancellationToken cancellationToken = default)
     { if (string.IsNullOrWhiteSpace(previewToken) || previewToken.Length != 64 || previewToken.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("A Core-issued instance sparse preview token is required.", nameof(previewToken)); return ExecuteJsonAsync<InstanceSparseOperationResult>(SetInstanceSparseModeCommand, new() { ["PreviewToken"] = previewToken }, cancellationToken); }
+    public Task<LifecycleOperationPreview> PreviewRemoveInstanceAsync(string name, bool keepFiles, CancellationToken cancellationToken = default) => PreviewLifecycleAsync(RemoveInstanceCommand, new() { ["Name"] = name, ["KeepFiles"] = keepFiles }, cancellationToken);
+    public Task<LifecycleOperationPreview> PreviewMoveInstanceAsync(string name, string destination, CancellationToken cancellationToken = default) => PreviewLifecycleAsync(MoveInstanceCommand, new() { ["Name"] = name, ["Destination"] = destination }, cancellationToken);
+    public Task<LifecycleOperationPreview> PreviewRenameInstanceAsync(string name, string newName, CancellationToken cancellationToken = default) => PreviewLifecycleAsync(RenameInstanceCommand, new() { ["Name"] = name, ["NewName"] = newName }, cancellationToken);
+    public Task<LifecycleOperationPreview> PreviewExportInstanceAsync(string name, string destination, bool stopRunning, CancellationToken cancellationToken = default) => PreviewLifecycleAsync(ExportInstanceCommand, new() { ["Name"] = name, ["Destination"] = destination, ["StopRunning"] = stopRunning }, cancellationToken);
+    public Task<LifecycleOperationPreview> PreviewImportInstanceAsync(string name, string source, string installPath, CancellationToken cancellationToken = default) => PreviewLifecycleAsync(ImportInstanceCommand, new() { ["Name"] = name, ["Source"] = source, ["InstallPath"] = installPath }, cancellationToken);
+    public Task<LifecycleOperationResult> ExecuteLifecycleOperationAsync(string previewToken, CancellationToken cancellationToken = default)
+    { ValidateToken(previewToken, nameof(previewToken)); return ExecuteJsonAsync<LifecycleOperationResult>(ExecuteLifecycleCommand, new() { ["PreviewToken"] = previewToken }, cancellationToken); }
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<DistroNexusInstanceTagResult>> GetInstanceTagsAsync(
@@ -607,6 +619,14 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
         ThrowIfFailed(result);
         return JsonSerializer.Deserialize<T>(result.Output, JsonOptions)
             ?? throw new InvalidOperationException("The DistroNexus module returned an invalid result.");
+    }
+    private const string ExecuteLifecycleCommand = "Invoke-DistroNexusLifecycleOperation";
+    private Task<LifecycleOperationPreview> PreviewLifecycleAsync(string command, Dictionary<string, object> parameters, CancellationToken cancellationToken)
+    {
+        foreach (var value in parameters.Values.OfType<string>()) ValidateName(value, nameof(parameters));
+        var operation = command switch { RemoveInstanceCommand => "Remove", MoveInstanceCommand => "Move", RenameInstanceCommand => "Rename", ExportInstanceCommand => "Export", ImportInstanceCommand => "Import", _ => throw new ArgumentOutOfRangeException(nameof(command)) };
+        parameters["Operation"] = operation;
+        return ExecuteJsonAsync<LifecycleOperationPreview>("Get-DistroNexusLifecycleOperationPreview", parameters, cancellationToken);
     }
 
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true, Converters = { new JsonStringEnumConverter() } };

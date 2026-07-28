@@ -13,7 +13,9 @@ var root = Environment.GetEnvironmentVariable("DISTRONEXUS_WORKSPACE_STORE_ROOT"
 // bridge is a real execution boundary, not a persistence-only surrogate: Core owns
 // validation, preview tokens, capability checks, and structured process requests.
 var processes = new ProcessRunner();
-var instances = new BridgeWslManagerService(processes);
+var lifecycleRoot = root ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DistroNexus");
+var instances = new BridgeWslManagerService(processes, lifecycleRoot);
+var lifecycleRoutes = new LifecyclePathOperationService(instances, lifecycleRoot, new LifecycleMetadataCleanup(lifecycleRoot, processes));
 var instanceResources = new InstanceResourceService(new RegisteredInstanceSparseAdapter(processes), Path.Combine(root ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DistroNexus"), "instance-sparse-grants"));
 var dockerIntegration = new DockerIntegrationService(NullLogger<DockerIntegrationService>.Instance, instances);
 var capabilities = new PlatformCapabilityService(processes);
@@ -214,6 +216,17 @@ while ((line = Console.ReadLine()) is not null)
             "instance.list.v1" => await instances.GetInstanceDetailsAsync(ParseInstanceListOptions(request)),
             "instance.start.v1" => await StartInstanceV1Async(request),
             "instance.stop.v1" => await StopInstanceV1Async(request),
+            "instance.remove.preview.v1" => await LifecycleRemovePreviewV1Async(request),
+            "instance.remove.execute.v1" => await LifecycleExecuteV1Async(request),
+            "instance.move.preview.v1" => await LifecycleMovePreviewV1Async(request),
+            "instance.move.execute.v1" => await LifecycleExecuteV1Async(request),
+            "instance.rename.preview.v1" => await LifecycleRenamePreviewV1Async(request),
+            "instance.rename.execute.v1" => await LifecycleExecuteV1Async(request),
+            "instance.export.preview.v1" => await LifecycleExportPreviewV1Async(request),
+            "instance.export.execute.v1" => await LifecycleExecuteV1Async(request),
+            "instance.import.preview.v1" => await LifecycleImportPreviewV1Async(request),
+            "instance.import.execute.v1" => await LifecycleExecuteV1Async(request),
+            "instance.lifecycle.execute.v1" => await LifecycleExecuteV1Async(request),
             "instance.resources.get.v1" => await InstanceResourcesGetV1Async(request),
             "instance.sparse.preview.v1" => await InstanceSparsePreviewV1Async(request),
             "instance.sparse.execute.v1" => await InstanceSparseExecuteV1Async(request),
@@ -267,6 +280,16 @@ while ((line = Console.ReadLine()) is not null)
     catch (DistroNexus.Core.Exceptions.WslOperationFailedException ex) { response = new(false, null, ex.Code.ToString(), ex.Message); }
     catch (InvalidOperationException ex) when (ex.Message is "Wslg.DiscoveryGrantInvalid" or "Wslg.DiscoveryGrantExpired" or "Wslg.ApplicationNotFound" or "Wslg.EntryChanged") { response = new(false, null, ex.Message, ex.Message); }
     catch (InvalidOperationException ex) when (string.Equals(ex.Message, "PackageCache.EntryInvalid", StringComparison.Ordinal)) { response = new(false, null, "PackageCache.EntryInvalid", "Package cache entry is invalid."); }
+    catch (Exception ex) when (request?.Operation.StartsWith("instance.", StringComparison.Ordinal) == true && (request.Operation.Contains(".preview.", StringComparison.Ordinal) || request.Operation.Contains(".execute.", StringComparison.Ordinal)))
+    {
+        var code = ex is OperationCanceledException ? "Lifecycle.Cancelled" : ex.Message is "Lifecycle.PathInvalid" or "Lifecycle.GrantInvalid" or "Lifecycle.GrantExpired" or "Lifecycle.InstanceStateChanged" or "Lifecycle.KeepFilesUnavailable" ? ex.Message : "Lifecycle.Failed";
+        response = new(false, null, code, code);
+    }
+    catch (Exception ex) when (request?.Operation.StartsWith("instance.", StringComparison.Ordinal) == true && request.Operation.Contains(".preview.", StringComparison.Ordinal) || request?.Operation.StartsWith("instance.", StringComparison.Ordinal) == true && request.Operation.Contains(".execute.", StringComparison.Ordinal) == true)
+    {
+        var code = ex is OperationCanceledException ? "Lifecycle.Cancelled" : ex.Message is "Lifecycle.PathInvalid" or "Lifecycle.GrantInvalid" or "Lifecycle.GrantExpired" or "Lifecycle.InstanceStateChanged" or "Lifecycle.KeepFilesUnavailable" ? ex.Message : "Lifecycle.Failed";
+        response = new(false, null, code, code);
+    }
     catch (Exception ex) when (request?.Operation.StartsWith("docker.integration.", StringComparison.Ordinal) == true)
     {
         var code = ex.Message is "DockerIntegration.PreviewInvalid" or "DockerIntegration.PreviewExpired" or "DockerIntegration.PreviewMismatch" or "DockerIntegration.PreviewStale" ? ex.Message : "DockerIntegration.Conflict";
@@ -338,6 +361,42 @@ async Task<object> StopInstanceV1Async(BridgeRequest request)
 {
     var stopped = await instances.StopInstanceAsync(ParseInstanceName(request));
     return new { Succeeded = stopped };
+}
+
+async Task<LifecycleOperationPreview> LifecycleRemovePreviewV1Async(BridgeRequest request)
+{
+    ValidatePayload(request, ["Name", "KeepFiles"], ["Name", "KeepFiles"]);
+    var payload = ParsePayload<LifecyclePayload>(request);
+    return await lifecycleRoutes.PreviewRemoveAsync(payload.Name, payload.KeepFiles);
+}
+async Task<LifecycleOperationPreview> LifecycleMovePreviewV1Async(BridgeRequest request)
+{
+    ValidatePayload(request, ["Name", "Destination"], ["Name", "Destination"]);
+    var payload = ParsePayload<LifecyclePayload>(request);
+    return await lifecycleRoutes.PreviewMoveAsync(payload.Name, payload.Destination!);
+}
+async Task<LifecycleOperationPreview> LifecycleRenamePreviewV1Async(BridgeRequest request)
+{
+    ValidatePayload(request, ["Name", "NewName"], ["Name", "NewName"]);
+    var payload = ParsePayload<LifecyclePayload>(request);
+    return await lifecycleRoutes.PreviewRenameAsync(payload.Name, payload.NewName!);
+}
+async Task<LifecycleOperationPreview> LifecycleExportPreviewV1Async(BridgeRequest request)
+{
+    ValidatePayload(request, ["Name", "Destination", "StopRunning"], ["Name", "Destination", "StopRunning"]);
+    var payload = ParsePayload<LifecyclePayload>(request);
+    return await lifecycleRoutes.PreviewExportAsync(payload.Name, payload.Destination!, payload.StopRunning);
+}
+async Task<LifecycleOperationPreview> LifecycleImportPreviewV1Async(BridgeRequest request)
+{
+    ValidatePayload(request, ["Name", "Source", "InstallPath"], ["Name", "Source", "InstallPath"]);
+    var payload = ParsePayload<LifecyclePayload>(request);
+    return await lifecycleRoutes.PreviewImportAsync(payload.Name, payload.Source!, payload.InstallPath!);
+}
+async Task<LifecycleOperationResult> LifecycleExecuteV1Async(BridgeRequest request)
+{
+    ValidatePayload(request, ["PreviewToken"], ["PreviewToken"]);
+    return await lifecycleRoutes.ExecuteAsync(ParsePayload<LifecycleExecutePayload>(request).PreviewToken);
 }
 
 GlobalSettings GetSettings(BridgeRequest request)
@@ -880,6 +939,14 @@ public sealed record InstanceNamePayload(string Name, bool KeepAlive = false);
 public sealed record InstanceResourcePayload(string Name);
 public sealed record InstanceSparsePayload(string Name, bool Enabled);
 public sealed record InstanceSparseExecutePayload(string PreviewToken);
+public sealed record LifecycleRemovePayload(string Name, bool KeepFiles);
+public sealed record LifecycleMovePayload(string Name, string Destination);
+public sealed record LifecycleRenamePayload(string Name, string NewName);
+public sealed record LifecycleExportPayload(string Name, string Destination, bool StopRunning);
+public sealed record LifecycleImportPayload(string Name, string Source, string InstallPath);
+public sealed record LifecyclePathExecutePayload(string PreviewToken);
+public sealed record LifecyclePayload(string Name, bool KeepFiles = false, string? Destination = null, string? NewName = null, bool StopRunning = false, string? Source = null, string? InstallPath = null);
+public sealed record LifecycleExecutePayload(string PreviewToken);
 public sealed record RecoveryExecutePayload(string PreviewToken);
 public sealed record BackupManualPayload(string InstanceName, int RetentionCount, string? Destination = null);
 public sealed record GlobalConfigurationPreviewPayload(Dictionary<string, string?> Changes);
@@ -1030,6 +1097,7 @@ public sealed record MarketplaceDownloadPayload(string SourceId, string? Templat
 public sealed record MarketplaceTemplatePayload(string TemplateId);
 public sealed record MarketplaceArtifactPayload(string TemplateId, string Sha256);
 public sealed record BridgeResponse(bool Succeeded, object? Value, string? ErrorCode, string? ErrorMessage, string Frame = "result");
+/// <summary>Only the five reviewed lifecycle shapes are executable from the bridge.</summary>
 public sealed class BridgeProgress(Action<BridgeResponse> write) : IProgress<WorkspaceActionResult>
 {
     public void Report(WorkspaceActionResult value) => write(new BridgeResponse(true, value, null, null, "progress"));

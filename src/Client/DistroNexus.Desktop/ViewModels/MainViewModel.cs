@@ -920,10 +920,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
         IsLoading = true;
         try
         {
-            await _wslManager.ImportInstanceAsync(
-                vm.InstanceName.Trim(),
-                vm.SourcePath.Trim(),
-                vm.InstallPath.Trim());
+            var preview = await _moduleClient.PreviewImportInstanceAsync(vm.InstanceName.Trim(), vm.SourcePath.Trim(), vm.InstallPath.Trim());
+            var outcome = await _moduleClient.ExecuteLifecycleOperationAsync(preview.PreviewToken);
+            if (!outcome.Succeeded) throw new InvalidOperationException(outcome.OutcomeCode);
 
             await LoadInstancesAsync();
 

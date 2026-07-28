@@ -20,6 +20,12 @@ public interface IPowerShellModuleClient
     Task<InstanceResourceSnapshot> GetInstanceResourcesAsync(string name, CancellationToken cancellationToken = default);
     Task<InstanceSparsePreview> GetInstanceSparsePreviewAsync(string name, bool enabled, CancellationToken cancellationToken = default);
     Task<InstanceSparseOperationResult> SetInstanceSparseModeAsync(string previewToken, CancellationToken cancellationToken = default);
+    Task<LifecycleOperationPreview> PreviewRemoveInstanceAsync(string name, bool keepFiles, CancellationToken cancellationToken = default);
+    Task<LifecycleOperationPreview> PreviewMoveInstanceAsync(string name, string destination, CancellationToken cancellationToken = default);
+    Task<LifecycleOperationPreview> PreviewRenameInstanceAsync(string name, string newName, CancellationToken cancellationToken = default);
+    Task<LifecycleOperationPreview> PreviewExportInstanceAsync(string name, string destination, bool stopRunning, CancellationToken cancellationToken = default);
+    Task<LifecycleOperationPreview> PreviewImportInstanceAsync(string name, string source, string installPath, CancellationToken cancellationToken = default);
+    Task<LifecycleOperationResult> ExecuteLifecycleOperationAsync(string previewToken, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets tags for every instance, or for one instance when <paramref name="name"/> is supplied.

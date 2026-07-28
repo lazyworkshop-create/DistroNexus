@@ -11,6 +11,13 @@ namespace DistroNexus.Tests.ViewModels;
 public sealed class WslInstanceTagRoutingTests
 {
     [Fact]
+    public void InstanceRemoveWorkflow_DoesNotCallBackupScheduleCleanup()
+    {
+        var source = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "DistroNexus.Desktop", "ViewModels", "WslInstanceViewModel.cs"));
+        Assert.DoesNotContain("RemoveBackupScheduleAsync", source);
+        Assert.DoesNotContain("GetBackupSchedulesAsync", source);
+    }
+    [Fact]
     public void MainInstanceLoad_CallsTheTypedModuleClient()
     {
         var stateMachine = typeof(MainViewModel)
@@ -48,23 +55,29 @@ public sealed class WslInstanceTagRoutingTests
     }
 
     [Theory]
-    [InlineData("StopAsync")]
-    [InlineData("ExportInstanceAsync")]
-    public void StopOperations_CallTheTypedModuleClient(string operation)
+    [InlineData("RemoveAsync", nameof(IPowerShellModuleClient.PreviewRemoveInstanceAsync))]
+    [InlineData("MoveAsync", nameof(IPowerShellModuleClient.PreviewMoveInstanceAsync))]
+    [InlineData("RenameAsync", nameof(IPowerShellModuleClient.PreviewRenameInstanceAsync))]
+    [InlineData("ExportInstanceAsync", nameof(IPowerShellModuleClient.PreviewExportInstanceAsync))]
+    public void PathLifecycleOperations_UseTypedPreviewAndTokenExecution(string operation, string previewMethod)
     {
         var stateMachine = typeof(WslInstanceViewModel)
             .GetNestedTypes(BindingFlags.NonPublic)
             .Single(type => type.Name.StartsWith($"<{operation}>", StringComparison.Ordinal));
         var moveNext = stateMachine.GetMethod("MoveNext", BindingFlags.Instance | BindingFlags.NonPublic)!;
 
-        Assert.Contains(nameof(IPowerShellModuleClient.StopInstanceAsync), CalledMethodNames(moveNext));
+        var methods = CalledMethodNames(moveNext).ToArray();
+        Assert.Contains(previewMethod, methods);
+        Assert.Contains(nameof(IPowerShellModuleClient.ExecuteLifecycleOperationAsync), methods);
+        Assert.DoesNotContain("RemoveInstanceAsync", methods);
+        Assert.DoesNotContain("MoveInstanceAsync", methods);
+        Assert.DoesNotContain("RenameInstanceAsync", methods);
+        Assert.DoesNotContain("ExportInstanceAsync", methods);
     }
 
     [Theory]
     [InlineData("AddTagAsync", "AddInstanceTagAsync")]
     [InlineData("RemoveTagAsync", "RemoveInstanceTagAsync")]
-    [InlineData("RenameAsync", "RenameInstanceTagsAsync")]
-    [InlineData("RemoveAsync", "SetInstanceTagsAsync")]
     public void TagMutations_CallTheTypedModuleClient(string operation, string moduleMethod)
     {
         var stateMachine = typeof(WslInstanceViewModel)
@@ -77,7 +90,6 @@ public sealed class WslInstanceTagRoutingTests
 
     [Theory]
     [InlineData("StopAsync")]
-    [InlineData("RemoveAsync")]
     public void ConfirmationOperations_GetSettingsThroughTheTypedModuleClient(string operation)
     {
         var stateMachine = typeof(WslInstanceViewModel)

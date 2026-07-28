@@ -106,6 +106,8 @@
         'Disable-DistroNexusDockerIntegration',
         'Export-DistroNexusInstance',
         'Import-DistroNexusInstance',
+        'Get-DistroNexusLifecycleOperationPreview',
+        'Invoke-DistroNexusLifecycleOperation',
         'Get-DistroNexusWslConfig',
         'Get-DistroNexusGlobalConfiguration',
         'Get-DistroNexusGlobalConfigurationPreview',

@@ -354,69 +354,14 @@ public partial class WslInstanceViewModel : ObservableObject
 
         var instanceName = Name;
 
-        // Check if a backup schedule exists and offer cleanup (P5-4 / D-01-6)
-        bool removeBackupTask = false;
-        try
-        {
-            var schedules = await _moduleClient.GetBackupSchedulesAsync();
-            var schedule = schedules.FirstOrDefault(s =>
-                string.Equals(s.Name, instanceName, StringComparison.OrdinalIgnoreCase));
-            if (schedule is not null)
-            {
-                var confirm = new Wpf.Ui.Controls.MessageBox
-                {
-                    Title = Properties.Resources.ConfirmRemoveTitle,
-                    Content = string.Format(Properties.Resources.ConfirmRemoveWithBackupMessage, instanceName),
-                    PrimaryButtonText = Properties.Resources.ButtonRemove,
-                    CloseButtonText = Properties.Resources.ButtonClose
-                };
-                var result = await confirm.ShowDialogAsync();
-                if (result != Wpf.Ui.Controls.MessageBoxResult.Primary)
-                {
-                    return;
-                }
-
-                // Ask whether to clean up Task Scheduler task
-                removeBackupTask = ConfirmDialog.Show(
-                    Properties.Resources.ConfirmRemoveTitle,
-                    Properties.Resources.Remove_DeleteTask,
-                    Properties.Resources.ButtonRemove);
-
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Could not check backup schedule for instance {Name}", instanceName);
-        }
-
         try
         {
             IsBusy = true;
             _logger.LogInformation("Removing instance {Name}", instanceName);
 
-            if (removeBackupTask)
-            {
-                try
-                {
-                    await _moduleClient.RemoveBackupScheduleAsync(instanceName);
-                    _logger.LogInformation("Backup schedule removed for instance {Name}", instanceName);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to remove backup schedule for instance {Name}", instanceName);
-                }
-            }
-
-            await _wslManager.RemoveInstanceAsync(instanceName);
-
-            try
-            {
-                await _moduleClient.SetInstanceTagsAsync(instanceName, []);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Tag cleanup failed for removed instance {Name}", instanceName);
-            }
+            var preview = await _moduleClient.PreviewRemoveInstanceAsync(instanceName, keepFiles: false);
+            var outcome = await _moduleClient.ExecuteLifecycleOperationAsync(preview.PreviewToken);
+            if (!outcome.Succeeded) throw new InvalidOperationException(outcome.OutcomeCode);
 
             await ShowAlert(Properties.Resources.SuccessTitle, string.Format(Properties.Resources.SuccessInstanceRemoved, instanceName));
 
@@ -493,10 +438,9 @@ public partial class WslInstanceViewModel : ObservableObject
             IsBusy = true;
             _logger.LogInformation("Moving instance {Name} to {NewPath}", Name, newPath);
             
-            await _wslManager.MoveInstanceAsync(Name, newPath);
-            
-            Instance.InstallPath = newPath;
-            OnPropertyChanged(nameof(InstallPath));
+            var preview = await _moduleClient.PreviewMoveInstanceAsync(Name, newPath);
+            var outcome = await _moduleClient.ExecuteLifecycleOperationAsync(preview.PreviewToken);
+            if (!outcome.Succeeded) throw new InvalidOperationException(outcome.OutcomeCode);
             
             await ShowAlert(Properties.Resources.SuccessTitle, string.Format(Properties.Resources.SuccessInstanceMoved, Name));
 
@@ -547,19 +491,12 @@ public partial class WslInstanceViewModel : ObservableObject
             IsBusy = true;
             _logger.LogInformation("Renaming instance {OldName} to {NewName}", oldName, newName);
 
-            await _wslManager.RenameInstanceAsync(oldName, newName);
+            var preview = await _moduleClient.PreviewRenameInstanceAsync(oldName, newName);
+            var outcome = await _moduleClient.ExecuteLifecycleOperationAsync(preview.PreviewToken);
+            if (!outcome.Succeeded) throw new InvalidOperationException(outcome.OutcomeCode);
 
             Instance.Name = newName;
             OnPropertyChanged(nameof(Name));
-
-            try
-            {
-                await _moduleClient.RenameInstanceTagsAsync(oldName, newName);
-            }
-            catch (Exception tagEx)
-            {
-                _logger.LogWarning(tagEx, "Tag migration failed for rename {OldName} -> {NewName}", oldName, newName);
-            }
 
             await ShowAlert(Properties.Resources.SuccessTitle, string.Format(Properties.Resources.SuccessInstanceRenamed, newName));
 
@@ -694,41 +631,6 @@ public partial class WslInstanceViewModel : ObservableObject
     {
         var dialogSvc = _serviceProvider.GetRequiredService<IDialogService>();
 
-        // Check running status — prompt auto-stop
-        if (IsRunning)
-        {
-            bool stopOk = await dialogSvc.ShowConfirmAsync(
-                Properties.Resources.Export_StopPromptTitle,
-                Properties.Resources.Export_StopPrompt);
-            if (!stopOk) return;
-
-            IsBusy = true;
-            try
-            {
-                var stopped = await _moduleClient.StopInstanceAsync(Name);
-                if (!stopped)
-                {
-                    await dialogSvc.ShowAlertAsync(
-                        Properties.Resources.ErrorTitle,
-                        string.Format(Properties.Resources.ErrorStopInstanceFailed, Name));
-                    return;
-                }
-
-                UpdateState("Stopped");
-            }
-            catch (Exception ex)
-            {
-                await dialogSvc.ShowAlertAsync(
-                    Properties.Resources.ErrorTitle,
-                    string.Format(Properties.Resources.ErrorStopInstanceEx, MainViewModel.FormatAlertMessage(ex)));
-                return;
-            }
-            finally
-            {
-                IsBusy = false;
-            }
-        }
-
         // Open SaveFileDialog
         var dlg = new SaveFileDialog
         {
@@ -739,7 +641,6 @@ public partial class WslInstanceViewModel : ObservableObject
         if (dlg.ShowDialog() != true) return;
 
         string destPath = dlg.FileName;
-        bool force = System.IO.File.Exists(destPath);
 
         var progressDialog = new ProgressDialog
         {
@@ -757,28 +658,15 @@ public partial class WslInstanceViewModel : ObservableObject
             progressDialog.Show();
             var startedAt = DateTimeOffset.Now;
 
-            var exportTask = _wslManager.ExportInstanceAsync(Name, destPath, force, progressDialog.CancellationToken);
-            while (!exportTask.IsCompleted)
-            {
-                progressDialog.StatusMessage = string.Format(
-                    Properties.Resources.Export_ProgressStatus,
-                    FormatElapsed(DateTimeOffset.Now - startedAt),
-                    FormatFileSize(GetFileLengthOrZero(destPath)));
-
-                await Task.WhenAny(exportTask, Task.Delay(500));
-            }
-
-            await exportTask;
-
-            long fileSize = new System.IO.FileInfo(destPath).Length;
-            string sizeDisplay = FormatFileSize(fileSize);
+            var preview = await _moduleClient.PreviewExportInstanceAsync(Name, destPath, IsRunning, progressDialog.CancellationToken);
+            var outcome = await _moduleClient.ExecuteLifecycleOperationAsync(preview.PreviewToken, progressDialog.CancellationToken);
+            if (!outcome.Succeeded) throw new InvalidOperationException(outcome.OutcomeCode);
             await dialogSvc.ShowAlertAsync(
                 Properties.Resources.Export_CompleteTitle,
-                string.Format(Properties.Resources.Export_Complete, destPath, sizeDisplay));
+                string.Format(Properties.Resources.Export_Complete, Name, Properties.Resources.StatusUnknown));
         }
         catch (WslOperationException ex)
         {
-            try { if (System.IO.File.Exists(destPath)) System.IO.File.Delete(destPath); } catch { /* best effort */ }
             _logger.LogError(ex, "Export failed for {Name}. ErrorCode={ErrorCode}", Name, (int)ex.Code);
             await dialogSvc.ShowAlertAsync(
                 Properties.Resources.ErrorTitle,
@@ -787,7 +675,6 @@ public partial class WslInstanceViewModel : ObservableObject
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            try { if (System.IO.File.Exists(destPath)) System.IO.File.Delete(destPath); } catch { /* best effort */ }
             await dialogSvc.ShowAlertAsync(
                 Properties.Resources.ErrorTitle,
                 string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
