@@ -86,7 +86,13 @@ public sealed partial class PlatformCapabilityService : IPlatformCapabilityServi
 
         var flightKey = new FlightKey(key.ToUpperInvariant(), epoch);
         var lazy = _inflight.GetOrAdd(flightKey, _ => new Lazy<Task<object>>(
-            async () => (object)(await factory(CancellationToken.None).ConfigureAwait(false))!,
+            async () =>
+            {
+                var value = await factory(CancellationToken.None).ConfigureAwait(false);
+                if (_epochs.GetOrAdd(key, 0) == epoch)
+                    _cache[key] = new CacheEntry(value!, _timeProvider.GetUtcNow(), IsNegative(value), epoch);
+                return (object)value!;
+            },
             LazyThreadSafetyMode.ExecutionAndPublication));
         var flight = lazy.Value;
         _ = flight.ContinueWith((_, state) =>
@@ -97,8 +103,6 @@ public sealed partial class PlatformCapabilityService : IPlatformCapabilityServi
         try
         {
             var value = (T)await flight.WaitAsync(cancellationToken).ConfigureAwait(false);
-            if (_epochs.GetOrAdd(key, 0) == epoch)
-                _cache[key] = new CacheEntry(value!, _timeProvider.GetUtcNow(), IsNegative(value), epoch);
             return value;
         }
         finally
