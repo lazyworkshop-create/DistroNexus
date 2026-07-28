@@ -2275,6 +2275,67 @@ Desktop migration and structural enforcement.
 
 New business capability work.
 
+## Slice S40: Workspace module-client migration
+
+### Status
+
+Planned
+
+### Objective
+
+Make the PowerShell module and typed module client the sole product route for workspace list, editing, import/export, trust, launch, retry and close operations.
+
+### Sources
+
+`docs/specs/workspace-module-requirements.md` FR-001 through FR-004; `docs/specs/workspace-module-design.md`; existing workspace service and bridge evidence.
+
+### Dependencies
+
+S39
+
+### Allowed Paths
+
+Workspace Core contracts/services/grant-operation stores and tests; packaged `DistroNexus.WorkspaceWorker` project/composition/tests; WorkspaceBridge protocol/handlers/tests and package copy configuration; workspace public module commands and Pester tests; `IPowerShellModuleClient` and implementation/tests; `WorkspacesViewModel` and focused view-model tests; workspace requirements/design/plan.
+
+### Excluded Paths
+
+Shortcut-writing implementation, file picker UX, templates/marketplace, USB/elevation, unrelated lifecycle/disk behavior, release/publishing workflows and real WSL mutation.
+
+### Contract and Documentation
+
+Use fixed typed list, preview and opaque-token execute contracts. Move workspace import/export document content across modeled requests/results; neither WPF nor public module commands own workspace product files. Launch/retry execute starts only the fixed packaged, same-user authenticated WorkspaceWorker and uses durable operation status/cancel records.
+
+### Implementation Scope
+
+Replace all `IWorkspaceService` product calls in `WorkspacesViewModel` with typed module-client calls. Preserve Core trust/revision/grant semantics and ShouldProcess. Do not introduce generic bridge dispatch, arbitrary host paths or arbitrary command/process execution.
+
+### Test Scope
+
+Cover closed bridge payloads, content validation, WhatIf/declined confirmation, revision/token expiry/replay/state drift, launch/retry/close progress/cancellation, typed-client parsing and WPF structural/routing behavior.
+
+### Acceptance Criteria
+
+- `WorkspacesViewModel` has no direct `IWorkspaceService` or workspace product-state file operation.
+- Module import/export uses fixed typed content contracts rather than public-command file I/O.
+- All mutations execute only with a fresh Core-issued token and expected revision.
+- Targeted xUnit, Pester unit tests and Debug build pass; real workspace action execution is recorded as external UAT.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Workspace|FullyQualifiedName~PowerShellModuleClient|FullyQualifiedName~WorkspaceBridgeProtocol"
+pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Unit
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+One accepted workspace module/client and presentation migration slice.
+
+### Out of Scope
+
+Live WSL workspace execution, shortcut/file-picker implementation and all unrelated capability families.
+
 ## Slice S08: Conformance and release-evidence closure
 
 ### Status
