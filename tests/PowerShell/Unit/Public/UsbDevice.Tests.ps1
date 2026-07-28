@@ -4,8 +4,17 @@ BeforeAll {
 }
 
 Describe 'DistroNexus USB cmdlets' -Tag 'Unit', 'Public', 'Usb' {
-    It 'exports the read and constrained mutation commands' {
-        Get-Command Get-DistroNexusUsbDevice, Connect-DistroNexusUsbDevice, Disconnect-DistroNexusUsbDevice | Should -HaveCount 3
+    It 'exports the fixed discovery reads and retains legacy actions outside this migration' {
+        Get-Command Get-DistroNexusUsbStatus, Get-DistroNexusUsbDevice, Connect-DistroNexusUsbDevice, Disconnect-DistroNexusUsbDevice | Should -HaveCount 4
+    }
+    It 'uses only fixed empty-payload bridge discovery routes' {
+        InModuleScope DistroNexus {
+            Mock Invoke-DistroNexusWorkspaceBridge { [PSCustomObject]@{ OutcomeCode = 'Usb.Ready'; Devices = @() } }
+            (Get-DistroNexusUsbStatus).OutcomeCode | Should -Be 'Usb.Ready'
+            (Get-DistroNexusUsbDevice).OutcomeCode | Should -Be 'Usb.Ready'
+            Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 1 -Exactly -ParameterFilter { $Operation -eq 'usb.status.v1' -and -not $PSBoundParameters.ContainsKey('Payload') }
+            Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 1 -Exactly -ParameterFilter { $Operation -eq 'usb.list.v1' -and -not $PSBoundParameters.ContainsKey('Payload') }
+        }
     }
     It 'runs a structured preflight and returns its preview for WhatIf attach without mutation' {
         InModuleScope DistroNexus {

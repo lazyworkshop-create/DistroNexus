@@ -6,7 +6,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DistroNexus.Core\DistroNexus.Core.csproj" />
-    <ProjectReference Include="..\DistroNexus.UsbElevatedHelper\DistroNexus.UsbElevatedHelper.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>
@@ -20,13 +19,6 @@
     <PackageReference Include="WPF-UI" Version="4.2.0" />
     <PackageReference Include="WPFLocalizeExtension" Version="3.10.0" />
   </ItemGroup>
-
-  <Target Name="CopyUsbElevatedHelper" AfterTargets="Build">
-    <ItemGroup>
-      <UsbElevatedHelperFiles Include="$(MSBuildProjectDirectory)\..\DistroNexus.UsbElevatedHelper\bin\$(Configuration)\net10.0-windows\DistroNexus.UsbElevatedHelper.*" />
-    </ItemGroup>
-    <Copy SourceFiles="@(UsbElevatedHelperFiles)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="'@(UsbElevatedHelperFiles)' != ''" />
-  </Target>
 
   <ItemGroup>
     <None Update="nlog.config">

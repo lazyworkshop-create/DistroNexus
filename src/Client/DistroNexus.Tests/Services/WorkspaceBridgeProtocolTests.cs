@@ -14,6 +14,22 @@ namespace DistroNexus.Tests.Services;
 public sealed class WorkspaceBridgeProtocolTests
 {
     [Fact]
+    public async Task UsbReadRoutes_RejectPayloadsAndExposeNoActionContract()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        var statusWithPayload = await bridge.SendAsync("usb.status.v1", payload: JsonSerializer.SerializeToElement(new { Action = "Bind" }));
+        var listWithPayload = await bridge.SendAsync("usb.list.v1", payload: JsonSerializer.SerializeToElement(new { BusId = "1-2" }));
+        Assert.False(statusWithPayload.GetProperty("Succeeded").GetBoolean());
+        Assert.False(listWithPayload.GetProperty("Succeeded").GetBoolean());
+        var root = FindRoot();
+        var source = File.ReadAllText(Path.Combine(root, "src", "Client", "DistroNexus.WorkspaceBridge", "Program.cs"));
+        Assert.Contains("\"usb.status.v1\"", source, StringComparison.Ordinal);
+        Assert.Contains("\"usb.list.v1\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("usb.action.preview.v1", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("usb.action.execute.v1", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void S44Routes_DeclareClosedPayloadsAndStableFailureMappings()
     {
         var root = FindRoot();

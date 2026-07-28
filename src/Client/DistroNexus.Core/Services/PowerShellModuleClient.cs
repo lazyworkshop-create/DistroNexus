@@ -71,6 +71,8 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string GetPackageCacheUsageCommand = "Get-DistroNexusPackageCacheUsage";
     private const string RemovePackageCacheCommand = "Remove-DistroNexusPackage";
     private const string ClearPackageCacheCommand = "Clear-DistroNexusPackageCache";
+    private const string GetUsbStatusCommand = "Get-DistroNexusUsbStatus";
+    private const string GetUsbDevicesCommand = "Get-DistroNexusUsbDevice";
     private const string GetTerminalStatusCommand = "Get-DistroNexusTerminalStatus";
     private const string StartTerminalCommand = "Start-DistroNexusTerminal";
     private const string OpenPackageCacheFolderCommand = "Open-DistroNexusPackageCacheFolder";
@@ -701,6 +703,24 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
         ThrowIfFailed(result);
         return JsonSerializer.Deserialize<PackageCacheClearResult>(result.Output, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? throw new InvalidOperationException("The module returned an invalid package cache clear result.");
     }
+    public async Task<UsbStatusResult> GetUsbStatusAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(GetUsbStatusCommand, null, new ModuleCallOptions { ParseAsJson = true }, cancellationToken); ThrowIfFailed(result);
+        EnsureUsbEnvelopeSize(result.Output);
+        using var document = JsonDocument.Parse(result.Output); EnsureOnly(document.RootElement, ["IsInstalled", "ServiceState", "Version", "SupportsActions", "Reason", "OutcomeCode"]);
+        var value = JsonSerializer.Deserialize<UsbStatusResult>(document.RootElement.GetRawText(), JsonOptions) ?? throw new JsonException("Invalid USB status.");
+        ValidateUsbStatus(value); return value;
+    }
+    public async Task<UsbDeviceListResult> GetUsbDevicesAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(GetUsbDevicesCommand, null, new ModuleCallOptions { ParseAsJson = true }, cancellationToken); ThrowIfFailed(result);
+        EnsureUsbEnvelopeSize(result.Output);
+        using var document = JsonDocument.Parse(result.Output); EnsureOnly(document.RootElement, ["Devices", "OutcomeCode"]);
+        if (!document.RootElement.TryGetProperty("Devices", out var devices) || devices.ValueKind != JsonValueKind.Array || devices.GetArrayLength() > 128) throw new JsonException("Invalid USB device list.");
+        foreach (var item in devices.EnumerateArray()) EnsureOnly(item, ["BusId", "Description", "Availability", "SharedState", "AttachedState", "IsStorage", "Distribution", "Guidance"]);
+        var value = JsonSerializer.Deserialize<UsbDeviceListResult>(document.RootElement.GetRawText(), JsonOptions) ?? throw new JsonException("Invalid USB device list.");
+        ValidateUsbList(value); return value;
+    }
 
     public Task<TerminalStatusResult> GetTerminalStatusAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<TerminalStatusResult>(GetTerminalStatusCommand, [], cancellationToken);
     public Task<TerminalLaunchResult> StartTerminalAsync(string name, string? startPath = null, TerminalKind terminalKind = TerminalKind.Auto, CancellationToken cancellationToken = default)
@@ -923,6 +943,33 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
             case PackageDownloadJob x when (!Id(x.JobId) || !Package(x.PackageId) || string.IsNullOrWhiteSpace(x.PackageLabel) || x.PackageLabel.Length > 256 || x.State is not ("Queued" or "Running" or "Completed" or "Failed" or "Cancelled" or "Interrupted") || x.ProgressPercent is < 0 or > 100 || !Outcome(x.OutcomeCode)): throw new JsonException("Invalid package job.");
         }
     }
+    private static void ValidateUsbStatus(UsbStatusResult value)
+    {
+        if (value.ServiceState is not ("Running" or "Stopped" or "Unknown") || value.SupportsActions || !UsbOutcome(value.OutcomeCode) || !Bounded(value.Reason) ||
+            (value.Version is not null && !System.Text.RegularExpressions.Regex.IsMatch(value.Version, "^[0-9]{1,5}(\\.[0-9]{1,5}){0,3}$")))
+            throw new JsonException("Invalid USB status.");
+    }
+    private static void ValidateUsbList(UsbDeviceListResult value)
+    {
+        if (value.Devices.Count > 128 || !UsbOutcome(value.OutcomeCode)) throw new JsonException("Invalid USB device list.");
+        foreach (var device in value.Devices)
+            if (!System.Text.RegularExpressions.Regex.IsMatch(device.BusId ?? string.Empty, "^[0-9A-Fa-f]{1,3}-[0-9A-Fa-f]{1,3}$") || !Bounded(device.Description) || !Bounded(device.Distribution) || !Bounded(device.Guidance) ||
+                device.Availability is not ("Available" or "Shared" or "Attached" or "NotConnected" or "Unsupported" or "Unknown") ||
+                !UsbStateIsCoherent(device)) throw new JsonException("Invalid USB device result.");
+    }
+    private static bool UsbStateIsCoherent(UsbDeviceResult value) => value.Availability switch
+    {
+        "Available" or "NotConnected" or "Unsupported" or "Unknown" => !value.SharedState && !value.AttachedState,
+        "Shared" => value.SharedState && !value.AttachedState,
+        "Attached" => value.SharedState && value.AttachedState,
+        _ => false
+    };
+    private static void EnsureUsbEnvelopeSize(string? output)
+    {
+        if (output is null || System.Text.Encoding.UTF8.GetByteCount(output) > 64 * 1024) throw new JsonException("USB response exceeds the maximum envelope size.");
+    }
+    private static bool Bounded(string? value) => value is null || value.Length <= 256;
+    private static bool UsbOutcome(string? value) => value is "Usb.Ready" or "Usb.NotInstalled" or "Usb.ServiceUnavailable" or "Usb.ListUnavailable" or "Usb.ListMalformed" or "Usb.BridgeUnavailable";
 
     private async Task<T> ExecuteJsonAsync<T>(string command, Dictionary<string, object> parameters, CancellationToken cancellationToken)
     {

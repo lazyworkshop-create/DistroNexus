@@ -8,28 +8,13 @@
   <Grid Margin="12"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
     <StackPanel>
       <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Margin="0,0,0,4"/>
-      <StackPanel Orientation="Horizontal">
-        <TextBlock Text="{Binding OperationPhase}" Margin="0,0,8,0"/>
-        <ProgressBar Minimum="0" Maximum="100" Value="{Binding OperationPercent}" Width="180" Height="12"/>
-      </StackPanel>
-      <StackPanel Margin="0,4,0,8">
-        <TextBlock Text="{Binding DiagnosticCode}" FontWeight="SemiBold"/>
-        <TextBlock Text="{Binding DiagnosticMessage}" TextWrapping="Wrap"/>
-        <ui:Button Content="{lex:Loc Devices_CopyDiagnostic}" Command="{Binding CopyDiagnosticCommand}" HorizontalAlignment="Left"/>
-      </StackPanel>
     </StackPanel>
     <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,12">
       <ui:Button Content="{lex:Loc Devices_Refresh}" Command="{Binding RefreshCommand}" Margin="0,0,8,0"/>
-      <ui:Button Content="{lex:Loc Devices_Bind}" Command="{Binding BindCommand}" IsEnabled="{Binding CanOperate}" Margin="0,0,8,0"/>
-      <ui:Button Content="{lex:Loc Devices_Unbind}" Command="{Binding UnbindCommand}" IsEnabled="{Binding CanOperate}" Margin="0,0,8,0"/>
-      <TextBox Width="180" Text="{Binding DistributionName, UpdateSourceTrigger=PropertyChanged}" ToolTip="{lex:Loc Devices_DistributionToolTip}" Margin="0,0,8,0"/>
-      <ui:Button Content="{lex:Loc Devices_Attach}" Command="{Binding AttachCommand}" IsEnabled="{Binding CanOperate}" Margin="0,0,8,0"/>
-      <ui:Button Content="{lex:Loc Devices_Detach}" Command="{Binding DetachCommand}" IsEnabled="{Binding CanOperate}" Margin="0,0,8,0"/>
-      <ui:Button Content="{lex:Loc Devices_Cancel}" Command="{Binding CancelCommand}" IsEnabled="{Binding IsBusy}"/>
     </StackPanel>
     <StackPanel Grid.Row="2"><TextBlock Text="{Binding SelectedGuidance}" TextWrapping="Wrap" Margin="0,0,0,8"/>
     <ListView ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}">
-      <ListView.View><GridView><GridViewColumn Header="{lex:Loc Devices_BusIdHeader}" DisplayMemberBinding="{Binding BusId.Value}" Width="90"/><GridViewColumn Header="{lex:Loc Devices_HardwareHeader}" DisplayMemberBinding="{Binding HardwareId}" Width="110"/><GridViewColumn Header="{lex:Loc Devices_DescriptionHeader}" DisplayMemberBinding="{Binding Description}" Width="300"/><GridViewColumn Header="{lex:Loc Devices_StateHeader}" DisplayMemberBinding="{Binding Availability}" Width="100"/><GridViewColumn Header="{lex:Loc Devices_AttachmentHeader}" DisplayMemberBinding="{Binding AttachedDistribution}" Width="160"/></GridView></ListView.View>
+      <ListView.View><GridView><GridViewColumn Header="{lex:Loc Devices_BusIdHeader}" DisplayMemberBinding="{Binding BusId}" Width="90"/><GridViewColumn Header="{lex:Loc Devices_DescriptionHeader}" DisplayMemberBinding="{Binding Description}" Width="300"/><GridViewColumn Header="{lex:Loc Devices_StateHeader}" DisplayMemberBinding="{Binding Availability}" Width="100"/><GridViewColumn Header="{lex:Loc Devices_AttachmentHeader}" DisplayMemberBinding="{Binding Distribution}" Width="160"/></GridView></ListView.View>
     </ListView>
     </StackPanel>
   </Grid>

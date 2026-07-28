@@ -121,6 +121,8 @@ public interface IPowerShellModuleClient
     Task<CacheUsageInfo> GetPackageCacheUsageAsync(CancellationToken cancellationToken = default);
     Task<PackageCacheDeleteResult> DeletePackageCacheEntryAsync(string cacheEntryId, CancellationToken cancellationToken = default);
     Task<PackageCacheClearResult> ClearPackageCacheAsync(CancellationToken cancellationToken = default);
+    Task<UsbStatusResult> GetUsbStatusAsync(CancellationToken cancellationToken = default);
+    Task<UsbDeviceListResult> GetUsbDevicesAsync(CancellationToken cancellationToken = default);
     Task<TerminalStatusResult> GetTerminalStatusAsync(CancellationToken cancellationToken = default);
     Task<TerminalLaunchResult> StartTerminalAsync(string name, string? startPath = null, TerminalKind terminalKind = TerminalKind.Auto, CancellationToken cancellationToken = default);
     Task<TerminalLaunchResult> OpenPackageCacheFolderAsync(CancellationToken cancellationToken = default);

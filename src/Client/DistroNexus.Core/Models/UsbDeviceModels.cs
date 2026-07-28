@@ -16,6 +16,12 @@ public sealed record UsbBusId
 }
 
 public enum UsbDeviceAvailability { Available, Shared, Attached, NotConnected, Unsupported, Unknown }
+/// <summary>Closed, display-safe USB status returned by the broker-free module read contract.</summary>
+public sealed record UsbStatusResult(bool IsInstalled, string ServiceState, string? Version, bool SupportsActions, string? Reason, string OutcomeCode);
+/// <summary>Closed, display-safe USB device returned by the broker-free module read contract.</summary>
+public sealed record UsbDeviceResult(string BusId, string Description, string Availability, bool SharedState, bool AttachedState,
+    bool IsStorage, string? Distribution, string? Guidance);
+public sealed record UsbDeviceListResult(IReadOnlyList<UsbDeviceResult> Devices, string OutcomeCode);
 public enum UsbDeviceAction { Bind, Unbind, Attach, Detach }
 public sealed record UsbDeviceInfo(UsbBusId BusId, string HardwareId, string Description, UsbDeviceAvailability Availability,
     bool IsShared, bool IsAttached, bool IsStorageClass, string? AttachedDistribution = null, string? GuidanceCode = null);

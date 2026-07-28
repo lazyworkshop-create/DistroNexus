@@ -10,6 +10,59 @@ namespace DistroNexus.Tests.Services;
 public sealed class PowerShellModuleClientTests
 {
     [Fact]
+    public async Task UsbReads_UseClosedCommandsAndRejectUnexpectedDeviceFields()
+    {
+        var service = new Mock<IPowerShellService>(MockBehavior.Strict);
+        service.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusUsbStatus", null, It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"IsInstalled\":true,\"ServiceState\":\"Running\",\"Version\":\"5.1\",\"SupportsActions\":false,\"Reason\":null,\"OutcomeCode\":\"Usb.Ready\"}" });
+        service.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusUsbDevice", null, It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Devices\":[{\"BusId\":\"1-2\",\"Description\":\"Fixture\",\"Availability\":\"Shared\",\"SharedState\":true,\"AttachedState\":false,\"IsStorage\":false,\"Distribution\":null,\"Guidance\":null}],\"OutcomeCode\":\"Usb.Ready\"}" });
+        var client = new PowerShellModuleClient(service.Object);
+        Assert.Equal("Running", (await client.GetUsbStatusAsync()).ServiceState);
+        Assert.Equal("1-2", Assert.Single((await client.GetUsbDevicesAsync()).Devices).BusId);
+    }
+
+    [Fact]
+    public async Task UsbDeviceRead_RejectsRawOrUnknownFields()
+    {
+        var service = new Mock<IPowerShellService>(MockBehavior.Strict);
+        service.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusUsbDevice", null, It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Devices\":[{\"BusId\":\"1-2\",\"Description\":\"Fixture\",\"Availability\":\"Shared\",\"SharedState\":true,\"AttachedState\":false,\"IsStorage\":false,\"Distribution\":null,\"Guidance\":null,\"RawPath\":\"C:\\\\secret\"}],\"OutcomeCode\":\"Usb.Ready\"}" });
+        await Assert.ThrowsAsync<JsonException>(() => new PowerShellModuleClient(service.Object).GetUsbDevicesAsync());
+    }
+
+    [Theory]
+    [InlineData("Get-DistroNexusUsbStatus")]
+    [InlineData("Get-DistroNexusUsbDevice")]
+    public async Task UsbReads_RejectOversizedUtf8EnvelopeBeforeParsing(string command)
+    {
+        var service = new Mock<IPowerShellService>(MockBehavior.Strict);
+        service.Setup(x => x.ExecuteModuleCmdletAsync(command, null, It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = new string('x', 64 * 1024 + 1) });
+        var client = new PowerShellModuleClient(service.Object);
+        if (command == "Get-DistroNexusUsbStatus") await Assert.ThrowsAsync<JsonException>(() => client.GetUsbStatusAsync());
+        else await Assert.ThrowsAsync<JsonException>(() => client.GetUsbDevicesAsync());
+    }
+
+    [Fact]
+    public async Task UsbStatusRead_RejectsActionCapability()
+    {
+        var service = new Mock<IPowerShellService>(MockBehavior.Strict);
+        service.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusUsbStatus", null, It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"IsInstalled\":true,\"ServiceState\":\"Running\",\"Version\":\"5.1\",\"SupportsActions\":true,\"Reason\":null,\"OutcomeCode\":\"Usb.Ready\"}" });
+        await Assert.ThrowsAsync<JsonException>(() => new PowerShellModuleClient(service.Object).GetUsbStatusAsync());
+    }
+
+    [Fact]
+    public async Task UsbDeviceRead_RejectsContradictoryAvailabilityState()
+    {
+        var service = new Mock<IPowerShellService>(MockBehavior.Strict);
+        service.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusUsbDevice", null, It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Devices\":[{\"BusId\":\"1-2\",\"Description\":\"Fixture\",\"Availability\":\"Available\",\"SharedState\":true,\"AttachedState\":false,\"IsStorage\":false,\"Distribution\":null,\"Guidance\":null}],\"OutcomeCode\":\"Usb.Ready\"}" });
+        await Assert.ThrowsAsync<JsonException>(() => new PowerShellModuleClient(service.Object).GetUsbDevicesAsync());
+    }
+
+    [Fact]
     public async Task SetCredential_UsesDedicatedSecureParameterBinding()
     {
         using var secret = new SecureString(); secret.AppendChar('x'); secret.MakeReadOnly();
@@ -571,6 +624,8 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.GetSystemdServicesAsync),
                 nameof(IPowerShellModuleClient.GetTerminalStatusAsync),
                 nameof(IPowerShellModuleClient.GetUpdateStatusAsync),
+                nameof(IPowerShellModuleClient.GetUsbDevicesAsync),
+                nameof(IPowerShellModuleClient.GetUsbStatusAsync),
                 nameof(IPowerShellModuleClient.GetWslgStatusAsync),
                 nameof(IPowerShellModuleClient.InvokeBackupAsync),
                 nameof(IPowerShellModuleClient.InvokeMonitoringProcessActionAsync),

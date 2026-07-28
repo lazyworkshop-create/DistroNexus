@@ -45,6 +45,7 @@ var catalogSources = new CatalogSourceManager(settings, new HttpClient(), NullLo
 var catalogHttp = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(10) };
 var catalog = new CatalogService(NullLogger<CatalogService>.Instance, settings, catalogHttp);
 var packageJobs = new PackageDownloadJobService(catalog, new DownloadService(NullLogger<DownloadService>.Instance, new HttpClient()), Path.Combine(applicationRoot, "package-download-jobs"));
+var usbDiscovery = new UsbIpdAdapter(processes);
 var verifiedInstall = new VerifiedInstallService(
     catalog,
     processes,
@@ -322,6 +323,8 @@ while ((line = Console.ReadLine()) is not null)
             "package.jobs.retry.execute.v1" => await PackageJobActionExecuteV1Async(request),
             "package.jobs.clear.preview.v1" => await PackageJobActionPreviewV1Async(request, "clear"),
             "package.jobs.clear.execute.v1" => await PackageJobActionExecuteV1Async(request),
+            "usb.status.v1" => await UsbStatusV1Async(request),
+            "usb.list.v1" => await UsbListV1Async(request),
             "terminal.status.v1" => GetTerminalStatus(request),
             "terminal.launch.v1" => await LaunchTerminalAsync(request),
             "explorer.package-cache.v1" => OpenPackageCacheFolder(request),
@@ -573,6 +576,43 @@ async Task<PackageJobActionPreviewResult> PackageJobActionPreviewV1Async(BridgeR
 { ValidatePayload(request, ["JobId"], ["JobId"]); return await packageJobs.PreviewActionAsync(ParsePayload<PackageJobActionPayload>(request).JobId, action); }
 async Task<PackageJobActionResult> PackageJobActionExecuteV1Async(BridgeRequest request)
 { ValidatePayload(request, ["PreviewToken"], ["PreviewToken"]); return await packageJobs.ExecuteActionAsync(ParsePayload<PackageJobExecutePayload>(request).PreviewToken); }
+async Task<UsbStatusResult> UsbStatusV1Async(BridgeRequest request)
+{
+    RequireNoPayload(request, "USB status does not accept a payload.");
+    return ToUsbStatus(await usbDiscovery.GetStatusAsync());
+}
+async Task<UsbDeviceListResult> UsbListV1Async(BridgeRequest request)
+{
+    RequireNoPayload(request, "USB list does not accept a payload.");
+    var status = await usbDiscovery.GetStatusAsync();
+    if (!status.IsInstalled) return new([], "Usb.NotInstalled");
+    if (!status.IsServiceRunning) return new([], "Usb.ServiceUnavailable");
+    try
+    {
+        var devices = await usbDiscovery.ListAsync(status);
+        if (devices.Count > 128) return new([], "Usb.ListMalformed");
+        var result = new UsbDeviceListResult(devices.Select(ToUsbDevice).ToArray(), "Usb.Ready");
+        return JsonSerializer.SerializeToUtf8Bytes(result, options).Length <= 64 * 1024 ? result : new([], "Usb.ListMalformed");
+    }
+    catch (OperationCanceledException) { throw; }
+    catch { return new([], "Usb.ListUnavailable"); }
+}
+static UsbStatusResult ToUsbStatus(UsbIpdStatus status)
+{
+    var version = status.Version?.ToString();
+    if (version is not null && !System.Text.RegularExpressions.Regex.IsMatch(version, "^[0-9]{1,5}(\\.[0-9]{1,5}){0,3}$")) version = null;
+    var service = !status.IsInstalled ? "Unknown" : status.IsServiceRunning ? "Running" : "Stopped";
+    var outcome = !status.IsInstalled ? "Usb.NotInstalled" : !status.IsServiceRunning ? "Usb.ServiceUnavailable" : "Usb.Ready";
+    return new(status.IsInstalled, service, version, false, UsbText(status.ReasonCode), outcome);
+}
+static UsbDeviceResult ToUsbDevice(UsbDeviceInfo value) => new(value.BusId.Value, UsbText(value.Description) ?? string.Empty,
+    value.Availability.ToString(), value.IsShared, value.IsAttached, value.IsStorageClass, UsbText(value.AttachedDistribution), UsbText(value.GuidanceCode));
+static string? UsbText(string? value)
+{
+    if (string.IsNullOrWhiteSpace(value)) return null;
+    var safe = new string(value.Where(c => !char.IsControl(c)).ToArray()).Trim();
+    return safe.Length <= 256 ? safe : safe[..256];
+}
 async Task<InstallPreview> PreviewVerifiedInstallV1Async(BridgeRequest request)
 {
     ValidatePayload(request, ["PackageReference", "Name", "TargetPreviewToken", "Username", "Shell", "Locale", "SetAsDefault", "SecretEnvelope"], ["PackageReference", "Name", "TargetPreviewToken", "Username", "Shell", "SetAsDefault"]);

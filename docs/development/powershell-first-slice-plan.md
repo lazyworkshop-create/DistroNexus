@@ -2780,6 +2780,65 @@ Bind/unbind implementation, UAC, device mutation, signing, and packaging.
 
 The authorized signed broker packaging/publisher pin required for bind/unbind is absent. Read-only discovery may be split into a ready sub-slice only after its independent contract review proves it does not weaken the action boundary.
 
+## Slice S45a: USB broker-free discovery migration
+
+### Status
+
+Committed
+
+### Objective
+
+Move USB status and device-list presentation through fixed typed PowerShell reads without changing or enabling any USB action.
+
+### Sources
+
+Remaining-boundaries requirements FR-103 and FR-107; design USB; S45 blocker evidence.
+
+### Dependencies
+
+S42.
+
+### Allowed Paths
+
+USB read-only Core/Bridge/module/client contracts and focused tests; `src/Client/DistroNexus.Desktop/App.xaml.cs`; `src/Client/DistroNexus.Desktop/DistroNexus.Desktop.csproj`; `UsbDevicesViewModel.cs`; USB page lifecycle/presentation only as required; requirements/design/this plan.
+
+### Excluded Paths
+
+Connect/disconnect commands, USB action routes, elevation helpers/brokers, signing/publishing/release configuration, and physical device mutation.
+
+### Contract and Documentation
+
+Implement only `usb.status.v1 {}` and `usb.list.v1 {}` with the closed bounded records in the design. Any action is explicitly unavailable.
+
+### Implementation Scope
+
+Remove Desktop USB service/watcher ownership and replace it with visible-lifetime cancellable typed polling. Core/Bridge owns adapter invocation and result sanitization.
+
+### Test Scope
+
+Empty-payload enforcement, result bounds/unknown-field rejection, adapter status/list behavior, polling cancellation, and Desktop forbidden-dependency tests.
+
+### Acceptance Criteria
+
+- Desktop has no `IUsbDeviceService` or `IUsbDeviceChangeWatcher` dependency or registration.
+- The only USB client operations are bounded status/list reads; no action/elevation path is introduced or weakened.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Usb|FullyQualifiedName~PowerShellModuleClient|FullyQualifiedName~WorkspaceBridgeProtocol"
+pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Unit
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+One broker-free USB discovery migration and its contract/tests only.
+
+### Out of Scope
+
+USB bind/unbind, UAC, device mutation, broker signing/packaging, and S45 action closure.
+
 ## Slice S46: Diagnostics replacement and final Desktop boundary enforcement
 
 ### Status

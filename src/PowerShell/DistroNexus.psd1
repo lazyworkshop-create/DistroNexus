@@ -156,6 +156,7 @@
         'Rename-DistroNexusInstanceTags',
         'Get-DistroNexusCache',
         'Get-DistroNexusUsbDevice',
+        'Get-DistroNexusUsbStatus',
         'Connect-DistroNexusUsbDevice',
         'Disconnect-DistroNexusUsbDevice'
         ,'Get-DistroNexusSettings'

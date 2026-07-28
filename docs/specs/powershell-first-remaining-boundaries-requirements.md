@@ -45,7 +45,7 @@ Acceptance: package/download presentation uses only typed module methods; start/
 
 USB status, list, refresh, preview, execute, and notification behavior must be available through fixed typed module routes. Desktop may render bounded snapshots or poll a typed status method, but cannot use `IUsbDeviceService` or an `IUsbDeviceChangeWatcher`.
 
-Acceptance: no USB Core service/watcher reference remains in Desktop. Bind/unbind retains the accepted signed-broker and same-user grant design; absent authorized signing/packaging evidence remains an explicit blocker rather than a trust relaxation.
+Acceptance: the broker-free status/list subset uses only fixed typed reads with bounded, sanitized results and cancellable visible-lifetime polling; no USB Core service/watcher reference remains in Desktop. Bind/unbind retains the accepted signed-broker and same-user grant design; absent authorized signing/packaging evidence remains an explicit blocker rather than a trust relaxation. The read subset must not expose an action token, device path, native command, raw diagnostic, or elevation capability.
 
 ### FR-104 Instance configuration module parity
 

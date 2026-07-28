@@ -1,61 +1,69 @@
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using DistroNexus.Desktop.ViewModels;
+using Moq;
 
 namespace DistroNexus.Tests.ViewModels;
 
 public sealed class UsbDevicesViewModelTests
 {
     [Fact]
-    public async Task Initialize_TracksAvailabilityAndDeviceGuidance()
+    public async Task Initialize_UsesOnlyTypedModuleReadsAndRendersSanitizedGuidance()
     {
-        var watcher = new FakeWatcher();
-        using var vm = new UsbDevicesViewModel(new FakeService(), watcher);
+        var module = ReadModule();
+        using var vm = new UsbDevicesViewModel(module.Object);
         await vm.InitializeAsync();
         vm.SelectedDevice = Assert.Single(vm.Devices);
         Assert.True(vm.IsAvailable);
-        Assert.True(watcher.Started);
-        Assert.False(string.IsNullOrWhiteSpace(vm.SelectedGuidance));
-        watcher.Raise(); // Exercises the view-model notification path without a physical device notification.
+        Assert.Equal("Devices_GuidanceArduino", vm.SelectedGuidance);
+        module.Verify(x => x.GetUsbStatusAsync(It.IsAny<CancellationToken>()), Times.Once);
+        module.Verify(x => x.GetUsbDevicesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public void Dispose_StopsAndDisposesThePageScopedWatcherOnce()
+    public async Task Unload_CancelsVisibleLifetimeAndSuppressesLateRefresh()
     {
-        var watcher = new FakeWatcher();
-        var vm = new UsbDevicesViewModel(new FakeService(), watcher);
-        vm.Dispose(); vm.Dispose();
-        Assert.True(watcher.Stopped);
-        Assert.Equal(1, watcher.DisposeCalls);
-    }
-    [Fact]
-    public async Task Initialize_DisablesActionsWhenServiceIsStoppedWhileLeavingDiscoverySafe()
-    {
-        var service = new FakeService { Status = new UsbIpdStatus(true, false, new Version(4, 2), true, "Usb.ServiceStopped") };
-        using var vm = new UsbDevicesViewModel(service);
-        await vm.InitializeAsync();
-        Assert.False(vm.IsAvailable);
-        Assert.Single(vm.Devices);
+        var completion = new TaskCompletionSource<UsbStatusResult>();
+        var module = new Mock<IPowerShellModuleClient>(MockBehavior.Strict);
+        module.Setup(x => x.GetUsbStatusAsync(It.IsAny<CancellationToken>())).Returns(completion.Task);
+        using var vm = new UsbDevicesViewModel(module.Object);
+        var initialize = vm.InitializeAsync();
+        vm.Dispose();
+        completion.SetResult(new(true, "Running", "5.1", false, null, "Usb.Ready"));
+        await initialize;
+        Assert.Empty(vm.Devices);
+        Assert.False(vm.IsBusy);
     }
 
-    private sealed class FakeService : IUsbDeviceService
+    [Fact]
+    public void DesktopUsbSurface_HasNoServiceWatcherOrActionAuthority()
     {
-        private static readonly UsbDeviceInfo Device = new(new UsbBusId("1-2"), "2341:0043", "Arduino Uno", UsbDeviceAvailability.Shared, true, false, false, null, "Devices_GuidanceArduino");
-        public UsbIpdStatus Status { get; set; } = new(true, true, new Version(4, 2), true, "Usb.Available");
-        public Task<UsbIpdStatus> GetStatusAsync(CancellationToken cancellationToken = default) => Task.FromResult(Status);
-        public Task<IReadOnlyList<UsbDeviceInfo>> ListAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<UsbDeviceInfo>>([Device]);
-        public Task<UsbDeviceActionPreview> PreviewAsync(UsbDeviceAction action, UsbBusId busId, string? distributionName = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<UsbDeviceActionResult> ExecuteAsync(UsbDeviceActionPreview preview, IProgress<UsbOperationProgress>? progress = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        var root = FindRoot();
+        var source = File.ReadAllText(Path.Combine(root, "src", "Client", "DistroNexus.Desktop", "ViewModels", "UsbDevicesViewModel.cs"));
+        var app = File.ReadAllText(Path.Combine(root, "src", "Client", "DistroNexus.Desktop", "App.xaml.cs"));
+        Assert.DoesNotContain("IUsbDeviceService", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("IUsbDeviceChangeWatcher", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("PreviewAsync", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("ExecuteAsync", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("IUsbDeviceService", app, StringComparison.Ordinal);
+        Assert.DoesNotContain("IUsbDeviceChangeWatcher", app, StringComparison.Ordinal);
+        var project = File.ReadAllText(Path.Combine(root, "src", "Client", "DistroNexus.Desktop", "DistroNexus.Desktop.csproj"));
+        Assert.DoesNotContain("DistroNexus.UsbElevatedHelper", project, StringComparison.Ordinal);
+        Assert.DoesNotContain("CopyUsbElevatedHelper", project, StringComparison.Ordinal);
     }
-    private sealed class FakeWatcher : IUsbDeviceChangeWatcher
+
+    private static Mock<IPowerShellModuleClient> ReadModule()
     {
-        public event EventHandler? DevicesChanged;
-        public bool Started { get; private set; }
-        public bool Stopped { get; private set; }
-        public int DisposeCalls { get; private set; }
-        public void Start() => Started = true;
-        public void Stop() => Stopped = true;
-        public void Dispose() => DisposeCalls++;
-        public void Raise() => DevicesChanged?.Invoke(this, EventArgs.Empty);
+        var module = new Mock<IPowerShellModuleClient>(MockBehavior.Strict);
+        module.Setup(x => x.GetUsbStatusAsync(It.IsAny<CancellationToken>())).ReturnsAsync(new UsbStatusResult(true, "Running", "5.1", false, null, "Usb.Ready"));
+        module.Setup(x => x.GetUsbDevicesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(new UsbDeviceListResult(
+            [new UsbDeviceResult("1-2", "Arduino", "Shared", true, false, false, null, "Devices_GuidanceArduino")], "Usb.Ready"));
+        return module;
+    }
+    private static string FindRoot()
+    {
+        var path = Directory.GetCurrentDirectory();
+        while (!File.Exists(Path.Combine(path, "AGENTS.md"))) path = Directory.GetParent(path)?.FullName ?? throw new DirectoryNotFoundException();
+        return path;
     }
 }

@@ -93,13 +93,6 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<IMonitoringWarningSource>(sp => sp.GetRequiredService<MonitoringWarningRegistry>());
                     services.AddSingleton<IMonitoringWarningSink>(sp => sp.GetRequiredService<MonitoringWarningRegistry>());
                     services.AddSingleton<IMonitoringService, MonitoringService>();
-                    services.AddSingleton<IUsbIpdAdapter, UsbIpdAdapter>();
-                    services.AddSingleton<IUsbElevatedRequestIssuer, UsbElevatedRequestIssuer>();
-                    services.AddSingleton<IUsbCallerIdentityProvider, WindowsUsbCallerIdentityProvider>();
-                    services.AddSingleton<IUsbElevatedHelperLauncher, SignedUsbElevatedHelperLauncher>();
-                    services.AddSingleton<IUsbElevatedOperationBroker, SignedUsbElevatedOperationBroker>();
-                    services.AddSingleton<IUsbDeviceService, UsbDeviceService>();
-                    services.AddTransient<IUsbDeviceChangeWatcher, UsbDeviceChangeWatcher>();
                     services.AddSingleton<IProcessRunner, ProcessRunner>();
                     services.AddSingleton<IPodmanDesktopInstallationDetector, WindowsPodmanDesktopInstallationDetector>();
                     services.AddSingleton<IContainerRuntimeAdapter, DockerDesktopRuntimeAdapter>();
