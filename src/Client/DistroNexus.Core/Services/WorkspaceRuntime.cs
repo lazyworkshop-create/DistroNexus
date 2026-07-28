@@ -59,7 +59,7 @@ public sealed class WorkspaceRuntime : IWorkspaceRuntime
         var timeout = a.Timeout ?? TimeSpan.FromMinutes(2);
         return a.Type switch
         {
-            WorkspaceActionType.Terminal => new("wt.exe", ["wsl", "--distribution", d.InstanceName, "--cd", d.ProjectPath ?? "/"], timeout),
+            WorkspaceActionType.Terminal => new("wt.exe", ["new-tab", "--", "wsl.exe", "--distribution", d.InstanceName, "--cd", d.ProjectPath ?? "/"], timeout),
             WorkspaceActionType.VisualStudioCode => new("code.exe", ["--folder-uri", "vscode-remote://wsl+" + Uri.EscapeDataString(d.InstanceName) + (d.ProjectPath ?? "/")], timeout),
             WorkspaceActionType.Explorer => new("explorer.exe", ["\\\\wsl$\\" + d.InstanceName + (d.ProjectPath?.Replace('/', '\\') ?? "")], timeout),
             WorkspaceActionType.Browser => Browser(a, timeout),

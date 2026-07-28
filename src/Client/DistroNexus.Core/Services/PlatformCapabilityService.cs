@@ -215,6 +215,11 @@ public sealed partial class PlatformCapabilityService : IPlatformCapabilityServi
             if (located.ExitCode != 0 || string.IsNullOrWhiteSpace(located.StandardOutput))
                 return Result(descriptor.Id, located.Failure == ProcessFailureKind.StartFailed ? CapabilityStatus.Unknown : CapabilityStatus.Unavailable,
                     located.Failure == ProcessFailureKind.StartFailed ? "Capability.Dependency.ProbeUnavailable" : "Capability.Dependency.NotInstalled", CapabilitySource.DependencyCli, now);
+            // `wt.exe --version` opens a Windows Terminal version dialog on supported builds.
+            // Presence is sufficient for this capability; never invoke the interactive terminal while probing.
+            if (descriptor.Id == CapabilityId.WindowsTerminal)
+                return Result(descriptor.Id, CapabilityStatus.Supported, "Capability.Dependency.Present", CapabilitySource.DependencyCli, now,
+                    evidence: new Dictionary<string, string> { ["product"] = descriptor.Executable });
             result = await RunAsync(descriptor.Executable, descriptor.VersionArguments, ct).ConfigureAwait(false);
         }
 

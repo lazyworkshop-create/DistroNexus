@@ -77,6 +77,24 @@ public sealed class WorkspaceRuntimeTests
     }
 
     [Fact]
+    public async Task TerminalAction_UsesExplicitWindowsTerminalNewTabBoundary()
+    {
+        ProcessRequest? captured = null;
+        var processes = new Mock<IProcessRunner>();
+        processes.Setup(x => x.RunAsync(It.IsAny<ProcessRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<ProcessRequest, CancellationToken>((request, _) => captured = request)
+            .ReturnsAsync(Success());
+        var runtime = new WorkspaceRuntime(new Mock<IWslManagerService>().Object, processes.Object);
+
+        var result = await runtime.ExecuteAsync(Definition(), new(Guid.NewGuid(), WorkspaceActionType.Terminal, "terminal", []), CancellationToken.None);
+
+        Assert.Equal(WorkspaceActionOutcome.Succeeded, result.Outcome);
+        Assert.NotNull(captured);
+        Assert.Equal("wt.exe", captured!.FileName);
+        Assert.Equal(["new-tab", "--", "wsl.exe", "--distribution", "Ubuntu", "--cd", "/home/demo"], captured.Arguments);
+    }
+
+    [Fact]
     public async Task SystemdAction_RejectsUnapprovedOperationWithoutStartingProcess()
     {
         var processes = new Mock<IProcessRunner>(MockBehavior.Strict);

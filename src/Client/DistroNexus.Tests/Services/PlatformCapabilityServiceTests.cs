@@ -9,6 +9,19 @@ namespace DistroNexus.Tests.Services;
 public class PlatformCapabilityServiceTests
 {
     [Fact]
+    public async Task HostDependencyProbe_DetectsWindowsTerminalWithoutInvokingIt()
+    {
+        var runner = new FakeRunner(request => request.FileName == "where.exe"
+            ? Ok("C:\\Tools\\" + request.Arguments[0])
+            : Ok("WSL version: 2.4.11.0"));
+
+        var snapshot = await new PlatformCapabilityService(runner).GetHostSnapshotAsync();
+
+        Assert.Equal(CapabilityStatus.Supported, snapshot.OptionalDependencies[CapabilityId.WindowsTerminal].Status);
+        Assert.DoesNotContain(runner.Requests, request => string.Equals(request.FileName, "wt.exe", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void AddPlatformCapabilities_RegistersSingletonsWithoutRunningAProbe()
     {
         var services = new ServiceCollection();
