@@ -1092,7 +1092,7 @@ S21
 
 ### Allowed Paths
 
-`src/Client/DistroNexus.Core/Models/WslgApplicationModels.cs`, `src/Client/DistroNexus.Core/Interfaces/IWslgApplicationService.cs`, `src/Client/DistroNexus.Core/Services/WslgApplicationService.cs`, a WSLg-specific Core discovery-grant store and its narrowly scoped test support, `src/Client/DistroNexus.WorkspaceBridge/Program.cs`, `src/PowerShell/Public/WslgCommands.ps1`, `src/PowerShell/DistroNexus.psd1`, `src/Client/DistroNexus.Core/Interfaces/IPowerShellModuleClient.cs`, `src/Client/DistroNexus.Core/Services/PowerShellModuleClient.cs`, `src/Client/DistroNexus.Desktop/ViewModels/ApplicationsViewModel.cs`, `src/Client/DistroNexus.Desktop/Views/ApplicationsPage.xaml`, `src/Client/DistroNexus.Desktop/App.xaml.cs`, focused WSLg/Core/Bridge/module-client/view-model/Pester tests, design, plan.
+`src/Client/DistroNexus.Core/Models/WslgApplicationModels.cs`, `src/Client/DistroNexus.Core/Interfaces/IWslgApplicationService.cs`, `src/Client/DistroNexus.Core/Services/WslgApplicationService.cs`, a WSLg-specific Core discovery-grant store and its narrowly scoped test support, `src/Client/DistroNexus.WorkspaceBridge/Program.cs`, `src/PowerShell/Public/WslgCommands.ps1`, `src/PowerShell/DistroNexus.psd1`, `src/Client/DistroNexus.Core/Interfaces/IPowerShellModuleClient.cs`, `src/Client/DistroNexus.Core/Services/PowerShellModuleClient.cs`, `src/Client/DistroNexus.Desktop/ViewModels/ApplicationsViewModel.cs`, `src/Client/DistroNexus.Desktop/Views/ApplicationsPage.xaml`, `src/Client/DistroNexus.Desktop/App.xaml.cs`, `src/Client/DistroNexus.Tests/Architecture/S13DesktopCompositionAndLocalizationTests.cs`, focused WSLg/Core/Bridge/module-client/view-model/Pester tests, design, plan.
 
 ### Excluded Paths
 

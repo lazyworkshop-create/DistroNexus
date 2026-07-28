@@ -23,13 +23,14 @@ public sealed class S13DesktopCompositionAndLocalizationTests
         var app = File.ReadAllText(Path.Combine(root, "src", "Client", "DistroNexus.Desktop", "App.xaml.cs"));
         foreach (var registration in new[]
         {
-            "services.AddPlatformCapabilities()", "services.AddHealthCenter()", "services.AddWslgApplications()",
+            "services.AddPlatformCapabilities()", "services.AddHealthCenter()",
             "IRecoveryPointService", "IMonitoringService", "IUsbDeviceService", "IWorkspaceService",
             "IContainerRuntimeService", "ITemplateMarketplaceService", "HealthCenterViewModel",
             "UsbDevicesViewModel", "WorkspacesViewModel", "ApplicationsViewModel", "HealthCenterPage",
             "UsbDevicesPage", "WorkspacesPage", "ApplicationsPage"
         })
             Assert.Contains(registration, app, StringComparison.Ordinal);
+        Assert.DoesNotContain("services.AddWslgApplications()", app, StringComparison.Ordinal);
     }
 
     [Fact]
