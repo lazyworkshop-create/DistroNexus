@@ -2043,7 +2043,7 @@ Install acquisition, credentials, compaction and production WSL UAT.
 
 ### Status
 
-In Progress
+Completed
 
 ### Objective
 
@@ -2103,7 +2103,7 @@ Compaction and production package/WSL UAT.
 
 ### Status
 
-Planned
+Completed
 
 ### Objective
 

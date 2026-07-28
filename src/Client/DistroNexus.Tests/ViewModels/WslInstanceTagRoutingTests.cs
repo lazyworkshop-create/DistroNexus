@@ -54,6 +54,40 @@ public sealed class WslInstanceTagRoutingTests
         if (operation == "ForceRefreshAsync") Assert.DoesNotContain("LoadDiskSizeAsync", methods);
     }
 
+    [Fact]
+    public void DiskSizePresentation_UsesTypedInstanceListWithoutManagerBypass()
+    {
+        var stateMachine = typeof(WslInstanceViewModel)
+            .GetNestedTypes(BindingFlags.NonPublic)
+            .Single(type => type.Name.StartsWith("<LoadDiskSizeAsync>", StringComparison.Ordinal));
+        var methods = CalledMethodNames(stateMachine.GetMethod("MoveNext", BindingFlags.Instance | BindingFlags.NonPublic)!);
+
+        Assert.Contains(nameof(IPowerShellModuleClient.GetInstancesAsync), methods);
+        Assert.DoesNotContain("GetInstanceDiskSizeAsync", methods);
+    }
+
+    [Fact]
+    public async Task LoadDiskSizeAsync_RequestsTheMeasuredDiskProjectionThroughTheModuleClient()
+    {
+        var moduleClient = new Mock<IPowerShellModuleClient>(MockBehavior.Strict);
+        moduleClient
+            .Setup(client => client.GetInstancesAsync(
+                It.Is<InstanceListRequest>(request => !request.SkipDiskSize && !request.ForceRefresh),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new WslInstance { Name = "Ubuntu", Size = 2048 }]);
+        var viewModel = new WslInstanceViewModel(
+            new WslInstance { Name = "Ubuntu", State = "Running" },
+            Mock.Of<IWslManagerService>(),
+            Mock.Of<ILogger>(),
+            moduleClient.Object,
+            Mock.Of<IServiceProvider>());
+
+        await viewModel.LoadDiskSizeAsync();
+
+        Assert.Equal(2048, viewModel.DiskSize);
+        moduleClient.VerifyAll();
+    }
+
     [Theory]
     [InlineData("RemoveAsync", nameof(IPowerShellModuleClient.PreviewRemoveInstanceAsync))]
     [InlineData("MoveAsync", nameof(IPowerShellModuleClient.PreviewMoveInstanceAsync))]

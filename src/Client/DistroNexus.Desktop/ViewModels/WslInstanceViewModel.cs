@@ -216,13 +216,21 @@ public partial class WslInstanceViewModel : ObservableObject
             
             _logger.LogInformation("Loading disk size for instance {Name}", Name);
             
-            var size = await _wslManager.GetInstanceDiskSizeAsync(Name);
-            
-            Instance.Size = size;
+            var refreshedInstance = (await _moduleClient.GetInstancesAsync(
+                new InstanceListRequest(SkipDiskSize: false, ForceRefresh: false)))
+                .FirstOrDefault(instance => string.Equals(instance.Name, Name, StringComparison.OrdinalIgnoreCase));
+
+            if (refreshedInstance is null)
+            {
+                _logger.LogWarning("Disk size load did not return instance {Name}", Name);
+                return;
+            }
+
+            Instance.Size = refreshedInstance.Size;
             OnPropertyChanged(nameof(DiskSize));
             OnPropertyChanged(nameof(DiskSizeDisplay));
             
-            _logger.LogInformation("Loaded disk size for {Name}: {Size} bytes", Name, size);
+            _logger.LogInformation("Loaded disk size for {Name}: {Size} bytes", Name, refreshedInstance.Size);
         }
         catch (Exception ex)
         {
