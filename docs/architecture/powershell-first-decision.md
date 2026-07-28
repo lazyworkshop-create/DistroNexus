@@ -28,6 +28,10 @@ The PowerShell module is the sole supported product execution boundary. WPF is o
 - Trade-off: bridge operations, typed desktop client contracts, and tests must be expanded before direct WPF service references can be removed.
 - Operational impact: packaged bridge availability becomes command-family-specific; real-host UAT is still required for privileged and WSL-dependent operations.
 
+### USB elevation boundary amendment
+
+For USB Bind/Unbind, the module cannot be made a trusted elevated-helper caller merely by accepting `powershell.exe` or `dotnet.exe`. The product therefore uses a dedicated, signed, unelevated `DistroNexus.UsbElevationBroker` as the only additional trusted pipe server alongside the signed Desktop executable. The broker consumes a same-user, short-lived Core grant and preserves the existing helper SID, PID, nonce, proof, trusted-`usbipd` and post-state checks. This adds a narrowly auditable product identity without granting generic scripts a privileged channel. Packaging/signing and physical-device/UAC evidence remain release/UAT gates.
+
 ## Alternatives Considered
 
 1. Keep the module as a thin optional adapter while WPF calls Core directly. Rejected because it fails the explicit PowerShell-first requirement and preserves duplicate behavior paths.

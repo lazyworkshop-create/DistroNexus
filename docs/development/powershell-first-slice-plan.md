@@ -12,7 +12,7 @@
 
 ## Dependency Order
 
-S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S18 -> S19 -> S20 -> S21 -> S22 -> S23 -> S24 -> S06 -> S07 -> S08
+S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S18 -> S19 -> S20 -> S21 -> S22 -> S23 -> S24 -> S25 -> S06 -> S07 -> S08
 
 ## Slice S01: Verified module contract and migration baseline
 
@@ -1254,6 +1254,71 @@ One accepted monitoring contract and presentation-client migration slice.
 ### Out of Scope
 
 External monitoring UAT, long-running monitoring persistence, and every other uncontracted platform family.
+
+## Slice S25: USB module contract, trusted elevation broker, and presentation-client migration
+
+### Status
+
+Blocked
+
+### Objective
+
+Make fixed PowerShell USB discovery and action commands the only product path while preserving the elevated helper's strict signed-caller boundary.
+
+### Sources
+
+Requirements FR-001 and FR-003 through FR-007; `docs/specs/powershell-first-design.md` USB action-grant and trusted-elevation-broker contract amendment; `docs/architecture/powershell-first-decision.md` USB elevation boundary amendment.
+
+### Dependencies
+
+S24
+
+### Allowed Paths
+
+`src/Client/DistroNexus.Core/Models/UsbDeviceModels.cs`, `src/Client/DistroNexus.Core/Interfaces/IUsbDeviceService.cs`, `src/Client/DistroNexus.Core/Services/UsbDeviceService.cs`, narrow USB action-grant/protection support, `src/Client/DistroNexus.WorkspaceBridge/Program.cs`, USB public command files and `src/PowerShell/DistroNexus.psd1`, `IPowerShellModuleClient`, `PowerShellModuleClient`, `UsbDevicesViewModel`, `App.xaml.cs`, `src/Client/DistroNexus.UsbElevatedHelper/Program.cs`, new `src/Client/DistroNexus.UsbElevationBroker/` project and required solution/packaging references, focused USB/Core/helper/broker/Bridge/module-client/view-model/Pester/architecture tests, design, decision, plan.
+
+### Excluded Paths
+
+Generic elevation APIs, accepting PowerShell/dotnet/admin/filename-only caller identity, arbitrary helper or usbipd paths/arguments, driver or usbipd installation, service/Windows-feature mutation, automatic UAC, persistent watches, WSL start, physical-device execution, release/publishing surfaces.
+
+### Contract and Documentation
+
+Define only `usb.status.v1`, `usb.list.v1`, `usb.action.preview.v1`, and `usb.action.execute.v1`. Preview accepts exactly Action, BusId and optional DistributionName; execute accepts only PreviewToken. Status/list and preview outputs are sanitized. Public status/list/preview/invoke commands use those routes; existing Connect/Disconnect are deprecated facades only.
+
+### Implementation Scope
+
+Implement a durable same-user protected, expiry-bound, atomically consumed USB action grant. Preserve Core revalidation and use a new signed `DistroNexus.UsbElevationBroker` only for Bind/Unbind so the elevated helper can retain strict product-signed caller proof. Replace direct view-model service use with typed module-client calls and non-authoritative typed refresh.
+
+### Test Scope
+
+Cover exact payloads, unknown fields, invalid action/distribution, WhatIf/decline, forged/expired/replayed/wrong-user grants, parallel consumption, BusId/HardwareId/state drift, UAC decline, untrusted caller/PID/nonce/proof/signature, redaction/bounds, compatibility facade no-native bypass, and module-only view-model behavior.
+
+### Acceptance Criteria
+
+- USB WPF has no `IUsbDeviceService` or helper authority and reaches all discovery/actions through closed typed module methods.
+- Public USB actions use only the versioned preview/execute contract; no accepted input can supply a native command, path, device identity or elevation authority.
+- Bind/Unbind never broaden helper trust to PowerShell/dotnet and retain signed broker, same-SID grant, pipe proof and final helper revalidation.
+- Unavailable/unsupported usbipd, stale device state, bad/expired/reused grants and declined consent fail before a mutation.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Usb|FullyQualifiedName~PowerShellModuleClient|FullyQualifiedName~WorkspaceBridgeProtocol"
+pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Unit
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+One accepted USB module/elevation-boundary/presentation-client migration slice.
+
+### Out of Scope
+
+USB driver/usbipd installation, host configuration, signing deployment, real UAC/device UAT, and every remaining platform family.
+
+### Blocker
+
+The existing helper deliberately authorizes only the signed `DistroNexus.Desktop.exe` pipe server; Core defaults the publisher pin to empty and `tools/build.ps1` has no signed broker publishing path. A new broker cannot safely serve module Bind/Unbind until a release/security owner supplies a pinned broker signing and packaging contract and explicitly authorizes the required packaging/signing edits. Trusting unsigned broker, PowerShell, dotnet, admin membership, or filename-only identity is prohibited.
 
 ## Slice S06: Platform-integrated command parity
 
