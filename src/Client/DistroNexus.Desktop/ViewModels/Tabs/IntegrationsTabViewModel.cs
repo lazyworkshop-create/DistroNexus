@@ -15,8 +15,7 @@ public partial class IntegrationsTabViewModel : ObservableObject
     private readonly WslInstanceViewModel _instance;
     private readonly IDockerIntegrationService _dockerIntegrationService;
     private readonly IDialogService _dialogService;
-    private readonly IContainerRuntimeService? _containerRuntimeService;
-    private readonly IPlatformCapabilityService _platformCapabilityService;
+    private readonly IPowerShellModuleClient? _powerShellModuleClient;
 
     private bool _initialized;
 
@@ -71,8 +70,8 @@ public partial class IntegrationsTabViewModel : ObservableObject
     // True when toggle should be interactive.
     public bool IsToggleEnabled => IsDockerInstalled && Instance.IsWslV2 && !IsLoading;
     public bool IsContainerActionsEnabled => IsPodmanServiceControlsEnabled || IsPodmanConnectionEnabled;
-    public bool IsPodmanServiceControlsEnabled => _containerRuntimeService is not null && Instance.IsWslV2 && IsInstanceSystemdSupported && IsPodmanWslAvailable && !IsLoading;
-    public bool IsPodmanConnectionEnabled => _containerRuntimeService is not null && Instance.IsWslV2 && IsPodmanWslAvailable && !IsLoading;
+    public bool IsPodmanServiceControlsEnabled => _powerShellModuleClient is not null && Instance.IsWslV2 && IsInstanceSystemdSupported && IsPodmanWslAvailable && !IsLoading;
+    public bool IsPodmanConnectionEnabled => _powerShellModuleClient is not null && Instance.IsWslV2 && IsPodmanWslAvailable && !IsLoading;
 
     // WSL v1 guard message
     public bool ShowWslV1Message => !Instance.IsWslV2;
@@ -81,14 +80,12 @@ public partial class IntegrationsTabViewModel : ObservableObject
         WslInstanceViewModel instance,
         IDockerIntegrationService dockerIntegrationService,
         IDialogService dialogService,
-        IPlatformCapabilityService platformCapabilityService,
-        IContainerRuntimeService? containerRuntimeService = null)
+        IPowerShellModuleClient? powerShellModuleClient = null)
     {
         _instance = instance ?? throw new ArgumentNullException(nameof(instance));
         _dockerIntegrationService = dockerIntegrationService ?? throw new ArgumentNullException(nameof(dockerIntegrationService));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
-        _platformCapabilityService = platformCapabilityService ?? throw new ArgumentNullException(nameof(platformCapabilityService));
-        _containerRuntimeService = containerRuntimeService;
+        _powerShellModuleClient = powerShellModuleClient;
     }
 
     public async Task InitializeAsync()
@@ -102,7 +99,12 @@ public partial class IntegrationsTabViewModel : ObservableObject
         _instance.IsBusy = true;
         try
         {
-            var capabilities = await _platformCapabilityService.GetInstanceSnapshotAsync(_instance.Name);
+            if (_powerShellModuleClient is null)
+            {
+                PodmanPrerequisiteMessage = R("IntegrationsTab_PodmanUnavailableService");
+                return;
+            }
+            var capabilities = await _powerShellModuleClient.GetInstanceCapabilitiesAsync(_instance.Name);
             IsInstanceSystemdSupported = capabilities.Capabilities.TryGetValue(CapabilityId.InstanceSystemd, out var systemd) && systemd.IsSupported;
             IsDockerInstalled = await _dockerIntegrationService.IsDockerDesktopInstalledAsync();
 
@@ -111,9 +113,9 @@ public partial class IntegrationsTabViewModel : ObservableObject
                 DockerStatus = await _dockerIntegrationService.GetIntegrationStatusAsync(_instance.Name);
                 IsDockerEnabled = DockerStatus == DockerIntegrationStatus.Enabled;
             }
-            if (_containerRuntimeService is not null)
+            if (_powerShellModuleClient is not null)
             {
-                var snapshot = await _containerRuntimeService.GetSnapshotAsync(_instance.Name);
+                var snapshot = await _powerShellModuleClient.GetContainerRuntimeStatusAsync(_instance.Name);
                 IsPodmanWslAvailable = snapshot.Runtimes.Any(x => x.Kind == ContainerRuntimeKind.PodmanWsl && x.Availability == ContainerRuntimeAvailability.Available);
                 PodmanPrerequisiteMessage = PodmanPrerequisiteExplanation();
                 ContainerRuntimeSummary = string.Join("; ", snapshot.Runtimes.Select(x => string.Format(R("IntegrationsTab_RuntimeSummary"), RuntimeLabel(x.Kind), AvailabilityLabel(x.Availability), HealthLabel(x.Health))));
@@ -195,14 +197,14 @@ public partial class IntegrationsTabViewModel : ObservableObject
 
     private async Task RunPodmanUnitAsync(PodmanUserUnit unit, SystemdAction action)
     {
-        var containerRuntimeService = _containerRuntimeService;
-        if (!IsPodmanServiceControlsEnabled || containerRuntimeService is null) return;
+        var powerShellModuleClient = _powerShellModuleClient;
+        if (!IsPodmanServiceControlsEnabled || powerShellModuleClient is null) return;
         IsLoading = true;
         try
         {
-            var preview = await containerRuntimeService.PreviewPodmanUserUnitAsync(_instance.Name, unit, action);
+            var preview = await powerShellModuleClient.GetPodmanUserUnitPreviewAsync(_instance.Name, unit, action);
             if (!await _dialogService.ShowConfirmAsync(R("IntegrationsTab_ConfirmPodmanAction"), FormatPreview(preview.Effects))) return;
-            var result = await containerRuntimeService.ExecutePodmanUserUnitAsync(preview);
+            var result = await powerShellModuleClient.InvokePodmanUserUnitAsync(preview);
             if (!result.Succeeded) await _dialogService.ShowAlertAsync(Properties.Resources.ErrorTitle, result.Guidance ?? result.OutcomeCode);
             _initialized = false;
             await InitializeAsync();
@@ -212,14 +214,14 @@ public partial class IntegrationsTabViewModel : ObservableObject
     [RelayCommand]
     private async Task ConfigurePodmanConnectionAsync()
     {
-        var containerRuntimeService = _containerRuntimeService;
-        if (!IsPodmanConnectionEnabled || containerRuntimeService is null) return;
+        var powerShellModuleClient = _powerShellModuleClient;
+        if (!IsPodmanConnectionEnabled || powerShellModuleClient is null) return;
         IsLoading = true;
         try
         {
-            var preview = await containerRuntimeService.PreviewPodmanConnectionAsync(_instance.Name, new PodmanConnectionRequest(PodmanConnectionName, new Uri(PodmanConnectionEndpoint, UriKind.Absolute)));
+            var preview = await powerShellModuleClient.GetPodmanConnectionPreviewAsync(_instance.Name, new PodmanConnectionRequest(PodmanConnectionName, new Uri(PodmanConnectionEndpoint, UriKind.Absolute)));
             if (!await _dialogService.ShowConfirmAsync(R("IntegrationsTab_ConfirmConnection"), FormatPreview(preview.Effects))) return;
-            var result = await containerRuntimeService.ConfigurePodmanConnectionAsync(preview);
+            var result = await powerShellModuleClient.InvokePodmanConnectionAsync(preview);
             if (!result.Succeeded) await _dialogService.ShowAlertAsync(Properties.Resources.ErrorTitle, result.Guidance ?? result.OutcomeCode);
         }
         catch (Exception ex) { await _dialogService.ShowAlertAsync(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex))); }
@@ -233,7 +235,7 @@ public partial class IntegrationsTabViewModel : ObservableObject
     private static string RuntimeLabel(ContainerRuntimeKind kind) => R($"IntegrationsTab_Runtime_{kind}");
     private static string AvailabilityLabel(ContainerRuntimeAvailability availability) => R($"IntegrationsTab_Availability_{availability}");
     private static string HealthLabel(string health) => Properties.Resources.ResourceManager.GetString($"IntegrationsTab_Health_{health}") ?? health;
-    private static string FormatPreview(IReadOnlyList<PodmanPreviewMessage>? messages) => string.Join(Environment.NewLine, (messages ?? []).Select(m => string.Format(R($"IntegrationsTab_Preview_{m.Code}"), m.Parameters.Cast<object>().ToArray())));
+    private static string FormatPreview(IReadOnlyList<string>? effects) => string.Join(Environment.NewLine, effects ?? []);
     private static string? SafeVersion(string? value) => VersionSafety.Normalize(value);
     private static (string Socket, string Service) PodmanStates(string value)
     {

@@ -437,13 +437,19 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.ClearPackageCacheAsync),
                 nameof(IPowerShellModuleClient.DeletePackageCacheEntryAsync),
                 nameof(IPowerShellModuleClient.GetCatalogSourcesAsync),
+                nameof(IPowerShellModuleClient.GetContainerRuntimeStatusAsync),
+                nameof(IPowerShellModuleClient.GetInstanceCapabilitiesAsync),
                 nameof(IPowerShellModuleClient.GetInstancesAsync),
                 nameof(IPowerShellModuleClient.GetInstanceTagsAsync),
                 nameof(IPowerShellModuleClient.GetPackageAsync),
                 nameof(IPowerShellModuleClient.GetPackageCacheLocationAsync),
                 nameof(IPowerShellModuleClient.GetPackageCacheUsageAsync),
                 nameof(IPowerShellModuleClient.GetPackagesAsync),
+                nameof(IPowerShellModuleClient.GetPodmanConnectionPreviewAsync),
+                nameof(IPowerShellModuleClient.GetPodmanUserUnitPreviewAsync),
                 nameof(IPowerShellModuleClient.GetSettingsAsync),
+                nameof(IPowerShellModuleClient.InvokePodmanConnectionAsync),
+                nameof(IPowerShellModuleClient.InvokePodmanUserUnitAsync),
                 nameof(IPowerShellModuleClient.RefreshCatalogAsync),
                 nameof(IPowerShellModuleClient.RemoveCatalogSourceAsync),
                 nameof(IPowerShellModuleClient.RemoveInstanceTagAsync),
@@ -464,6 +470,65 @@ public sealed class PowerShellModuleClientTests
         Assert.DoesNotContain(methods, method => method.Name.Contains("Script", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(methods, method => method.Name.Contains("Command", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(methods, method => method.Name.Contains("Operation", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task ContainerAndCapabilityQueries_UseOnlyTheirFixedCmdlets()
+    {
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusContainerRuntimeStatus", It.Is<Dictionary<string, object>>(p => (string)p["Name"] == "Ubuntu"), It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Runtimes\":[],\"Containers\":{},\"Images\":{},\"Projects\":{},\"Failures\":{}}" });
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusCapability", It.Is<Dictionary<string, object>>(p => (string)p["Name"] == "Ubuntu" && (bool)p["InstanceOnly"]), It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Instance\":{\"Name\":\"Ubuntu\"},\"Capabilities\":{},\"RefreshedAt\":\"2026-01-01T00:00:00+00:00\"}" });
+        var client = new PowerShellModuleClient(powerShell.Object);
+
+        Assert.Empty((await client.GetContainerRuntimeStatusAsync("Ubuntu")).Runtimes);
+        Assert.Empty((await client.GetInstanceCapabilitiesAsync("Ubuntu")).Capabilities);
+        powerShell.VerifyAll();
+    }
+
+    [Fact]
+    public async Task PodmanOperations_UseFixedCmdletsAndScalarExecuteParameters()
+    {
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusPodmanUserUnitPreview", It.Is<Dictionary<string, object>>(p => (string)p["Name"] == "Ubuntu" && (string)p["Unit"] == "Socket" && (string)p["Action"] == "Start"), It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Token\":\"unit-token\",\"InstanceName\":\"Ubuntu\",\"Unit\":\"Socket\",\"Action\":\"Start\",\"Effects\":[\"start\"]}" });
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Invoke-DistroNexusPodmanUserUnit", It.Is<Dictionary<string, object>>(p => (string)p["PreviewToken"] == "unit-token" && (string)p["InstanceName"] == "Ubuntu" && (string)p["Unit"] == "Socket" && (string)p["Action"] == "Start"), It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Succeeded\":true,\"OutcomeCode\":\"Succeeded\"}" });
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusPodmanConnectionPreview", It.Is<Dictionary<string, object>>(p => (string)p["Name"] == "Ubuntu" && (string)p["ConnectionName"] == "local"), It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Token\":\"connection-token\",\"InstanceName\":\"Ubuntu\",\"Name\":\"local\",\"Endpoint\":\"unix:///run/user/1000/podman/podman.sock\",\"Operation\":\"Create\",\"Effects\":[\"configure\"]}" });
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Invoke-DistroNexusPodmanConnection", It.Is<Dictionary<string, object>>(p => (string)p["PreviewToken"] == "connection-token" && (string)p["ConnectionName"] == "local"), It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Succeeded\":true,\"OutcomeCode\":\"Succeeded\"}" });
+        var client = new PowerShellModuleClient(powerShell.Object);
+
+        var unitPreview = await client.GetPodmanUserUnitPreviewAsync("Ubuntu", PodmanUserUnit.Socket, SystemdAction.Start);
+        Assert.True((await client.InvokePodmanUserUnitAsync(unitPreview)).Succeeded);
+        var connectionPreview = await client.GetPodmanConnectionPreviewAsync("Ubuntu", new PodmanConnectionRequest("local", new Uri("unix:///run/user/1000/podman/podman.sock")));
+        Assert.True((await client.InvokePodmanConnectionAsync(connectionPreview)).Succeeded);
+        powerShell.VerifyAll();
+    }
+
+    [Fact]
+    public async Task PodmanOperations_RejectInvalidInputBeforeModuleInvocation()
+    {
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        var client = new PowerShellModuleClient(powerShell.Object);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => client.GetContainerRuntimeStatusAsync("bad\nname"));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => client.GetPodmanUserUnitPreviewAsync("Ubuntu", PodmanUserUnit.Socket, SystemdAction.Restart));
+        await Assert.ThrowsAsync<ArgumentException>(() => client.GetPodmanConnectionPreviewAsync("Ubuntu", new PodmanConnectionRequest("local", new Uri("https://example.test"))));
+    }
+
+    [Fact]
+    public async Task ContainerRuntimeQuery_PreservesCancellation()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusContainerRuntimeStatus", It.IsAny<Dictionary<string, object>>(), It.IsAny<ModuleCallOptions>(), cancellation.Token))
+            .Returns(Task.FromCanceled<PowerShellScriptResult>(cancellation.Token));
+
+        await Assert.ThrowsAsync<TaskCanceledException>(() => new PowerShellModuleClient(powerShell.Object).GetContainerRuntimeStatusAsync("Ubuntu", cancellation.Token));
     }
 
     [Fact]

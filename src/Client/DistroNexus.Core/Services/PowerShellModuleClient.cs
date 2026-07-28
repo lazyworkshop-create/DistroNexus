@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 
@@ -34,6 +35,12 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string GetPackageCacheUsageCommand = "Get-DistroNexusPackageCacheUsage";
     private const string RemovePackageCacheCommand = "Remove-DistroNexusPackage";
     private const string ClearPackageCacheCommand = "Clear-DistroNexusPackageCache";
+    private const string GetContainerRuntimeStatusCommand = "Get-DistroNexusContainerRuntimeStatus";
+    private const string GetCapabilityCommand = "Get-DistroNexusCapability";
+    private const string GetPodmanUserUnitPreviewCommand = "Get-DistroNexusPodmanUserUnitPreview";
+    private const string InvokePodmanUserUnitCommand = "Invoke-DistroNexusPodmanUserUnit";
+    private const string GetPodmanConnectionPreviewCommand = "Get-DistroNexusPodmanConnectionPreview";
+    private const string InvokePodmanConnectionCommand = "Invoke-DistroNexusPodmanConnection";
     private readonly IPowerShellService _powerShellService;
 
     public PowerShellModuleClient(IPowerShellService powerShellService)
@@ -305,6 +312,52 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
         return JsonSerializer.Deserialize<PackageCacheClearResult>(result.Output, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? throw new InvalidOperationException("The module returned an invalid package cache clear result.");
     }
 
+    public async Task<ContainerRuntimeSnapshot> GetContainerRuntimeStatusAsync(string name, CancellationToken cancellationToken = default)
+    {
+        ValidateName(name, nameof(name));
+        return await ExecuteJsonAsync<ContainerRuntimeSnapshot>(GetContainerRuntimeStatusCommand, new() { ["Name"] = name }, cancellationToken);
+    }
+
+    public async Task<InstanceCapabilitySnapshot> GetInstanceCapabilitiesAsync(string name, CancellationToken cancellationToken = default)
+    {
+        ValidateName(name, nameof(name));
+        return await ExecuteJsonAsync<InstanceCapabilitySnapshot>(GetCapabilityCommand, new() { ["Name"] = name, ["InstanceOnly"] = true }, cancellationToken);
+    }
+
+    public async Task<DistroNexusPodmanUserUnitPreview> GetPodmanUserUnitPreviewAsync(string name, PodmanUserUnit unit, SystemdAction action, CancellationToken cancellationToken = default)
+    {
+        ValidateName(name, nameof(name));
+        ValidatePodmanUnitAction(unit, action);
+        return await ExecuteJsonAsync<DistroNexusPodmanUserUnitPreview>(GetPodmanUserUnitPreviewCommand, new() { ["Name"] = name, ["Unit"] = unit.ToString(), ["Action"] = action.ToString() }, cancellationToken);
+    }
+
+    public async Task<DistroNexusPodmanUserUnitResult> InvokePodmanUserUnitAsync(DistroNexusPodmanUserUnitPreview preview, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(preview);
+        ValidateName(preview.InstanceName, nameof(preview));
+        ValidatePodmanUnitAction(preview.Unit, preview.Action);
+        if (string.IsNullOrWhiteSpace(preview.Token)) throw new ArgumentException("A Core-issued Podman preview token is required.", nameof(preview));
+        return await ExecuteJsonAsync<DistroNexusPodmanUserUnitResult>(InvokePodmanUserUnitCommand, new() { ["PreviewToken"] = preview.Token, ["InstanceName"] = preview.InstanceName, ["Unit"] = preview.Unit.ToString(), ["Action"] = preview.Action.ToString() }, cancellationToken);
+    }
+
+    public async Task<DistroNexusPodmanConnectionPreview> GetPodmanConnectionPreviewAsync(string name, PodmanConnectionRequest request, CancellationToken cancellationToken = default)
+    {
+        ValidateName(name, nameof(name));
+        ArgumentNullException.ThrowIfNull(request);
+        request.Validate();
+        return await ExecuteJsonAsync<DistroNexusPodmanConnectionPreview>(GetPodmanConnectionPreviewCommand, new() { ["Name"] = name, ["ConnectionName"] = request.Name, ["Endpoint"] = request.SafeEndpoint }, cancellationToken);
+    }
+
+    public async Task<PodmanConnectionResult> InvokePodmanConnectionAsync(DistroNexusPodmanConnectionPreview preview, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(preview);
+        ValidateName(preview.InstanceName, nameof(preview));
+        if (string.IsNullOrWhiteSpace(preview.Token)) throw new ArgumentException("A Core-issued Podman preview token is required.", nameof(preview));
+        var request = new PodmanConnectionRequest(preview.Name, new Uri(preview.Endpoint, UriKind.Absolute));
+        request.Validate();
+        return await ExecuteJsonAsync<PodmanConnectionResult>(InvokePodmanConnectionCommand, new() { ["PreviewToken"] = preview.Token, ["InstanceName"] = preview.InstanceName, ["ConnectionName"] = request.Name, ["Endpoint"] = request.SafeEndpoint }, cancellationToken);
+    }
+
     private async Task<IReadOnlyList<DistroPackage>> ExecutePackagesAsync(Dictionary<string, object>? parameters, CancellationToken cancellationToken)
     {
         var result = await _powerShellService.ExecuteModuleCmdletAsync(GetPackagesCommand, parameters, new ModuleCallOptions { ParseAsJson = true }, cancellationToken);
@@ -314,6 +367,26 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
         return result.Output.TrimStart().StartsWith('[')
             ? JsonSerializer.Deserialize<List<DistroPackage>>(result.Output, options) ?? []
             : [JsonSerializer.Deserialize<DistroPackage>(result.Output, options) ?? throw new InvalidOperationException("The module returned an invalid package result.")];
+    }
+
+    private async Task<T> ExecuteJsonAsync<T>(string command, Dictionary<string, object> parameters, CancellationToken cancellationToken)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(command, parameters, new ModuleCallOptions { ParseAsJson = true }, cancellationToken);
+        ThrowIfFailed(result);
+        return JsonSerializer.Deserialize<T>(result.Output, JsonOptions)
+            ?? throw new InvalidOperationException("The DistroNexus module returned an invalid result.");
+    }
+
+    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true, Converters = { new JsonStringEnumConverter() } };
+
+    private static void ValidateName(string value, string parameterName)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.IndexOfAny(['\r', '\n', '\0']) >= 0) throw new ArgumentException("The instance name is invalid.", parameterName);
+    }
+
+    private static void ValidatePodmanUnitAction(PodmanUserUnit unit, SystemdAction action)
+    {
+        if (unit is not (PodmanUserUnit.Service or PodmanUserUnit.Socket) || action is not (SystemdAction.Start or SystemdAction.Stop)) throw new ArgumentOutOfRangeException(nameof(action));
     }
 
     private async Task ExecuteTagMutationAsync(

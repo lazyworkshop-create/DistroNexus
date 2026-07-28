@@ -51,14 +51,14 @@ public partial class InstanceDetailViewModel : ObservableObject, IAsyncDisposabl
         INetworkStatusAdapter networkStatusAdapter,
         IBrowserLauncher browserLauncher,
         IMonitoringService monitoringService,
-        IContainerRuntimeService? containerRuntimeService = null)
+        IPowerShellModuleClient? powerShellModuleClient = null)
     {
         _instance = instance ?? throw new ArgumentNullException(nameof(instance));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
 
         DiskTab = new DiskTabViewModel(instance, wslManager, dialogService);
         ResourcesTab = new ResourcesTabViewModel(instance, wslManager, wslConfigService, dialogService);
-        IntegrationsTab = new IntegrationsTabViewModel(instance, dockerIntegrationService, dialogService, platformCapabilityService, containerRuntimeService);
+        IntegrationsTab = new IntegrationsTabViewModel(instance, dockerIntegrationService, dialogService, powerShellModuleClient);
         NetworkTab = new NetworkTabViewModel(instance, networkService, dialogService, networkDiagnostics, firewallOperationBroker, networkConfigurationService, networkStatusAdapter, browserLauncher);
         BackupTab = new BackupTabViewModel(instance, backupService, dialogService, recoveryPointService);
         ConfigurationTab = new ConfigurationTabViewModel(instance, distributionConfigurationService, platformCapabilityService, dialogService);

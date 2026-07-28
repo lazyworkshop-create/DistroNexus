@@ -1016,7 +1016,7 @@ Desktop migration and real diagnostic collection UAT.
 
 ### Status
 
-Planned
+Committed
 
 ### Objective
 
@@ -1032,7 +1032,7 @@ S20
 
 ### Allowed Paths
 
-`src/PowerShell/Public/Get-DistroNexusCapability.ps1`, `src/PowerShell/Public/Get-DistroNexusContainerRuntimeStatus.ps1`, `src/PowerShell/Public/Get-DistroNexusPodmanUserUnitPreview.ps1`, `src/PowerShell/Public/Invoke-DistroNexusPodmanUserUnit.ps1`, `src/PowerShell/Public/Get-DistroNexusPodmanConnectionPreview.ps1`, `src/PowerShell/Public/Invoke-DistroNexusPodmanConnection.ps1`, `src/PowerShell/DistroNexus.psd1`, `src/Client/DistroNexus.Core/Interfaces/IPowerShellModuleClient.cs`, `src/Client/DistroNexus.Core/Services/PowerShellModuleClient.cs`, `src/Client/DistroNexus.Tests/Services/PowerShellModuleClientTests.cs`, `src/Client/DistroNexus.Desktop/ViewModels/Tabs/IntegrationsTabViewModel.cs`, matching integration view-model tests, focused Pester/xUnit tests, plan.
+`src/PowerShell/Public/Get-DistroNexusCapability.ps1`, `src/PowerShell/Public/Get-DistroNexusContainerRuntimeStatus.ps1`, `src/PowerShell/Public/Get-DistroNexusPodmanUserUnitPreview.ps1`, `src/PowerShell/Public/Invoke-DistroNexusPodmanUserUnit.ps1`, `src/PowerShell/Public/Get-DistroNexusPodmanConnectionPreview.ps1`, `src/PowerShell/Public/Invoke-DistroNexusPodmanConnection.ps1`, `src/PowerShell/DistroNexus.psd1`, `tests/PowerShell/Unit/Public/PodmanUserUnit.Tests.ps1`, `tests/PowerShell/Unit/Public/PodmanConnection.Tests.ps1`, `src/Client/DistroNexus.Core/Interfaces/IPowerShellModuleClient.cs`, `src/Client/DistroNexus.Core/Services/PowerShellModuleClient.cs`, `src/Client/DistroNexus.Tests/Services/PowerShellModuleClientTests.cs`, `src/Client/DistroNexus.Desktop/ViewModels/WslInstanceViewModel.cs`, `src/Client/DistroNexus.Desktop/ViewModels/InstanceDetailViewModel.cs`, `src/Client/DistroNexus.Desktop/ViewModels/Tabs/IntegrationsTabViewModel.cs`, `src/Client/DistroNexus.Tests/ViewModels/IntegrationsContainerRuntimeTests.cs`, focused Pester/xUnit tests, plan.
 
 ### Excluded Paths
 
@@ -1040,7 +1040,7 @@ Core container runtime adapters and their safety policy, Docker integration, con
 
 ### Contract and Documentation
 
-Record the existing fixed container/PODMAN public command names as the sole client contract. Add only explicit typed module-client methods for inventory, the existing `Get-DistroNexusCapability -Name <name> -InstanceOnly` query used to preserve the `InstanceSystemd` gate, user-unit preview/execute, and connection preview/execute. Preserve the Core-issued preview token, TTL, fingerprint, replay, and endpoint-validation semantics without exposing generic cmdlet, Bridge-operation, or raw process arguments.
+Record the existing fixed container/PODMAN public command names as the sole client contract. Add only explicit typed module-client methods for inventory, the existing `Get-DistroNexusCapability -Name <name> -InstanceOnly` query used to preserve the `InstanceSystemd` gate, user-unit preview/execute, and connection preview/execute. Retain pipeline `-Preview` compatibility and add strict scalar execute parameter sets from returned preview data: user-unit `PreviewToken`/`InstanceName`/`Unit`/`Action`, connection `PreviewToken`/`InstanceName`/`ConnectionName`/`Endpoint`. Preserve Core-issued token, TTL, fingerprint, replay, and endpoint-validation semantics without exposing generic cmdlet, Bridge-operation, object serializer, or raw process arguments.
 
 ### Implementation Scope
 

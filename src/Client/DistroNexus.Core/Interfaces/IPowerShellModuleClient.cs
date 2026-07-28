@@ -88,7 +88,18 @@ public interface IPowerShellModuleClient
     Task<CacheUsageInfo> GetPackageCacheUsageAsync(CancellationToken cancellationToken = default);
     Task<PackageCacheDeleteResult> DeletePackageCacheEntryAsync(string cacheEntryId, CancellationToken cancellationToken = default);
     Task<PackageCacheClearResult> ClearPackageCacheAsync(CancellationToken cancellationToken = default);
+
+    Task<ContainerRuntimeSnapshot> GetContainerRuntimeStatusAsync(string name, CancellationToken cancellationToken = default);
+    Task<InstanceCapabilitySnapshot> GetInstanceCapabilitiesAsync(string name, CancellationToken cancellationToken = default);
+    Task<DistroNexusPodmanUserUnitPreview> GetPodmanUserUnitPreviewAsync(string name, PodmanUserUnit unit, SystemdAction action, CancellationToken cancellationToken = default);
+    Task<DistroNexusPodmanUserUnitResult> InvokePodmanUserUnitAsync(DistroNexusPodmanUserUnitPreview preview, CancellationToken cancellationToken = default);
+    Task<DistroNexusPodmanConnectionPreview> GetPodmanConnectionPreviewAsync(string name, PodmanConnectionRequest request, CancellationToken cancellationToken = default);
+    Task<PodmanConnectionResult> InvokePodmanConnectionAsync(DistroNexusPodmanConnectionPreview preview, CancellationToken cancellationToken = default);
 }
+
+public sealed record DistroNexusPodmanUserUnitPreview(string Token, string InstanceName, PodmanUserUnit Unit, SystemdAction Action, IReadOnlyList<string> Effects);
+public sealed record DistroNexusPodmanUserUnitResult(bool Succeeded, string OutcomeCode, string? Guidance = null);
+public sealed record DistroNexusPodmanConnectionPreview(string Token, string InstanceName, string Name, string Endpoint, string Operation, string? ExistingEndpoint, IReadOnlyList<string> Effects);
 
 /// <summary>
 /// Represents the stable module result for an instance tag query.

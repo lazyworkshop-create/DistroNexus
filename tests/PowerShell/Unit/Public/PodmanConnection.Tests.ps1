@@ -52,4 +52,13 @@ Describe 'Podman connection preview and execution' -Tag 'Unit', 'Public', 'Conta
         $result.Succeeded | Should -BeTrue
         Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 1 -ParameterFilter { $Operation -eq 'executePodmanConnection' -and $Token -eq 'issued' -and $Payload.InstanceName -eq 'Ubuntu' -and $Payload.Name -eq 'local' -and $Payload.Endpoint -eq 'unix:///run/user/1000/podman/podman.sock' }
     }
+
+    It 'routes strict scalar execution parameters and rejects an unsafe endpoint before the bridge' {
+        Mock Invoke-DistroNexusWorkspaceBridge { [pscustomobject]@{ Succeeded=$true; OutcomeCode='Succeeded' } }
+
+        $result = Invoke-DistroNexusPodmanConnection -PreviewToken issued -InstanceName Ubuntu -ConnectionName local -Endpoint 'unix:///run/user/1000/podman/podman.sock' -Confirm:$false
+        $result.Succeeded | Should -BeTrue
+        { Invoke-DistroNexusPodmanConnection -PreviewToken issued -InstanceName Ubuntu -ConnectionName local -Endpoint 'https://example.test' -Confirm:$false } | Should -Throw
+        Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 1 -ParameterFilter { $Operation -eq 'executePodmanConnection' -and $Token -eq 'issued' -and $Payload.InstanceName -eq 'Ubuntu' -and $Payload.Name -eq 'local' }
+    }
 }
