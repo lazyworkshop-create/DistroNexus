@@ -28,6 +28,7 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string SetCatalogSourceActiveCommand = "Set-DistroNexusCatalogSourceActive";
     private const string SetCatalogSourceOrderCommand = "Set-DistroNexusCatalogSourceOrder";
     private const string ResetCatalogSourcesCommand = "Reset-DistroNexusCatalogSource";
+    private const string GetPackagesCommand = "Get-DistroNexusPackage";
     private readonly IPowerShellService _powerShellService;
 
     public PowerShellModuleClient(IPowerShellService powerShellService)
@@ -244,6 +245,34 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     /// <inheritdoc />
     public Task<bool> ResetCatalogSourcesAsync(CancellationToken cancellationToken = default) =>
         ExecuteCatalogSourceBooleanMutationAsync(ResetCatalogSourcesCommand, null, cancellationToken);
+
+    public async Task<IReadOnlyList<DistroPackage>> GetPackagesAsync(string? family = null, bool forceReload = false, CancellationToken cancellationToken = default)
+    {
+        var parameters = new Dictionary<string, object>();
+        if (!string.IsNullOrWhiteSpace(family)) parameters["Family"] = family;
+        if (forceReload) parameters["ForceReload"] = true;
+        return await ExecutePackagesAsync(parameters.Count == 0 ? null : parameters, cancellationToken);
+    }
+
+    public Task<IReadOnlyList<DistroPackage>> SearchPackagesAsync(string query, CancellationToken cancellationToken = default) =>
+        ExecutePackagesAsync(new Dictionary<string, object> { ["Query"] = query }, cancellationToken);
+
+    public async Task<DistroPackage?> GetPackageAsync(string id, CancellationToken cancellationToken = default)
+    {
+        var packages = await ExecutePackagesAsync(new Dictionary<string, object> { ["Id"] = id }, cancellationToken);
+        return packages.FirstOrDefault();
+    }
+
+    private async Task<IReadOnlyList<DistroPackage>> ExecutePackagesAsync(Dictionary<string, object>? parameters, CancellationToken cancellationToken)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(GetPackagesCommand, parameters, new ModuleCallOptions { ParseAsJson = true }, cancellationToken);
+        if (!result.Success) throw result.Exception ?? new InvalidOperationException(result.Error ?? "The DistroNexus module operation failed.");
+        if (string.IsNullOrWhiteSpace(result.Output)) return Array.Empty<DistroPackage>();
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        return result.Output.TrimStart().StartsWith('[')
+            ? JsonSerializer.Deserialize<List<DistroPackage>>(result.Output, options) ?? []
+            : [JsonSerializer.Deserialize<DistroPackage>(result.Output, options) ?? throw new InvalidOperationException("The module returned an invalid package result.")];
+    }
 
     private async Task ExecuteTagMutationAsync(
         string command,

@@ -71,6 +71,15 @@ public interface IPowerShellModuleClient
 
     /// <summary>Resets catalog sources to their defaults through the module contract.</summary>
     Task<bool> ResetCatalogSourcesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Lists catalog packages through the module contract.</summary>
+    Task<IReadOnlyList<DistroPackage>> GetPackagesAsync(string? family = null, bool forceReload = false, CancellationToken cancellationToken = default);
+
+    /// <summary>Searches catalog packages through the module contract.</summary>
+    Task<IReadOnlyList<DistroPackage>> SearchPackagesAsync(string query, CancellationToken cancellationToken = default);
+
+    /// <summary>Gets one catalog package through the module contract.</summary>
+    Task<DistroPackage?> GetPackageAsync(string id, CancellationToken cancellationToken = default);
 }
 
 /// <summary>

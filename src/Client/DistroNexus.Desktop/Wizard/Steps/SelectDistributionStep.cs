@@ -12,7 +12,7 @@ namespace DistroNexus.Desktop.Wizard.Steps;
 /// </summary>
 public partial class SelectDistributionStep : WizardStepBase
 {
-    private readonly ICatalogService _catalogService;
+    private readonly IPowerShellModuleClient _moduleClient;
     private readonly ITemplateService _templateService;
     private readonly ILogger _logger;
 
@@ -26,9 +26,9 @@ public partial class SelectDistributionStep : WizardStepBase
     [ObservableProperty]
     private bool _isLoading;
 
-    public SelectDistributionStep(ICatalogService catalogService, ITemplateService templateService, ILogger logger)
+    public SelectDistributionStep(IPowerShellModuleClient moduleClient, ITemplateService templateService, ILogger logger)
     {
-        _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _templateService = templateService ?? throw new ArgumentNullException(nameof(templateService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -53,7 +53,7 @@ public partial class SelectDistributionStep : WizardStepBase
             IsLoading = true;
             _logger.LogInformation("Loading available distributions");
 
-            var packages = await _catalogService.LoadCatalogAsync();
+            var packages = await _moduleClient.GetPackagesAsync();
             AvailableDistributions.Clear();
             
             foreach (var package in packages)

@@ -24,6 +24,7 @@ var applicationRoot = root ?? Path.Combine(Environment.GetFolderPath(Environment
 var bridgePowerShell = new BridgeReadOnlyPowerShellService();
 var settings = new SettingsService(NullLogger<SettingsService>.Instance, Path.Combine(applicationRoot, "settings.json"));
 var catalogSources = new CatalogSourceManager(settings, new HttpClient(), NullLogger<CatalogSourceManager>.Instance);
+var catalog = new CatalogService(NullLogger<CatalogService>.Instance, settings, bridgePowerShell, new HttpClient());
 var globalConfiguration = new WslConfigService(NullLogger<WslConfigService>.Instance, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
 var backups = new BackupService(bridgePowerShell, NullLogger<BackupService>.Instance, applicationRoot);
 var templates = new TemplateService(NullLogger<TemplateService>.Instance, settings, bridgePowerShell, new HttpClient());
@@ -151,6 +152,9 @@ while ((line = Console.ReadLine()) is not null)
             "catalog-source.reorder.v1" => await ReorderCatalogSourcesAsync(request),
             "catalog-source.defaults.get.v1" => GetDefaultCatalogSources(request),
             "catalog-source.defaults.reset.v1" => await ResetCatalogSourcesAsync(request),
+            "catalog.list.v1" => await ListCatalogAsync(request),
+            "catalog.search.v1" => await SearchCatalogAsync(request),
+            "catalog.get.v1" => await GetCatalogAsync(request),
             _ => throw new ArgumentException("Bridge operation is unsupported.")
         };
         response = new(true, value, null, null);
@@ -196,6 +200,41 @@ async Task<List<CatalogSource>> GetCatalogSourcesAsync(BridgeRequest request)
 {
     RequireNoPayload(request, "Catalog source list does not accept a payload.");
     return await catalogSources.GetSourcesAsync();
+}
+
+async Task<List<DistroPackage>> ListCatalogAsync(BridgeRequest request)
+{
+    var payload = DeserializeOptionalCatalogPayload<CatalogListPayload>(request);
+    if (payload is not null && payload.Family is not null)
+        ValidateCatalogText(payload.Family, "family");
+    var packages = await catalog.LoadCatalogAsync(payload?.ForceReload ?? false);
+    return string.IsNullOrWhiteSpace(payload?.Family) ? packages : packages.Where(p => string.Equals(p.Category, payload.Family, StringComparison.OrdinalIgnoreCase)).ToList();
+}
+
+async Task<List<DistroPackage>> SearchCatalogAsync(BridgeRequest request)
+{
+    var payload = DeserializeCatalogSourcePayload<CatalogSearchPayload>(request, "Catalog search payload is required.");
+    ValidateCatalogText(payload.Query, "query");
+    return await catalog.SearchDistributionsAsync(payload.Query);
+}
+
+async Task<DistroPackage?> GetCatalogAsync(BridgeRequest request)
+{
+    var payload = DeserializeCatalogSourcePayload<CatalogGetPayload>(request, "Catalog get payload is required.");
+    ValidateCatalogText(payload.Id, "id");
+    return await catalog.GetDistributionByIdAsync(payload.Id);
+}
+
+T? DeserializeOptionalCatalogPayload<T>(BridgeRequest request) where T : class
+{
+    if (request.Payload is null || request.Payload.Value.ValueKind == JsonValueKind.Null) return null;
+    return JsonSerializer.Deserialize<T>(request.Payload.Value.GetRawText(), new JsonSerializerOptions(options) { UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow });
+}
+
+static void ValidateCatalogText(string? value, string name)
+{
+    if (string.IsNullOrWhiteSpace(value) || value.Length > 256)
+        throw new ArgumentException($"Catalog {name} must be between 1 and 256 characters.");
 }
 
 async Task<CatalogSource> AddCatalogSourceAsync(BridgeRequest request)
@@ -415,6 +454,9 @@ public sealed record CatalogSourceIdPayload(string SourceId);
 public sealed record CatalogSourceTestPayload(string Url);
 public sealed record CatalogSourceActivePayload(string SourceId, bool IsActive);
 public sealed record CatalogSourceReorderPayload(List<string> SourceIds);
+public sealed record CatalogListPayload(string? Family = null, bool ForceReload = false);
+public sealed record CatalogSearchPayload(string Query);
+public sealed record CatalogGetPayload(string Id);
 public sealed record PodmanUnitPayload(string InstanceName, PodmanUserUnit Unit, SystemdAction Action);
 public sealed record PodmanConnectionPayload(string InstanceName, string Name, string Endpoint);
 public sealed record PodmanStatusPayload(string InstanceName);

@@ -293,6 +293,32 @@ public sealed class WorkspaceBridgeProtocolTests
         Assert.Contains("Export revision", exported.GetProperty("Value").GetString(), StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task CatalogRoutes_UseFixedPayloadsAndRejectMalformedRequests()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        var list = await bridge.SendAsync("catalog.list.v1");
+        var family = await bridge.SendAsync("catalog.list.v1", payload: JsonDocument.Parse("{\"Family\":\"Ubuntu\"}").RootElement.Clone());
+        var force = await bridge.SendAsync("catalog.list.v1", payload: JsonDocument.Parse("{\"ForceReload\":true}").RootElement.Clone());
+        var search = await bridge.SendAsync("catalog.search.v1", payload: JsonDocument.Parse("{\"Query\":\"ubuntu\"}").RootElement.Clone());
+        var get = await bridge.SendAsync("catalog.get.v1", payload: JsonDocument.Parse("{\"Id\":\"unknown\"}").RootElement.Clone());
+        Assert.True(list.GetProperty("Succeeded").GetBoolean());
+        Assert.True(family.GetProperty("Succeeded").GetBoolean());
+        Assert.True(force.GetProperty("Succeeded").GetBoolean());
+        Assert.True(search.GetProperty("Succeeded").GetBoolean());
+        Assert.True(get.GetProperty("Succeeded").GetBoolean());
+        foreach (var malformed in new[] {
+            await bridge.SendAsync("catalog.search.v1"),
+            await bridge.SendAsync("catalog.search.v1", payload: JsonDocument.Parse("{\"Query\":\"\"}").RootElement.Clone()),
+            await bridge.SendAsync("catalog.get.v1", payload: JsonDocument.Parse("null").RootElement.Clone()),
+            await bridge.SendAsync("catalog.list.v1", payload: JsonDocument.Parse("{\"Family\":\"\",\"Script\":\"x\"}").RootElement.Clone()),
+            await bridge.SendAsync("catalog.unknown.v1") })
+        {
+            Assert.False(malformed.GetProperty("Succeeded").GetBoolean());
+            Assert.Equal("Workspace.Bridge.Invalid", malformed.GetProperty("ErrorCode").GetString());
+        }
+    }
+
     private sealed class BridgeProcess : IAsyncDisposable
     {
         private readonly Process process;

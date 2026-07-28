@@ -86,8 +86,8 @@ public class InstallWizardWorkflowViewModelTests
             DownloadUrl = "https://example.com/ubuntu.tar.gz"
         };
 
-        _mockCatalogService
-            .Setup(service => service.LoadCatalogAsync())
+        _mockModuleClient
+            .Setup(client => client.GetPackagesAsync(null, false, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<DistroPackage> { expectedDistro });
 
         var viewModel = CreateViewModel();
@@ -131,7 +131,6 @@ public class InstallWizardWorkflowViewModelTests
     private InstallWizardWorkflowViewModel CreateViewModel()
     {
         return new InstallWizardWorkflowViewModel(
-            _mockCatalogService.Object,
             _mockWslManagerService.Object,
             _mockModuleClient.Object,
             _mockSettingsService.Object,

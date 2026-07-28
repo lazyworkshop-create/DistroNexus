@@ -215,7 +215,7 @@ public partial class SettingsViewModel : ObservableObject
     {
         try
         {
-            var distributions = await _catalogService.LoadCatalogAsync();
+            var distributions = await _moduleClient.GetPackagesAsync();
             AvailableDistributions.Clear();
             foreach (var distro in distributions)
             {

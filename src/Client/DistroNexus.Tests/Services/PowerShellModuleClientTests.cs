@@ -8,6 +8,51 @@ namespace DistroNexus.Tests.Services;
 public sealed class PowerShellModuleClientTests
 {
     [Fact]
+    public async Task PackageQueries_UseClosedCmdletParametersAndDeserializeResults()
+    {
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(service => service.ExecuteModuleCmdletAsync("Get-DistroNexusPackage", It.Is<Dictionary<string, object>>(p => p.ContainsKey("Family") && Equals(p["Family"], "Ubuntu")), It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "[{\"Id\":\"ubuntu\",\"Name\":\"Ubuntu\"}]" });
+        powerShell.Setup(service => service.ExecuteModuleCmdletAsync("Get-DistroNexusPackage", It.Is<Dictionary<string, object>>(p => p.ContainsKey("Id") && Equals(p["Id"], "ubuntu")), It.IsAny<ModuleCallOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Id\":\"ubuntu\",\"Name\":\"Ubuntu\"}" });
+        var client = new PowerShellModuleClient(powerShell.Object);
+        Assert.Equal("ubuntu", Assert.Single(await client.GetPackagesAsync("Ubuntu")).Id);
+        Assert.Equal("ubuntu", (await client.GetPackageAsync("ubuntu"))!.Id);
+    }
+
+    [Fact]
+    public async Task PackageList_DefaultForceAndSearch_UseTheirModeledParameters()
+    {
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(service => service.ExecuteModuleCmdletAsync("Get-DistroNexusPackage", null, It.IsAny<ModuleCallOptions>(), It.IsAny<CancellationToken>())).ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "[]" });
+        powerShell.Setup(service => service.ExecuteModuleCmdletAsync("Get-DistroNexusPackage", It.Is<Dictionary<string, object>>(p => p != null && p.ContainsKey("ForceReload")), It.IsAny<ModuleCallOptions>(), It.IsAny<CancellationToken>())).ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "[]" });
+        powerShell.Setup(service => service.ExecuteModuleCmdletAsync("Get-DistroNexusPackage", It.Is<Dictionary<string, object>>(p => p != null && p.ContainsKey("Query") && Equals(p["Query"], "ubuntu")), It.IsAny<ModuleCallOptions>(), It.IsAny<CancellationToken>())).ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "[{\"Id\":\"ubuntu\"}]" });
+        var client = new PowerShellModuleClient(powerShell.Object);
+        await client.GetPackagesAsync(); await client.GetPackagesAsync(forceReload: true);
+        Assert.Equal("ubuntu", Assert.Single(await client.SearchPackagesAsync("ubuntu")).Id);
+    }
+
+    [Fact]
+    public async Task PackageQuery_PreservesCancellationToken()
+    {
+        using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(service => service.ExecuteModuleCmdletAsync("Get-DistroNexusPackage", It.IsAny<Dictionary<string, object>?>(), It.IsAny<ModuleCallOptions>(), cancellation.Token)).Returns(Task.FromCanceled<PowerShellScriptResult>(cancellation.Token));
+        await Assert.ThrowsAsync<TaskCanceledException>(() => new PowerShellModuleClient(powerShell.Object).SearchPackagesAsync("ubuntu", cancellation.Token));
+    }
+
+    [Fact]
+    public async Task PackageQueries_PropagateFailureAndCancellation()
+    {
+        using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(service => service.ExecuteModuleCmdletAsync("Get-DistroNexusPackage", It.IsAny<Dictionary<string, object>?>(), It.IsAny<ModuleCallOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 1, Error = "failed" });
+        var client = new PowerShellModuleClient(powerShell.Object);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => client.SearchPackagesAsync("ubuntu"));
+    }
+
+    [Fact]
     public async Task GetInstancesAsync_UsesTheRegisteredCmdletAndMapsModuleResults()
     {
         var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
@@ -376,6 +421,8 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.GetCatalogSourcesAsync),
                 nameof(IPowerShellModuleClient.GetInstancesAsync),
                 nameof(IPowerShellModuleClient.GetInstanceTagsAsync),
+                nameof(IPowerShellModuleClient.GetPackageAsync),
+                nameof(IPowerShellModuleClient.GetPackagesAsync),
                 nameof(IPowerShellModuleClient.GetSettingsAsync),
                 nameof(IPowerShellModuleClient.RemoveCatalogSourceAsync),
                 nameof(IPowerShellModuleClient.RemoveInstanceTagAsync),
@@ -384,6 +431,7 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.ResetCatalogSourcesAsync),
                 nameof(IPowerShellModuleClient.ResetSettingsAsync),
                 nameof(IPowerShellModuleClient.SaveSettingsAsync),
+                nameof(IPowerShellModuleClient.SearchPackagesAsync),
                 nameof(IPowerShellModuleClient.SetCatalogSourceActiveAsync),
                 nameof(IPowerShellModuleClient.SetInstanceTagsAsync),
                 nameof(IPowerShellModuleClient.StartInstanceAsync),

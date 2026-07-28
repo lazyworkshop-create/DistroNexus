@@ -12,7 +12,7 @@
 
 ## Dependency Order
 
-S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S05 -> S06 -> S07 -> S08
+S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S05 -> S06 -> S07 -> S08
 
 ## Slice S01: Verified module contract and migration baseline
 
@@ -600,6 +600,65 @@ Typed catalog-source desktop client and Source Manager migration with focused te
 ### Out of Scope
 
 Catalog loading/refresh/search/package/cache behavior, source defaults UI, and source-to-catalog refresh integration.
+
+## Slice S15: Native catalog read contract
+
+### Status
+
+Committed
+
+### Objective
+
+Catalog list, search, and package lookup run natively in Core behind fixed module and Bridge read contracts, with no Core-to-module invocation.
+
+### Sources
+
+`docs/specs/powershell-first-catalog-requirements.md` FR-101, FR-102, FR-106, FR-108; `docs/specs/powershell-first-catalog-design.md`.
+
+### Dependencies
+
+S14 and the approved catalog design.
+
+### Allowed Paths
+
+`src/Client/DistroNexus.Core/Services/CatalogService.cs`, `src/Client/DistroNexus.Core/Interfaces/IPowerShellModuleClient.cs`, `src/Client/DistroNexus.Core/Services/PowerShellModuleClient.cs`, `src/Client/DistroNexus.WorkspaceBridge/Program.cs`, `src/PowerShell/Public/Get-DistroNexusPackage.ps1`, `src/Client/DistroNexus.Desktop/ViewModels/PackageManagerViewModel.cs`, `src/Client/DistroNexus.Desktop/ViewModels/SettingsViewModel.cs`, `src/Client/DistroNexus.Desktop/ViewModels/InstallWizardViewModel.cs`, `src/Client/DistroNexus.Desktop/Wizard/InstallWizardWorkflowViewModel.cs`, `src/Client/DistroNexus.Desktop/Wizard/Steps/SelectDistributionStep.cs`, focused listed/new C# tests, `tests/PowerShell/Unit/Public/Get-DistroNexusPackageBridge.Tests.ps1`, plan.
+
+### Excluded Paths
+
+`Update-DistroNexusCatalog.ps1`, `Remove-DistroNexusPackage.ps1`, `Save-DistroNexusPackage.ps1`, private Config scripts, `CatalogSourceManager`, cache mutation methods, `DownloadTaskManager`, App composition, arbitrary bridge execution, release/publishing surfaces.
+
+### Contract and Documentation
+
+Use only `catalog.list.v1`, `catalog.search.v1`, and `catalog.get.v1` with typed bounded payloads and matching fixed public commands. Preserve legacy `Get-DistroNexusPackage -Family` behavior; do not add refresh or cache mutation routes.
+
+### Implementation Scope
+
+Remove `IPowerShellService` use from CatalogService read paths while retaining the field temporarily for excluded refresh/delete methods; the later refresh/cache slice removes the remaining dependency. Implement deterministic snapshot/cache/bundled fallback reads, compose native service in bridge, and migrate named read-only Desktop catalog consumers to the typed client. A no-catalog read returns an empty typed list/null lookup; it never fetches the network.
+
+### Test Scope
+
+Native read-precedence/search/lookup/cancellation tests; bridge payload/unknown-route tests; command mapping tests; typed client and WPF routing tests; structural assertion against Core-to-module catalog calls.
+
+### Acceptance Criteria
+
+- Catalog read paths never call the PowerShell module from Core.
+- Public and WPF reads use the same fixed module contract.
+- No refresh, cache deletion, or download state behavior changes in this slice.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Catalog|FullyQualifiedName~WorkspaceBridgeProtocol|FullyQualifiedName~PowerShellModuleClient"
+pwsh -NoProfile -Command "Invoke-Pester -Path tests/PowerShell/Unit/Public"
+```
+
+### Commit Boundary
+
+Native catalog read contract and read-only consumer migration.
+
+### Out of Scope
+
+Catalog refresh, source persistence, cache mutations, and durable download-task migration.
 
 ## Slice S05: Network, systemd, firewall, recovery, health, and diagnostics command parity
 

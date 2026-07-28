@@ -20,6 +20,7 @@ namespace DistroNexus.Desktop.ViewModels;
 public partial class PackageManagerViewModel : ObservableObject
 {
     private readonly ICatalogService _catalogService;
+    private readonly IPowerShellModuleClient _moduleClient;
     private readonly IDownloadService _downloadService;
     private readonly IDownloadTaskManager _downloadTaskManager;
     private readonly ILogger<PackageManagerViewModel> _logger;
@@ -51,12 +52,14 @@ public partial class PackageManagerViewModel : ObservableObject
 
     public PackageManagerViewModel(
         ICatalogService catalogService,
+        IPowerShellModuleClient moduleClient,
         IDownloadService downloadService,
         IDownloadTaskManager downloadTaskManager,
         ILogger<PackageManagerViewModel> logger,
         IServiceProvider serviceProvider)
     {
         _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _downloadService = downloadService ?? throw new ArgumentNullException(nameof(downloadService));
         _downloadTaskManager = downloadTaskManager ?? throw new ArgumentNullException(nameof(downloadTaskManager));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -86,7 +89,7 @@ public partial class PackageManagerViewModel : ObservableObject
 
             _logger.LogInformation("Loading distribution catalog");
 
-            var packages = await _catalogService.LoadCatalogAsync();
+            var packages = await _moduleClient.GetPackagesAsync();
             
             Packages.Clear();
             FilteredPackages.Clear();
@@ -173,7 +176,7 @@ public partial class PackageManagerViewModel : ObservableObject
         {
             _logger.LogInformation("Searching for '{Query}'", SearchQuery);
 
-            var results = await _catalogService.SearchDistributionsAsync(SearchQuery);
+            var results = await _moduleClient.SearchPackagesAsync(SearchQuery);
             
             FilteredPackages.Clear();
             foreach (var package in results)
@@ -408,7 +411,7 @@ public partial class PackageManagerViewModel : ObservableObject
         try
         {
             // Reload catalog to get updated cache status and file sizes
-            var refreshedPackages = await _catalogService.LoadCatalogAsync(forceReload: true);
+            var refreshedPackages = await _moduleClient.GetPackagesAsync(forceReload: true);
             
             // Update existing package objects with new cache status
             foreach (var pkg in Packages)

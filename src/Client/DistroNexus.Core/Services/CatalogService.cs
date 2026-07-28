@@ -23,7 +23,9 @@ public class CatalogService : ICatalogService
         ILogger<CatalogService> logger, 
         ISettingsService settingsService,
         IPowerShellService powerShellService,
-        HttpClient httpClient)
+        HttpClient httpClient,
+        string? catalogCachePath = null,
+        string? localCatalogPath = null)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
@@ -33,17 +35,12 @@ public class CatalogService : ICatalogService
         var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         var appFolder = Path.Combine(appDataPath, "DistroNexus");
         
-        if (!Directory.Exists(appFolder))
-        {
-            Directory.CreateDirectory(appFolder);
-        }
-
-        _catalogCachePath = Path.Combine(appFolder, "catalog.json");
+        _catalogCachePath = catalogCachePath ?? Path.Combine(appFolder, "catalog.json");
         
         
         // Local fallback path - try multiple locations
         var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-        _localCatalogPath = FindLocalCatalogPath(baseDir);
+        _localCatalogPath = localCatalogPath ?? FindLocalCatalogPath(baseDir);
         
         _logger.LogInformation("CatalogService initialized. Local catalog path: {LocalPath}, Exists: {Exists}", 
             _localCatalogPath, File.Exists(_localCatalogPath));
@@ -57,39 +54,18 @@ public class CatalogService : ICatalogService
     /// <inheritdoc/>
     public async Task<List<DistroPackage>> LoadCatalogAsync(bool forceReload = false, CancellationToken cancellationToken = default)
     {
-        if (!forceReload && _cachedCatalog != null)
-        {
-            return _cachedCatalog;
-        }
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!forceReload && _cachedCatalog is not null)
+            return ClonePackages(_cachedCatalog);
 
-        try
-        {
-            _logger.LogInformation("Loading catalog via PowerShell Get-DistroNexusPackage");
-            
-            // Call PowerShell module to get packages
-            var packages = await _powerShellService.ExecuteAsync<List<DistroPackage>>(
-                "Get-DistroNexusPackage",
-                null,
-                cancellationToken);
-            
-            if (packages != null && packages.Count > 0)
-            {
-                _cachedCatalog = packages;
-                _logger.LogInformation("Loaded {Count} distributions from PowerShell module", _cachedCatalog.Count);
-                
-                // Cache the result for future use
-                await CacheCatalogAsync(_cachedCatalog, cancellationToken);
-                return _cachedCatalog;
-            }
-            
-            _logger.LogWarning("No packages returned from PowerShell module");
-            return [];
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to load catalog from PowerShell module");
-            return [];
-        }
+        // Read operations are intentionally native and side-effect free.  The PowerShell
+        // service remains only for the separately migrated refresh/delete operations below.
+        var catalog = await ReadCatalogAsync(_catalogCachePath, cancellationToken)
+            ?? await ReadCatalogAsync(_localCatalogPath, cancellationToken)
+            ?? [];
+        UpdatePackageCacheStatus(catalog);
+        _cachedCatalog = ClonePackages(catalog);
+        return ClonePackages(_cachedCatalog);
     }
 
     /// <inheritdoc/>
@@ -163,7 +139,7 @@ public class CatalogService : ICatalogService
             ).ToList();
 
             _logger.LogInformation("Found {Count} distributions matching query '{Query}'", results.Count, query);
-            return results;
+            return ClonePackages(results);
         }
         catch (Exception ex)
         {
@@ -188,7 +164,7 @@ public class CatalogService : ICatalogService
                 _logger.LogWarning("Distribution with ID '{Id}' not found", id);
             }
 
-            return distro;
+            return distro is null ? null : ClonePackage(distro);
         }
         catch (Exception ex)
         {
@@ -460,7 +436,7 @@ public class CatalogService : ICatalogService
     {
         try
         {
-            var cachePath = GetPackageCachePath();
+            var cachePath = ResolvePackageCachePath();
             
             if (!Directory.Exists(cachePath))
             {
@@ -469,7 +445,8 @@ public class CatalogService : ICatalogService
                 {
                     package.IsCached = false;
                     package.LocalPath = string.Empty;
-                }
+    }
+
                 return;
             }
 
@@ -525,4 +502,29 @@ public class CatalogService : ICatalogService
         {
             _logger.LogError(ex, "Failed to update package cache status");
         }
-    }}
+    }
+
+    private async Task<List<DistroPackage>?> ReadCatalogAsync(string path, CancellationToken cancellationToken)
+    {
+        if (!File.Exists(path)) return null;
+        try
+        {
+            await using var stream = File.OpenRead(path);
+            var catalog = await JsonSerializer.DeserializeAsync<List<DistroPackage>>(stream, cancellationToken: cancellationToken);
+            return catalog is { Count: > 0 } ? catalog : null;
+        }
+        catch (JsonException ex) { _logger.LogWarning(ex, "Ignoring invalid catalog at {Path}", path); return null; }
+        catch (IOException ex) { _logger.LogWarning(ex, "Could not read catalog at {Path}", path); return null; }
+    }
+
+    private string ResolvePackageCachePath()
+    {
+        var configured = _settingsService.LoadSettings().PackageCachePath;
+        return string.IsNullOrWhiteSpace(configured)
+            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DistroNexus", "packages")
+            : configured;
+    }
+
+    private static List<DistroPackage> ClonePackages(IEnumerable<DistroPackage> packages) => packages.Select(ClonePackage).ToList();
+    private static DistroPackage ClonePackage(DistroPackage package) => JsonSerializer.Deserialize<DistroPackage>(JsonSerializer.Serialize(package))!;
+}

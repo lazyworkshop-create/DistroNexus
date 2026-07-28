@@ -17,7 +17,7 @@ namespace DistroNexus.Desktop.ViewModels;
 /// </summary>
 public partial class InstallWizardViewModel : ObservableObject
 {
-    private readonly ICatalogService _catalogService;
+    private readonly IPowerShellModuleClient _moduleClient;
     private readonly IWslManagerService _wslManager;
     private readonly ITerminalService _terminalService;
     private readonly ISettingsService _settingsService;
@@ -119,13 +119,13 @@ public partial class InstallWizardViewModel : ObservableObject
     public event EventHandler<bool>? WizardCompleted;
 
     public InstallWizardViewModel(
-        ICatalogService catalogService,
+        IPowerShellModuleClient moduleClient,
         IWslManagerService wslManager,
         ITerminalService terminalService,
         ISettingsService settingsService,
         ILogger<InstallWizardViewModel> logger)
     {
-        _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
         _terminalService = terminalService ?? throw new ArgumentNullException(nameof(terminalService));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
@@ -146,7 +146,7 @@ public partial class InstallWizardViewModel : ObservableObject
             Username = settings.DefaultUsername;
 
             // Load available distributions
-            var packages = await _catalogService.LoadCatalogAsync();
+            var packages = await _moduleClient.GetPackagesAsync();
             AvailableDistributions.Clear();
             foreach (var package in packages)
             {
