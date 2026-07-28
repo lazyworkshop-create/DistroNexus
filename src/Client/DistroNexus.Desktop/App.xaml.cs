@@ -70,10 +70,8 @@ public partial class App : System.Windows.Application
 
                     // Register other Core services
                     services.AddSingleton<IWslManagerService, WslManagerService>();
-                    services.AddSingleton<IDownloadService, DownloadService>();
                     services.AddSingleton<ICatalogService, CatalogService>();
                     services.AddSingleton<INavigationService, NavigationService>();
-                    services.AddSingleton<IDownloadTaskManager, DownloadTaskManager>();
                     services.AddSingleton<IDockerIntegrationService, DockerIntegrationService>();
                     services.AddSingleton<WslConfigService>();
                     services.AddSingleton<IWslConfigService>(sp => sp.GetRequiredService<WslConfigService>());

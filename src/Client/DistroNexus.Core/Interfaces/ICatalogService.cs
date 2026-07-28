@@ -37,6 +37,10 @@ public interface ICatalogService
     /// <returns>The distribution package, or null if not found.</returns>
     Task<DistroPackage?> GetDistributionByIdAsync(string id, CancellationToken cancellationToken = default);
 
+    /// <summary>Returns stable catalog source/revision provenance for a package download authorization.</summary>
+    Task<string> GetPackageDownloadProvenanceAsync(DistroPackage package, CancellationToken cancellationToken = default) =>
+        Task.FromResult(string.Join("|", package.Metadata.TryGetValue("source", out var source) ? source : "default", package.Metadata.TryGetValue("revision", out var revision) ? revision : package.Version));
+
     /// <summary>
     /// Gets the local cache path for the catalog.
     /// </summary>

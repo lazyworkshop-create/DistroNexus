@@ -43,6 +43,7 @@ var updates = new UpdateService(new HttpClient(), NullLogger<UpdateService>.Inst
 var catalogSources = new CatalogSourceManager(settings, new HttpClient(), NullLogger<CatalogSourceManager>.Instance);
 var catalogHttp = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(10) };
 var catalog = new CatalogService(NullLogger<CatalogService>.Instance, settings, catalogHttp);
+var packageJobs = new PackageDownloadJobService(catalog, new DownloadService(NullLogger<DownloadService>.Instance, new HttpClient()), Path.Combine(applicationRoot, "package-download-jobs"));
 var verifiedInstall = new VerifiedInstallService(
     catalog,
     processes,
@@ -306,6 +307,15 @@ while ((line = Console.ReadLine()) is not null)
             "package-cache.usage.v1" => await GetPackageCacheUsageAsync(request),
             "package-cache.delete.v1" => await DeletePackageCacheAsync(request),
             "package-cache.clear.v1" => await ClearPackageCacheAsync(request),
+            "package.jobs.start.preview.v1" => await PackageJobStartPreviewV1Async(request),
+            "package.jobs.start.execute.v1" => await PackageJobStartV1Async(request),
+            "package.jobs.list.v1" => await PackageJobListV1Async(request),
+            "package.jobs.cancel.preview.v1" => await PackageJobActionPreviewV1Async(request, "cancel"),
+            "package.jobs.cancel.execute.v1" => await PackageJobActionExecuteV1Async(request),
+            "package.jobs.retry.preview.v1" => await PackageJobActionPreviewV1Async(request, "retry"),
+            "package.jobs.retry.execute.v1" => await PackageJobActionExecuteV1Async(request),
+            "package.jobs.clear.preview.v1" => await PackageJobActionPreviewV1Async(request, "clear"),
+            "package.jobs.clear.execute.v1" => await PackageJobActionExecuteV1Async(request),
             "terminal.status.v1" => GetTerminalStatus(request),
             "terminal.launch.v1" => await LaunchTerminalAsync(request),
             "explorer.package-cache.v1" => OpenPackageCacheFolder(request),
@@ -530,6 +540,16 @@ async Task<PackageAcquisitionResult> AcquirePackageV1Async(BridgeRequest request
     ValidatePayload(request, ["PreviewToken"], ["PreviewToken"]);
     return await verifiedInstall.AcquireAsync(ParsePayload<PackageAcquisitionExecutePayload>(request).PreviewToken);
 }
+async Task<PackageJobStartPreviewResult> PackageJobStartPreviewV1Async(BridgeRequest request)
+{ ValidatePayload(request, ["PackageId"], ["PackageId"]); return await packageJobs.PreviewStartAsync(ParsePayload<PackageJobStartPayload>(request).PackageId); }
+async Task<PackageJobStartResult> PackageJobStartV1Async(BridgeRequest request)
+{ ValidatePayload(request, ["PreviewToken"], ["PreviewToken"]); return await packageJobs.StartAsync(ParsePayload<PackageJobExecutePayload>(request).PreviewToken); }
+async Task<IReadOnlyList<PackageDownloadJob>> PackageJobListV1Async(BridgeRequest request)
+{ RequireNoPayload(request, "Package jobs list does not accept a payload."); return await packageJobs.ListAsync(); }
+async Task<PackageJobActionPreviewResult> PackageJobActionPreviewV1Async(BridgeRequest request, string action)
+{ ValidatePayload(request, ["JobId"], ["JobId"]); return await packageJobs.PreviewActionAsync(ParsePayload<PackageJobActionPayload>(request).JobId, action); }
+async Task<PackageJobActionResult> PackageJobActionExecuteV1Async(BridgeRequest request)
+{ ValidatePayload(request, ["PreviewToken"], ["PreviewToken"]); return await packageJobs.ExecuteActionAsync(ParsePayload<PackageJobExecutePayload>(request).PreviewToken); }
 async Task<InstallPreview> PreviewVerifiedInstallV1Async(BridgeRequest request)
 {
     ValidatePayload(request, ["PackageReference", "Name", "InstallRoot", "Username", "Shell", "Locale", "SetAsDefault", "SecretEnvelope"], ["PackageReference", "Name", "InstallRoot", "Username", "Shell", "SetAsDefault"]);
@@ -1455,6 +1475,9 @@ public sealed record TemplateApplyExecutePayload(string PreviewToken);
 public sealed record TemplateApplyOperationPayload(string OperationId);
 public sealed record TemplateMarketplaceAddSourcePayload(string Url, TemplateSourceKind Kind, bool AcceptNonHttps);
 public sealed record TemplateMarketplaceRollbackPayload(string TemplateId, string ArtifactSha256);
+public sealed record PackageJobStartPayload(string PackageId);
+public sealed record PackageJobExecutePayload(string PreviewToken);
+public sealed record PackageJobActionPayload(string JobId);
 public sealed record TemplateLocalContentPayload(string Content);
 public sealed record BridgeResponse(bool Succeeded, object? Value, string? ErrorCode, string? ErrorMessage, string Frame = "result");
 /// <summary>Only the five reviewed lifecycle shapes are executable from the bridge.</summary>

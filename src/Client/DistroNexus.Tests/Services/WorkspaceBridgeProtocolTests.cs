@@ -14,6 +14,37 @@ namespace DistroNexus.Tests.Services;
 public sealed class WorkspaceBridgeProtocolTests
 {
     [Fact]
+    public async Task PackageJobRoutes_KeepListAndCancelRetryClearExecuteContractsFixed()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        var token = new string('a', 64);
+        var jobId = new string('b', 32);
+
+        var listWithPayload = await bridge.SendAsync("package.jobs.list.v1", payload: JsonSerializer.SerializeToElement(new { JobId = jobId }));
+        var actions = new[] { "cancel", "retry", "clear" };
+        var previews = new List<JsonElement>();
+        var executes = new List<JsonElement>();
+        foreach (var action in actions)
+        {
+            previews.Add(await bridge.SendAsync($"package.jobs.{action}.preview.v1", payload: JsonSerializer.SerializeToElement(new { JobId = jobId })));
+            executes.Add(await bridge.SendAsync($"package.jobs.{action}.execute.v1", payload: JsonSerializer.SerializeToElement(new { PreviewToken = token })));
+        }
+
+        Assert.False(listWithPayload.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("Workspace.Bridge.Invalid", listWithPayload.GetProperty("ErrorCode").GetString());
+        Assert.All(previews, response =>
+        {
+            Assert.True(response.GetProperty("Succeeded").GetBoolean());
+            Assert.Equal("Package.JobStateChanged", response.GetProperty("Value").GetProperty("OutcomeCode").GetString());
+        });
+        Assert.All(executes, response =>
+        {
+            Assert.True(response.GetProperty("Succeeded").GetBoolean());
+            Assert.Equal("Package.JobGrantInvalid", response.GetProperty("Value").GetProperty("OutcomeCode").GetString());
+        });
+    }
+
+    [Fact]
     public void FixedLoopbackHandler_LaunchesOnlyTheExactValidatedHttpUri()
     {
         ProcessStartInfo? captured = null;

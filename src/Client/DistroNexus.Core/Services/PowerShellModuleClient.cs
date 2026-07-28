@@ -11,6 +11,7 @@ namespace DistroNexus.Core.Services;
 /// </summary>
 public sealed class PowerShellModuleClient : IPowerShellModuleClient
 {
+    private const int MaxPackageDownloadJobs = 200;
     private static readonly HashSet<string> RegisteredWorkspaceOperations = new(StringComparer.Ordinal)
     {
         "Get-DistroNexusWorkspace", "Get-DistroNexusWorkspaceSavePreview", "Save-DistroNexusWorkspace",
@@ -58,6 +59,9 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string GetInstallSourceCommand = "Get-DistroNexusInstallSource";
     private const string GetPackageAcquisitionPreviewCommand = "Get-DistroNexusPackageAcquisitionPreview";
     private const string InvokePackageAcquisitionCommand = "Invoke-DistroNexusPackageAcquisition";
+    private const string StartPackageDownloadCommand = "Start-DistroNexusPackageDownload";
+    private const string GetPackageDownloadJobsCommand = "Get-DistroNexusPackageDownloadJob";
+    private const string InvokePackageDownloadJobActionCommand = "Invoke-DistroNexusPackageDownloadJobAction";
     private const string InstallVerifiedInstanceCommand = "Install-DistroNexusInstance";
     private const string GetPackageCacheLocationCommand = "Get-DistroNexusPackageCacheLocation";
     private const string GetPackageCacheUsageCommand = "Get-DistroNexusPackageCacheUsage";
@@ -402,6 +406,21 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
         ValidateToken(previewToken, nameof(previewToken));
         return ExecuteJsonAsync<PackageAcquisitionResult>(InvokePackageAcquisitionCommand, new() { ["PreviewToken"] = previewToken, ["Confirm"] = false }, cancellationToken);
     }
+
+    public Task<PackageJobStartPreviewResult> PreviewPackageDownloadJobStartAsync(string packageId, CancellationToken cancellationToken = default)
+    { ValidatePackageId(packageId, nameof(packageId)); return ExecutePackageJobJsonAsync<PackageJobStartPreviewResult>(StartPackageDownloadCommand, new() { ["PackageId"] = packageId, ["Preview"] = true }, cancellationToken); }
+    public Task<PackageJobStartResult> StartPackageDownloadJobAsync(string previewToken, CancellationToken cancellationToken = default)
+    { ValidateToken(previewToken, nameof(previewToken)); return ExecutePackageJobJsonAsync<PackageJobStartResult>(StartPackageDownloadCommand, new() { ["PreviewToken"] = previewToken, ["Confirm"] = false }, cancellationToken); }
+    public async Task<IReadOnlyList<PackageDownloadJob>> GetPackageDownloadJobsAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(GetPackageDownloadJobsCommand, null, new ModuleCallOptions { ParseAsJson = true }, cancellationToken); ThrowIfFailed(result);
+        using var doc = JsonDocument.Parse(result.Output); if (doc.RootElement.ValueKind != JsonValueKind.Array) throw new JsonException("Package jobs must be an array."); if (doc.RootElement.GetArrayLength() > MaxPackageDownloadJobs) throw new JsonException("Package jobs exceed the maximum supported count.");
+        return doc.RootElement.EnumerateArray().Select(ParsePackageJob).ToArray();
+    }
+    public Task<PackageJobActionPreviewResult> PreviewPackageDownloadJobActionAsync(string jobId, string action, CancellationToken cancellationToken = default)
+    { if (string.IsNullOrWhiteSpace(jobId) || jobId.Length != 32 || jobId.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("A package job id is required.", nameof(jobId)); if (action is not ("cancel" or "retry" or "clear")) throw new ArgumentException("The package job action is invalid.", nameof(action)); return ExecutePackageJobJsonAsync<PackageJobActionPreviewResult>(InvokePackageDownloadJobActionCommand, new() { ["JobId"] = jobId, ["Action"] = action, ["Preview"] = true }, cancellationToken); }
+    public Task<PackageJobActionResult> ExecutePackageDownloadJobActionAsync(string previewToken, CancellationToken cancellationToken = default)
+    { ValidateToken(previewToken, nameof(previewToken)); return ExecutePackageJobJsonAsync<PackageJobActionResult>(InvokePackageDownloadJobActionCommand, new() { ["PreviewToken"] = previewToken, ["Confirm"] = false }, cancellationToken); }
 
     public async Task<VerifiedInstallResult> InstallVerifiedInstanceAsync(string packageReference, string name, string installRoot, string username, string shell, string? locale, bool setAsDefault, SecureString? password = null, CancellationToken cancellationToken = default)
     {
@@ -846,6 +865,38 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
         return result.Output.TrimStart().StartsWith('[')
             ? JsonSerializer.Deserialize<List<DistroPackage>>(result.Output, options) ?? []
             : [JsonSerializer.Deserialize<DistroPackage>(result.Output, options) ?? throw new InvalidOperationException("The module returned an invalid package result.")];
+    }
+
+    private async Task<T> ExecutePackageJobJsonAsync<T>(string command, Dictionary<string, object> parameters, CancellationToken cancellationToken)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(command, parameters, new ModuleCallOptions { ParseAsJson = true }, cancellationToken); ThrowIfFailed(result);
+        using var doc = JsonDocument.Parse(result.Output); EnsureOnly(doc.RootElement, typeof(T) == typeof(PackageJobStartPreviewResult) ? ["PreviewToken", "ExpiresAt", "PackageId", "PackageLabel", "OutcomeCode"] : typeof(T) == typeof(PackageJobStartResult) ? ["JobId", "OutcomeCode"] : typeof(T) == typeof(PackageJobActionPreviewResult) ? ["PreviewToken", "ExpiresAt", "JobId", "OutcomeCode"] : ["JobId", "OutcomeCode"]);
+        var value = JsonSerializer.Deserialize<T>(doc.RootElement.GetRawText(), JsonOptions) ?? throw new JsonException("Invalid package job result.");
+        ValidatePackageJobResult(value); return value;
+    }
+
+    private static PackageDownloadJob ParsePackageJob(JsonElement item)
+    {
+        EnsureOnly(item, ["JobId", "PackageId", "PackageLabel", "State", "ProgressPercent", "OutcomeCode"]);
+        var value = JsonSerializer.Deserialize<PackageDownloadJob>(item.GetRawText(), JsonOptions) ?? throw new JsonException("Invalid package job."); ValidatePackageJobResult(value); return value;
+    }
+    private static void EnsureOnly(JsonElement value, IReadOnlyCollection<string> names)
+    {
+        if (value.ValueKind != JsonValueKind.Object || value.EnumerateObject().Any(p => !names.Contains(p.Name, StringComparer.OrdinalIgnoreCase))) throw new JsonException("Unexpected package job response field.");
+    }
+    private static void ValidatePackageJobResult(object value)
+    {
+        static bool Token(string? s) => s?.Length == 64 && s.All(Uri.IsHexDigit); static bool Id(string? s) => s?.Length == 32 && s.All(Uri.IsHexDigit);
+        static bool Outcome(string? s) => !string.IsNullOrWhiteSpace(s) && s.Length <= 128 && s.All(c => char.IsLetterOrDigit(c) || c is '.' or '_');
+        static bool Package(string? s) => !string.IsNullOrWhiteSpace(s) && s.Length <= 128 && System.Text.RegularExpressions.Regex.IsMatch(s, "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$");
+        switch (value)
+        {
+            case PackageJobStartPreviewResult x when ((x.PreviewToken is null) != (x.ExpiresAt is null) || (x.PreviewToken is not null && !Token(x.PreviewToken)) || !Package(x.PackageId) || string.IsNullOrWhiteSpace(x.PackageLabel) || x.PackageLabel.Length > 256 || !Outcome(x.OutcomeCode)): throw new JsonException("Invalid package start preview.");
+            case PackageJobStartResult x when (x.JobId is not null && !Id(x.JobId) || !Outcome(x.OutcomeCode)): throw new JsonException("Invalid package start result.");
+            case PackageJobActionPreviewResult x when ((x.PreviewToken is null) != (x.ExpiresAt is null) || (x.PreviewToken is not null && !Token(x.PreviewToken)) || !Id(x.JobId) || !Outcome(x.OutcomeCode)): throw new JsonException("Invalid package action preview.");
+            case PackageJobActionResult x when (!Id(x.JobId) || !Outcome(x.OutcomeCode)): throw new JsonException("Invalid package action result.");
+            case PackageDownloadJob x when (!Id(x.JobId) || !Package(x.PackageId) || string.IsNullOrWhiteSpace(x.PackageLabel) || x.PackageLabel.Length > 256 || x.State is not ("Queued" or "Running" or "Completed" or "Failed" or "Cancelled" or "Interrupted") || x.ProgressPercent is < 0 or > 100 || !Outcome(x.OutcomeCode)): throw new JsonException("Invalid package job.");
+        }
     }
 
     private async Task<T> ExecuteJsonAsync<T>(string command, Dictionary<string, object> parameters, CancellationToken cancellationToken)

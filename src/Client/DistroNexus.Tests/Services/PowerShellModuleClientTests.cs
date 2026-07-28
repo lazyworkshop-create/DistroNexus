@@ -3,6 +3,7 @@ using DistroNexus.Core.Models;
 using DistroNexus.Core.Services;
 using Moq;
 using System.Security;
+using System.Text.Json;
 
 namespace DistroNexus.Tests.Services;
 
@@ -508,6 +509,7 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.DeletePackageCacheEntryAsync),
                 nameof(IPowerShellModuleClient.DiscoverWslgApplicationsAsync),
                 nameof(IPowerShellModuleClient.ExecuteLifecycleOperationAsync),
+                nameof(IPowerShellModuleClient.ExecutePackageDownloadJobActionAsync),
                 nameof(IPowerShellModuleClient.ExecuteRecoveryPointNotesAsync),
                 nameof(IPowerShellModuleClient.ExportDiagnosticReportAsync),
                 nameof(IPowerShellModuleClient.GetBackupSchedulesAsync),
@@ -541,7 +543,10 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.GetNetworkSettingsPreviewAsync),
                 nameof(IPowerShellModuleClient.GetNetworkStatusAsync),
                 nameof(IPowerShellModuleClient.GetPackageAsync),
+                nameof(IPowerShellModuleClient.GetPackageDownloadJobsAsync),
                 nameof(IPowerShellModuleClient.PreviewPackageAcquisitionAsync),
+                nameof(IPowerShellModuleClient.PreviewPackageDownloadJobActionAsync),
+                nameof(IPowerShellModuleClient.PreviewPackageDownloadJobStartAsync),
                 nameof(IPowerShellModuleClient.GetPackageCacheLocationAsync),
                 nameof(IPowerShellModuleClient.GetPackageCacheUsageAsync),
                 nameof(IPowerShellModuleClient.GetPackagesAsync),
@@ -612,6 +617,7 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.SetWslgApplicationPinAsync),
                 nameof(IPowerShellModuleClient.StartInstanceAsync),
                 nameof(IPowerShellModuleClient.StartInstanceWithResultAsync),
+                nameof(IPowerShellModuleClient.StartPackageDownloadJobAsync),
                 nameof(IPowerShellModuleClient.StartTemplateApplyAsync),
                 nameof(IPowerShellModuleClient.StartTerminalAsync),
                 nameof(IPowerShellModuleClient.InstallVerifiedInstanceAsync),
@@ -943,6 +949,26 @@ public sealed class PowerShellModuleClientTests
         Assert.False((await client.GetUpdateStatusAsync(false)).IsPreRelease);
         Assert.True((await client.GetUpdateStatusAsync(true)).IsPreRelease);
         service.VerifyAll();
+    }
+
+    [Fact]
+    public async Task PackageDownloadJobResponses_RejectUnknownFieldsAndInvalidState()
+    {
+        var service = new Mock<IPowerShellService>(MockBehavior.Strict);
+        service.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusPackageDownloadJob", null, It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "[{\"JobId\":\"" + new string('a', 32) + "\",\"PackageId\":\"ubuntu\",\"PackageLabel\":\"Ubuntu\",\"State\":\"Downloading\",\"ProgressPercent\":101,\"OutcomeCode\":\"Package.Queued\",\"Unexpected\":true}]" });
+        await Assert.ThrowsAsync<JsonException>(() => new PowerShellModuleClient(service.Object).GetPackageDownloadJobsAsync());
+    }
+
+    [Fact]
+    public async Task PackageDownloadJobList_RejectsMoreThanTwoHundredItemsBeforeMaterialization()
+    {
+        var service = new Mock<IPowerShellService>(MockBehavior.Strict);
+        var job = "{\"JobId\":\"" + new string('a', 32) + "\",\"PackageId\":\"ubuntu\",\"PackageLabel\":\"Ubuntu\",\"State\":\"Completed\",\"ProgressPercent\":100,\"OutcomeCode\":\"Package.Completed\"}";
+        service.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusPackageDownloadJob", null, It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "[" + string.Join(',', Enumerable.Repeat(job, 201)) + "]" });
+
+        await Assert.ThrowsAsync<JsonException>(() => new PowerShellModuleClient(service.Object).GetPackageDownloadJobsAsync());
     }
 
     private static Mock<IPowerShellService> CreateServiceReturning(string output)

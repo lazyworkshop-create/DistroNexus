@@ -176,7 +176,6 @@ public sealed class WslInstanceTagRoutingTests
     private static MainViewModel NewMainViewModel(IPowerShellModuleClient moduleClient) => new(
         Mock.Of<IWslManagerService>(),
         Mock.Of<INavigationService>(),
-        Mock.Of<IDownloadTaskManager>(),
         Mock.Of<IServiceProvider>(),
         Mock.Of<ILogger<MainViewModel>>(),
         Mock.Of<IWslEventWatcher>(),

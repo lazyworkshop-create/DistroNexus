@@ -104,6 +104,11 @@ public interface IPowerShellModuleClient
     Task<InstallSourceResolution> ResolveInstallSourceAsync(string packageId, CancellationToken cancellationToken = default);
     Task<PackageAcquisitionPreview> PreviewPackageAcquisitionAsync(string packageId, CancellationToken cancellationToken = default);
     Task<PackageAcquisitionResult> AcquirePackageAsync(string previewToken, CancellationToken cancellationToken = default);
+    Task<PackageJobStartPreviewResult> PreviewPackageDownloadJobStartAsync(string packageId, CancellationToken cancellationToken = default);
+    Task<PackageJobStartResult> StartPackageDownloadJobAsync(string previewToken, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<PackageDownloadJob>> GetPackageDownloadJobsAsync(CancellationToken cancellationToken = default);
+    Task<PackageJobActionPreviewResult> PreviewPackageDownloadJobActionAsync(string jobId, string action, CancellationToken cancellationToken = default);
+    Task<PackageJobActionResult> ExecutePackageDownloadJobActionAsync(string previewToken, CancellationToken cancellationToken = default);
     Task<VerifiedInstallResult> InstallVerifiedInstanceAsync(string packageReference, string name, string installRoot, string username, string shell, string? locale, bool setAsDefault, SecureString? password = null, CancellationToken cancellationToken = default);
 
     Task<PackageCacheLocationResult> GetPackageCacheLocationAsync(CancellationToken cancellationToken = default);
