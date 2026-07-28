@@ -132,15 +132,15 @@ Runtime isolation and module-client foundation.
 
 Feature-family migration.
 
-## Slice S03: Lifecycle, catalog, cache, backup, tags, and settings command parity
+## Slice S03: Instance-tag mutation consent contract
 
 ### Status
 
-Planned
+Committed
 
 ### Objective
 
-Lifecycle, catalog, cache, backup, tags, and settings command parity.
+Instance-tag mutations honor PowerShell consent semantics without changing their public grammar.
 
 ### Sources
 
@@ -152,28 +152,28 @@ S02
 
 ### Allowed Paths
 
-`src/PowerShell/Private`, lifecycle/catalog/package/backup/tag public command files, matching Core interfaces, `src/Client/DistroNexus.WorkspaceBridge`, focused xUnit/Pester tests, plan
+`src/PowerShell/Public/Add-DistroNexusInstanceTag.ps1`, `src/PowerShell/Public/Set-DistroNexusInstanceTag.ps1`, `src/PowerShell/Public/Remove-DistroNexusInstanceTag.ps1`, `src/PowerShell/Public/Get-DistroNexusInstanceTag.ps1`, `tests/PowerShell/Unit/Public/InstanceTagConsent.Tests.ps1`, plan
 
 ### Excluded Paths
 
-Desktop consumers, WPF views, release and publishing surfaces
+Desktop consumers, WPF views, manifest changes, Core/bridge changes, release and publishing surfaces
 
 ### Contract and Documentation
 
-Inventory and expose every lifecycle and supporting-state operation through typed module contracts.
+Document the consent contract for tag mutation commands and preserve their existing output and validation behavior.
 
 ### Implementation Scope
 
-Add missing catalog-source/cache/state operations and preserve consent and safe persistence.
+Add `SupportsShouldProcess` and a `ShouldProcess` gate before each tag-state write. Do not change Desktop consumers, module exports, Core, or bridge routes.
 
 ### Test Scope
 
-Success, invalid input, WhatIf, declined confirmation, and bridge failure cases.
+Success, validation, `WhatIf`, and declined confirmation cases using an isolated tag settings file.
 
 ### Acceptance Criteria
 
-- No supported lifecycle or supporting-state operation is Core/WPF-only.
-- Every mutation retains PowerShell consent semantics.
+- Add, set, remove, and rename tag mutations do not persist state under `WhatIf` or declined confirmation.
+- Existing tag mutation behavior still succeeds after confirmation and public parameters/output remain compatible.
 
 ### Verification Commands
 
@@ -184,11 +184,11 @@ pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Unit
 
 ### Commit Boundary
 
-Lifecycle and support-state command family.
+Tag mutation PowerShell consent behavior and focused Pester tests only.
 
 ### Out of Scope
 
-Desktop replacement.
+Lifecycle/catalog/cache/backup/settings parity and all Desktop replacement work.
 
 ## Slice S04: Configuration, templates, marketplace, and workspace command parity
 

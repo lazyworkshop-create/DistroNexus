@@ -12,7 +12,7 @@ function Remove-DistroNexusInstanceTag {
     .EXAMPLE
         Remove-DistroNexusInstanceTag -Name "Ubuntu-22.04" -Tag "docker"
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory = $true, Position = 0)]
         [ValidateNotNullOrEmpty()]
@@ -23,16 +23,16 @@ function Remove-DistroNexusInstanceTag {
         [string]$Tag
     )
 
-    begin {
-        Initialize-DistroNexusLogger
-    }
-
     process {
         $normalised = $Tag.ToLowerInvariant().Trim()
         $tagMap     = Get-InstanceTagMap
         $existing   = if ($tagMap.PSObject.Properties[$Name]) { @($tagMap.$Name) } else { @() }
 
         $updated = @($existing | Where-Object { $_ -ne $normalised })
+        if (-not $PSCmdlet.ShouldProcess($Name, "Remove tag '$normalised'")) {
+            return
+        }
+        Initialize-DistroNexusLogger
         Set-InstanceTagEntry -Name $Name -Tags $updated
 
         Write-DistroNexusLog "Removed tag '$normalised' from '$Name' (if present)"

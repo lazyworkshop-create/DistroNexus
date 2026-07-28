@@ -64,7 +64,7 @@ function Rename-DistroNexusInstanceTags {
     .EXAMPLE
         Rename-DistroNexusInstanceTags -OldName "Ubuntu" -NewName "Ubuntu-Dev"
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
@@ -75,14 +75,14 @@ function Rename-DistroNexusInstanceTags {
         [string]$NewName
     )
 
-    begin {
-        Initialize-DistroNexusLogger
-    }
-
     process {
         $tagMap = Get-InstanceTagMap
         $tags   = if ($tagMap.PSObject.Properties[$OldName]) { @($tagMap.$OldName) } else { @() }
 
+        if (-not $PSCmdlet.ShouldProcess($OldName, "Migrate tags to '$NewName'")) {
+            return
+        }
+        Initialize-DistroNexusLogger
         # Write tags under the new name
         Set-InstanceTagEntry -Name $NewName -Tags $tags
 

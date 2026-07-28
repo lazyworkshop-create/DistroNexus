@@ -12,7 +12,7 @@ function Set-DistroNexusInstanceTag {
     .EXAMPLE
         Set-DistroNexusInstanceTag -Name "Ubuntu-22.04" -Tags @("dev","docker")
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory = $true, Position = 0)]
         [ValidateNotNullOrEmpty()]
@@ -24,10 +24,6 @@ function Set-DistroNexusInstanceTag {
         [string[]]$Tags
     )
 
-    begin {
-        Initialize-DistroNexusLogger
-    }
-
     process {
         if ($Tags.Count -gt 10) {
             Write-Error "Maximum 10 tags allowed per instance. Got $($Tags.Count)." -ErrorId "DistroNexus.TooManyTags"
@@ -36,6 +32,10 @@ function Set-DistroNexusInstanceTag {
 
         $normalised = @($Tags | ForEach-Object { $_.ToLowerInvariant().Trim() } | Select-Object -Unique)
 
+        if (-not $PSCmdlet.ShouldProcess($Name, 'Replace instance tags')) {
+            return
+        }
+        Initialize-DistroNexusLogger
         Set-InstanceTagEntry -Name $Name -Tags $normalised
 
         Write-DistroNexusLog "Set tags for '$Name': $($normalised -join ', ')"
