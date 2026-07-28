@@ -1052,7 +1052,8 @@ async Task StartWorkspaceWorkerAsync(string operationId)
     var assembly=Path.Combine(AppContext.BaseDirectory,"WorkspaceWorker","DistroNexus.WorkspaceWorker.dll");
     try { WorkspaceWorkerIdentity.EnsureApprovedWorker(System.Reflection.AssemblyName.GetAssemblyName(assembly), System.Reflection.Assembly.GetExecutingAssembly().GetName().Version ?? throw new InvalidOperationException()); }
     catch { var op=await operationStore.ReadAsync(operationId); await operationStore.WriteAsync(op with { IsTerminal=true, Outcome="Failed", ErrorCode="Workspace.WorkerIdentityInvalid" }); return; }
-    try { var info=new ProcessStartInfo("dotnet") { UseShellExecute=false, CreateNoWindow=true }; info.ArgumentList.Add(assembly); info.ArgumentList.Add(operationId); info.Environment["DISTRONEXUS_WORKSPACE_STORE_ROOT"]=root ?? string.Empty; _ = Process.Start(info) ?? throw new InvalidOperationException(); }
+    var host=Path.ChangeExtension(assembly,".exe");
+    try { if (!File.Exists(host)) throw new InvalidOperationException(); var info=new ProcessStartInfo(host) { UseShellExecute=false, CreateNoWindow=true }; info.ArgumentList.Add(operationId); info.Environment["DISTRONEXUS_WORKSPACE_STORE_ROOT"]=root ?? string.Empty; _ = Process.Start(info) ?? throw new InvalidOperationException(); }
     catch { var op=await operationStore.ReadAsync(operationId); await operationStore.WriteAsync(op with { IsTerminal=true, Outcome="Failed", ErrorCode="Workspace.WorkerStartFailed" }); }
 }
 WorkspaceIdPayload WorkspaceId(BridgeRequest request) { ValidatePayload(request,["Id","ExpectedRevision"],["Id","ExpectedRevision"]); return ParsePayload<WorkspaceIdPayload>(request); }

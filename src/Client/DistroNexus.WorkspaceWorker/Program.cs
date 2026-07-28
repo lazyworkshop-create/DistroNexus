@@ -13,8 +13,10 @@ try
     var bridge = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "DistroNexus.WorkspaceBridge.dll"));
     if (!File.Exists(bridge)) throw new InvalidOperationException();
     WorkspaceWorkerIdentity.EnsureApprovedBridge(AssemblyName.GetAssemblyName(bridge), Assembly.GetExecutingAssembly().GetName().Version ?? throw new InvalidOperationException());
-    var info = new ProcessStartInfo("dotnet") { UseShellExecute = false, CreateNoWindow = true };
-    info.ArgumentList.Add(bridge); info.ArgumentList.Add("--run-workspace-operation"); info.ArgumentList.Add(operation.OperationId); info.Environment["DISTRONEXUS_WORKSPACE_STORE_ROOT"] = root;
+    var bridgeHost = Path.ChangeExtension(bridge, ".exe");
+    if (!File.Exists(bridgeHost)) throw new InvalidOperationException();
+    var info = new ProcessStartInfo(bridgeHost) { UseShellExecute = false, CreateNoWindow = true };
+    info.ArgumentList.Add("--run-workspace-operation"); info.ArgumentList.Add(operation.OperationId); info.Environment["DISTRONEXUS_WORKSPACE_STORE_ROOT"] = root;
     using var process = Process.Start(info) ?? throw new InvalidOperationException();
     await process.WaitForExitAsync();
     return process.ExitCode;

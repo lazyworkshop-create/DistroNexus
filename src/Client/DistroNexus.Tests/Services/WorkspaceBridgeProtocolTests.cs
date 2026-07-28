@@ -125,9 +125,11 @@ public sealed class WorkspaceBridgeProtocolTests
         {
             var id = new string('c', 64); var store = new WorkspaceOperationStore(Path.Combine(root, "workspace-operations"));
             await store.CreateAsync(new WorkspaceOperationRecord(id, WorkspaceOperationStore.CurrentSid(), "launch", Guid.NewGuid(), null, 1, [], false, false));
-            var worker = Path.Combine(FindRoot(), "src", "Client", "DistroNexus.WorkspaceBridge", "bin", "Debug", "net10.0", "WorkspaceWorker", "DistroNexus.WorkspaceWorker.dll");
-            using var process = Process.Start(new ProcessStartInfo("dotnet") { UseShellExecute = false, Environment = { ["DISTRONEXUS_WORKSPACE_STORE_ROOT"] = root }, ArgumentList = { worker, id } })!;
+            var worker = FindPackagedWorkerHost();
+            Assert.True(File.Exists(worker), $"The packaged worker host was not found: {worker}");
+            using var process = Process.Start(new ProcessStartInfo(worker) { UseShellExecute = false, Environment = { ["DISTRONEXUS_WORKSPACE_STORE_ROOT"] = root }, ArgumentList = { id } })!;
             await process.WaitForExitAsync();
+            Assert.Equal(0, process.ExitCode);
             var terminal = await store.ReadAsync(id);
             Assert.True(terminal.IsTerminal);
             Assert.NotEqual("Workspace.WorkerCompositionUnavailable", terminal.ErrorCode);
@@ -859,5 +861,12 @@ public sealed class WorkspaceBridgeProtocolTests
         while (!File.Exists(Path.Combine(path, "AGENTS.md")))
             path = Directory.GetParent(path)?.FullName ?? throw new DirectoryNotFoundException();
         return path;
+    }
+
+    private static string FindPackagedWorkerHost()
+    {
+        var configuration = Directory.GetParent(AppContext.BaseDirectory)?.Parent?.Name
+            ?? throw new DirectoryNotFoundException("Unable to determine the active test configuration.");
+        return Path.Combine(FindRoot(), "src", "Client", "DistroNexus.WorkspaceBridge", "bin", configuration, "net10.0", "WorkspaceWorker", "DistroNexus.WorkspaceWorker.exe");
     }
 }
