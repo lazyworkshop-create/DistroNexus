@@ -63,6 +63,7 @@ if (args.Length > 0 && string.Equals(args[0], "--run-backup-schedule", StringCom
     return;
 }
 var templates = new TemplateService(NullLogger<TemplateService>.Instance, settings, bridgePowerShell, new HttpClient());
+var templateLocalPreviews = new TemplateLocalPreviewStore(applicationRoot);
 var monitoringWarnings = new MonitoringWarningRegistry();
 var healthRuntime = new HealthRuntimeAdapter(processes, globalConfiguration);
 var healthProbe = new DefaultHealthProbe(new BackupHealthSource(backups), templates, healthRuntime);
@@ -215,18 +216,26 @@ while ((line = Console.ReadLine()) is not null)
             "health.repair.v1" => await ExecuteHealthRepairV1Async(request),
             "diagnostics.preview.v1" => await PreviewDiagnosticsV1Async(request),
             "diagnostics.export.v1" => await ExportDiagnosticsV1Async(request),
-            "marketplaceListSources" => await marketplace.GetSourcesAsync(),
-            "marketplaceStatus" => await GetMarketplaceStatusAsync(request),
-            "marketplaceAddSource" => await AddMarketplaceSourceAsync(request),
-            "marketplaceSetSourceEnabled" => await SetMarketplaceSourceEnabledAsync(request),
-            "marketplaceRemoveSource" => await RemoveMarketplaceSourceAsync(request),
-            "marketplaceCreateReviewGrant" => await CreateMarketplaceReviewGrantAsync(request),
-            "marketplaceApproveCandidate" => await ApproveMarketplaceCandidateAsync(request),
-            "marketplaceReviewUpdate" => await ReviewMarketplaceUpdateAsync(request),
-            "marketplaceScriptDiff" => await ReviewMarketplaceScriptDiffAsync(request),
-            "marketplaceArtifactHistory" => await GetMarketplaceArtifactHistoryAsync(request),
-            "marketplaceRollback" => await RollbackMarketplaceArtifactAsync(request),
-            "marketplaceDownloadArtifact" => await DownloadMarketplaceArtifactAsync(request),
+            "template.catalog.list.v1" => await TemplateCatalogListV1Async(request),
+            "template.catalog.get.v1" => await TemplateCatalogGetV1Async(request),
+            "template.compatibility.v1" => await TemplateCompatibilityV1Async(request),
+            "template.marketplace.sources.v1" => await TemplateMarketplaceSourcesV1Async(request),
+            "template.marketplace.discover.v1" => await TemplateMarketplaceDiscoverV1Async(request),
+            "template.marketplace.status.v1" => await TemplateMarketplaceStatusV1Async(request),
+            "template.marketplace.add-source.v1" => await TemplateMarketplaceAddSourceV1Async(request),
+            "template.marketplace.set-enabled.v1" => await TemplateMarketplaceSetEnabledV1Async(request),
+            "template.marketplace.remove-source.v1" => await TemplateMarketplaceRemoveSourceV1Async(request),
+            "template.marketplace.review.v1" => await TemplateMarketplaceReviewV1Async(request),
+            "template.marketplace.approve.v1" => await TemplateMarketplaceApproveV1Async(request),
+            "template.marketplace.download.v1" => await TemplateMarketplaceDownloadV1Async(request),
+            "template.marketplace.history.v1" => await TemplateMarketplaceHistoryV1Async(request),
+            "template.marketplace.rollback.v1" => await TemplateMarketplaceRollbackV1Async(request),
+            "template.local.import-preview.v1" => await TemplateLocalImportPreviewV1Async(request),
+            "template.local.import-execute.v1" => await TemplateLocalImportExecuteV1Async(request),
+            "template.local.export-preview.v1" => await TemplateLocalExportPreviewV1Async(request),
+            "template.local.export-execute.v1" => await TemplateLocalExportExecuteV1Async(request),
+            "template.local.remove-preview.v1" => await TemplateLocalRemovePreviewV1Async(request),
+            "template.local.remove-execute.v1" => await TemplateLocalRemoveExecuteV1Async(request),
             "instance.list.v1" => await instances.GetInstanceDetailsAsync(ParseInstanceListOptions(request)),
             "instance.start.v1" => await StartInstanceV1Async(request),
             "instance.stop.v1" => await StopInstanceV1Async(request),
@@ -299,6 +308,29 @@ while ((line = Console.ReadLine()) is not null)
         };
         response = new(true, value, null, null);
     }
+    catch (DistroNexus.Core.Exceptions.WslOperationFailedException ex) when (IsTemplateOperation(request?.Operation))
+    {
+        var code = ex.Code switch
+        {
+            _ when IsTemplateOutcome(ex.Message) => ex.Message,
+            DistroNexus.Core.Exceptions.DistroNexusErrorCode.TemplateTrustRequired => "Template.TrustRequired",
+            DistroNexus.Core.Exceptions.DistroNexusErrorCode.TemplateArtifactIntegrityFailed => "Template.ProvenanceChanged",
+            DistroNexus.Core.Exceptions.DistroNexusErrorCode.TemplateNotFound or DistroNexus.Core.Exceptions.DistroNexusErrorCode.TemplateManifestInvalid or DistroNexus.Core.Exceptions.DistroNexusErrorCode.ValidationFailed => "Template.InvalidRequest",
+            _ => "Template.Failed"
+        };
+        response = new(false, null, code, code);
+    }
+    catch (Exception ex) when (IsTemplateOperation(request?.Operation))
+    {
+        var code = ex switch
+        {
+            ArgumentException => "Template.InvalidRequest",
+            OperationCanceledException => "Template.Cancelled",
+            InvalidOperationException when IsTemplateOutcome(ex.Message) => ex.Message,
+            _ => "Template.Failed"
+        };
+        response = new(false, null, code, code);
+    }
     catch (DistroNexus.Core.Exceptions.WslOperationFailedException) when (request?.Operation.StartsWith("monitoring.", StringComparison.Ordinal) == true) { response = new(false, null, "Monitor.Failed", "Monitor.Failed"); }
     catch (DistroNexus.Core.Exceptions.WslOperationFailedException ex) { response = new(false, null, ex.Code.ToString(), ex.Message); }
     catch (InvalidOperationException ex) when (ex.Message is "Wslg.DiscoveryGrantInvalid" or "Wslg.DiscoveryGrantExpired" or "Wslg.ApplicationNotFound" or "Wslg.EntryChanged") { response = new(false, null, ex.Message, ex.Message); }
@@ -356,6 +388,13 @@ while ((line = Console.ReadLine()) is not null)
 static bool IsVerifiedInstallOperation(string? operation) => operation is
     "install.source.resolve.v1" or "package.acquire.preview.v1" or "package.acquire.execute.v1" or
     "instance.install.preview.v1" or "instance.install.execute.v1";
+
+static bool IsTemplateOperation(string? operation) => operation?.StartsWith("template.", StringComparison.Ordinal) == true;
+static bool IsTemplateOutcome(string value) => value is
+    "Template.InvalidRequest" or "Template.GrantInvalid" or "Template.GrantExpired" or
+    "Template.ReviewGrantInvalid" or "Template.ReviewGrantExpired" or "Template.ProvenanceChanged" or
+    "Template.TrustRequired" or "Template.RecoveryDeclineRequired" or "Template.ExecutionPlanInvalid" or
+    "Template.Cancelled" or "Template.WorkerStartFailed" or "Template.WorkerInterrupted" or "Template.Failed";
 
 static bool IsVerifiedInstallOutcome(string value) => value is
     "Lifecycle.AcquisitionInvalid" or "Lifecycle.AcquisitionUnavailable" or "Lifecycle.AcquisitionFailed" or
@@ -998,17 +1037,101 @@ async Task<RepairPreview> PreviewHealthRepairAsync(BridgeRequest request)
     var p = JsonSerializer.Deserialize<HealthFindingPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Health finding payload is required.");
     return await healthRepairs.PreviewAsync(p.Finding);
 }
-async Task<TemplateSource> AddMarketplaceSourceAsync(BridgeRequest request) { var p = JsonSerializer.Deserialize<MarketplaceSourcePayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Marketplace source payload is required."); return await marketplace.AddSourceAsync(p.Url, p.Kind, p.ExplicitlyAcceptedNonHttps); }
-async Task<TemplateMarketplaceStatus> GetMarketplaceStatusAsync(BridgeRequest request) { var p = JsonSerializer.Deserialize<MarketplaceStatusPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Marketplace source payload is required."); return string.IsNullOrWhiteSpace(p.TemplateId) || string.IsNullOrWhiteSpace(p.ManifestDigest) ? await marketplace.GetStatusAsync(p.SourceId) : await marketplace.GetStatusAsync(p.SourceId, p.TemplateId, p.ManifestDigest); }
-async Task<object> SetMarketplaceSourceEnabledAsync(BridgeRequest request) { var p = JsonSerializer.Deserialize<MarketplaceSourceEnabledPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Marketplace source payload is required."); await marketplace.SetSourceEnabledAsync(p.SourceId, p.Enabled); return new { }; }
-async Task<object> RemoveMarketplaceSourceAsync(BridgeRequest request) { var p = JsonSerializer.Deserialize<MarketplaceSourceRemovePayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Marketplace source payload is required."); await marketplace.RemoveSourceAsync(p.SourceId); return new { }; }
-async Task<TemplateReviewGrant> CreateMarketplaceReviewGrantAsync(BridgeRequest request) { var p = JsonSerializer.Deserialize<MarketplaceReviewGrantPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Marketplace review payload is required."); return await marketplace.CreateReviewGrantAsync(p.SourceId, p.Sha256); }
-async Task<TemplateArtifact> ApproveMarketplaceCandidateAsync(BridgeRequest request) { var p = JsonSerializer.Deserialize<MarketplaceApprovalPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Marketplace approval payload is required."); return await marketplace.ApproveCandidateAsync(p.ReviewToken); }
-async Task<TemplateUpdateReview> ReviewMarketplaceUpdateAsync(BridgeRequest request) { var p = JsonSerializer.Deserialize<MarketplaceExactEntryPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Marketplace review payload is required."); return await marketplace.ReviewUpdateAsync(p.SourceId, p.TemplateId, p.ManifestDigest); }
-async Task<TemplateScriptDiff> ReviewMarketplaceScriptDiffAsync(BridgeRequest request) { var p = JsonSerializer.Deserialize<MarketplaceArtifactPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Marketplace artifact payload is required."); return await marketplace.ReviewScriptDiffAsync(p.TemplateId, p.Sha256); }
-async Task<IReadOnlyList<TemplateArtifactHistoryEntry>> GetMarketplaceArtifactHistoryAsync(BridgeRequest request) { var p = JsonSerializer.Deserialize<MarketplaceTemplatePayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Marketplace template payload is required."); return await marketplace.GetArtifactHistoryAsync(p.TemplateId); }
-async Task<object> RollbackMarketplaceArtifactAsync(BridgeRequest request) { var p = JsonSerializer.Deserialize<MarketplaceArtifactPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Marketplace artifact payload is required."); await marketplace.RollbackAsync(p.TemplateId, p.Sha256); return new { }; }
-async Task<TemplateArtifact> DownloadMarketplaceArtifactAsync(BridgeRequest request) { var p = JsonSerializer.Deserialize<MarketplaceDownloadPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Marketplace download payload is required."); return string.IsNullOrWhiteSpace(p.TemplateId) || string.IsNullOrWhiteSpace(p.ManifestDigest) ? throw new ArgumentException("Exact catalog entry identity is required.") : await marketplace.DownloadArtifactAsync(p.SourceId, p.TemplateId, p.ManifestDigest); }
+async Task<IReadOnlyList<TemplateSourceDisplay>> TemplateMarketplaceSourcesV1Async(BridgeRequest request) { ValidateEmptyPayload(request); return (await marketplace.GetSourcesAsync()).Take(500).Select(ToTemplateSourceDisplay).ToArray(); }
+async Task<IReadOnlyList<TemplateMarketplaceEntryDisplay>> TemplateMarketplaceDiscoverV1Async(BridgeRequest request) { ValidateEmptyPayload(request); return (await marketplace.DiscoverAsync()).Take(500).Select(ToMarketplaceEntryDisplay).ToArray(); }
+async Task<object> TemplateCatalogListV1Async(BridgeRequest request) { ValidatePayload(request, ["ForceRefresh", "Query", "Category"], []); var p=ParsePayload<TemplateCatalogListPayload>(request); var all=await templates.LoadTemplatesAsync(p.ForceRefresh); IEnumerable<Template> selected=all; if(!string.IsNullOrWhiteSpace(p.Query)) selected=selected.Where(x => x.Name.Contains(p.Query, StringComparison.OrdinalIgnoreCase) || x.Id.Contains(p.Query, StringComparison.OrdinalIgnoreCase)); if(!string.IsNullOrWhiteSpace(p.Category)) selected=selected.Where(x => string.Equals(x.Category,p.Category,StringComparison.OrdinalIgnoreCase)); return new { Templates=selected.Take(500).Select(ToTemplateDisplay).ToArray() }; }
+async Task<object> TemplateCatalogGetV1Async(BridgeRequest request) { ValidatePayload(request,["TemplateId"],["TemplateId"]); var p=ParsePayload<TemplateCatalogGetPayload>(request); return new { Template=(await templates.GetTemplateByIdAsync(p.TemplateId)) is { } template ? ToTemplateDisplay(template) : null }; }
+async Task<object> TemplateCompatibilityV1Async(BridgeRequest request) { ValidatePayload(request,["TemplateId","DistributionName"],["TemplateId","DistributionName"]); var p=ParsePayload<TemplateCompatibilityPayload>(request); var compatible=await templates.IsTemplateCompatibleAsync(p.TemplateId,p.DistributionName); return new { IsCompatible=compatible, Disposition=compatible ? "Compatible" : "Incompatible", Warnings=Array.Empty<string>() }; }
+async Task<TemplateMarketplaceStatusDisplay> TemplateMarketplaceStatusV1Async(BridgeRequest request) { ValidatePayload(request,["SourceId","TemplateId","ManifestDigest"],["SourceId","TemplateId","ManifestDigest"]); var p=ParsePayload<MarketplaceExactEntryPayload>(request); return ToMarketplaceStatusDisplay(p.SourceId,p.TemplateId,p.ManifestDigest,await marketplace.GetStatusAsync(p.SourceId,p.TemplateId,p.ManifestDigest)); }
+async Task<TemplateSourceDisplay> TemplateMarketplaceAddSourceV1Async(BridgeRequest request) { ValidatePayload(request,["Url","Kind","AcceptNonHttps"],["Url","Kind","AcceptNonHttps"]); var p=ParsePayload<TemplateMarketplaceAddSourcePayload>(request); return ToTemplateSourceDisplay(await marketplace.AddSourceAsync(p.Url,p.Kind,p.AcceptNonHttps)); }
+async Task<TemplateSourceDisplay> TemplateMarketplaceSetEnabledV1Async(BridgeRequest request) { ValidatePayload(request,["SourceId","Enabled"],["SourceId","Enabled"]); var p=ParsePayload<MarketplaceSourceEnabledPayload>(request); await marketplace.SetSourceEnabledAsync(p.SourceId,p.Enabled); return ToTemplateSourceDisplay((await marketplace.GetSourcesAsync()).Single(x=>x.Id==p.SourceId)); }
+async Task<object> TemplateMarketplaceRemoveSourceV1Async(BridgeRequest request) { ValidatePayload(request,["SourceId"],["SourceId"]); await marketplace.RemoveSourceAsync(ParsePayload<MarketplaceSourceIdPayload>(request).SourceId); return new { Changed=true }; }
+async Task<TemplateReviewDisplay> TemplateMarketplaceReviewV1Async(BridgeRequest request) { ValidatePayload(request,["SourceId","TemplateId","ManifestDigest"],["SourceId","TemplateId","ManifestDigest"]); var p=ParsePayload<MarketplaceExactEntryPayload>(request); var artifact=await marketplace.DownloadArtifactAsync(p.SourceId,p.TemplateId,p.ManifestDigest); return ToReviewDisplay(await marketplace.CreateReviewGrantAsync(p.SourceId,artifact.Sha256)); }
+async Task<TemplateArtifactDisplay> TemplateMarketplaceApproveV1Async(BridgeRequest request) { ValidatePayload(request,["ReviewToken"],["ReviewToken"]); return ToArtifactDisplay(await marketplace.ApproveCandidateAsync(ParsePayload<MarketplaceApprovalPayload>(request).ReviewToken)); }
+async Task<TemplateArtifactDisplay> TemplateMarketplaceDownloadV1Async(BridgeRequest request) { ValidatePayload(request,["SourceId","TemplateId","ManifestDigest"],["SourceId","TemplateId","ManifestDigest"]); var p=ParsePayload<MarketplaceExactEntryPayload>(request); return ToArtifactDisplay(await marketplace.DownloadArtifactAsync(p.SourceId,p.TemplateId,p.ManifestDigest)); }
+async Task<IReadOnlyList<TemplateArtifactHistoryDisplay>> TemplateMarketplaceHistoryV1Async(BridgeRequest request) { ValidatePayload(request,["TemplateId"],["TemplateId"]); return (await marketplace.GetArtifactHistoryAsync(ParsePayload<MarketplaceTemplatePayload>(request).TemplateId)).Take(500).Select(ToArtifactHistoryDisplay).ToArray(); }
+async Task<object> TemplateMarketplaceRollbackV1Async(BridgeRequest request) { ValidatePayload(request,["TemplateId","ArtifactSha256"],["TemplateId","ArtifactSha256"]); var p=ParsePayload<TemplateMarketplaceRollbackPayload>(request); await marketplace.RollbackAsync(p.TemplateId,p.ArtifactSha256); return new { Changed=true }; }
+async Task<TemplateLocalPreview> TemplateLocalImportPreviewV1Async(BridgeRequest request) { ValidatePayload(request,["Content"],["Content"]); var content=ParsePayload<TemplateLocalContentPayload>(request).Content; if(string.IsNullOrWhiteSpace(content) || System.Text.Encoding.UTF8.GetByteCount(content)>1024*1024) throw new ArgumentException("Template content is invalid."); Template template; try { template=JsonSerializer.Deserialize<Template>(content,options) ?? throw new ArgumentException("Template content is invalid."); } catch (JsonException) { throw new ArgumentException("Template content is invalid."); } var validation=await templates.ValidateTemplateAsync(template); if(!validation.IsValid) throw new ArgumentException("Template content is invalid."); var token=await templateLocalPreviews.IssueAsync("import",content,default); return new TemplateLocalPreview(token,"Import",template.Id,DateTimeOffset.UtcNow.AddMinutes(5)); }
+async Task<TemplateLocalMutationResult> TemplateLocalImportExecuteV1Async(BridgeRequest request) { ValidatePayload(request,["PreviewToken"],["PreviewToken"]); var grant=await templateLocalPreviews.ConsumeAsync(ParsePayload<WorkspaceTokenPayload>(request).PreviewToken,"import",default); var path=Path.Combine(applicationRoot,"template-local-previews",Guid.NewGuid().ToString("N")+".json"); try { Directory.CreateDirectory(Path.GetDirectoryName(path)!); await File.WriteAllTextAsync(path,grant.Value); var template=await templates.ImportTemplateAsync(path) ?? throw new InvalidOperationException("Template import failed."); return new TemplateLocalMutationResult(ToTemplateDisplay(template)); } finally { try { File.Delete(path); } catch {} } }
+async Task<TemplateLocalPreview> TemplateLocalExportPreviewV1Async(BridgeRequest request) { ValidatePayload(request,["TemplateId"],["TemplateId"]); var id=ParsePayload<MarketplaceTemplatePayload>(request).TemplateId; if(await templates.GetTemplateByIdAsync(id) is null) throw new ArgumentException("Template was not found."); var token=await templateLocalPreviews.IssueAsync("export",id,default); return new TemplateLocalPreview(token,"Export",id,DateTimeOffset.UtcNow.AddMinutes(5)); }
+async Task<TemplateExportResult> TemplateLocalExportExecuteV1Async(BridgeRequest request) { ValidatePayload(request,["PreviewToken"],["PreviewToken"]); var grant=await templateLocalPreviews.ConsumeAsync(ParsePayload<WorkspaceTokenPayload>(request).PreviewToken,"export",default); var template=await templates.GetTemplateByIdAsync(grant.Value) ?? throw new InvalidOperationException("Template was not found."); var content=JsonSerializer.Serialize(template,options); if(System.Text.Encoding.UTF8.GetByteCount(content)>1024*1024) throw new InvalidOperationException("Template export exceeds the supported limit."); return new TemplateExportResult(content); }
+async Task<TemplateLocalPreview> TemplateLocalRemovePreviewV1Async(BridgeRequest request) { ValidatePayload(request,["TemplateId"],["TemplateId"]); var id=ParsePayload<MarketplaceTemplatePayload>(request).TemplateId; var template=await templates.GetTemplateByIdAsync(id) ?? throw new ArgumentException("Template was not found."); if(!template.IsCustom) throw new ArgumentException("Only custom templates can be removed."); var token=await templateLocalPreviews.IssueAsync("remove",id,default); return new TemplateLocalPreview(token,"Remove",id,DateTimeOffset.UtcNow.AddMinutes(5)); }
+async Task<object> TemplateLocalRemoveExecuteV1Async(BridgeRequest request) { ValidatePayload(request,["PreviewToken"],["PreviewToken"]); var grant=await templateLocalPreviews.ConsumeAsync(ParsePayload<WorkspaceTokenPayload>(request).PreviewToken,"remove",default); if(!await templates.RemoveCustomTemplateAsync(grant.Value)) throw new InvalidOperationException("Template removal failed."); return new { Changed=true }; }
+
+static TemplateDisplay ToTemplateDisplay(Template template) => new(
+    template.Id,
+    template.Name,
+    template.Description,
+    template.Category,
+    template.Version,
+    template.Author,
+    template.Tags.Take(500).ToArray(),
+    template.CompatibleDistros.Take(500).ToArray(),
+    template.EstimatedDurationMinutes,
+    template.EstimatedDiskSpaceMB,
+    template.IsOfficial,
+    template.IsCustom,
+    template.TrustState,
+    template.Capabilities.Take(500).ToArray());
+
+static TemplateSourceDisplay ToTemplateSourceDisplay(TemplateSource source) => new(
+    source.Id,
+    source.Url,
+    source.Kind,
+    source.PublisherFingerprint,
+    source.IsEnabled,
+    source.LastFetchedAt);
+
+static TemplateMarketplaceEntryDisplay ToMarketplaceEntryDisplay(TemplateMarketplaceEntry entry) => new(
+    entry.Source.Id,
+    entry.Manifest.Id,
+    entry.Manifest.Name,
+    entry.Manifest.Version,
+    entry.ManifestDigest,
+    entry.TrustState,
+    entry.CanExecute,
+    entry.ExecutionReason,
+    entry.Manifest.Capabilities.Take(500).ToArray());
+
+static TemplateMarketplaceStatusDisplay ToMarketplaceStatusDisplay(string sourceId, string templateId, string manifestDigest, TemplateMarketplaceStatus status) => new(
+    sourceId,
+    templateId,
+    manifestDigest,
+    status.SignatureStatus,
+    status.TrustState,
+    status.HasEffectiveReviewAuthorization,
+    status.CanExecute,
+    status.Reason);
+
+static TemplateReviewDisplay ToReviewDisplay(TemplateReviewGrant grant) => new(
+    grant.Token,
+    grant.SourceId,
+    grant.Manifest.Id,
+    grant.Manifest.Version,
+    grant.ManifestDigest,
+    Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(grant.NormalizedSourceUrl))).ToLowerInvariant(),
+    grant.Artifact.Sha256,
+    grant.ScriptDiffDigest,
+    grant.ExpiresAt,
+    grant.Manifest.Capabilities.Take(500).ToArray(),
+    grant.ScriptDiff.Changed.Take(100).ToArray(),
+    grant.ScriptDiff.Added.Count,
+    grant.ScriptDiff.Removed.Count,
+    grant.ScriptDiff.Changed.Count,
+    grant.ScriptDiff.IsTruncated);
+
+static TemplateArtifactDisplay ToArtifactDisplay(TemplateArtifact artifact) => new(
+    artifact.TemplateId ?? string.Empty,
+    artifact.Version,
+    artifact.Sha256,
+    artifact.CachedAt);
+
+static TemplateArtifactHistoryDisplay ToArtifactHistoryDisplay(TemplateArtifactHistoryEntry entry) => new(
+    entry.Manifest.Id,
+    entry.Manifest.Version,
+    entry.Artifact.Sha256,
+    entry.RecordedAt,
+    entry.SourceUrl);
 
 async Task<WorkspaceLaunchResult> LaunchAsync(BridgeRequest request)
 {
@@ -1237,6 +1360,12 @@ public sealed record MarketplaceExactEntryPayload(string SourceId, string Templa
 public sealed record MarketplaceDownloadPayload(string SourceId, string? TemplateId = null, string? ManifestDigest = null);
 public sealed record MarketplaceTemplatePayload(string TemplateId);
 public sealed record MarketplaceArtifactPayload(string TemplateId, string Sha256);
+public sealed record TemplateCatalogListPayload(bool ForceRefresh = false, string? Query = null, string? Category = null);
+public sealed record TemplateCatalogGetPayload(string TemplateId);
+public sealed record TemplateCompatibilityPayload(string TemplateId, string DistributionName);
+public sealed record TemplateMarketplaceAddSourcePayload(string Url, TemplateSourceKind Kind, bool AcceptNonHttps);
+public sealed record TemplateMarketplaceRollbackPayload(string TemplateId, string ArtifactSha256);
+public sealed record TemplateLocalContentPayload(string Content);
 public sealed record BridgeResponse(bool Succeeded, object? Value, string? ErrorCode, string? ErrorMessage, string Frame = "result");
 /// <summary>Only the five reviewed lifecycle shapes are executable from the bridge.</summary>
 public sealed class BridgeProgress(Action<BridgeResponse> write) : IProgress<WorkspaceActionResult>

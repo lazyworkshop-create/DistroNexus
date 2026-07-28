@@ -1,5 +1,8 @@
 using System.Diagnostics;
+using System.IO.Compression;
 using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using DistroNexus.Core.Models;
 using DistroNexus.Core.Services;
@@ -804,18 +807,131 @@ public sealed class WorkspaceBridgeProtocolTests
         finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
     }
 
+    [Fact]
+    public async Task TemplateV1Routes_UseClosedPayloadsAndDoNotExposeCoreScriptOrPathFields()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        var catalog = await bridge.SendAsync("template.catalog.list.v1", payload: JsonDocument.Parse("{\"ForceRefresh\":false}").RootElement.Clone());
+        var category = await bridge.SendAsync("template.catalog.list.v1", payload: JsonDocument.Parse("{\"ForceRefresh\":false,\"Category\":\"Development\"}").RootElement.Clone());
+        var legacyMarketplace = await bridge.SendAsync("marketplaceScriptDiff", payload: JsonDocument.Parse("{\"TemplateId\":\"forged\",\"Sha256\":\"" + new string('a', 64) + "\"}").RootElement.Clone());
+        var sourcesWithPayload = await bridge.SendAsync("template.marketplace.sources.v1", payload: JsonDocument.Parse("{}").RootElement.Clone());
+        var discoveryWithPayload = await bridge.SendAsync("template.marketplace.discover.v1", payload: JsonDocument.Parse("{}").RootElement.Clone());
+        var malformedImport = await bridge.SendAsync("template.local.import-preview.v1", payload: JsonDocument.Parse("{\"Content\":\"{}\",\"Path\":\"C:\\\\outside\"}").RootElement.Clone());
+        var malformedExecute = await bridge.SendAsync("template.local.export-execute.v1", payload: JsonDocument.Parse("{\"PreviewToken\":\"" + new string('a', 64) + "\",\"TemplateId\":\"forged\"}").RootElement.Clone());
+        var replay = await bridge.SendAsync("template.local.remove-execute.v1", payload: JsonDocument.Parse("{\"PreviewToken\":\"" + new string('b', 64) + "\"}").RootElement.Clone());
+        var invalidReview = await bridge.SendAsync("template.marketplace.approve.v1", payload: JsonDocument.Parse("{\"ReviewToken\":\"" + new string('c', 64) + "\"}").RootElement.Clone());
+
+        Assert.True(catalog.GetProperty("Succeeded").GetBoolean());
+        Assert.True(category.GetProperty("Succeeded").GetBoolean());
+        Assert.All(category.GetProperty("Value").GetProperty("Templates").EnumerateArray(), template => Assert.Equal("Development", template.GetProperty("Category").GetString()));
+        var templates = catalog.GetProperty("Value").GetProperty("Templates");
+        if (templates.GetArrayLength() > 0)
+        {
+            var display = templates[0];
+            Assert.False(display.TryGetProperty("Scripts", out _));
+            Assert.False(display.TryGetProperty("MarketplaceArtifactRoot", out _));
+        }
+        Assert.Equal("Workspace.Bridge.Invalid", legacyMarketplace.GetProperty("ErrorCode").GetString());
+        foreach (var result in new[] { sourcesWithPayload, discoveryWithPayload, malformedImport, malformedExecute, replay, invalidReview })
+        {
+            Assert.False(result.GetProperty("Succeeded").GetBoolean());
+        }
+        Assert.Equal("Template.InvalidRequest", sourcesWithPayload.GetProperty("ErrorCode").GetString());
+        Assert.Equal("Template.InvalidRequest", discoveryWithPayload.GetProperty("ErrorCode").GetString());
+        Assert.Equal("Template.InvalidRequest", malformedImport.GetProperty("ErrorCode").GetString());
+        Assert.Equal("Template.InvalidRequest", malformedExecute.GetProperty("ErrorCode").GetString());
+        Assert.Equal("Template.GrantInvalid", replay.GetProperty("ErrorCode").GetString());
+        Assert.Equal("Template.ReviewGrantInvalid", invalidReview.GetProperty("ErrorCode").GetString());
+    }
+
+    [Fact]
+    public async Task TemplateMarketplaceReviewGrant_IsApprovedByAFreshBridgeProcess_AndCannotReplay()
+    {
+        var store = Path.Combine(Path.GetTempPath(), "DistroNexusTemplateGrant-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(store);
+        try
+        {
+            var artifactPath = Path.Combine(store, "review-template.zip");
+            CreateReviewArtifact(artifactPath);
+            var artifactHash = Convert.ToHexString(SHA256.HashData(await File.ReadAllBytesAsync(artifactPath))).ToLowerInvariant();
+            var scriptHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes("echo reviewed"))).ToLowerInvariant();
+            var catalogPath = Path.Combine(store, "review-catalog.json");
+            var manifest = new
+            {
+                SchemaVersion = 2,
+                Id = "review-template",
+                Name = "Review Template",
+                Version = "1",
+                ArtifactUrl = new Uri(artifactPath).AbsoluteUri,
+                ArtifactSha256 = artifactHash,
+                Capabilities = Array.Empty<string>(),
+                ScriptHashes = new[] { scriptHash },
+                ExecutableFiles = Array.Empty<object>(),
+                HealthChecks = Array.Empty<string>(),
+                Compatibility = ""
+            };
+            await File.WriteAllTextAsync(catalogPath, JsonSerializer.Serialize(new { SchemaVersion = 2, Templates = new[] { manifest } }));
+
+            string reviewToken;
+            await using (var first = await BridgeProcess.StartAsync(store))
+            {
+                var add = await first.SendAsync("template.marketplace.add-source.v1", payload: JsonPayload(new { Url = new Uri(catalogPath).AbsoluteUri, Kind = "UserLocal", AcceptNonHttps = true }));
+                Assert.True(add.GetProperty("Succeeded").GetBoolean());
+                var sourceId = add.GetProperty("Value").GetProperty("Id").GetString();
+                var discovery = await first.SendAsync("template.marketplace.discover.v1");
+                Assert.True(discovery.GetProperty("Succeeded").GetBoolean());
+                var entry = Assert.Single(discovery.GetProperty("Value").EnumerateArray());
+                var review = await first.SendAsync("template.marketplace.review.v1", payload: JsonPayload(new { SourceId = sourceId, TemplateId = "review-template", ManifestDigest = entry.GetProperty("ManifestDigest").GetString() }));
+                Assert.True(review.GetProperty("Succeeded").GetBoolean());
+                var reviewValue = review.GetProperty("Value");
+                Assert.Equal("1", reviewValue.GetProperty("TemplateVersion").GetString());
+                Assert.Equal(Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(new Uri(catalogPath).AbsoluteUri.TrimEnd('/')))).ToLowerInvariant(), reviewValue.GetProperty("NormalizedSourceIdentity").GetString());
+                Assert.Matches("^[a-f0-9]{64}$", reviewValue.GetProperty("ScriptDiffDigest").GetString());
+                Assert.True(reviewValue.GetProperty("ChangedScriptIdentifiers").GetArrayLength() <= 100);
+                Assert.Equal(reviewValue.GetProperty("ChangedScriptIdentifiers").GetArrayLength(), reviewValue.GetProperty("ChangedScriptCount").GetInt32());
+                reviewToken = review.GetProperty("Value").GetProperty("ReviewToken").GetString()!;
+            }
+
+            await using var second = await BridgeProcess.StartAsync(store);
+            var approval = await second.SendAsync("template.marketplace.approve.v1", payload: JsonPayload(new { ReviewToken = reviewToken }));
+            var replay = await second.SendAsync("template.marketplace.approve.v1", payload: JsonPayload(new { ReviewToken = reviewToken }));
+            Assert.True(approval.GetProperty("Succeeded").GetBoolean());
+            Assert.Equal(artifactHash, approval.GetProperty("Value").GetProperty("Sha256").GetString());
+            Assert.Equal("1", approval.GetProperty("Value").GetProperty("Version").GetString());
+            Assert.False(replay.GetProperty("Succeeded").GetBoolean());
+            Assert.Equal("Template.ReviewGrantInvalid", replay.GetProperty("ErrorCode").GetString());
+        }
+        finally { try { Directory.Delete(store, true); } catch { } }
+    }
+
+    private static JsonElement JsonPayload(object value)
+    {
+        using var document = JsonDocument.Parse(JsonSerializer.Serialize(value));
+        return document.RootElement.Clone();
+    }
+
+    private static void CreateReviewArtifact(string path)
+    {
+        using var archive = ZipFile.Open(path, ZipArchiveMode.Create);
+        var entry = archive.CreateEntry("template.json");
+        using var writer = new StreamWriter(entry.Open());
+        writer.Write("{\"id\":\"review-template\",\"name\":\"Review Template\",\"scripts\":[{\"content\":\"echo reviewed\"}]}");
+    }
+
     private sealed class BridgeProcess : IAsyncDisposable
     {
         private readonly Process process;
         private readonly string store;
+        private readonly bool ownsStore;
 
-        private BridgeProcess(Process process, string store)
+        private BridgeProcess(Process process, string store, bool ownsStore)
         {
             this.process = process;
             this.store = store;
+            this.ownsStore = ownsStore;
         }
 
-        public static Task<BridgeProcess> StartAsync()
+        public static Task<BridgeProcess> StartAsync(string? store = null)
         {
             var root = FindRoot();
             var bridgeDirectory = Path.Combine(root, "src", "Client", "DistroNexus.WorkspaceBridge", "bin");
@@ -823,7 +939,8 @@ public sealed class WorkspaceBridgeProtocolTests
                 .Select(configuration => Path.Combine(bridgeDirectory, configuration, "net10.0", "DistroNexus.WorkspaceBridge.dll"))
                 .FirstOrDefault(File.Exists)
                 ?? throw new InvalidOperationException("Build the WorkspaceBridge project before running protocol tests.");
-            var store = Path.Combine(Path.GetTempPath(), "DistroNexusBridge-" + Guid.NewGuid().ToString("N"));
+            var ownsStore = string.IsNullOrWhiteSpace(store);
+            store ??= Path.Combine(Path.GetTempPath(), "DistroNexusBridge-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(store);
             var process = Process.Start(new ProcessStartInfo("dotnet", $"\"{bridge}\"")
             {
@@ -833,7 +950,7 @@ public sealed class WorkspaceBridgeProtocolTests
                 CreateNoWindow = true,
                 Environment = { ["DISTRONEXUS_WORKSPACE_STORE_ROOT"] = store },
             }) ?? throw new InvalidOperationException("Unable to start WorkspaceBridge.");
-            return Task.FromResult(new BridgeProcess(process, store));
+            return Task.FromResult(new BridgeProcess(process, store, ownsStore));
         }
 
         public async Task<JsonElement> SendAsync(string operation, Guid? id = null, JsonElement? payload = null, long? expectedRevision = null, string? token = null)
@@ -851,7 +968,7 @@ public sealed class WorkspaceBridgeProtocolTests
             process.StandardInput.Close();
             await process.WaitForExitAsync();
             process.Dispose();
-            Directory.Delete(store, true);
+            if (ownsStore) Directory.Delete(store, true);
         }
     }
 

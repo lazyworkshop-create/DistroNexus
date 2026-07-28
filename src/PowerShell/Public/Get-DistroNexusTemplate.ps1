@@ -6,45 +6,13 @@ function Get-DistroNexusTemplate {
         [string]$Id,
 
         [Parameter(ValueFromPipelineByPropertyName = $true)]
-        [string]$Category
+        [string]$Category,
+        [switch]$ForceRefresh,
+        [string]$Query
     )
 
     process {
-        # Determine config path. Try multiple locations relative to module.
-        $appDataRoot = [System.Environment]::GetFolderPath([System.Environment+SpecialFolder]::ApplicationData)
-        $possiblePaths = @(
-            (Join-Path $appDataRoot "DistroNexus\config\templates.json"), # Installed structure
-            (Join-Path $PSScriptRoot "..\..\..\config\templates.json"), # Dev source
-            (Join-Path $PSScriptRoot "..\config\templates.json")        # Released structure
-        )
-
-        $configPath = $null
-        foreach ($p in $possiblePaths) {
-            $p = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($p)
-            if (Test-Path $p) {
-                $configPath = $p
-                break
-            }
-        }
-
-        if (-not $configPath) {
-            Write-Verbose "Template configuration not found."
-            return
-        }
-
-        try {
-            $json = Get-Content -Path $configPath -Raw | ConvertFrom-Json
-            
-            foreach ($t in $json) {
-                if ($PSBoundParameters.ContainsKey('Id') -and $t.Id -ne $Id) { continue }
-                if ($PSBoundParameters.ContainsKey('Category') -and $t.Category -ne $Category) { continue }
-                
-                Write-Output $t
-            }
-        }
-        catch {
-            Write-Error "Failed to load DistroNexus templates: $_" `
-                -ErrorId "DistroNexus.TemplateNotFound"
-        }
+        if ($PSBoundParameters.ContainsKey('Id')) { return Invoke-DistroNexusWorkspaceBridge -Operation 'template.catalog.get.v1' -Payload @{ TemplateId = $Id } }
+        Invoke-DistroNexusWorkspaceBridge -Operation 'template.catalog.list.v1' -Payload @{ ForceRefresh = [bool]$ForceRefresh; Query = $Query; Category = $Category }
     }
 }

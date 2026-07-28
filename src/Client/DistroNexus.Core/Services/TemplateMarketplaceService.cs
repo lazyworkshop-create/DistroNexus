@@ -31,7 +31,7 @@ public sealed class TemplateMarketplaceService : ITemplateMarketplaceService
     private readonly VersionedJsonStore<Dictionary<string, TemplateMarketplaceCatalogV2>> _catalogCache;
     private readonly HttpClient _httpClient;
     private readonly SemaphoreSlim _gate = new(1, 1);
-    private readonly ConcurrentDictionary<string, TemplateReviewGrant> _reviewGrants = new(StringComparer.Ordinal);
+    private readonly TemplateMarketplaceReviewGrantStore _reviewGrants;
     private static readonly TimeSpan ReviewGrantLifetime = TimeSpan.FromMinutes(5);
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true, PropertyNameCaseInsensitive = true };
     public TemplateMarketplaceService(string? appDataDirectory = null, HttpClient? httpClient = null)
@@ -46,6 +46,7 @@ public sealed class TemplateMarketplaceService : ITemplateMarketplaceService
         _history = new(_artifactHistoryPath, 2, n => n.Deserialize<Dictionary<string, List<TemplateArtifactHistoryEntry>>>(Json) ?? [], new Dictionary<int, Func<Dictionary<string, List<TemplateArtifactHistoryEntry>>, Dictionary<string, List<TemplateArtifactHistoryEntry>>>> { [1] = value => value });
         _authorizations = new(_authorizationPath, 1, n => n.Deserialize<Dictionary<string, TemplateReviewAuthorization>>(Json) ?? []);
         _catalogCache = new(_catalogCachePath, 1, n => n.Deserialize<Dictionary<string, TemplateMarketplaceCatalogV2>>(Json) ?? []);
+        _reviewGrants = new TemplateMarketplaceReviewGrantStore(_root);
     }
     public async Task<IReadOnlyList<TemplateSource>> GetSourcesAsync(CancellationToken cancellationToken = default)
     {
@@ -80,7 +81,7 @@ public sealed class TemplateMarketplaceService : ITemplateMarketplaceService
                 var authorizations = await ReadStoreAsync(_authorizations, cancellationToken).ConfigureAwait(false);
                 foreach (var key in authorizations.Where(x => string.Equals(NormalizeSourceUrl(x.Value.SourceUrl, TemplateSourceKind.Remote, true), normalized, StringComparison.OrdinalIgnoreCase)).Select(x => x.Key).ToArray()) authorizations.Remove(key);
                 await WriteStoreAsync(_authorizations, authorizations, cancellationToken).ConfigureAwait(false);
-                foreach (var grant in _reviewGrants.Where(x => string.Equals(x.Value.SourceId, sourceId, StringComparison.Ordinal)).Select(x => x.Key).ToArray()) _reviewGrants.TryRemove(grant, out _);
+                await _reviewGrants.RevokeSourceAsync(sourceId, cancellationToken).ConfigureAwait(false);
                 var trust = await ReadStoreAsync(_trust, cancellationToken).ConfigureAwait(false);
                 foreach (var key in trust.Keys.Where(x => x.StartsWith(normalized.ToLowerInvariant() + "|", StringComparison.Ordinal)).ToArray()) trust.Remove(key);
                 await WriteStoreAsync(_trust, trust, cancellationToken).ConfigureAwait(false);
@@ -103,6 +104,7 @@ public sealed class TemplateMarketplaceService : ITemplateMarketplaceService
             var authorizations = await ReadStoreAsync(_authorizations, cancellationToken).ConfigureAwait(false);
             foreach (var key in authorizations.Where(x => string.Equals(NormalizeSourceUrl(x.Value.SourceUrl, TemplateSourceKind.Remote, true), normalized, StringComparison.OrdinalIgnoreCase)).Select(x => x.Key).ToArray()) authorizations.Remove(key);
             await WriteStoreAsync(_authorizations, authorizations, cancellationToken).ConfigureAwait(false);
+            await _reviewGrants.RevokeSourceAsync(sourceId, cancellationToken).ConfigureAwait(false);
             var trust = await ReadStoreAsync(_trust, cancellationToken).ConfigureAwait(false);
             foreach (var key in trust.Keys.Where(x => x.StartsWith(normalized.ToLowerInvariant() + "|", StringComparison.Ordinal)).ToArray()) trust.Remove(key);
             await WriteStoreAsync(_trust, trust, cancellationToken).ConfigureAwait(false);
@@ -166,14 +168,21 @@ public sealed class TemplateMarketplaceService : ITemplateMarketplaceService
         await VerifyArtifactAsync(candidate.Manifest, candidate.Artifact, cancellationToken).ConfigureAwait(false);
         var normalized = NormalizeSourceUrl(source.Url, source.Kind, true);
         if (!string.Equals(candidate.SourceUrl, normalized, StringComparison.OrdinalIgnoreCase) || !ManifestEquals(candidate.Manifest, current)) throw new WslOperationFailedException("Candidate provenance does not match the reviewed source.", DistroNexusErrorCode.TemplateArtifactIntegrityFailed, "CreateTemplateReviewGrant");
-        var grant = new TemplateReviewGrant(Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant(), source.Id, normalized, current, candidate.Artifact, await ReviewScriptDiffAsync(current.Id, sha256, cancellationToken).ConfigureAwait(false), DateTimeOffset.UtcNow.Add(ReviewGrantLifetime), ManifestDigest(current));
-        _reviewGrants[grant.Token] = grant;
+        var diff = await ReviewScriptDiffAsync(current.Id, sha256, cancellationToken).ConfigureAwait(false);
+        var canonicalManifest = Convert.ToBase64String(CanonicalizeFullManifest(current));
+        var grant = new TemplateReviewGrant(
+            Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant(), source.Id, normalized, current, candidate.Artifact, diff,
+            DateTimeOffset.UtcNow.Add(ReviewGrantLifetime), ManifestDigest(current), canonicalManifest,
+            ExecutableFilesDigest(current.ExecutableFiles), ScriptDiffDigest(diff));
+        await _reviewGrants.IssueAsync(grant, cancellationToken).ConfigureAwait(false);
         return grant;
     }
     public async Task<TemplateArtifact> ApproveCandidateAsync(string reviewToken, CancellationToken cancellationToken = default)
     {
-        if (!_reviewGrants.TryRemove(reviewToken, out var grant) || grant.ExpiresAt < DateTimeOffset.UtcNow)
-            throw new WslOperationFailedException("Review grant is invalid or expired.", DistroNexusErrorCode.TemplateTrustRequired, "ApproveTemplateArtifact");
+        TemplateReviewGrant grant;
+        try { grant = await _reviewGrants.ConsumeAsync(reviewToken, cancellationToken).ConfigureAwait(false); }
+        catch (InvalidOperationException ex) { throw new WslOperationFailedException(ex.Message, DistroNexusErrorCode.TemplateTrustRequired, "ApproveTemplateArtifact"); }
+        if (!IsReviewGrantProvenanceValid(grant)) throw new WslOperationFailedException("Reviewed candidate provenance is invalid.", DistroNexusErrorCode.TemplateArtifactIntegrityFailed, "ApproveTemplateArtifact");
         var source = (await GetSourcesAsync(cancellationToken).ConfigureAwait(false)).SingleOrDefault(x => x.Id == grant.SourceId && x.IsEnabled && string.Equals(NormalizeSourceUrl(x.Url, x.Kind, true), grant.NormalizedSourceUrl, StringComparison.OrdinalIgnoreCase));
         if (source is null) throw new WslOperationFailedException("Template source is unavailable.", DistroNexusErrorCode.TemplateTrustRequired, "ApproveTemplateArtifact");
         var current = (await FetchCatalogAsync(source.Id, cancellationToken).ConfigureAwait(false)).Templates.SingleOrDefault(x =>
@@ -555,6 +564,23 @@ public sealed class TemplateMarketplaceService : ITemplateMarketplaceService
 
     private static string AuthorizationKey(string sourceUrl, string templateId, string manifestDigest) => NormalizeSourceUrl(sourceUrl, TemplateSourceKind.Remote, true).ToLowerInvariant() + "|" + templateId.Trim().ToLowerInvariant() + "|" + manifestDigest;
     private static bool ManifestEquals(TemplateManifestV2 left, TemplateManifestV2 right) => string.Equals(ManifestDigest(left), ManifestDigest(right), StringComparison.Ordinal);
+    private static bool IsReviewGrantProvenanceValid(TemplateReviewGrant grant)
+    {
+        if (string.IsNullOrWhiteSpace(grant.Artifact.RootPath) || !Directory.Exists(grant.Artifact.RootPath) || !File.Exists(Path.Combine(grant.Artifact.RootPath, "artifact.zip"))) return false;
+        var canonical = Convert.ToBase64String(CanonicalizeFullManifest(grant.Manifest));
+        return string.Equals(canonical, grant.CanonicalManifest, StringComparison.Ordinal) &&
+               string.Equals(ManifestDigest(grant.Manifest), grant.ManifestDigest, StringComparison.Ordinal) &&
+               string.Equals(ExecutableFilesDigest(grant.Manifest.ExecutableFiles), grant.ExecutableFilesDigest, StringComparison.Ordinal) &&
+               string.Equals(ScriptDiffDigest(grant.ScriptDiff), grant.ScriptDiffDigest, StringComparison.Ordinal);
+    }
+    private static string ExecutableFilesDigest(IReadOnlyList<TemplateExecutableFile> files) => DigestCanonicalJson(files.OrderBy(file => file.Path, StringComparer.OrdinalIgnoreCase).ThenBy(file => file.Sha256, StringComparer.Ordinal).ToArray());
+    private static string ScriptDiffDigest(TemplateScriptDiff diff) => DigestCanonicalJson(diff);
+    private static string DigestCanonicalJson<T>(T value)
+    {
+        using var document = JsonDocument.Parse(JsonSerializer.Serialize(value, Json));
+        using var stream = new MemoryStream(); using (var writer = new Utf8JsonWriter(stream)) WriteCanonical(document.RootElement, writer);
+        return Convert.ToHexString(SHA256.HashData(stream.ToArray())).ToLowerInvariant();
+    }
     /// <summary>Canonical full-manifest representation for grants and durable authorization identity; unlike signature verification it includes the signature itself.</summary>
     private static string ManifestDigest(TemplateManifestV2 manifest) => Convert.ToHexString(SHA256.HashData(CanonicalizeFullManifest(manifest))).ToLowerInvariant();
     private static byte[] CanonicalizeFullManifest(TemplateManifestV2 manifest)

@@ -207,6 +207,27 @@ public interface IPowerShellModuleClient
     Task<WorkspaceActionResult> CloseWorkspaceAsync(string previewToken, CancellationToken cancellationToken = default);
     Task<WorkspaceOperationStatus> GetWorkspaceOperationStatusAsync(string operationId, CancellationToken cancellationToken = default);
     Task StopWorkspaceOperationAsync(string operationId, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<TemplateDisplay>> GetTemplatesAsync(bool forceRefresh = false, string? query = null, string? category = null, CancellationToken cancellationToken = default);
+    Task<TemplateDisplay?> GetTemplateAsync(string templateId, CancellationToken cancellationToken = default);
+    Task<bool> TestTemplateCompatibilityAsync(string templateId, string distributionName, CancellationToken cancellationToken = default);
+    Task<TemplateLocalPreview> PreviewTemplateImportAsync(string content, CancellationToken cancellationToken = default);
+    Task<TemplateLocalMutationResult> ImportTemplateAsync(string previewToken, CancellationToken cancellationToken = default);
+    Task<TemplateLocalPreview> PreviewTemplateExportAsync(string templateId, CancellationToken cancellationToken = default);
+    Task<TemplateExportResult> ExportTemplateAsync(string previewToken, CancellationToken cancellationToken = default);
+    Task<TemplateLocalPreview> PreviewTemplateRemoveAsync(string templateId, CancellationToken cancellationToken = default);
+    Task<bool> RemoveTemplateAsync(string previewToken, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TemplateSourceDisplay>> GetTemplateSourcesAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TemplateMarketplaceEntryDisplay>> GetTemplateMarketplaceEntriesAsync(CancellationToken cancellationToken = default);
+    Task<TemplateMarketplaceStatusDisplay> GetTemplateMarketplaceStatusAsync(string sourceId, string templateId, string manifestDigest, CancellationToken cancellationToken = default);
+    Task<TemplateSourceDisplay> AddTemplateSourceAsync(string url, TemplateSourceKind kind, bool acceptNonHttps, CancellationToken cancellationToken = default);
+    Task<TemplateSourceDisplay> SetTemplateSourceEnabledAsync(string sourceId, bool enabled, CancellationToken cancellationToken = default);
+    Task<bool> RemoveTemplateSourceAsync(string sourceId, CancellationToken cancellationToken = default);
+    Task<TemplateReviewDisplay> ReviewTemplateMarketplaceCandidateAsync(string sourceId, string templateId, string manifestDigest, CancellationToken cancellationToken = default);
+    Task<TemplateArtifactDisplay> ApproveTemplateMarketplaceCandidateAsync(string reviewToken, CancellationToken cancellationToken = default);
+    Task<TemplateArtifactDisplay> DownloadTemplateMarketplaceArtifactAsync(string sourceId, string templateId, string manifestDigest, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TemplateArtifactHistoryDisplay>> GetTemplateMarketplaceHistoryAsync(string templateId, CancellationToken cancellationToken = default);
+    Task<bool> RollbackTemplateMarketplaceArtifactAsync(string templateId, string artifactSha256, CancellationToken cancellationToken = default);
 }
 
 public sealed record FixedExplorerResult(bool Succeeded, string OutcomeCode);

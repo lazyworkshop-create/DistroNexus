@@ -49,7 +49,18 @@ public sealed record TemplateReviewAuthorization(string SourceUrl, string Publis
 public sealed record TemplateScriptDiff(IReadOnlyList<string> Added, IReadOnlyList<string> Removed, IReadOnlyList<string> Changed, IReadOnlyList<TemplateScriptTextChange>? TextChanges = null, bool IsTruncated = false);
 public sealed record TemplateScriptTextChange(string ScriptId, string PreviousText, string CandidateText, bool IsTruncated);
 /// <summary>One-shot Core-issued review grant, bound to all material candidate declarations.</summary>
-public sealed record TemplateReviewGrant(string Token, string SourceId, string NormalizedSourceUrl, TemplateManifestV2 Manifest, TemplateArtifact Artifact, TemplateScriptDiff ScriptDiff, DateTimeOffset ExpiresAt, string ManifestDigest = "");
+public sealed record TemplateReviewGrant(
+    string Token,
+    string SourceId,
+    string NormalizedSourceUrl,
+    TemplateManifestV2 Manifest,
+    TemplateArtifact Artifact,
+    TemplateScriptDiff ScriptDiff,
+    DateTimeOffset ExpiresAt,
+    string ManifestDigest = "",
+    string CanonicalManifest = "",
+    string ExecutableFilesDigest = "",
+    string ScriptDiffDigest = "");
 public sealed record TemplateUpdateReview(string TemplateId, string PreviousSha256, string CandidateSha256, IReadOnlyList<TemplateCapability> NewlyRequestedCapabilities, bool ScriptsChanged, bool PublisherChanged, bool RequiresReview);
 public sealed record TemplateMarketplaceEntry(TemplateManifestV2 Manifest, TemplateSource Source, TemplateTrustState TrustState, TemplateArtifact? KnownGoodArtifact, bool CanExecute, string ExecutionReason, string ManifestDigest = "");
 /// <summary>Core-derived display-safe status; callers must not infer signature or authorization from manifest fields.</summary>

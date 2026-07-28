@@ -1,94 +1,95 @@
 function Get-DistroNexusTemplateSource {
     [CmdletBinding()]
-    [OutputType([PSCustomObject])]
     param()
-    Invoke-DistroNexusWorkspaceBridge -Operation marketplaceListSources
+    Invoke-DistroNexusWorkspaceBridge -Operation 'template.marketplace.sources.v1'
+}
+
+function Get-DistroNexusTemplateMarketplaceEntry {
+    [CmdletBinding()]
+    param()
+    Invoke-DistroNexusWorkspaceBridge -Operation 'template.marketplace.discover.v1'
+}
+
+function Get-DistroNexusTemplateMarketplaceStatus {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$SourceId,
+        [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$TemplateId,
+        [Parameter(Mandatory)][ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$ManifestDigest
+    )
+    Invoke-DistroNexusWorkspaceBridge -Operation 'template.marketplace.status.v1' -Payload @{ SourceId = $SourceId; TemplateId = $TemplateId; ManifestDigest = $ManifestDigest }
 }
 
 function Add-DistroNexusTemplateSource {
     [CmdletBinding(SupportsShouldProcess)]
-    [OutputType([PSCustomObject])]
     param(
         [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$Url,
         [ValidateSet('Remote', 'UserLocal')][string]$Kind = 'Remote',
-        [switch]$AcceptNonHttpsOrLocalSource
+        [switch]$AcceptNonHttps
     )
-    $payload = @{ Url = $Url; Kind = $Kind; ExplicitlyAcceptedNonHttps = [bool]$AcceptNonHttpsOrLocalSource }
-    if ($WhatIfPreference) { return [PSCustomObject]@{ Operation = 'AddTemplateSource'; Url = $Url; Kind = $Kind; ExplicitConfirmationRequired = ($Kind -eq 'UserLocal' -or -not $Url.StartsWith('https://', [StringComparison]::OrdinalIgnoreCase)) } }
-    if ($PSCmdlet.ShouldProcess($Url, 'Add template marketplace source')) { Invoke-DistroNexusWorkspaceBridge -Operation marketplaceAddSource -Payload $payload }
+    if ($PSCmdlet.ShouldProcess($Url, 'Add template marketplace source')) {
+        Invoke-DistroNexusWorkspaceBridge -Operation 'template.marketplace.add-source.v1' -Payload @{ Url = $Url; Kind = $Kind; AcceptNonHttps = [bool]$AcceptNonHttps }
+    }
 }
 
-function Set-DistroNexusTemplateSourceEnabled {
+function Set-DistroNexusTemplateSource {
     [CmdletBinding(SupportsShouldProcess)]
-    param(
-        [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$SourceId,
-        [Parameter(Mandatory)][bool]$Enabled
-    )
-    $payload = @{ SourceId = $SourceId; Enabled = $Enabled }
-    if ($WhatIfPreference) { return [PSCustomObject]@{ Operation = 'SetTemplateSourceEnabled'; SourceId = $SourceId; Enabled = $Enabled; ExplicitConfirmationRequired = $true } }
-    if ($PSCmdlet.ShouldProcess($SourceId, $(if ($Enabled) { 'Enable template marketplace source' } else { 'Disable template marketplace source' }))) { Invoke-DistroNexusWorkspaceBridge -Operation marketplaceSetSourceEnabled -Payload $payload }
+    param([Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$SourceId, [Parameter(Mandatory)][bool]$Enabled)
+    if ($PSCmdlet.ShouldProcess($SourceId, $(if ($Enabled) { 'Enable template marketplace source' } else { 'Disable template marketplace source' }))) {
+        Invoke-DistroNexusWorkspaceBridge -Operation 'template.marketplace.set-enabled.v1' -Payload @{ SourceId = $SourceId; Enabled = $Enabled }
+    }
 }
 
 function Remove-DistroNexusTemplateSource {
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
     param([Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$SourceId)
-    $payload = @{ SourceId = $SourceId }
-    if ($WhatIfPreference) { return [PSCustomObject]@{ Operation = 'RemoveTemplateSource'; SourceId = $SourceId; ExplicitConfirmationRequired = $true } }
-    if ($PSCmdlet.ShouldProcess($SourceId, 'Remove template marketplace source')) { Invoke-DistroNexusWorkspaceBridge -Operation marketplaceRemoveSource -Payload $payload }
+    if ($PSCmdlet.ShouldProcess($SourceId, 'Remove template marketplace source')) {
+        Invoke-DistroNexusWorkspaceBridge -Operation 'template.marketplace.remove-source.v1' -Payload @{ SourceId = $SourceId }
+    }
+}
+
+function Get-DistroNexusTemplateMarketplaceReview {
+    [CmdletBinding(SupportsShouldProcess)]
+    param(
+        [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$SourceId,
+        [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$TemplateId,
+        [Parameter(Mandatory)][ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$ManifestDigest
+    )
+    if ($PSCmdlet.ShouldProcess($TemplateId, 'Download, verify, and create a template marketplace review')) {
+        Invoke-DistroNexusWorkspaceBridge -Operation 'template.marketplace.review.v1' -Payload @{ SourceId = $SourceId; TemplateId = $TemplateId; ManifestDigest = $ManifestDigest }
+    }
 }
 
 function Approve-DistroNexusTemplateMarketplaceCandidate {
     [CmdletBinding(SupportsShouldProcess)]
-    param(
-        [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$ReviewToken
-    )
-    $payload = @{ ReviewToken = $ReviewToken }
-    if ($WhatIfPreference) { return [PSCustomObject]@{ Operation = 'ApproveTemplateMarketplaceCandidate'; ReviewToken = '<Core-issued>'; ExplicitReviewRequired = $true } }
-    if ($PSCmdlet.ShouldProcess('Core-issued marketplace review grant', 'Approve reviewed marketplace candidate')) { Invoke-DistroNexusWorkspaceBridge -Operation marketplaceApproveCandidate -Payload $payload }
-}
-
-function Get-DistroNexusTemplateMarketplaceReviewGrant {
-    [CmdletBinding()]
-    [OutputType([PSCustomObject])]
-    param([Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$SourceId, [Parameter(Mandatory)][ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$Sha256)
-    Invoke-DistroNexusWorkspaceBridge -Operation marketplaceCreateReviewGrant -Payload @{ SourceId = $SourceId; Sha256 = $Sha256 }
+    param([Parameter(Mandatory)][ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$ReviewToken)
+    if ($PSCmdlet.ShouldProcess('Core-issued marketplace review grant', 'Approve reviewed marketplace candidate')) {
+        Invoke-DistroNexusWorkspaceBridge -Operation 'template.marketplace.approve.v1' -Payload @{ ReviewToken = $ReviewToken }
+    }
 }
 
 function Save-DistroNexusTemplateMarketplaceArtifact {
     [CmdletBinding(SupportsShouldProcess)]
-    [OutputType([PSCustomObject])]
-    param([Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$SourceId, [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$TemplateId, [Parameter(Mandatory)][ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$ManifestDigest)
-    $payload = @{ SourceId = $SourceId; TemplateId = $TemplateId; ManifestDigest = $ManifestDigest }
-    if ($WhatIfPreference) { return [PSCustomObject]@{ Operation = 'DownloadTemplateArtifact'; SourceId = $SourceId; TemplateId = $TemplateId; ManifestDigest = $ManifestDigest; WritesCache = $true } }
-    if ($PSCmdlet.ShouldProcess($SourceId, 'Download and verify template marketplace artifact')) {
-        Invoke-DistroNexusWorkspaceBridge -Operation marketplaceDownloadArtifact -Payload $payload
+    param(
+        [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$SourceId,
+        [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$TemplateId,
+        [Parameter(Mandatory)][ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$ManifestDigest
+    )
+    if ($PSCmdlet.ShouldProcess($TemplateId, 'Download and verify template marketplace artifact')) {
+        Invoke-DistroNexusWorkspaceBridge -Operation 'template.marketplace.download.v1' -Payload @{ SourceId = $SourceId; TemplateId = $TemplateId; ManifestDigest = $ManifestDigest }
     }
 }
 
-function Get-DistroNexusTemplateMarketplaceArtifactHistory {
+function Get-DistroNexusTemplateMarketplaceHistory {
     [CmdletBinding()]
-    [OutputType([PSCustomObject])]
     param([Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$TemplateId)
-    Invoke-DistroNexusWorkspaceBridge -Operation marketplaceArtifactHistory -Payload @{ TemplateId = $TemplateId }
-}
-
-function Get-DistroNexusTemplateMarketplaceScriptDiff {
-    [CmdletBinding()]
-    [OutputType([PSCustomObject])]
-    param(
-        [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$TemplateId,
-        [Parameter(Mandatory)][ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$Sha256
-    )
-    Invoke-DistroNexusWorkspaceBridge -Operation marketplaceScriptDiff -Payload @{ TemplateId = $TemplateId; Sha256 = $Sha256 }
+    Invoke-DistroNexusWorkspaceBridge -Operation 'template.marketplace.history.v1' -Payload @{ TemplateId = $TemplateId }
 }
 
 function Restore-DistroNexusTemplateMarketplaceArtifact {
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
-    param(
-        [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$TemplateId,
-        [Parameter(Mandatory)][ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$Sha256
-    )
-    $payload = @{ TemplateId = $TemplateId; Sha256 = $Sha256 }
-    if ($WhatIfPreference) { return [PSCustomObject]@{ Operation = 'RestoreTemplateMarketplaceArtifact'; TemplateId = $TemplateId; Sha256 = $Sha256; ExplicitConfirmationRequired = $true } }
-    if ($PSCmdlet.ShouldProcess($TemplateId, "Restore verified marketplace artifact $Sha256")) { Invoke-DistroNexusWorkspaceBridge -Operation marketplaceRollback -Payload $payload }
+    param([Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$TemplateId, [Parameter(Mandatory)][ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$ArtifactSha256)
+    if ($PSCmdlet.ShouldProcess($TemplateId, "Restore verified marketplace artifact $ArtifactSha256")) {
+        Invoke-DistroNexusWorkspaceBridge -Operation 'template.marketplace.rollback.v1' -Payload @{ TemplateId = $TemplateId; ArtifactSha256 = $ArtifactSha256 }
+    }
 }

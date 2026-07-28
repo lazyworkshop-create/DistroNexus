@@ -646,12 +646,51 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.CloseWorkspaceAsync),
                 nameof(IPowerShellModuleClient.GetWorkspaceOperationStatusAsync),
                 nameof(IPowerShellModuleClient.StopWorkspaceOperationAsync),
+                nameof(IPowerShellModuleClient.GetTemplatesAsync),
+                nameof(IPowerShellModuleClient.GetTemplateAsync),
+                nameof(IPowerShellModuleClient.TestTemplateCompatibilityAsync),
+                nameof(IPowerShellModuleClient.PreviewTemplateImportAsync),
+                nameof(IPowerShellModuleClient.ImportTemplateAsync),
+                nameof(IPowerShellModuleClient.PreviewTemplateExportAsync),
+                nameof(IPowerShellModuleClient.ExportTemplateAsync),
+                nameof(IPowerShellModuleClient.PreviewTemplateRemoveAsync),
+                nameof(IPowerShellModuleClient.RemoveTemplateAsync),
+                nameof(IPowerShellModuleClient.GetTemplateSourcesAsync),
+                nameof(IPowerShellModuleClient.GetTemplateMarketplaceEntriesAsync),
+                nameof(IPowerShellModuleClient.GetTemplateMarketplaceStatusAsync),
+                nameof(IPowerShellModuleClient.AddTemplateSourceAsync),
+                nameof(IPowerShellModuleClient.SetTemplateSourceEnabledAsync),
+                nameof(IPowerShellModuleClient.RemoveTemplateSourceAsync),
+                nameof(IPowerShellModuleClient.ReviewTemplateMarketplaceCandidateAsync),
+                nameof(IPowerShellModuleClient.ApproveTemplateMarketplaceCandidateAsync),
+                nameof(IPowerShellModuleClient.DownloadTemplateMarketplaceArtifactAsync),
+                nameof(IPowerShellModuleClient.GetTemplateMarketplaceHistoryAsync),
+                nameof(IPowerShellModuleClient.RollbackTemplateMarketplaceArtifactAsync),
                 nameof(IPowerShellModuleClient.VerifyRecoveryPointAsync)
             }.Order(),
             methods.Select(method => method.Name).Order());
         Assert.DoesNotContain(methods, method => method.Name.Contains("Script", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(methods, method => method.Name.Contains("Command", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(methods, method => method.Name.Equals("ExecuteOperationAsync", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task TemplateClient_UsesOnlyTypedFixedCommandsAndSafeParameters()
+    {
+        const string digest = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusTemplate", It.Is<Dictionary<string, object>>(p => (bool)p["ForceRefresh"] && (string)p["Query"] == "dev" && (string)p["Category"] == "Development"), It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Templates\":[{\"Id\":\"demo\",\"Name\":\"Demo\",\"Description\":\"safe\",\"Category\":\"Dev\",\"Version\":\"1\",\"Author\":\"test\",\"Tags\":[],\"CompatibleDistros\":[],\"EstimatedDurationMinutes\":0,\"EstimatedDiskSpaceMB\":0,\"IsOfficial\":true,\"IsCustom\":false,\"TrustState\":\"BuiltIn\",\"Capabilities\":[]}]}" });
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusTemplateMarketplaceStatus", It.Is<Dictionary<string, object>>(p => (string)p["SourceId"] == "source" && (string)p["TemplateId"] == "demo" && (string)p["ManifestDigest"] == digest), It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"SourceId\":\"source\",\"TemplateId\":\"demo\",\"ManifestDigest\":\"" + digest + "\",\"SignatureStatus\":\"Verified\",\"TrustState\":\"Trusted\",\"HasEffectiveReviewAuthorization\":true,\"CanExecute\":true,\"Reason\":\"Marketplace.Ready\"}" });
+
+        var client = new PowerShellModuleClient(powerShell.Object);
+        var template = Assert.Single(await client.GetTemplatesAsync(forceRefresh: true, query: "dev", category: "Development"));
+        var status = await client.GetTemplateMarketplaceStatusAsync("source", "demo", digest);
+
+        Assert.Equal("demo", template.Id);
+        Assert.True(status.CanExecute);
+        powerShell.VerifyAll();
     }
 
     [Fact]

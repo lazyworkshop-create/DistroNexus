@@ -154,6 +154,25 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string CloseWorkspaceCommand = "Close-DistroNexusWorkspace";
     private const string GetWorkspaceOperationCommand = "Get-DistroNexusWorkspaceOperation";
     private const string StopWorkspaceOperationCommand = "Stop-DistroNexusWorkspaceOperation";
+    private const string GetTemplateCommand = "Get-DistroNexusTemplate";
+    private const string TestTemplateCompatibilityCommand = "Test-DistroNexusTemplateCompatibility";
+    private const string ImportTemplatePreviewCommand = "Get-DistroNexusTemplateImportPreview";
+    private const string ImportTemplateCommand = "Import-DistroNexusTemplate";
+    private const string ExportTemplatePreviewCommand = "Get-DistroNexusTemplateExportPreview";
+    private const string ExportTemplateCommand = "Export-DistroNexusTemplate";
+    private const string RemoveTemplatePreviewCommand = "Get-DistroNexusTemplateRemovePreview";
+    private const string RemoveTemplateCommand = "Remove-DistroNexusTemplate";
+    private const string GetTemplateSourceCommand = "Get-DistroNexusTemplateSource";
+    private const string GetTemplateMarketplaceEntryCommand = "Get-DistroNexusTemplateMarketplaceEntry";
+    private const string GetTemplateMarketplaceStatusCommand = "Get-DistroNexusTemplateMarketplaceStatus";
+    private const string AddTemplateSourceCommand = "Add-DistroNexusTemplateSource";
+    private const string SetTemplateSourceCommand = "Set-DistroNexusTemplateSource";
+    private const string RemoveTemplateSourceCommand = "Remove-DistroNexusTemplateSource";
+    private const string GetTemplateMarketplaceReviewCommand = "Get-DistroNexusTemplateMarketplaceReview";
+    private const string ApproveTemplateMarketplaceCandidateCommand = "Approve-DistroNexusTemplateMarketplaceCandidate";
+    private const string SaveTemplateMarketplaceArtifactCommand = "Save-DistroNexusTemplateMarketplaceArtifact";
+    private const string GetTemplateMarketplaceHistoryCommand = "Get-DistroNexusTemplateMarketplaceHistory";
+    private const string RestoreTemplateMarketplaceArtifactCommand = "Restore-DistroNexusTemplateMarketplaceArtifact";
     private readonly IPowerShellService _powerShellService;
 
     public PowerShellModuleClient(IPowerShellService powerShellService)
@@ -192,6 +211,54 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     public Task<WorkspaceActionResult> CloseWorkspaceAsync(string previewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceActionResult>(CloseWorkspaceCommand, TokenParameters(previewToken), cancellationToken);
     public Task<WorkspaceOperationStatus> GetWorkspaceOperationStatusAsync(string operationId, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceOperationStatus>(GetWorkspaceOperationCommand, new() { ["OperationId"] = operationId }, cancellationToken);
     public async Task StopWorkspaceOperationAsync(string operationId, CancellationToken cancellationToken = default) => await ExecuteJsonAsync<object>(StopWorkspaceOperationCommand, new() { ["OperationId"] = operationId, ["Confirm"] = false }, cancellationToken);
+
+    public async Task<IReadOnlyList<TemplateDisplay>> GetTemplatesAsync(bool forceRefresh = false, string? query = null, string? category = null, CancellationToken cancellationToken = default)
+    {
+        ValidateOptionalTemplateText(query, nameof(query));
+        ValidateOptionalTemplateText(category, nameof(category));
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(GetTemplateCommand, new() { ["ForceRefresh"] = forceRefresh, ["Query"] = query ?? string.Empty, ["Category"] = category ?? string.Empty }, new ModuleCallOptions { ParseAsJson = true }, cancellationToken);
+        ThrowIfFailed(result);
+        return ReadEnvelopeList<TemplateDisplay>(result.Output, "Templates");
+    }
+    public async Task<TemplateDisplay?> GetTemplateAsync(string templateId, CancellationToken cancellationToken = default)
+    {
+        ValidateTemplateIdentifier(templateId, nameof(templateId));
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(GetTemplateCommand, new() { ["Id"] = templateId }, new ModuleCallOptions { ParseAsJson = true }, cancellationToken);
+        ThrowIfFailed(result);
+        return ReadEnvelopeValue<TemplateDisplay>(result.Output, "Template");
+    }
+    public async Task<bool> TestTemplateCompatibilityAsync(string templateId, string distributionName, CancellationToken cancellationToken = default)
+    { ValidateTemplateIdentifier(templateId, nameof(templateId)); ValidateName(distributionName, nameof(distributionName)); var result = await ExecuteJsonAsync<TemplateCompatibilityClientResult>(TestTemplateCompatibilityCommand, new() { ["TemplateId"] = templateId, ["DistributionName"] = distributionName }, cancellationToken); return result.IsCompatible; }
+    public Task<TemplateLocalPreview> PreviewTemplateImportAsync(string content, CancellationToken cancellationToken = default)
+    { ValidateTemplateContent(content); return ExecuteJsonAsync<TemplateLocalPreview>(ImportTemplatePreviewCommand, new() { ["Content"] = content }, cancellationToken); }
+    public Task<TemplateLocalMutationResult> ImportTemplateAsync(string previewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<TemplateLocalMutationResult>(ImportTemplateCommand, TokenParameters(previewToken), cancellationToken);
+    public Task<TemplateLocalPreview> PreviewTemplateExportAsync(string templateId, CancellationToken cancellationToken = default)
+    { ValidateTemplateIdentifier(templateId, nameof(templateId)); return ExecuteJsonAsync<TemplateLocalPreview>(ExportTemplatePreviewCommand, new() { ["TemplateId"] = templateId }, cancellationToken); }
+    public Task<TemplateExportResult> ExportTemplateAsync(string previewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<TemplateExportResult>(ExportTemplateCommand, TokenParameters(previewToken), cancellationToken);
+    public Task<TemplateLocalPreview> PreviewTemplateRemoveAsync(string templateId, CancellationToken cancellationToken = default)
+    { ValidateTemplateIdentifier(templateId, nameof(templateId)); return ExecuteJsonAsync<TemplateLocalPreview>(RemoveTemplatePreviewCommand, new() { ["TemplateId"] = templateId }, cancellationToken); }
+    public async Task<bool> RemoveTemplateAsync(string previewToken, CancellationToken cancellationToken = default) { var result = await ExecuteJsonAsync<TemplateMarketplaceMutationClientResult>(RemoveTemplateCommand, TokenParameters(previewToken), cancellationToken); return result.Changed; }
+    public async Task<IReadOnlyList<TemplateSourceDisplay>> GetTemplateSourcesAsync(CancellationToken cancellationToken = default) => await ExecuteListAsync<TemplateSourceDisplay>(GetTemplateSourceCommand, null, cancellationToken);
+    public async Task<IReadOnlyList<TemplateMarketplaceEntryDisplay>> GetTemplateMarketplaceEntriesAsync(CancellationToken cancellationToken = default) => await ExecuteListAsync<TemplateMarketplaceEntryDisplay>(GetTemplateMarketplaceEntryCommand, null, cancellationToken);
+    public Task<TemplateMarketplaceStatusDisplay> GetTemplateMarketplaceStatusAsync(string sourceId, string templateId, string manifestDigest, CancellationToken cancellationToken = default)
+    { ValidateTemplateIdentifier(sourceId, nameof(sourceId)); ValidateTemplateIdentifier(templateId, nameof(templateId)); ValidateDigest(manifestDigest, nameof(manifestDigest)); return ExecuteJsonAsync<TemplateMarketplaceStatusDisplay>(GetTemplateMarketplaceStatusCommand, new() { ["SourceId"] = sourceId, ["TemplateId"] = templateId, ["ManifestDigest"] = manifestDigest }, cancellationToken); }
+    public Task<TemplateSourceDisplay> AddTemplateSourceAsync(string url, TemplateSourceKind kind, bool acceptNonHttps, CancellationToken cancellationToken = default)
+    { if (!Uri.TryCreate(url, UriKind.Absolute, out _)) throw new ArgumentException("The template source URL is invalid.", nameof(url)); if (!Enum.IsDefined(kind)) throw new ArgumentOutOfRangeException(nameof(kind)); return ExecuteJsonAsync<TemplateSourceDisplay>(AddTemplateSourceCommand, new() { ["Url"] = url, ["Kind"] = kind.ToString(), ["AcceptNonHttps"] = acceptNonHttps }, cancellationToken); }
+    public Task<TemplateSourceDisplay> SetTemplateSourceEnabledAsync(string sourceId, bool enabled, CancellationToken cancellationToken = default)
+    { ValidateTemplateIdentifier(sourceId, nameof(sourceId)); return ExecuteJsonAsync<TemplateSourceDisplay>(SetTemplateSourceCommand, new() { ["SourceId"] = sourceId, ["Enabled"] = enabled }, cancellationToken); }
+    public async Task<bool> RemoveTemplateSourceAsync(string sourceId, CancellationToken cancellationToken = default)
+    { ValidateTemplateIdentifier(sourceId, nameof(sourceId)); return (await ExecuteJsonAsync<TemplateMarketplaceMutationClientResult>(RemoveTemplateSourceCommand, new() { ["SourceId"] = sourceId }, cancellationToken)).Changed; }
+    public Task<TemplateReviewDisplay> ReviewTemplateMarketplaceCandidateAsync(string sourceId, string templateId, string manifestDigest, CancellationToken cancellationToken = default)
+    { ValidateTemplateIdentifier(sourceId, nameof(sourceId)); ValidateTemplateIdentifier(templateId, nameof(templateId)); ValidateDigest(manifestDigest, nameof(manifestDigest)); return ExecuteJsonAsync<TemplateReviewDisplay>(GetTemplateMarketplaceReviewCommand, new() { ["SourceId"] = sourceId, ["TemplateId"] = templateId, ["ManifestDigest"] = manifestDigest }, cancellationToken); }
+    public Task<TemplateArtifactDisplay> ApproveTemplateMarketplaceCandidateAsync(string reviewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<TemplateArtifactDisplay>(ApproveTemplateMarketplaceCandidateCommand, new() { ["ReviewToken"] = ValidateHexToken(reviewToken, nameof(reviewToken)) }, cancellationToken);
+    public Task<TemplateArtifactDisplay> DownloadTemplateMarketplaceArtifactAsync(string sourceId, string templateId, string manifestDigest, CancellationToken cancellationToken = default)
+    { ValidateTemplateIdentifier(sourceId, nameof(sourceId)); ValidateTemplateIdentifier(templateId, nameof(templateId)); ValidateDigest(manifestDigest, nameof(manifestDigest)); return ExecuteJsonAsync<TemplateArtifactDisplay>(SaveTemplateMarketplaceArtifactCommand, new() { ["SourceId"] = sourceId, ["TemplateId"] = templateId, ["ManifestDigest"] = manifestDigest }, cancellationToken); }
+    public async Task<IReadOnlyList<TemplateArtifactHistoryDisplay>> GetTemplateMarketplaceHistoryAsync(string templateId, CancellationToken cancellationToken = default)
+    { ValidateTemplateIdentifier(templateId, nameof(templateId)); return await ExecuteListAsync<TemplateArtifactHistoryDisplay>(GetTemplateMarketplaceHistoryCommand, new() { ["TemplateId"] = templateId }, cancellationToken); }
+    public async Task<bool> RollbackTemplateMarketplaceArtifactAsync(string templateId, string artifactSha256, CancellationToken cancellationToken = default)
+    { ValidateTemplateIdentifier(templateId, nameof(templateId)); ValidateDigest(artifactSha256, nameof(artifactSha256)); return (await ExecuteJsonAsync<TemplateMarketplaceMutationClientResult>(RestoreTemplateMarketplaceArtifactCommand, new() { ["TemplateId"] = templateId, ["ArtifactSha256"] = artifactSha256 }, cancellationToken)).Changed; }
+    private sealed record TemplateCompatibilityClientResult(bool IsCompatible);
+    private sealed record TemplateMarketplaceMutationClientResult(bool Changed);
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<WslInstance>> GetInstancesAsync(CancellationToken cancellationToken = default)
@@ -743,6 +810,32 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
         return JsonSerializer.Deserialize<T>(result.Output, JsonOptions)
             ?? throw new InvalidOperationException("The DistroNexus module returned an invalid result.");
     }
+
+    private async Task<IReadOnlyList<T>> ExecuteListAsync<T>(string command, Dictionary<string, object>? parameters, CancellationToken cancellationToken)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(command, parameters, new ModuleCallOptions { ParseAsJson = true }, cancellationToken);
+        ThrowIfFailed(result);
+        return ReadEnvelopeList<T>(result.Output, null);
+    }
+
+    private static IReadOnlyList<T> ReadEnvelopeList<T>(string? output, string? envelopeName)
+    {
+        if (string.IsNullOrWhiteSpace(output)) return [];
+        using var document = JsonDocument.Parse(output);
+        var root = document.RootElement;
+        if (envelopeName is not null && root.ValueKind == JsonValueKind.Object && root.TryGetProperty(envelopeName, out var envelope)) root = envelope;
+        if (root.ValueKind != JsonValueKind.Array) throw new InvalidOperationException("The DistroNexus module returned an invalid list result.");
+        return JsonSerializer.Deserialize<List<T>>(root.GetRawText(), JsonOptions) ?? [];
+    }
+
+    private static T? ReadEnvelopeValue<T>(string? output, string envelopeName) where T : class
+    {
+        if (string.IsNullOrWhiteSpace(output)) return null;
+        using var document = JsonDocument.Parse(output);
+        var root = document.RootElement;
+        if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty(envelopeName, out var envelope)) root = envelope;
+        return root.ValueKind == JsonValueKind.Null ? null : JsonSerializer.Deserialize<T>(root.GetRawText(), JsonOptions);
+    }
     private const string ExecuteLifecycleCommand = "Invoke-DistroNexusLifecycleOperation";
     private Task<LifecycleOperationPreview> PreviewLifecycleAsync(string command, Dictionary<string, object> parameters, CancellationToken cancellationToken)
     {
@@ -757,6 +850,33 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     {
         if (string.IsNullOrWhiteSpace(previewToken)) throw new ArgumentException("A Core-issued workspace preview token is required.", nameof(previewToken));
         return new() { ["PreviewToken"] = previewToken, ["Confirm"] = false };
+    }
+
+    private static string ValidateHexToken(string value, string parameterName)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length != 64 || value.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("A Core-issued template token is required.", parameterName);
+        return value;
+    }
+
+    private static void ValidateDigest(string value, string parameterName)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length != 64 || value.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("A SHA-256 digest is required.", parameterName);
+    }
+
+    private static void ValidateTemplateIdentifier(string value, string parameterName)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length > 256 || value.IndexOfAny(['\r', '\n', '\0']) >= 0) throw new ArgumentException("The template identifier is invalid.", parameterName);
+    }
+
+    private static void ValidateOptionalTemplateText(string? value, string parameterName)
+    {
+        if (value is not null && (value.Length > 256 || value.IndexOfAny(['\r', '\n', '\0']) >= 0))
+            throw new ArgumentException("The template filter is invalid.", parameterName);
+    }
+
+    private static void ValidateTemplateContent(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content) || System.Text.Encoding.UTF8.GetByteCount(content) > 1024 * 1024) throw new ArgumentException("Template content must be non-empty and at most 1 MiB.", nameof(content));
     }
 
     private static void ValidateName(string value, string parameterName)
