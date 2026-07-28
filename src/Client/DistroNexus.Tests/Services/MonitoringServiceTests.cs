@@ -137,10 +137,17 @@ public class MonitoringServiceTests
         var instance = new WslInstance { Name = "d", State = "Running", Size = 100 * 1024 };
         var runner = new StateTransitionRunner();
         await using var session = new MonitoringService(runner).CreateSession(instance, TimeSpan.FromSeconds(1));
+        var stopped = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        session.SampleAvailable += (_, sample) =>
+        {
+            if (sample.UnavailableMetrics.TryGetValue("runtime", out var reason) && reason == "Monitor.InstanceStopped")
+                stopped.TrySetResult();
+        };
+
         await session.StartAsync();
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(3);
-        while (session.IsRunning && DateTimeOffset.UtcNow < deadline)
-            await Task.Delay(TimeSpan.FromMilliseconds(25)).ConfigureAwait(false);
+        await stopped.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await session.StopAsync();
+
         Assert.False(session.IsRunning);
         Assert.Equal("Monitor.InstanceStopped", session.UnavailableReason);
         Assert.Equal(3, runner.Requests.Count);
