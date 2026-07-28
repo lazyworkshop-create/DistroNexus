@@ -14,7 +14,12 @@ var root = Environment.GetEnvironmentVariable("DISTRONEXUS_WORKSPACE_STORE_ROOT"
 var processes = new ProcessRunner();
 var instances = new BridgeWslManagerService(processes);
 var capabilities = new PlatformCapabilityService(processes);
+var networkStatus = new WindowsNetworkStatusAdapter();
+var portMappings = new BridgeNetworkPortMappingService(processes, networkStatus);
 var distributionConfiguration = new DistributionConfigurationService(processes);
+var networkDiagnostics = new NetworkDiagnosticsService(new WslNetworkDiagnosticsAdapter(processes));
+var networkConfiguration = new NetworkConfigurationService(new WslConfigService(NullLogger<WslConfigService>.Instance, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)), capabilities, networkDiagnostics);
+var firewall = new GuardedFirewallOperationBroker();
 var systemd = new SystemdService(processes, capabilities, distributionConfiguration);
 var containers = ContainerRuntimeBridgeComposition.Create(processes, systemd);
 var wslg = new WslgApplicationService(processes, capabilities, root);
@@ -184,6 +189,20 @@ while ((line = Console.ReadLine()) is not null)
             "package-cache.usage.v1" => await GetPackageCacheUsageAsync(request),
             "package-cache.delete.v1" => await DeletePackageCacheAsync(request),
             "package-cache.clear.v1" => await ClearPackageCacheAsync(request),
+            "network.status.v1" => NetworkStatusV1(request),
+            "network.ip.v1" => await NetworkIpV1Async(request),
+            "network.port-mappings.v1" => await NetworkPortMappingsV1Async(request),
+            "network.probe.v1" => await NetworkProbeV1Async(request),
+            "network.mode.get.v1" => await NetworkModeV1Async(request),
+            "network.mode.preview.v1" => await NetworkModePreviewV1Async(request),
+            "network.mode.set.v1" => await NetworkModeSetV1Async(request),
+            "network.settings.preview.v1" => await NetworkSettingsPreviewV1Async(request),
+            "network.settings.set.v1" => await NetworkSettingsSetV1Async(request),
+            "firewall.list.v1" => await FirewallListV1Async(request),
+            "firewall.preview-create.v1" => await FirewallPreviewCreateV1Async(request),
+            "firewall.create.v1" => await FirewallCreateV1Async(request),
+            "firewall.preview-remove.v1" => await FirewallPreviewRemoveV1Async(request),
+            "firewall.remove.v1" => await FirewallRemoveV1Async(request),
             _ => throw new ArgumentException("Bridge operation is unsupported.")
         };
         response = new(true, value, null, null);
@@ -286,6 +305,23 @@ async Task<CacheUsageInfo> GetPackageCacheUsageAsync(BridgeRequest request)
     RequireNoPayload(request, "Package cache usage does not accept a payload.");
     return await catalog.GetCacheUsageAsync();
 }
+
+FirewallStatus NetworkStatusV1(BridgeRequest request) { ValidateEmptyPayload(request); return networkStatus.GetFirewallStatusAsync().GetAwaiter().GetResult(); }
+async Task<string?> NetworkIpV1Async(BridgeRequest request) { ValidatePayload(request, ["Name"], ["Name"]); return await portMappings.GetInstanceIpAddressAsync(ParseNetworkPayload(request).Name); }
+async Task<IReadOnlyList<PortMapping>> NetworkPortMappingsV1Async(BridgeRequest request) { ValidatePayload(request, ["Name", "Protocol"], ["Name"]); var p = ParseNetworkPayload(request); return await portMappings.GetPortMappingsAsync(p.Name, p.Protocol); }
+async Task<NetworkProbeResult> NetworkProbeV1Async(BridgeRequest request) { ValidatePayload(request, ["Request"], ["Request"]); return await networkDiagnostics.ProbeAsync(ParsePayload<NetworkProbePayload>(request).Request); }
+async Task<NetworkingModeGuidance> NetworkModeV1Async(BridgeRequest request) { ValidatePayload(request, ["Mode"], ["Mode"]); return await networkConfiguration.GetGuidanceAsync(ParsePayload<NetworkModePayload>(request).Mode); }
+async Task<NetworkModePreview> NetworkModePreviewV1Async(BridgeRequest request) { ValidatePayload(request, ["Mode"], ["Mode"]); return await networkConfiguration.PreviewModeAsync(ParsePayload<NetworkModePayload>(request).Mode); }
+async Task<ConfigurationSaveResult> NetworkModeSetV1Async(BridgeRequest request) { ValidatePayload(request, ["Mode"], ["Mode"]); var p = ParsePayload<NetworkModePayload>(request); return await networkConfiguration.ApplyModeAsync(p.Mode, request.Token ?? throw new ArgumentException("Network mode preview token is required.")); }
+async Task<NetworkSettingsPreview> NetworkSettingsPreviewV1Async(BridgeRequest request) { ValidatePayload(request, ["Settings"], ["Settings"]); return await networkConfiguration.PreviewSettingsAsync(ParsePayload<NetworkSettingsPayload>(request).Settings); }
+async Task<ConfigurationSaveResult> NetworkSettingsSetV1Async(BridgeRequest request) { ValidatePayload(request, ["Settings"], ["Settings"]); var p = ParsePayload<NetworkSettingsPayload>(request); return await networkConfiguration.ApplySettingsAsync(p.Settings, request.Token ?? throw new ArgumentException("Network settings preview token is required.")); }
+async Task<IReadOnlyList<FirewallRuleInfo>> FirewallListV1Async(BridgeRequest request) { ValidateEmptyPayload(request); return await firewall.ListOwnedAsync(); }
+async Task<FirewallOperationPreview> FirewallPreviewCreateV1Async(BridgeRequest request) { ValidatePayload(request, ["Request"], ["Request"]); return await firewall.PreviewCreateAsync(ParsePayload<FirewallRequestPayload>(request).Request); }
+async Task<FirewallOperationResult> FirewallCreateV1Async(BridgeRequest request) { ValidatePayload(request, ["PreviewRuleId"], ["PreviewRuleId"]); return await firewall.CreateAsync(ParsePayload<FirewallCreatePayload>(request).PreviewRuleId); }
+async Task<FirewallRemovalPreview> FirewallPreviewRemoveV1Async(BridgeRequest request) { ValidatePayload(request, ["RuleId"], ["RuleId"]); return await firewall.PreviewRemoveAsync(ParsePayload<FirewallRemovePreviewPayload>(request).RuleId); }
+async Task<FirewallOperationResult> FirewallRemoveV1Async(BridgeRequest request) { ValidatePayload(request, ["PreviewToken"], ["PreviewToken"]); return await firewall.RemoveAsync(ParsePayload<FirewallRemovePayload>(request).PreviewToken); }
+T ParsePayload<T>(BridgeRequest request) => JsonSerializer.Deserialize<T>(request.Payload!.Value.GetRawText(), options) ?? throw new ArgumentException("Bridge payload is invalid.");
+NetworkPortMappingPayload ParseNetworkPayload(BridgeRequest request) { var p = ParsePayload<NetworkPortMappingPayload>(request); if (string.IsNullOrWhiteSpace(p.Name)) throw new ArgumentException("Instance name is required."); return p; }
 
 async Task<PackageCacheDeleteResult> DeletePackageCacheAsync(BridgeRequest request)
 {
@@ -596,6 +632,14 @@ public sealed record CatalogSearchPayload(string Query);
 public sealed record CatalogGetPayload(string Id);
 public sealed record CatalogRefreshPayload(string? SourceUrl = null);
 public sealed record PackageCacheDeletePayload(string? CacheEntryId = null, string? DefaultName = null, string? LocalPath = null);
+public sealed record NetworkPortMappingPayload(string Name, string? Protocol = null);
+public sealed record NetworkProbePayload(NetworkProbeRequest Request);
+public sealed record NetworkModePayload(WslNetworkingMode Mode);
+public sealed record NetworkSettingsPayload(NetworkSettings Settings);
+public sealed record FirewallRequestPayload(FirewallRuleRequest Request);
+public sealed record FirewallCreatePayload(string PreviewRuleId);
+public sealed record FirewallRemovePreviewPayload(string RuleId);
+public sealed record FirewallRemovePayload(string PreviewToken);
 public sealed record PodmanUnitPayload(string InstanceName, PodmanUserUnit Unit, SystemdAction Action);
 public sealed record PodmanConnectionPayload(string InstanceName, string Name, string Endpoint);
 public sealed record PodmanStatusPayload(string InstanceName);

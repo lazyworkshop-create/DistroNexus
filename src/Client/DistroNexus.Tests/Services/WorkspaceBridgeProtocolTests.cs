@@ -122,6 +122,23 @@ public sealed class WorkspaceBridgeProtocolTests
     }
 
     [Fact]
+    public async Task NetworkAndFirewallRoutes_RejectUnexpectedPayloadsAndKeepFixedContracts()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        var status = await bridge.SendAsync("network.status.v1");
+        var statusWithPayload = await bridge.SendAsync("network.status.v1", payload: JsonDocument.Parse("{}").RootElement.Clone());
+        var ports = await bridge.SendAsync("network.port-mappings.v1", payload: JsonDocument.Parse("{\"Name\":\"Ubuntu\",\"Script\":\"Get-ChildItem\"}").RootElement.Clone());
+        var firewall = await bridge.SendAsync("firewall.preview-create.v1", payload: JsonDocument.Parse("{\"Request\":{\"Direction\":\"Inbound\",\"Protocol\":\"Tcp\",\"Port\":443,\"Profiles\":[\"Private\"]},\"Grant\":\"forged\"}").RootElement.Clone());
+        var listWithPayload = await bridge.SendAsync("firewall.list.v1", payload: JsonDocument.Parse("{}").RootElement.Clone());
+
+        Assert.True(status.TryGetProperty("Succeeded", out _));
+        Assert.False(statusWithPayload.GetProperty("Succeeded").GetBoolean());
+        Assert.False(ports.GetProperty("Succeeded").GetBoolean());
+        Assert.False(firewall.GetProperty("Succeeded").GetBoolean());
+        Assert.False(listWithPayload.GetProperty("Succeeded").GetBoolean());
+    }
+
+    [Fact]
     public async Task CatalogSource_RoutesCoverEveryManagerOperationWithTypedPayloads()
     {
         await using var bridge = await BridgeProcess.StartAsync();

@@ -900,7 +900,7 @@ Desktop migration and real host UAT.
 
 ### Status
 
-Planned
+Committed
 
 ### Objective
 

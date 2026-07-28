@@ -335,6 +335,13 @@ public sealed class GuardedFirewallOperationBroker : IFirewallOperationBroker
         if (!_previews.Remove(preview.RuleId, out var expected) || expected != preview) return Task.FromResult(new FirewallOperationResult(false, "PreviewRequired", "DN-8003: Generate and explicitly confirm a current firewall preview before execution."));
         return Task.FromResult(new FirewallOperationResult(false, "ElevatedHelperUnavailable", "DN-8003: Firewall rules require the signed DistroNexus elevated helper and explicit confirmation."));
     }
+    /// <summary>Consumes a Core-issued create preview by its deterministic identity.</summary>
+    public Task<FirewallOperationResult> CreateAsync(string previewRuleId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(previewRuleId) || !_previews.TryGetValue(previewRuleId, out var preview))
+            return Task.FromResult(new FirewallOperationResult(false, "PreviewRequired", "DN-8003: Generate and explicitly confirm a current firewall preview before execution."));
+        return CreateAsync(preview, cancellationToken);
+    }
     public Task<FirewallRemovalPreview> PreviewRemoveAsync(string ruleId, CancellationToken cancellationToken = default)
     {
         if (!_ownedRules.TryGetValue(ruleId, out var rule)) throw new InvalidOperationException("DN-8003: Only DistroNexus-owned firewall rules may be removed.");
@@ -346,5 +353,12 @@ public sealed class GuardedFirewallOperationBroker : IFirewallOperationBroker
     {
         if (!_removePreviews.Remove(preview.Token, out var expected) || expected != preview || !_ownedRules.ContainsKey(preview.RuleId)) return Task.FromResult(new FirewallOperationResult(false, "PreviewRequired", "DN-8003: Generate and explicitly confirm a current firewall removal preview before execution."));
         return Task.FromResult(new FirewallOperationResult(false, "ElevatedHelperUnavailable", "DN-8003: Firewall rule removal requires the signed DistroNexus elevated helper and explicit confirmation."));
+    }
+    /// <summary>Consumes a Core-issued removal preview by its one-time token.</summary>
+    public Task<FirewallOperationResult> RemoveAsync(string previewToken, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(previewToken) || !_removePreviews.TryGetValue(previewToken, out var preview))
+            return Task.FromResult(new FirewallOperationResult(false, "PreviewRequired", "DN-8003: Generate and explicitly confirm a current firewall removal preview before execution."));
+        return RemoveAsync(preview, cancellationToken);
     }
 }
