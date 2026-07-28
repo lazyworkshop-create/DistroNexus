@@ -30,6 +30,10 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string ResetCatalogSourcesCommand = "Reset-DistroNexusCatalogSource";
     private const string GetPackagesCommand = "Get-DistroNexusPackage";
     private const string RefreshCatalogCommand = "Update-DistroNexusCatalog";
+    private const string GetPackageCacheLocationCommand = "Get-DistroNexusPackageCacheLocation";
+    private const string GetPackageCacheUsageCommand = "Get-DistroNexusPackageCacheUsage";
+    private const string RemovePackageCacheCommand = "Remove-DistroNexusPackage";
+    private const string ClearPackageCacheCommand = "Clear-DistroNexusPackageCache";
     private readonly IPowerShellService _powerShellService;
 
     public PowerShellModuleClient(IPowerShellService powerShellService)
@@ -271,6 +275,34 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
         ThrowIfFailed(result);
         return JsonSerializer.Deserialize<DistroNexusCatalogRefreshResult>(result.Output, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
             ?? throw new InvalidOperationException("The DistroNexus module returned an invalid catalog refresh result.");
+    }
+
+    public async Task<PackageCacheLocationResult> GetPackageCacheLocationAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(GetPackageCacheLocationCommand, options: new ModuleCallOptions { ParseAsJson = true }, cancellationToken: cancellationToken);
+        ThrowIfFailed(result);
+        return JsonSerializer.Deserialize<PackageCacheLocationResult>(result.Output, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? throw new InvalidOperationException("The module returned an invalid package cache location.");
+    }
+
+    public async Task<CacheUsageInfo> GetPackageCacheUsageAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(GetPackageCacheUsageCommand, options: new ModuleCallOptions { ParseAsJson = true }, cancellationToken: cancellationToken);
+        ThrowIfFailed(result);
+        return JsonSerializer.Deserialize<CacheUsageInfo>(result.Output, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? throw new InvalidOperationException("The module returned an invalid package cache usage result.");
+    }
+
+    public async Task<PackageCacheDeleteResult> DeletePackageCacheEntryAsync(string cacheEntryId, CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(RemovePackageCacheCommand, new Dictionary<string, object> { ["CacheEntryId"] = cacheEntryId }, new ModuleCallOptions { ParseAsJson = true }, cancellationToken);
+        ThrowIfFailed(result);
+        return JsonSerializer.Deserialize<PackageCacheDeleteResult>(result.Output, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? throw new InvalidOperationException("The module returned an invalid package cache delete result.");
+    }
+
+    public async Task<PackageCacheClearResult> ClearPackageCacheAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(ClearPackageCacheCommand, options: new ModuleCallOptions { ParseAsJson = true }, cancellationToken: cancellationToken);
+        ThrowIfFailed(result);
+        return JsonSerializer.Deserialize<PackageCacheClearResult>(result.Output, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? throw new InvalidOperationException("The module returned an invalid package cache clear result.");
     }
 
     private async Task<IReadOnlyList<DistroPackage>> ExecutePackagesAsync(Dictionary<string, object>? parameters, CancellationToken cancellationToken)

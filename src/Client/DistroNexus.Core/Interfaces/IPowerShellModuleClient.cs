@@ -83,6 +83,11 @@ public interface IPowerShellModuleClient
 
     /// <summary>Refreshes the catalog through the module contract.</summary>
     Task<DistroNexusCatalogRefreshResult> RefreshCatalogAsync(string? sourceUrl = null, CancellationToken cancellationToken = default);
+
+    Task<PackageCacheLocationResult> GetPackageCacheLocationAsync(CancellationToken cancellationToken = default);
+    Task<CacheUsageInfo> GetPackageCacheUsageAsync(CancellationToken cancellationToken = default);
+    Task<PackageCacheDeleteResult> DeletePackageCacheEntryAsync(string cacheEntryId, CancellationToken cancellationToken = default);
+    Task<PackageCacheClearResult> ClearPackageCacheAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>

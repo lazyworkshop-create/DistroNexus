@@ -157,11 +157,16 @@ while ((line = Console.ReadLine()) is not null)
             "catalog.search.v1" => await SearchCatalogAsync(request),
             "catalog.get.v1" => await GetCatalogAsync(request),
             "catalog.refresh.v1" => await RefreshCatalogAsync(request),
+            "package-cache.location.v1" => GetPackageCacheLocation(request),
+            "package-cache.usage.v1" => await GetPackageCacheUsageAsync(request),
+            "package-cache.delete.v1" => await DeletePackageCacheAsync(request),
+            "package-cache.clear.v1" => await ClearPackageCacheAsync(request),
             _ => throw new ArgumentException("Bridge operation is unsupported.")
         };
         response = new(true, value, null, null);
     }
     catch (DistroNexus.Core.Exceptions.WslOperationFailedException ex) { response = new(false, null, ex.Code.ToString(), ex.Message); }
+    catch (InvalidOperationException ex) when (string.Equals(ex.Message, "PackageCache.EntryInvalid", StringComparison.Ordinal)) { response = new(false, null, "PackageCache.EntryInvalid", "Package cache entry is invalid."); }
     catch (Exception ex) { response = new(false, null, ex is InvalidOperationException ? "Workspace.ConflictOrState" : "Workspace.Bridge.Invalid", ex.Message); }
     WriteFrame(response);
 }
@@ -233,6 +238,33 @@ async Task<object> RefreshCatalogAsync(BridgeRequest request)
     if (payload?.SourceUrl is { } sourceUrl && !IsValidRefreshUrl(sourceUrl))
         throw new ArgumentException("Catalog source URL is invalid.");
     return await catalog.RefreshCatalogWithResultAsync(payload?.SourceUrl);
+}
+
+PackageCacheLocationResult GetPackageCacheLocation(BridgeRequest request)
+{
+    RequireNoPayload(request, "Package cache location does not accept a payload.");
+    return catalog.GetPackageCacheLocation();
+}
+
+async Task<CacheUsageInfo> GetPackageCacheUsageAsync(BridgeRequest request)
+{
+    RequireNoPayload(request, "Package cache usage does not accept a payload.");
+    return await catalog.GetCacheUsageAsync();
+}
+
+async Task<PackageCacheDeleteResult> DeletePackageCacheAsync(BridgeRequest request)
+{
+    var payload = DeserializeCatalogSourcePayload<PackageCacheDeletePayload>(request, "Package cache delete payload is required.");
+    var supplied = new[] { payload.CacheEntryId, payload.DefaultName, payload.LocalPath }.Count(value => !string.IsNullOrWhiteSpace(value));
+    if (supplied != 1 || (payload.CacheEntryId?.Length ?? 0) > 4096 || (payload.DefaultName?.Length ?? 0) > 256 || (payload.LocalPath?.Length ?? 0) > 4096)
+        throw new ArgumentException("Package cache entry identifier is invalid.");
+    return await catalog.DeletePackageCacheAsync(new PackageCacheDeleteRequest(payload.CacheEntryId, payload.DefaultName, payload.LocalPath));
+}
+
+async Task<PackageCacheClearResult> ClearPackageCacheAsync(BridgeRequest request)
+{
+    RequireNoPayload(request, "Package cache clear does not accept a payload.");
+    return await catalog.ClearPackageCacheAsync();
 }
 
 T? DeserializeOptionalCatalogPayload<T>(BridgeRequest request) where T : class
@@ -472,6 +504,7 @@ public sealed record CatalogListPayload(string? Family = null, bool ForceReload 
 public sealed record CatalogSearchPayload(string Query);
 public sealed record CatalogGetPayload(string Id);
 public sealed record CatalogRefreshPayload(string? SourceUrl = null);
+public sealed record PackageCacheDeletePayload(string? CacheEntryId = null, string? DefaultName = null, string? LocalPath = null);
 public sealed record PodmanUnitPayload(string InstanceName, PodmanUserUnit Unit, SystemdAction Action);
 public sealed record PodmanConnectionPayload(string InstanceName, string Name, string Endpoint);
 public sealed record PodmanStatusPayload(string InstanceName);

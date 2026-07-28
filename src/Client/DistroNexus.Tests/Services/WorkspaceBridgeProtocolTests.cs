@@ -319,6 +319,39 @@ public sealed class WorkspaceBridgeProtocolTests
         }
     }
 
+    [Fact]
+    public async Task PackageCacheRoutes_RejectMalformedDeletePayloadsBeforeMutation()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        var location = await bridge.SendAsync("package-cache.location.v1");
+        var usage = await bridge.SendAsync("package-cache.usage.v1");
+        Assert.True(location.GetProperty("Succeeded").GetBoolean());
+        Assert.True(location.GetProperty("Value").TryGetProperty("CachePath", out _));
+        Assert.True(usage.GetProperty("Succeeded").GetBoolean());
+        foreach (var invalid in new[]
+        {
+            await bridge.SendAsync("package-cache.delete.v1"),
+            await bridge.SendAsync("package-cache.delete.v1", payload: JsonDocument.Parse("{}").RootElement.Clone()),
+            await bridge.SendAsync("package-cache.delete.v1", payload: JsonDocument.Parse("{\"CacheEntryId\":\"a\",\"DefaultName\":\"b\"}").RootElement.Clone()),
+            await bridge.SendAsync("package-cache.delete.v1", payload: JsonDocument.Parse("{\"CacheEntryId\":\"a\",\"Script\":\"x\"}").RootElement.Clone()),
+            await bridge.SendAsync("package-cache.clear.v1", payload: JsonDocument.Parse("{}").RootElement.Clone())
+        })
+        {
+            Assert.False(invalid.GetProperty("Succeeded").GetBoolean());
+            Assert.Equal("Workspace.Bridge.Invalid", invalid.GetProperty("ErrorCode").GetString());
+        }
+    }
+
+    [Fact]
+    public async Task PackageCacheDelete_MapsForgedAuthorityToStableSanitizedError()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        var response = await bridge.SendAsync("package-cache.delete.v1", payload: JsonDocument.Parse("{\"CacheEntryId\":\"forged\"}").RootElement.Clone());
+        Assert.False(response.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("PackageCache.EntryInvalid", response.GetProperty("ErrorCode").GetString());
+        Assert.Equal("Package cache entry is invalid.", response.GetProperty("ErrorMessage").GetString());
+    }
+
     private sealed class BridgeProcess : IAsyncDisposable
     {
         private readonly Process process;

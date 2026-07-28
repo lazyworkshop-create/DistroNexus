@@ -722,7 +722,7 @@ Package-cache operations, package download task persistence/progress/retry, pack
 
 ### Status
 
-Planned
+Committed
 
 ### Objective
 

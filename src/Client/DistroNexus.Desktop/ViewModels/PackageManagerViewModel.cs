@@ -612,7 +612,7 @@ public partial class PackageManagerViewModel : ObservableObject
         {
             _logger.LogInformation("Deleting cached package {PackageName}", package.Name);
             
-            await _catalogService.DeleteCachedPackageAsync(package.Id);
+            await DeletePackageCacheEntryAsync(package);
 
             // Refresh all package cache states so same-file merged variants stay consistent.
             await RefreshCatalogCacheStatusAsync();
@@ -681,6 +681,17 @@ public partial class PackageManagerViewModel : ObservableObject
         return "An unexpected error occurred while deleting the package.";
     }
 
+    private async Task DeletePackageCacheEntryAsync(DistroPackage package)
+    {
+        var usage = await _moduleClient.GetPackageCacheUsageAsync();
+        var entry = usage.CachedPackages.SingleOrDefault(item =>
+            string.Equals(item.PackageId, package.Id, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(item.Name, package.Name, StringComparison.OrdinalIgnoreCase));
+        if (entry is null || string.IsNullOrWhiteSpace(entry.CacheEntryId))
+            throw new InvalidOperationException("PackageCache.EntryInvalid");
+        await _moduleClient.DeletePackageCacheEntryAsync(entry.CacheEntryId);
+    }
+
     /// <summary>
     /// Re-downloads a package, replacing any existing cached version.
     /// </summary>
@@ -697,7 +708,7 @@ public partial class PackageManagerViewModel : ObservableObject
             // Delete existing cache first if present
             if (package.IsCached)
             {
-                await _catalogService.DeleteCachedPackageAsync(package.Id);
+                await DeletePackageCacheEntryAsync(package);
                 package.IsCached = false;
             }
 

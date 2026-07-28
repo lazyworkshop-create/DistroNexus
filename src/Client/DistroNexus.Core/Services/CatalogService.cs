@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Security.Cryptography;
+using System.Text;
 using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
@@ -17,13 +19,23 @@ public class CatalogService : ICatalogService
     private List<DistroPackage>? _cachedCatalog;
     private readonly string _catalogCachePath;
     private readonly string _localCatalogPath;
+    private readonly string? _tokenKeyRoot;
+    private readonly TimeProvider _timeProvider;
+    private readonly Func<string, FileAttributes> _getAttributes;
+    private readonly Action<string> _deleteFile;
+    private readonly Action _beforeTokenKeyPublish;
 
     public CatalogService(
         ILogger<CatalogService> logger, 
         ISettingsService settingsService,
         HttpClient httpClient,
         string? catalogCachePath = null,
-        string? localCatalogPath = null)
+        string? localCatalogPath = null,
+        string? tokenKeyRoot = null,
+        TimeProvider? timeProvider = null,
+        Func<string, FileAttributes>? getAttributes = null,
+        Action<string>? deleteFile = null,
+        Action? beforeTokenKeyPublish = null)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
@@ -38,6 +50,11 @@ public class CatalogService : ICatalogService
         // Local fallback path - try multiple locations
         var baseDir = AppDomain.CurrentDomain.BaseDirectory;
         _localCatalogPath = localCatalogPath ?? FindLocalCatalogPath(baseDir);
+        _tokenKeyRoot = tokenKeyRoot;
+        _timeProvider = timeProvider ?? TimeProvider.System;
+        _getAttributes = getAttributes ?? File.GetAttributes;
+        _deleteFile = deleteFile ?? File.Delete;
+        _beforeTokenKeyPublish = beforeTokenKeyPublish ?? (() => { });
         
         _logger.LogInformation("CatalogService initialized. Local catalog path: {LocalPath}, Exists: {Exists}", 
             _localCatalogPath, File.Exists(_localCatalogPath));
@@ -311,17 +328,22 @@ public class CatalogService : ICatalogService
                 return result;
             }
 
-            var files = Directory.GetFiles(result.CachePath, "*.*", SearchOption.AllDirectories);
-
-            foreach (var file in files)
+            foreach (var file in EnumerateContainedCacheFiles(result.CachePath, cancellationToken))
             {
-                cancellationToken.ThrowIfCancellationRequested();
-
                 var fileInfo = new FileInfo(file);
                 result.TotalSizeBytes += fileInfo.Length;
+                result.PackageCount++;
+
+                // Totals intentionally cover every eligible file; only display entries are bounded.
+                if (result.CachedPackages.Count >= 1000)
+                {
+                    result.HasMoreEntries = true;
+                    continue;
+                }
 
                 var cachedPackage = new CachedPackageInfo
                 {
+                    CacheEntryId = CreateCacheEntryId(result.CachePath, fileInfo),
                     FilePath = file,
                     FileName = fileInfo.Name,
                     SizeBytes = fileInfo.Length,
@@ -333,8 +355,6 @@ public class CatalogService : ICatalogService
 
                 result.CachedPackages.Add(cachedPackage);
             }
-
-            result.PackageCount = result.CachedPackages.Count;
 
             _logger.LogInformation("Cache usage: {Count} files, {Size} bytes", 
                 result.PackageCount, result.TotalSizeBytes);
@@ -351,54 +371,47 @@ public class CatalogService : ICatalogService
     /// <inheritdoc/>
     public async Task<int> ClearAllCacheAsync(CancellationToken cancellationToken = default)
     {
-        var deletedCount = 0;
-        var cachePath = GetPackageCachePath();
+        return (await ClearPackageCacheAsync(cancellationToken)).DeletedCount;
+    }
 
-        try
+    public PackageCacheLocationResult GetPackageCacheLocation() => new(GetPackageCachePath());
+
+    /// <inheritdoc />
+    public Task<PackageCacheDeleteResult> DeletePackageCacheEntryAsync(string cacheEntryId, CancellationToken cancellationToken = default)
+    {
+        return DeletePackageCacheAsync(new PackageCacheDeleteRequest(CacheEntryId: cacheEntryId), cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<PackageCacheDeleteResult> DeletePackageCacheAsync(PackageCacheDeleteRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
+        var root = GetPackageCachePath();
+        var supplied = new[] { request.CacheEntryId, request.DefaultName, request.LocalPath }.Count(value => !string.IsNullOrWhiteSpace(value));
+        if (supplied != 1) throw new InvalidOperationException("PackageCache.EntryInvalid");
+        var cacheEntryId = request.CacheEntryId ?? ResolveCompatibilitySelector(root, request);
+        var file = VerifyCacheEntryId(root, cacheEntryId);
+        cancellationToken.ThrowIfCancellationRequested();
+        _deleteFile(file.FullName);
+        return Task.FromResult(new PackageCacheDeleteResult(true, "PackageCache.Deleted"));
+    }
+
+    /// <inheritdoc />
+    public Task<PackageCacheClearResult> ClearPackageCacheAsync(CancellationToken cancellationToken = default)
+    {
+        var deleted = 0;
+        var failed = 0;
+        var root = GetPackageCachePath();
+        foreach (var file in EnumerateContainedCacheFiles(root, cancellationToken))
         {
-            _logger.LogInformation("Clearing all cache from {CachePath}", cachePath);
-
-            if (!Directory.Exists(cachePath))
-            {
-                return 0;
-            }
-
-            var files = Directory.GetFiles(cachePath, "*.*", SearchOption.AllDirectories);
-
-            foreach (var file in files)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                try
-                {
-                    File.Delete(file);
-                    deletedCount++;
-                    _logger.LogDebug("Deleted cached file: {FilePath}", file);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to delete cached file: {FilePath}", file);
-                }
-            }
-
-            // Update cached catalog to mark all as not cached
-            if (_cachedCatalog != null)
-            {
-                foreach (var package in _cachedCatalog)
-                {
-                    package.IsCached = false;
-                }
-            }
-
-            _logger.LogInformation("Cleared {Count} files from cache", deletedCount);
-
-            return await Task.FromResult(deletedCount);
+            try { _deleteFile(file); deleted++; }
+            catch (IOException) { failed++; }
+            catch (UnauthorizedAccessException) { failed++; }
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to clear cache");
-            throw;
-        }
+        if (_cachedCatalog is not null)
+            foreach (var package in _cachedCatalog) package.IsCached = false;
+        return Task.FromResult(new PackageCacheClearResult(deleted, failed, failed == 0 ? "PackageCache.Cleared" : "PackageCache.Partial"));
     }
 
     /// <summary>
@@ -551,6 +564,105 @@ public class CatalogService : ICatalogService
         return string.IsNullOrWhiteSpace(configured)
             ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DistroNexus", "packages")
             : configured;
+    }
+
+    private IEnumerable<string> EnumerateContainedCacheFiles(string configuredRoot, CancellationToken cancellationToken)
+    {
+        var root = Path.GetFullPath(configuredRoot);
+        if (!Directory.Exists(root) || IsReparsePoint(root)) yield break;
+        var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.ReparsePoint };
+        foreach (var file in Directory.EnumerateFiles(root, "*", options))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (IsChildPath(root, Path.GetFullPath(file)) && !IsReparsePoint(file)) yield return file;
+        }
+    }
+
+    private string CreateCacheEntryId(string configuredRoot, FileInfo file)
+    {
+        var root = Path.GetFullPath(configuredRoot);
+        var relative = Path.GetRelativePath(root, file.FullName).Replace('\\', '/');
+        var expiry = _timeProvider.GetUtcNow().AddMinutes(15).ToUnixTimeSeconds();
+        var body = string.Join("|", Convert.ToBase64String(Encoding.UTF8.GetBytes(relative)), file.Length, file.LastWriteTimeUtc.Ticks, expiry, RootFingerprint(root));
+        using var hmac = new HMACSHA256(GetCacheTokenKey());
+        return Convert.ToBase64String(Encoding.UTF8.GetBytes(body)) + "." + Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(body)));
+    }
+
+    private FileInfo VerifyCacheEntryId(string configuredRoot, string token)
+    {
+        try
+        {
+            var parts = token.Split('.', 2);
+            if (parts.Length != 2) throw new InvalidDataException();
+            var bodyBytes = Convert.FromBase64String(parts[0]);
+            var signature = Convert.FromBase64String(parts[1]);
+            using var hmac = new HMACSHA256(GetCacheTokenKey());
+            if (!CryptographicOperations.FixedTimeEquals(signature, hmac.ComputeHash(bodyBytes))) throw new InvalidDataException();
+            var fields = Encoding.UTF8.GetString(bodyBytes).Split('|');
+            if (fields.Length != 5 || !long.TryParse(fields[1], out var length) || !long.TryParse(fields[2], out var writeTicks) || !long.TryParse(fields[3], out var expiry) || expiry < _timeProvider.GetUtcNow().ToUnixTimeSeconds()) throw new InvalidDataException();
+            var root = Path.GetFullPath(configuredRoot);
+            if (!CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(fields[4]), Encoding.UTF8.GetBytes(RootFingerprint(root)))) throw new InvalidDataException();
+            var relative = Encoding.UTF8.GetString(Convert.FromBase64String(fields[0]));
+            if (Path.IsPathRooted(relative) || relative.Contains("..", StringComparison.Ordinal)) throw new InvalidDataException();
+            var path = Path.GetFullPath(Path.Combine(root, relative));
+            if (!IsChildPath(root, path) || IsReparsePoint(root) || IsReparsePoint(path)) throw new InvalidDataException();
+            var file = new FileInfo(path);
+            if (!file.Exists || file.Length != length || file.LastWriteTimeUtc.Ticks != writeTicks) throw new InvalidDataException();
+            return file;
+        }
+        catch (Exception ex) when (ex is FormatException or InvalidDataException or ArgumentException or UnauthorizedAccessException)
+        {
+            throw new InvalidOperationException("PackageCache.EntryInvalid");
+        }
+    }
+
+    private byte[] GetCacheTokenKey()
+    {
+        var directory = _tokenKeyRoot ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DistroNexus");
+        Directory.CreateDirectory(directory);
+        var path = Path.Combine(directory, "package-cache-token.key");
+        if (File.Exists(path)) return ProtectedData.Unprotect(File.ReadAllBytes(path), null, DataProtectionScope.CurrentUser);
+        var key = RandomNumberGenerator.GetBytes(32);
+        var protectedKey = ProtectedData.Protect(key, null, DataProtectionScope.CurrentUser);
+        var temporary = path + "." + Guid.NewGuid().ToString("N");
+        File.WriteAllBytes(temporary, protectedKey);
+        // Test-only synchronization seam: production is a no-op. It deliberately sits after
+        // absence observation and before atomic publish so collision recovery is testable.
+        _beforeTokenKeyPublish();
+        try
+        {
+            File.Move(temporary, path, false);
+            return key;
+        }
+        catch (IOException) when (File.Exists(path))
+        {
+            // Another bridge process won first creation; discard our protected candidate and
+            // load the established current-user key so tokens remain process-independent.
+            File.Delete(temporary);
+            return ProtectedData.Unprotect(File.ReadAllBytes(path), null, DataProtectionScope.CurrentUser);
+        }
+    }
+
+    private bool IsReparsePoint(string path) => (_getAttributes(path) & FileAttributes.ReparsePoint) != 0;
+    private static string RootFingerprint(string root) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar).ToUpperInvariant())));
+
+    private string ResolveCompatibilitySelector(string root, PackageCacheDeleteRequest request)
+    {
+        IEnumerable<string> candidates = EnumerateContainedCacheFiles(root, CancellationToken.None);
+        if (!string.IsNullOrWhiteSpace(request.LocalPath))
+        {
+            var candidate = Path.GetFullPath(request.LocalPath);
+            if (!IsChildPath(Path.GetFullPath(root), candidate)) throw new InvalidOperationException("PackageCache.EntryInvalid");
+            candidates = candidates.Where(path => string.Equals(Path.GetFullPath(path), candidate, StringComparison.OrdinalIgnoreCase));
+        }
+        else
+        {
+            var name = request.DefaultName!;
+            candidates = candidates.Where(path => string.Equals(Path.GetFileNameWithoutExtension(path), name, StringComparison.OrdinalIgnoreCase));
+        }
+        var selected = candidates.Take(2).ToList();
+        if (selected.Count != 1) throw new InvalidOperationException("PackageCache.EntryInvalid");
+        return CreateCacheEntryId(root, new FileInfo(selected[0]));
     }
 
     private static bool IsChildPath(string root, string candidate)

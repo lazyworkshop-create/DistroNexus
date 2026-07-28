@@ -434,10 +434,14 @@ public sealed class PowerShellModuleClientTests
             [
                 nameof(IPowerShellModuleClient.AddCatalogSourceAsync),
                 nameof(IPowerShellModuleClient.AddInstanceTagAsync),
+                nameof(IPowerShellModuleClient.ClearPackageCacheAsync),
+                nameof(IPowerShellModuleClient.DeletePackageCacheEntryAsync),
                 nameof(IPowerShellModuleClient.GetCatalogSourcesAsync),
                 nameof(IPowerShellModuleClient.GetInstancesAsync),
                 nameof(IPowerShellModuleClient.GetInstanceTagsAsync),
                 nameof(IPowerShellModuleClient.GetPackageAsync),
+                nameof(IPowerShellModuleClient.GetPackageCacheLocationAsync),
+                nameof(IPowerShellModuleClient.GetPackageCacheUsageAsync),
                 nameof(IPowerShellModuleClient.GetPackagesAsync),
                 nameof(IPowerShellModuleClient.GetSettingsAsync),
                 nameof(IPowerShellModuleClient.RefreshCatalogAsync),
@@ -460,6 +464,27 @@ public sealed class PowerShellModuleClientTests
         Assert.DoesNotContain(methods, method => method.Name.Contains("Script", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(methods, method => method.Name.Contains("Command", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(methods, method => method.Name.Contains("Operation", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task PackageCacheOperations_UseOnlyFixedCmdletsAndTypedResults()
+    {
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusPackageCacheLocation", null, It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"CachePath\":\"C:\\\\cache\"}" });
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusPackageCacheUsage", null, It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"CachePath\":\"C:\\\\cache\",\"PackageCount\":1,\"CachedPackages\":[]}" });
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Remove-DistroNexusPackage", It.Is<Dictionary<string, object>>(p => (string)p["CacheEntryId"] == "token"), It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Deleted\":true,\"DiagnosticCode\":\"PackageCache.Deleted\"}" });
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Clear-DistroNexusPackageCache", null, It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"DeletedCount\":1,\"FailedCount\":0,\"DiagnosticCode\":\"PackageCache.Cleared\"}" });
+        var client = new PowerShellModuleClient(powerShell.Object);
+
+        Assert.Equal("C:\\cache", (await client.GetPackageCacheLocationAsync()).CachePath);
+        Assert.Equal(1, (await client.GetPackageCacheUsageAsync()).PackageCount);
+        Assert.True((await client.DeletePackageCacheEntryAsync("token")).Deleted);
+        Assert.Equal(1, (await client.ClearPackageCacheAsync()).DeletedCount);
+        powerShell.VerifyAll();
     }
 
     private static Mock<IPowerShellService> CreateServiceReturning(string output)

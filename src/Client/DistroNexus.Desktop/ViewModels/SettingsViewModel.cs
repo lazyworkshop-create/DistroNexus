@@ -20,7 +20,6 @@ namespace DistroNexus.Desktop.ViewModels;
 public partial class SettingsViewModel : ObservableObject
 {
     private readonly IPowerShellModuleClient _moduleClient;
-    private readonly ICatalogService _catalogService;
     private readonly ITerminalService _terminalService;
     private readonly IStoreComplianceModeService _storeComplianceModeService;
     private readonly ILogger<SettingsViewModel> _logger;
@@ -136,7 +135,7 @@ public partial class SettingsViewModel : ObservableObject
         IPlatformCapabilityService capabilityService)
     {
         _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
-        _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
+        ArgumentNullException.ThrowIfNull(catalogService); // retained constructor compatibility; cache work uses the typed module client.
         _terminalService = terminalService ?? throw new ArgumentNullException(nameof(terminalService));
         _storeComplianceModeService = storeComplianceModeService ?? throw new ArgumentNullException(nameof(storeComplianceModeService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -452,7 +451,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             _logger.LogInformation("Refreshing cache info");
 
-            var cacheInfo = await _catalogService.GetCacheUsageAsync();
+            var cacheInfo = await _moduleClient.GetPackageCacheUsageAsync();
 
             CachePath = cacheInfo.CachePath;
             CachedPackageCount = cacheInfo.PackageCount;
@@ -491,7 +490,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             _logger.LogInformation("Clearing cache");
 
-            var deletedCount = await _catalogService.ClearAllCacheAsync();
+            var deletedCount = (await _moduleClient.ClearPackageCacheAsync()).DeletedCount;
 
             await RefreshCacheInfoAsync();
 
@@ -527,8 +526,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             _logger.LogInformation("Deleting cached package: {PackageId}", package.PackageId);
 
-            // Use catalog service to delete the package
-            await _catalogService.DeleteCachedPackageAsync(package.PackageId);
+            await _moduleClient.DeletePackageCacheEntryAsync(package.CacheEntryId);
 
             await RefreshCacheInfoAsync();
 
@@ -549,7 +547,7 @@ public partial class SettingsViewModel : ObservableObject
     {
         try
         {
-            var cachePath = _catalogService.GetPackageCachePath();
+            var cachePath = (await _moduleClient.GetPackageCacheLocationAsync()).CachePath;
 
             if (!string.IsNullOrEmpty(cachePath))
             {
