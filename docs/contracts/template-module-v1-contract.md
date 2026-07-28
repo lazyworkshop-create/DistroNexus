@@ -12,6 +12,7 @@
 | --- | --- | --- | --- | --- |
 | `Get-DistroNexusTemplate` | `template.catalog.list.v1` | `TemplateCatalogListRequest(bool ForceRefresh, string? Query, string? Category)` | `TemplateCatalogListResult(IReadOnlyList<TemplateDisplay> Templates)` | No |
 | `Get-DistroNexusTemplate` with `-Id` | `template.catalog.get.v1` | `TemplateCatalogGetRequest(string TemplateId)` | `TemplateCatalogGetResult(TemplateDisplay? Template)` | No |
+| `Get-DistroNexusTemplateOption` | `template.catalog.options.v1` | `TemplateCatalogOptionsRequest(string TemplateId)` | `TemplateCatalogOptionsResult(string TemplateId, IReadOnlyList<TemplateOptionDisplay> Options)` | No |
 | `Test-DistroNexusTemplateCompatibility` | `template.compatibility.v1` | `TemplateCompatibilityRequest(string TemplateId, string DistributionName)` | `TemplateCompatibilityResult(bool IsCompatible, string Disposition, IReadOnlyList<string> Warnings)` | No |
 | `New-DistroNexusTemplateApplyPreview` | `template.apply.preview.v1` | `TemplateApplyPreviewRequest(string InstanceName, string TemplateId, IReadOnlyDictionary<string,string> Variables, bool DeclineRecoveryOffer)` | `TemplateApplyPreviewResult(string? PreviewToken, RecoveryOfferDisplay RecoveryOffer, bool RequiresRecoveryDecline, bool TrustRequired, IReadOnlyList<string> Effects, IReadOnlyList<string> Warnings, DateTimeOffset? ExpiresAt)` | Yes only when a grant is issued |
 | `Start-DistroNexusTemplateApply` | `template.apply.execute.v1` | `TemplateApplyExecuteRequest(string PreviewToken)` | `TemplateApplyExecuteResult(string OperationId)` | Yes |
@@ -33,6 +34,8 @@
 | `Remove-DistroNexusTemplate` | `template.local.remove-preview.v1` / `template.local.remove-execute.v1` | `TemplateRemovePreviewRequest(string TemplateId)` / `TemplateRemoveExecuteRequest(string PreviewToken)` | preview / `TemplateMarketplaceMutationResult(bool Changed)` | Yes |
 
 Every mutating public cmdlet has `SupportsShouldProcess`; it invokes its fixed route only after `ShouldProcess` succeeds. WPF receives only typed display/result records through the client. `Content` is UTF-8 text capped at 1 MiB; variable maps contain at most 64 entries with key/value limits of 128/4096 UTF-8 bytes; all response lists contain at most 500 entries and output/message fields at most 16 KiB.
+
+`TemplateOptionDisplay` is a presentation-only schema `(string Key, string Label, string Description, TemplateOptionType Type, bool Required, string DefaultValue, IReadOnlyList<TemplateOptionValueDisplay> Values)`, where each value is `(string Value, string Label, string Description)`. Core resolves the effective default from the existing option/default-selection policy before serializing it. It does not expose script text, packages, paths, preflight commands, artifact provenance, arbitrary template variables, or execution authority. The options route is read-only, rejects unknown members, validates the template ID, returns at most 64 options and 100 values per option, and exists solely to preserve wizard selection UX through the typed module boundary.
 
 ## Apply, Recovery, and Durable State
 

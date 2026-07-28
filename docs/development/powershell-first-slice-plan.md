@@ -2477,6 +2477,7 @@ Core execution semantics, generic scripting, template content, USB/elevation, re
 
 - Desktop template consumers have no direct `ITemplateService` or `ITemplateMarketplaceService` dependency.
 - WPF only requests typed operations, displays results and gathers consent.
+- Wizard option selection uses the bounded `template.catalog.options.v1` display schema; it does not deserialize template content or obtain execution authority.
 - Targeted xUnit/Pester/Debug build pass; disposable WSL UAT remains recorded externally.
 
 ## Slice S08: Conformance and release-evidence closure
