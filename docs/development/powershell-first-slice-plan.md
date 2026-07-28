@@ -2427,7 +2427,7 @@ Template apply grant/operation/worker/runtime, Desktop consumers, template conte
 
 ### Status
 
-Planned
+Committed (`5f53c1d`)
 
 ### Dependencies
 
