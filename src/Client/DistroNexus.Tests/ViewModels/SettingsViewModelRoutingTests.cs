@@ -14,8 +14,10 @@ public sealed class SettingsViewModelRoutingTests
     public async Task LoadSettingsCommand_LoadsModeledSettingsThroughTheModuleClient()
     {
         var client = new Mock<IPowerShellModuleClient>();
-        client.Setup(x => x.GetSettingsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new GlobalSettings { Theme = "Dark", Language = "zh-CN", DefaultWslVersion = 1 });
+        client.Setup(x => x.GetBootstrapSettingsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new BootstrapSettingsResult(new GlobalSettings { Theme = "Dark", Language = "zh-CN", DefaultWslVersion = 1 }, "Ready"));
+        client.Setup(x => x.GetStoreComplianceStatusAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new StoreComplianceStatusResult(false, "Ready"));
         var viewModel = NewViewModel(client.Object);
 
         await viewModel.LoadSettingsCommand.ExecuteAsync(null);
@@ -23,7 +25,7 @@ public sealed class SettingsViewModelRoutingTests
         Assert.Equal("Dark", viewModel.Theme);
         Assert.Equal("zh-CN", viewModel.Language);
         Assert.Equal(1, viewModel.DefaultWslVersion);
-        client.Verify(x => x.GetSettingsAsync(It.IsAny<CancellationToken>()), Times.Once);
+        client.Verify(x => x.GetBootstrapSettingsAsync(It.IsAny<CancellationToken>()), Times.Once);
         viewModel.Dispose();
     }
 
@@ -77,8 +79,7 @@ public sealed class SettingsViewModelRoutingTests
     }
 
     private static SettingsViewModel NewViewModel(IPowerShellModuleClient client) => new(
-        Mock.Of<ICatalogService>(), Mock.Of<IStoreComplianceModeService>(),
-        Mock.Of<ILogger<SettingsViewModel>>(), Mock.Of<IWslManagerService>(), client,
+        Mock.Of<ICatalogService>(), Mock.Of<ILogger<SettingsViewModel>>(), Mock.Of<IWslManagerService>(), client,
         Mock.Of<IDialogService>());
 
     private static IEnumerable<string> CalledMethodNames(MethodInfo method)

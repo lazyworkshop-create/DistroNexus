@@ -340,6 +340,54 @@ public sealed class WorkspaceBridgeProtocolTests
     }
 
     [Fact]
+    public async Task Settings_LegacyModulePathIsClearedByActualBridgeReadsAndSuccessfulSaves()
+    {
+        var store = Path.Combine(Path.GetTempPath(), "DistroNexusBridge-settings-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(store);
+        var settingsPath = Path.Combine(store, "settings.json");
+        try
+        {
+            await File.WriteAllTextAsync(settingsPath, """{"PowerShellModulePath":"C:\\legacy-module","Theme":"Dark"}""");
+            await using var bridge = await BridgeProcess.StartAsync(store);
+
+            var read = await bridge.SendAsync("settings.get.v1");
+            Assert.True(read.GetProperty("Succeeded").GetBoolean());
+            Assert.True(read.GetProperty("Value").TryGetProperty("PowerShellModulePath", out var legacyPath));
+            Assert.Equal(JsonValueKind.Null, legacyPath.ValueKind);
+
+            var saved = await bridge.SendAsync("settings.save.v1", payload: JsonDocument.Parse("""{"Settings":{"Theme":"Light"}}""").RootElement.Clone());
+            Assert.True(saved.GetProperty("Succeeded").GetBoolean());
+
+            var afterSave = await bridge.SendAsync("settings.get.v1");
+            Assert.True(afterSave.GetProperty("Succeeded").GetBoolean());
+            Assert.True(afterSave.GetProperty("Value").TryGetProperty("PowerShellModulePath", out legacyPath));
+            Assert.Equal(JsonValueKind.Null, legacyPath.ValueKind);
+
+            using var persisted = JsonDocument.Parse(await File.ReadAllTextAsync(settingsPath));
+            Assert.False(persisted.RootElement.GetProperty("value").TryGetProperty("PowerShellModulePath", out _));
+        }
+        finally
+        {
+            if (Directory.Exists(store)) Directory.Delete(store, true);
+        }
+    }
+
+    [Fact]
+    public async Task UpdateStatusRoute_AcceptsBothExplicitPrereleaseValuesAtTheActualBridgeBoundary()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+
+        var stable = await bridge.SendAsync("update-status.get.v1", payload: JsonSerializer.SerializeToElement(new { IncludePrerelease = false }));
+        var prerelease = await bridge.SendAsync("update-status.get.v1", payload: JsonSerializer.SerializeToElement(new { IncludePrerelease = true }));
+
+        foreach (var response in new[] { stable, prerelease })
+        {
+            Assert.True(response.GetProperty("Succeeded").GetBoolean());
+            Assert.True(response.GetProperty("Value").TryGetProperty("OutcomeCode", out _));
+        }
+    }
+
+    [Fact]
     public async Task Settings_RoutesRejectPayloadsOutsideTheirFixedTypedContract()
     {
         await using var bridge = await BridgeProcess.StartAsync();

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Diagnostics;
 using DistroNexus.Core.Interfaces;
@@ -37,6 +38,8 @@ var applicationRoot = root ?? Path.Combine(Environment.GetFolderPath(Environment
 var monitoringAutomation = new MonitoringAutomationService(monitoring, processes, applicationRoot);
 var bridgePowerShell = new BridgeReadOnlyPowerShellService();
 var settings = new SettingsService(NullLogger<SettingsService>.Instance, Path.Combine(applicationRoot, "settings.json"));
+var storeCompliance = new StoreComplianceModeService(NullLogger<StoreComplianceModeService>.Instance);
+var updates = new UpdateService(new HttpClient(), NullLogger<UpdateService>.Instance, storeCompliance);
 var catalogSources = new CatalogSourceManager(settings, new HttpClient(), NullLogger<CatalogSourceManager>.Instance);
 var catalogHttp = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(10) };
 var catalog = new CatalogService(NullLogger<CatalogService>.Instance, settings, catalogHttp);
@@ -284,6 +287,8 @@ while ((line = Console.ReadLine()) is not null)
             "settings.get.v1" => GetSettings(request),
             "settings.save.v1" => SaveSettings(request),
             "settings.reset.v1" => ResetSettings(request),
+            "store-compliance.get.v1" => GetStoreComplianceStatus(request),
+            "update-status.get.v1" => await GetUpdateStatusAsync(request),
             "catalog-source.list.v1" => await GetCatalogSourcesAsync(request),
             "catalog-source.add.v1" => await AddCatalogSourceAsync(request),
             "catalog-source.update.v1" => await UpdateCatalogSourceAsync(request),
@@ -537,10 +542,14 @@ async Task<VerifiedInstallResult> ExecuteVerifiedInstallV1Async(BridgeRequest re
     return await verifiedInstall.InstallAsync(ParsePayload<VerifiedInstallExecutePayload>(request).PreviewToken);
 }
 
-GlobalSettings GetSettings(BridgeRequest request)
+JsonObject GetSettings(BridgeRequest request)
 {
     RequireNoPayload(request, "Settings get does not accept a payload.");
-    return settings.LoadSettings();
+    var current = settings.LoadSettings();
+    current.PowerShellModulePath = null;
+    var response = JsonSerializer.SerializeToNode(current, options)?.AsObject() ?? new JsonObject();
+    response[nameof(GlobalSettings.PowerShellModulePath)] = null;
+    return response;
 }
 
 GlobalSettings SaveSettings(BridgeRequest request)
@@ -549,8 +558,35 @@ GlobalSettings SaveSettings(BridgeRequest request)
         new JsonSerializerOptions(options) { UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow })
         ?? throw new ArgumentException("Settings save payload is required.");
     ArgumentNullException.ThrowIfNull(payload.Settings);
+    if (!string.IsNullOrWhiteSpace(payload.Settings.PowerShellModulePath)) throw new ArgumentException("Settings.ModulePathRetired");
+    payload.Settings.PowerShellModulePath = null;
     settings.SaveSettings(payload.Settings);
     return settings.LoadSettings();
+}
+
+StoreComplianceStatusResult GetStoreComplianceStatus(BridgeRequest request)
+{
+    RequireNoPayload(request, "Store compliance does not accept a payload.");
+    var managed = storeCompliance.IsStoreComplianceModeEnabled();
+    return new StoreComplianceStatusResult(managed, managed ? "StoreManaged" : "Ready");
+}
+
+async Task<UpdateStatusResult> GetUpdateStatusAsync(BridgeRequest request)
+{
+    ValidatePayload(request, ["IncludePrerelease"], []);
+    var payload = request.Payload is null ? new UpdateStatusPayload(false) : ParsePayload<UpdateStatusPayload>(request);
+    var update = await updates.CheckForUpdatesAsync(includePrerelease: payload.IncludePrerelease);
+    if (update is null) return new UpdateStatusResult(NormalizeUpdateVersion(updates.GetCurrentVersion()), null, false, null, null, null, false, storeCompliance.IsStoreComplianceModeEnabled() ? "StoreManaged" : "Unavailable");
+    Uri? uri = Uri.TryCreate(update.ReleaseUrl, UriKind.Absolute, out var candidate) && candidate.Scheme == Uri.UriSchemeHttps && candidate.Host == "github.com" && candidate.AbsolutePath.StartsWith("/LazyWorkshopCreate/DistroNexus/releases", StringComparison.Ordinal) && string.IsNullOrEmpty(candidate.UserInfo) && string.IsNullOrEmpty(candidate.Fragment) ? candidate : null;
+    var notes = new string((update.ReleaseNotes ?? string.Empty).Where(character => !char.IsControl(character) || character is '\r' or '\n' or '\t').Take(8192).ToArray());
+    return new UpdateStatusResult(NormalizeUpdateVersion(update.CurrentVersion), NormalizeUpdateVersion(update.LatestVersion), update.IsUpdateAvailable, notes, uri, update.ReleaseDate == DateTime.MinValue ? null : new DateTimeOffset(update.ReleaseDate), update.IsPreRelease, uri is null && update.IsUpdateAvailable ? "InvalidReleaseUri" : "Ready");
+}
+
+string NormalizeUpdateVersion(string value)
+{
+    var normalized = value.Trim().TrimStart('v', 'V');
+    if (!System.Text.RegularExpressions.Regex.IsMatch(normalized, "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?$")) throw new ArgumentException("Update version is invalid.");
+    return normalized;
 }
 
 GlobalSettings ResetSettings(BridgeRequest request)
@@ -1365,6 +1401,7 @@ public sealed record HealthFindingPayload(HealthFinding Finding);
 public sealed record HealthRepairPayload(HealthFinding Finding, bool Confirmed);
 public sealed record DiagnosticPreviewPayload(DiagnosticReportFormat Format, IReadOnlyList<string>? SelectedLogIds = null, int? DeadlineMilliseconds = null);
 public sealed record DiagnosticExportPayload(string DestinationFileName, int? DeadlineMilliseconds = null);
+public sealed record UpdateStatusPayload(bool IncludePrerelease = false);
 public sealed record MarketplaceSourcePayload(string Url, TemplateSourceKind Kind, bool ExplicitlyAcceptedNonHttps);
 public sealed record MarketplaceSourceIdPayload(string SourceId);
 public sealed record MarketplaceStatusPayload(string SourceId, string? TemplateId = null, string? ManifestDigest = null);

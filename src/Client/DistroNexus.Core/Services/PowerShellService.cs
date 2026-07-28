@@ -22,51 +22,17 @@ public class PowerShellService : IPowerShellService, IDisposable
     private readonly string? _moduleBasePath;
     private bool _disposed;
 
-    public PowerShellService(ILogger<PowerShellService> logger, string? customModulePath = null)
+    public PowerShellService(ILogger<PowerShellService> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         // Find the PowerShell executable (prefer pwsh.exe for PowerShell Core, fallback to powershell.exe)
         _powerShellPath = FindPowerShellPath();
 
-        // 1. Try configuration first
-        if (!string.IsNullOrWhiteSpace(customModulePath))
-        {
-            var manifestPath = Path.Combine(customModulePath, "DistroNexus.psd1");
-            if (File.Exists(manifestPath))
-            {
-                _moduleBasePath = customModulePath;
-                _logger.LogInformation("Using configured PowerShell module path: {Path}", customModulePath);
-            }
-            else
-            {
-                _logger.LogWarning("Configured PowerShell module not found at: {Path}", manifestPath);
-            }
-        }
-
-        // 2. Auto-detection if not found yet
-        if (string.IsNullOrEmpty(_moduleBasePath))
-        {
-            _moduleBasePath = FindModulePath();
-            if (!string.IsNullOrEmpty(_moduleBasePath))
-            {
-                _logger.LogInformation("Auto-detected PowerShell module at: {Path}", _moduleBasePath);
-            }
-            else
-            {
-                _logger.LogWarning("PowerShell module path could not be determined. Functionality may be limited.");
-            }
-        }
+        _moduleBasePath = new ProductModuleLocator().Resolve();
+        if (string.IsNullOrEmpty(_moduleBasePath)) _logger.LogWarning("DistroNexus module bootstrap is unavailable.");
 
         _logger.LogInformation("PowerShell service initialized using: {PowerShellPath}", _powerShellPath);
-    }
-
-    private string? FindModulePath()
-    {
-        return AppResourcePathResolver.FindDirectoryWithFileInBaseOrParents(
-            AppContext.BaseDirectory,
-            "PowerShell",
-            "DistroNexus.psd1");
     }
 
     private static string FindPowerShellPath()
@@ -512,16 +478,7 @@ public class PowerShellService : IPowerShellService, IDisposable
         // Check if module is available
         if (_moduleBasePath == null)
         {
-            _logger.LogError("DistroNexus PowerShell module path not configured");
-
-            var settingsPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "DistroNexus",
-                "settings.json");
-
-            _logger.LogError("Please configure PowerShellModulePath in settings file located at: {SettingsPath}", settingsPath);
-
-            var errorMessage = $"PowerShell module path not configured. Please set PowerShellModulePath in settings: {settingsPath}";
+            const string errorMessage = "DistroNexus.ModuleBootstrapUnavailable";
 
             return new PowerShellScriptResult
             {

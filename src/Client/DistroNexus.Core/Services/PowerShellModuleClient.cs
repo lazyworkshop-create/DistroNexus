@@ -470,8 +470,38 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
             return new GlobalSettings();
         }
 
-        return JsonSerializer.Deserialize<GlobalSettings>(result.Output, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
-            ?? new GlobalSettings();
+        var settings = JsonSerializer.Deserialize<GlobalSettings>(result.Output, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new GlobalSettings();
+        settings.PowerShellModulePath = null;
+        return settings;
+    }
+
+    public async Task<BootstrapSettingsResult> GetBootstrapSettingsAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync("Get-DistroNexusBootstrapSettings", options: new ModuleCallOptions { ParseAsJson = true }, cancellationToken: cancellationToken);
+        ThrowIfFailed(result);
+        var bootstrap = JsonSerializer.Deserialize<BootstrapSettingsResult>(result.Output, StrictJsonOptions) ?? throw new InvalidOperationException("Invalid bootstrap result.");
+        if (bootstrap.ModuleState != "Ready" || bootstrap.Settings is null) throw new InvalidOperationException("Invalid bootstrap result.");
+        bootstrap.Settings.PowerShellModulePath = null;
+        return bootstrap;
+    }
+
+    public async Task<StoreComplianceStatusResult> GetStoreComplianceStatusAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync("Get-DistroNexusStoreComplianceStatus", options: new ModuleCallOptions { ParseAsJson = true }, cancellationToken: cancellationToken);
+        ThrowIfFailed(result);
+        var status = JsonSerializer.Deserialize<StoreComplianceStatusResult>(result.Output, StrictJsonOptions) ?? throw new InvalidOperationException("Invalid compliance result.");
+        if (string.IsNullOrWhiteSpace(status.OutcomeCode)) throw new InvalidOperationException("Invalid compliance result.");
+        return status;
+    }
+
+    public async Task<UpdateStatusResult> GetUpdateStatusAsync(bool includePrerelease = false, CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync("Get-DistroNexusUpdateStatus", new() { ["IncludePrerelease"] = includePrerelease }, new ModuleCallOptions { ParseAsJson = true }, cancellationToken);
+        ThrowIfFailed(result);
+        var status = JsonSerializer.Deserialize<UpdateStatusResult>(result.Output, StrictJsonOptions) ?? throw new InvalidOperationException("Invalid update result.");
+        if (!IsNormalizedUpdateVersion(status.CurrentVersion) || (status.LatestVersion is not null && !IsNormalizedUpdateVersion(status.LatestVersion)) || status.ReleaseNotes?.Length > 8192 || string.IsNullOrWhiteSpace(status.OutcomeCode)) throw new InvalidOperationException("Invalid update result.");
+        if (status.ReleaseUri is not null && (!status.ReleaseUri.IsAbsoluteUri || status.ReleaseUri.Scheme != Uri.UriSchemeHttps || status.ReleaseUri.Host != "github.com" || !status.ReleaseUri.AbsolutePath.StartsWith("/LazyWorkshopCreate/DistroNexus/releases", StringComparison.Ordinal) || !string.IsNullOrEmpty(status.ReleaseUri.UserInfo) || !string.IsNullOrEmpty(status.ReleaseUri.Fragment))) throw new InvalidOperationException("Invalid update release URI.");
+        return status;
     }
 
     /// <inheritdoc />
@@ -966,6 +996,9 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
         }
     }
 
+    private static readonly JsonSerializerOptions StrictJsonOptions = new() { PropertyNameCaseInsensitive = true, UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow };
+    private static bool IsNormalizedUpdateVersion(string value) => System.Text.RegularExpressions.Regex.IsMatch(value, "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?$");
+
     private static Dictionary<string, object> SettingsParameters(DistroNexusSettingsUpdate settings)
     {
         var parameters = new Dictionary<string, object>();
@@ -987,7 +1020,6 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
         Add("MaxRetryAttempts", settings.MaxRetryAttempts);
         Add("AutoSaveEnabled", settings.AutoSaveEnabled);
         Add("AutoSaveInterval", settings.AutoSaveInterval);
-        if (settings.UpdatePowerShellModulePath) parameters["PowerShellModulePath"] = settings.PowerShellModulePath!;
         return parameters;
 
         void Add(string name, object? value)

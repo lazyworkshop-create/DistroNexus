@@ -20,7 +20,6 @@ namespace DistroNexus.Desktop.ViewModels;
 public partial class SettingsViewModel : ObservableObject
 {
     private readonly IPowerShellModuleClient _moduleClient;
-    private readonly IStoreComplianceModeService _storeComplianceModeService;
     private readonly ILogger<SettingsViewModel> _logger;
     private System.Timers.Timer? _autoSaveTimer;
 
@@ -112,9 +111,6 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private ObservableCollection<CachedPackageInfo> _cachedPackages = [];
 
-    [ObservableProperty]
-    private string? _powerShellModulePath;
-
     /// <summary>WSL Global Configuration editor section (E-01).</summary>
     public WslConfigSectionViewModel WslConfigSection { get; }
 
@@ -123,7 +119,6 @@ public partial class SettingsViewModel : ObservableObject
 
     public SettingsViewModel(
         ICatalogService catalogService,
-        IStoreComplianceModeService storeComplianceModeService,
         ILogger<SettingsViewModel> logger,
         IWslManagerService wslManagerService,
         IPowerShellModuleClient moduleClient,
@@ -131,7 +126,6 @@ public partial class SettingsViewModel : ObservableObject
     {
         _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         ArgumentNullException.ThrowIfNull(catalogService); // retained constructor compatibility; cache work uses the typed module client.
-        _storeComplianceModeService = storeComplianceModeService ?? throw new ArgumentNullException(nameof(storeComplianceModeService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         WslConfigSection = new WslConfigSectionViewModel(moduleClient, dialogService);
         ManageTags = new ManageTagsViewModel(moduleClient, dialogService);
@@ -160,8 +154,9 @@ public partial class SettingsViewModel : ObservableObject
         {
             _logger.LogInformation("Loading settings");
 
-            var settings = await _moduleClient.GetSettingsAsync();
-            var isStoreComplianceMode = _storeComplianceModeService.IsStoreComplianceModeEnabled();
+            var bootstrap = await _moduleClient.GetBootstrapSettingsAsync();
+            var settings = bootstrap.Settings;
+            var isStoreComplianceMode = (await _moduleClient.GetStoreComplianceStatusAsync()).IsStoreManaged;
 
             DefaultInstallPath = settings.DefaultInstallPath;
             PackageCachePath = settings.PackageCachePath;
@@ -186,7 +181,6 @@ public partial class SettingsViewModel : ObservableObject
             MaxRetryAttempts = settings.MaxRetryAttempts;
             AutoSaveEnabled = settings.AutoSaveEnabled;
             AutoSaveInterval = settings.AutoSaveInterval;
-            PowerShellModulePath = settings.PowerShellModulePath;
 
             // Load available distributions for default selection
             await LoadDistributionsAsync();
@@ -228,7 +222,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             _logger.LogInformation("Saving settings");
 
-            await _moduleClient.SaveSettingsAsync(CreateSettingsUpdate(includePowerShellModulePath: true));
+            await _moduleClient.SaveSettingsAsync(CreateSettingsUpdate());
 
             // Apply theme immediately
             await ApplyThemeAsync(Theme);
@@ -376,45 +370,6 @@ public partial class SettingsViewModel : ObservableObject
             TerminalStartPath = dialog.FolderName;
             IsDirty = true;
         }
-    }
-
-    [RelayCommand]
-    private async Task BrowsePowerShellModulePath()
-    {
-        var dialog = new Microsoft.Win32.OpenFolderDialog
-        {
-            Title = "Select PowerShell Module Directory (containing DistroNexus.psd1)",
-            InitialDirectory = !string.IsNullOrEmpty(PowerShellModulePath) && Directory.Exists(PowerShellModulePath)
-                ? PowerShellModulePath
-                : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
-        };
-
-        if (dialog.ShowDialog() == true)
-        {
-            var selectedPath = dialog.FolderName;
-
-            // Validate that the directory contains DistroNexus.psd1
-            var manifestPath = Path.Combine(selectedPath, "DistroNexus.psd1");
-            if (File.Exists(manifestPath))
-            {
-                PowerShellModulePath = selectedPath;
-                IsDirty = true;
-                _logger.LogInformation("PowerShell module path set to: {Path}", selectedPath);
-            }
-            else
-            {
-                await ShowAlert(Properties.Resources.TitleInvalidModulePath, Properties.Resources.ErrorInvalidModulePath);
-                _logger.LogWarning("Invalid PowerShell module path selected: {Path}", selectedPath);
-            }
-        }
-    }
-
-    [RelayCommand]
-    private void ClearPowerShellModulePath()
-    {
-        PowerShellModulePath = null;
-        IsDirty = true;
-        _logger.LogInformation("PowerShell module path cleared. Will use auto-detection.");
     }
 
     partial void OnDefaultInstallPathChanged(string value) => IsDirty = true;
@@ -605,7 +560,7 @@ public partial class SettingsViewModel : ObservableObject
             {
                 _logger.LogInformation("Auto-saving settings");
                 
-                await _moduleClient.SaveSettingsAsync(CreateSettingsUpdate(includePowerShellModulePath: false));
+                await _moduleClient.SaveSettingsAsync(CreateSettingsUpdate());
 
                 IsDirty = false;
                 AutoSaveStatus = $"Last auto-saved: {DateTime.Now:HH:mm:ss}";
@@ -630,7 +585,7 @@ public partial class SettingsViewModel : ObservableObject
         _autoSaveTimer = null;
     }
 
-    private DistroNexusSettingsUpdate CreateSettingsUpdate(bool includePowerShellModulePath) => new(
+    private DistroNexusSettingsUpdate CreateSettingsUpdate() => new(
         DefaultInstallPath,
         PackageCachePath,
         TerminalStartPath,
@@ -648,7 +603,5 @@ public partial class SettingsViewModel : ObservableObject
         AutoRetryDownloads,
         MaxRetryAttempts,
         AutoSaveEnabled,
-        AutoSaveInterval,
-        PowerShellModulePath,
-        includePowerShellModulePath);
+        AutoSaveInterval);
 }

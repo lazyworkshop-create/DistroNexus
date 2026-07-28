@@ -358,21 +358,9 @@ public sealed class PowerShellModuleClientTests
     }
 
     [Fact]
-    public async Task SaveSettingsAsync_CanExplicitlyClearTheModulePath()
+    public void SettingsUpdate_DoesNotExposeAModulePathSelector()
     {
-        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
-        powerShell.Setup(service => service.ExecuteModuleCmdletAsync(
-                "Set-DistroNexusSettings",
-                It.Is<Dictionary<string, object>>(parameters => parameters.Count == 1 &&
-                    parameters.ContainsKey("PowerShellModulePath") && parameters["PowerShellModulePath"] == null),
-                null,
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0 });
-        var client = new PowerShellModuleClient(powerShell.Object);
-
-        await client.SaveSettingsAsync(new DistroNexusSettingsUpdate(PowerShellModulePath: null, UpdatePowerShellModulePath: true));
-
-        powerShell.VerifyAll();
+        Assert.DoesNotContain(typeof(DistroNexusSettingsUpdate).GetProperties(), property => property.Name == "PowerShellModulePath");
     }
 
     [Fact]
@@ -523,6 +511,7 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.ExecuteRecoveryPointNotesAsync),
                 nameof(IPowerShellModuleClient.ExportDiagnosticReportAsync),
                 nameof(IPowerShellModuleClient.GetBackupSchedulesAsync),
+                nameof(IPowerShellModuleClient.GetBootstrapSettingsAsync),
                 nameof(IPowerShellModuleClient.GetCatalogSourcesAsync),
                 nameof(IPowerShellModuleClient.GetContainerRuntimeStatusAsync),
                 nameof(IPowerShellModuleClient.GetDockerIntegrationAsync),
@@ -568,11 +557,13 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.GetRecoveryRetentionAsync),
                 nameof(IPowerShellModuleClient.GetRecoveryRetentionPreviewAsync),
                 nameof(IPowerShellModuleClient.GetSettingsAsync),
+                nameof(IPowerShellModuleClient.GetStoreComplianceStatusAsync),
                 nameof(IPowerShellModuleClient.GetSystemdServiceDetailsAsync),
                 nameof(IPowerShellModuleClient.GetSystemdServiceJournalAsync),
                 nameof(IPowerShellModuleClient.GetSystemdServicePreviewAsync),
                 nameof(IPowerShellModuleClient.GetSystemdServicesAsync),
                 nameof(IPowerShellModuleClient.GetTerminalStatusAsync),
+                nameof(IPowerShellModuleClient.GetUpdateStatusAsync),
                 nameof(IPowerShellModuleClient.GetWslgStatusAsync),
                 nameof(IPowerShellModuleClient.InvokeBackupAsync),
                 nameof(IPowerShellModuleClient.InvokeMonitoringProcessActionAsync),
@@ -910,6 +901,48 @@ public sealed class PowerShellModuleClientTests
         Assert.True((await client.OpenPackageCacheFolderAsync()).Succeeded);
         await Assert.ThrowsAsync<ArgumentException>(() => client.StartTerminalAsync("Ubuntu", "C:\\outside"));
         powerShell.VerifyAll();
+    }
+
+    [Fact]
+    public async Task GetBootstrapSettingsAsync_UsesFixedCommandAndRejectsUnknownFields()
+    {
+        var service = new Mock<IPowerShellService>(MockBehavior.Strict);
+        service.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusBootstrapSettings", null, It.IsAny<ModuleCallOptions>(), It.IsAny<CancellationToken>())).ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Settings\":{},\"ModuleState\":\"Ready\"}" });
+        var result = await new PowerShellModuleClient(service.Object).GetBootstrapSettingsAsync();
+        Assert.Equal("Ready", result.ModuleState);
+        service.Verify(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusBootstrapSettings", null, It.IsAny<ModuleCallOptions>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetUpdateStatusAsync_RejectsUnknownFieldsAndInvalidReleaseUri()
+    {
+        var service = new Mock<IPowerShellService>(MockBehavior.Strict);
+        service.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusUpdateStatus", It.IsAny<Dictionary<string, object>>(), It.IsAny<ModuleCallOptions>(), It.IsAny<CancellationToken>())).ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"CurrentVersion\":\"1.0.0\",\"LatestVersion\":\"1.0.1\",\"IsUpdateAvailable\":true,\"ReleaseNotes\":\"ok\",\"ReleaseUri\":\"https://example.test/\",\"ReleasedAt\":null,\"IsPreRelease\":false,\"OutcomeCode\":\"Ready\",\"Unexpected\":true}" });
+        await Assert.ThrowsAsync<System.Text.Json.JsonException>(() => new PowerShellModuleClient(service.Object).GetUpdateStatusAsync());
+    }
+
+    [Fact]
+    public async Task GetUpdateStatusAsync_ForwardsEachPrereleaseChoiceToTheFixedModuleCmdlet()
+    {
+        var service = new Mock<IPowerShellService>(MockBehavior.Strict);
+        service.Setup(x => x.ExecuteModuleCmdletAsync(
+                "Get-DistroNexusUpdateStatus",
+                It.Is<Dictionary<string, object>>(parameters => parameters.Count == 1 && parameters["IncludePrerelease"].Equals(false)),
+                It.Is<ModuleCallOptions>(options => options.ParseAsJson),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"CurrentVersion\":\"1.0.0\",\"LatestVersion\":null,\"IsUpdateAvailable\":false,\"ReleaseNotes\":null,\"ReleaseUri\":null,\"ReleasedAt\":null,\"IsPreRelease\":false,\"OutcomeCode\":\"Unavailable\"}" });
+        service.Setup(x => x.ExecuteModuleCmdletAsync(
+                "Get-DistroNexusUpdateStatus",
+                It.Is<Dictionary<string, object>>(parameters => parameters.Count == 1 && parameters["IncludePrerelease"].Equals(true)),
+                It.Is<ModuleCallOptions>(options => options.ParseAsJson),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"CurrentVersion\":\"1.0.0\",\"LatestVersion\":\"1.1.0-alpha.10\",\"IsUpdateAvailable\":true,\"ReleaseNotes\":null,\"ReleaseUri\":null,\"ReleasedAt\":null,\"IsPreRelease\":true,\"OutcomeCode\":\"Ready\"}" });
+
+        var client = new PowerShellModuleClient(service.Object);
+
+        Assert.False((await client.GetUpdateStatusAsync(false)).IsPreRelease);
+        Assert.True((await client.GetUpdateStatusAsync(true)).IsPreRelease);
+        service.VerifyAll();
     }
 
     private static Mock<IPowerShellService> CreateServiceReturning(string output)

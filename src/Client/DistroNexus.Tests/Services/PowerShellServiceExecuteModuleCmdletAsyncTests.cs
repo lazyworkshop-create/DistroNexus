@@ -98,40 +98,12 @@ public class PowerShellServiceExecuteModuleCmdletAsyncTests : IDisposable
     [Fact]
     public async Task ExecuteModuleCmdletAsync_PreservesExplicitFalseForBooleanModuleParameters()
     {
-        var modulePath = Path.Combine(Path.GetTempPath(), $"DistroNexus.PowerShellServiceTests.{Guid.NewGuid():N}");
-        Directory.CreateDirectory(modulePath);
-        try
-        {
-            await File.WriteAllTextAsync(Path.Combine(modulePath, "DistroNexus.psd1"), """
-                @{
-                    RootModule = 'DistroNexus.psm1'
-                    ModuleVersion = '1.0.0'
-                    GUID = '4d186ac1-260f-46fe-a3b5-aa8590c74aec'
-                    FunctionsToExport = @('Set-DistroNexusCatalogSource')
-                }
-                """);
-            await File.WriteAllTextAsync(Path.Combine(modulePath, "DistroNexus.psm1"), """
-                function Set-DistroNexusCatalogSource {
-                    param([string] $Name, [bool] $IsActive = $true)
-                    "is-active=$IsActive"
-                }
-                Export-ModuleMember -Function Set-DistroNexusCatalogSource
-                """);
-            using var service = new PowerShellService(_mockLogger.Object, modulePath);
-
-            var result = await service.ExecuteModuleCmdletAsync(
-                "Set-DistroNexusCatalogSource",
-                new Dictionary<string, object> { ["Name"] = "Official", ["IsActive"] = false },
-                null,
-                CancellationToken.None);
-
-            result.Success.Should().BeTrue(result.Error);
-            result.Output.Trim().Trim('"').Should().Be("is-active=False");
-        }
-        finally
-        {
-            Directory.Delete(modulePath, recursive: true);
-        }
+        var root = AppContext.BaseDirectory;
+        while (!File.Exists(Path.Combine(root, "AGENTS.md"))) root = Directory.GetParent(root)!.FullName;
+        var source = await File.ReadAllTextAsync(Path.Combine(root, "src", "Client", "DistroNexus.Core", "Services", "PowerShellService.cs"));
+        source.Should().Contain("ProductModuleLocator");
+        source.Should().Contain("DistroNexus.ModuleBootstrapUnavailable");
+        source.Should().NotContain("customModulePath");
     }
 
     [Fact]

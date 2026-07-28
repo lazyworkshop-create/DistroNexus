@@ -31,6 +31,10 @@ function Set-DistroNexusSettings {
         throw 'Specify at least one modeled settings parameter.'
     }
 
+    if ($PSBoundParameters.ContainsKey('PowerShellModulePath') -and -not [string]::IsNullOrWhiteSpace($PowerShellModulePath)) {
+        throw 'Settings.ModulePathRetired'
+    }
+
     if (-not $PSCmdlet.ShouldProcess('global DistroNexus settings', 'Save')) { return $false }
 
     $settings = Get-DistroNexusSettings
@@ -38,7 +42,7 @@ function Set-DistroNexusSettings {
         'DefaultInstallPath', 'PackageCachePath', 'TerminalStartPath', 'DefaultWslVersion', 'DefaultUsername',
         'DefaultDistributionId', 'EnableLogging', 'LogPath', 'CheckUpdatesOnStartup', 'Theme', 'Language',
         'ShowConfirmationDialogs', 'MaxConcurrentDownloads', 'AutoRetryDownloads', 'MaxRetryAttempts',
-        'AutoSaveEnabled', 'AutoSaveInterval', 'PowerShellModulePath', 'LocalhostForwardingHealthEndpoint'
+        'AutoSaveEnabled', 'AutoSaveInterval', 'LocalhostForwardingHealthEndpoint'
     )) {
         if ($PSBoundParameters.ContainsKey($name)) { $settings.$name = $PSBoundParameters[$name] }
     }

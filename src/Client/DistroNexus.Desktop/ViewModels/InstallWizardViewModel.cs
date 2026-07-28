@@ -18,7 +18,6 @@ namespace DistroNexus.Desktop.ViewModels;
 public partial class InstallWizardViewModel : ObservableObject
 {
     private readonly IPowerShellModuleClient _moduleClient;
-    private readonly ISettingsService _settingsService;
     private readonly ILogger<InstallWizardViewModel> _logger;
     private CancellationTokenSource? _installCts;
 
@@ -113,11 +112,9 @@ public partial class InstallWizardViewModel : ObservableObject
 
     public InstallWizardViewModel(
         IPowerShellModuleClient moduleClient,
-        ISettingsService settingsService,
         ILogger<InstallWizardViewModel> logger)
     {
         _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
-        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -129,7 +126,7 @@ public partial class InstallWizardViewModel : ObservableObject
             _logger.LogInformation("Initializing install wizard");
 
             // Load default settings
-            var settings = _settingsService.LoadSettings();
+            var settings = await _moduleClient.GetSettingsAsync();
             InstallPath = settings.DefaultInstallPath;
             WslVersion = settings.DefaultWslVersion;
             Username = settings.DefaultUsername;

@@ -65,43 +65,14 @@ public partial class App : System.Windows.Application
                     // Register HttpClient
                     services.AddHttpClient();
 
-                    // Register SettingsService first as it's needed for PowerShellService
-                    services.AddSingleton<ISettingsService, SettingsService>();
-
-                    // Register PowerShellService with factory to inject custom module path from settings
-                    services.AddSingleton<IPowerShellService>(sp =>
-                    {
-                        var logger = sp.GetRequiredService<ILogger<PowerShellService>>();
-                        var settingsService = sp.GetRequiredService<ISettingsService>();
-
-                        // Load settings to get PowerShell module path
-                        string? customModulePath = null;
-                        try
-                        {
-                            var settings = settingsService.LoadSettings();
-                            customModulePath = settings.PowerShellModulePath;
-
-                            if (!string.IsNullOrWhiteSpace(customModulePath))
-                            {
-                                logger.LogInformation("Loaded custom PowerShell module path from settings: {Path}", customModulePath);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.LogWarning(ex, "Failed to load settings during PowerShellService initialization. Using auto-detection.");
-                        }
-
-                        return new PowerShellService(logger, customModulePath);
-                    });
+                    services.AddSingleton<IPowerShellService>(sp => new PowerShellService(sp.GetRequiredService<ILogger<PowerShellService>>()));
                     services.AddSingleton<IPowerShellModuleClient, PowerShellModuleClient>();
 
                     // Register other Core services
                     services.AddSingleton<IWslManagerService, WslManagerService>();
                     services.AddSingleton<IDownloadService, DownloadService>();
                     services.AddSingleton<ICatalogService, CatalogService>();
-                    services.AddSingleton<IStoreComplianceModeService, StoreComplianceModeService>();
                     services.AddSingleton<INavigationService, NavigationService>();
-                    services.AddSingleton<IUpdateService, UpdateService>();
                     services.AddSingleton<IDownloadTaskManager, DownloadTaskManager>();
                     services.AddSingleton<IDockerIntegrationService, DockerIntegrationService>();
                     services.AddSingleton<WslConfigService>();
@@ -331,14 +302,13 @@ public partial class App : System.Windows.Application
             if (_host == null)
                 return;
 
-            var storeComplianceModeService = _host.Services.GetRequiredService<IStoreComplianceModeService>();
-            if (storeComplianceModeService.IsStoreComplianceModeEnabled())
+            var moduleClient = _host.Services.GetRequiredService<IPowerShellModuleClient>();
+            if ((await moduleClient.GetStoreComplianceStatusAsync()).IsStoreManaged)
             {
                 _logger?.LogInformation("Skipping update check on startup because Store compliance mode is enabled");
                 return;
             }
 
-            var moduleClient = _host.Services.GetRequiredService<IPowerShellModuleClient>();
             var settings = await moduleClient.GetSettingsAsync();
 
             if (!settings.CheckUpdatesOnStartup)
@@ -349,8 +319,7 @@ public partial class App : System.Windows.Application
 
             _logger?.LogInformation("Checking for updates on startup");
 
-            var updateService = _host.Services.GetRequiredService<IUpdateService>();
-            var updateInfo = await updateService.CheckForUpdatesAsync();
+            var updateInfo = await moduleClient.GetUpdateStatusAsync();
 
             if (updateInfo?.IsUpdateAvailable == true)
             {
@@ -372,7 +341,8 @@ public partial class App : System.Windows.Application
 
                     if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
                     {
-                        updateService.OpenDownloadPage(updateInfo.ReleaseUrl);
+                        if (updateInfo.ReleaseUri is not null)
+                            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo { FileName = updateInfo.ReleaseUri.AbsoluteUri, UseShellExecute = true });
                     }
                 });
             }

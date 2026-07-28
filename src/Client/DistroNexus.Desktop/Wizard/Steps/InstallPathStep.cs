@@ -14,7 +14,6 @@ namespace DistroNexus.Desktop.Wizard.Steps;
 /// </summary>
 public partial class InstallPathStep : WizardStepBase
 {
-    private readonly ISettingsService _settingsService;
     private readonly IPowerShellModuleClient _moduleClient;
     private readonly ILogger _logger;
     private CancellationTokenSource? _validationCts;
@@ -46,9 +45,8 @@ public partial class InstallPathStep : WizardStepBase
     [ObservableProperty]
     private bool _isValidating;
 
-    public InstallPathStep(ISettingsService settingsService, IPowerShellModuleClient moduleClient, ILogger logger)
+    public InstallPathStep(IPowerShellModuleClient moduleClient, ILogger logger)
     {
-        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -63,7 +61,7 @@ public partial class InstallPathStep : WizardStepBase
         // Load default path from settings if not already set
         if (Context != null && string.IsNullOrEmpty(Context.InstallPath))
         {
-            var settings = _settingsService.LoadSettings();
+            var settings = await _moduleClient.GetSettingsAsync();
             Context.InstallPath = settings.DefaultInstallPath;
         }
 
@@ -490,7 +488,7 @@ public partial class InstallPathStep : WizardStepBase
             return;
 
         // Load default path from settings
-        var settings = _settingsService.LoadSettings();
+        var settings = await _moduleClient.GetSettingsAsync();
         Context.InstallPath = settings.DefaultInstallPath;
 
         // Generate a unique instance name based on the selected distribution

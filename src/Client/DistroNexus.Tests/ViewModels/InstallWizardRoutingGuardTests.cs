@@ -39,7 +39,7 @@ public sealed class InstallWizardRoutingGuardTests
             try
             {
                 var step = new DistroNexus.Desktop.Wizard.Steps.UserConfigurationStep(
-                    Moq.Mock.Of<DistroNexus.Core.Interfaces.ISettingsService>(), Moq.Mock.Of<Microsoft.Extensions.Logging.ILogger>())
+                    Moq.Mock.Of<DistroNexus.Core.Interfaces.IPowerShellModuleClient>(), Moq.Mock.Of<Microsoft.Extensions.Logging.ILogger>())
                 { Context = new DistroNexus.Desktop.Wizard.WizardContext() };
                 var view = (DistroNexus.Desktop.Wizard.Steps.UserConfigurationStepView)step.Content;
                 var password = (System.Windows.Controls.PasswordBox)view.FindName("PasswordInput");

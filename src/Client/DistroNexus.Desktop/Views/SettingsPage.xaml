@@ -301,54 +301,6 @@ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     <StackPanel>
                         <TextBlock Text="{lex:Loc AdvancedSettings}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
 
-                        <TextBlock Text="{lex:Loc PowerShellModulePathHeader}" Margin="0,0,0,5"/>
-                        <TextBlock Text="{lex:Loc PowerShellModulePathDescription}" 
-                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   FontSize="11"
-                                   TextWrapping="Wrap"
-                                   Margin="0,0,0,5"/>
-                        <Grid Margin="0,0,0,15">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <ui:TextBox Grid.Column="0" 
-                                       Text="{Binding PowerShellModulePath, UpdateSourceTrigger=PropertyChanged}"
-                                       PlaceholderText="{lex:Loc PowerShellModulePathPlaceholder}"
-                                       Margin="0,0,10,0"/>
-                            <ui:Button Grid.Column="1" 
-                                      Content="{lex:Loc Browse}"
-                                      Icon="{ui:SymbolIcon Symbol=Folder20}"
-                                      Command="{Binding BrowsePowerShellModulePathCommand}"
-                                      Margin="0,0,10,0"/>
-                            <ui:Button Grid.Column="2" 
-                                      Content="{lex:Loc Clear}"
-                                      Icon="{ui:SymbolIcon Symbol=Delete20}"
-                                      Command="{Binding ClearPowerShellModulePathCommand}"
-                                      Appearance="Secondary"/>
-                        </Grid>
-
-                        <ui:InfoBar Title="{lex:Loc ModulePathConfigTitle}" 
-                                    Severity="Informational"
-                                    IsOpen="True"
-                                    IsClosable="False">
-                            <ui:InfoBar.Content>
-                                <TextBlock TextWrapping="Wrap">
-                                    <Run Text="{lex:Loc ModulePathInfo1}"/>
-                                    <LineBreak/>
-                                    <Run Text="{lex:Loc ModulePathInfo2}"/>
-                                    <LineBreak/>
-                                    <Run Text="{lex:Loc ModulePathSearchLoc1}"/>
-                                    <LineBreak/>
-                                    <Run Text="{lex:Loc ModulePathSearchLoc2}"/>
-                                    <LineBreak/>
-                                    <Run Text="{lex:Loc ModulePathSearchLoc3}"/>
-                                    <LineBreak/>
-                                    <Run Text="{lex:Loc ModulePathSearchLoc4}"/>
-                                </TextBlock>
-                            </ui:InfoBar.Content>
-                        </ui:InfoBar>
                     </StackPanel>
                 </ui:Card>
 

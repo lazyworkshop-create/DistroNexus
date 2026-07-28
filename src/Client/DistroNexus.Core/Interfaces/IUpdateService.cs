@@ -10,7 +10,7 @@ public interface IUpdateService
     /// </summary>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>Update information if an update is available, null otherwise.</returns>
-    Task<UpdateInfo?> CheckForUpdatesAsync(CancellationToken cancellationToken = default);
+    Task<UpdateInfo?> CheckForUpdatesAsync(CancellationToken cancellationToken = default, bool includePrerelease = false);
 
     /// <summary>
     /// Gets the current application version.

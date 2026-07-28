@@ -10,7 +10,7 @@ namespace DistroNexus.Desktop.Wizard.Steps;
 /// </summary>
 public partial class UserConfigurationStep : WizardStepBase
 {
-    private readonly ISettingsService _settingsService;
+    private readonly IPowerShellModuleClient _moduleClient;
     private readonly ILogger _logger;
 
     public override string StepId => "user-configuration";
@@ -32,9 +32,9 @@ public partial class UserConfigurationStep : WizardStepBase
         }
     }
 
-    public UserConfigurationStep(ISettingsService settingsService, ILogger logger)
+    public UserConfigurationStep(IPowerShellModuleClient moduleClient, ILogger logger)
     {
-        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -48,7 +48,7 @@ public partial class UserConfigurationStep : WizardStepBase
         // Load default settings if username not set
         if (Context != null && string.IsNullOrEmpty(Context.Username))
         {
-            var settings = _settingsService.LoadSettings();
+            var settings = await _moduleClient.GetSettingsAsync();
             Context.Username = settings.DefaultUsername;
             Context.WslVersion = settings.DefaultWslVersion;
             OnPropertyChanged(nameof(WslVersionIndex));
@@ -113,7 +113,7 @@ public partial class UserConfigurationStep : WizardStepBase
             return;
 
         // Load default settings
-        var settings = _settingsService.LoadSettings();
+        var settings = await _moduleClient.GetSettingsAsync();
 
         // Use root user for quick install (no password needed)
         Context.Username = "root";

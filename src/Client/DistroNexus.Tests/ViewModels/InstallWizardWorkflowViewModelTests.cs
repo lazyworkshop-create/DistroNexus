@@ -110,10 +110,10 @@ public class InstallWizardWorkflowViewModelTests
     [Fact]
     public async Task InstallPathStep_UsesTheModuleClientToChooseAUniqueQuickInstallName()
     {
-        _mockSettingsService.Setup(service => service.LoadSettings()).Returns(new GlobalSettings { DefaultInstallPath = "C:\\WSL" });
+        _mockModuleClient.Setup(client => client.GetSettingsAsync(It.IsAny<CancellationToken>())).ReturnsAsync(new GlobalSettings { DefaultInstallPath = "C:\\WSL" });
         _mockModuleClient.Setup(client => client.GetInstancesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([new WslInstance { Name = "Ubuntu" }, new WslInstance { Name = "Ubuntu-1" }]);
-        var step = new InstallPathStep(_mockSettingsService.Object, _mockModuleClient.Object, Mock.Of<ILogger>())
+        var step = new InstallPathStep(_mockModuleClient.Object, Mock.Of<ILogger>())
         {
             Context = new WizardContext { SelectedDistribution = new DistroPackage { Name = "Ubuntu" } }
         };
@@ -128,7 +128,6 @@ public class InstallWizardWorkflowViewModelTests
     {
         return new InstallWizardWorkflowViewModel(
             _mockModuleClient.Object,
-            _mockSettingsService.Object,
             _mockLogger.Object);
     }
 }

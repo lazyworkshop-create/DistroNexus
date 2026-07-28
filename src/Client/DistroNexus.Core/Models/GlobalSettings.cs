@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace DistroNexus.Core.Models;
 
 /// <summary>
@@ -101,9 +103,9 @@ public class GlobalSettings
     public Dictionary<string, string> CustomData { get; set; } = new();
 
     /// <summary>
-    /// Gets or sets the custom path to the PowerShell module.
-    /// If not set, the service will auto-detect the module path.
+    /// Retired compatibility field. It is never used for module resolution.
     /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? PowerShellModulePath { get; set; }
 
     /// <summary>

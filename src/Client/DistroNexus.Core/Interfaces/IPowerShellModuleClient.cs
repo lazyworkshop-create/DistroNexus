@@ -51,6 +51,9 @@ public interface IPowerShellModuleClient
 
     /// <summary>Gets the modeled global settings through the module contract.</summary>
     Task<GlobalSettings> GetSettingsAsync(CancellationToken cancellationToken = default);
+    Task<BootstrapSettingsResult> GetBootstrapSettingsAsync(CancellationToken cancellationToken = default);
+    Task<StoreComplianceStatusResult> GetStoreComplianceStatusAsync(CancellationToken cancellationToken = default);
+    Task<UpdateStatusResult> GetUpdateStatusAsync(bool includePrerelease = false, CancellationToken cancellationToken = default);
 
     /// <summary>Applies the supplied modeled settings fields through the module contract.</summary>
     Task SaveSettingsAsync(DistroNexusSettingsUpdate settings, CancellationToken cancellationToken = default);
@@ -289,6 +292,8 @@ public sealed record DistroNexusSettingsUpdate(
     bool? AutoRetryDownloads = null,
     int? MaxRetryAttempts = null,
     bool? AutoSaveEnabled = null,
-    int? AutoSaveInterval = null,
-    string? PowerShellModulePath = null,
-    bool UpdatePowerShellModulePath = false);
+    int? AutoSaveInterval = null);
+
+public sealed record BootstrapSettingsResult(GlobalSettings Settings, string ModuleState);
+public sealed record StoreComplianceStatusResult(bool IsStoreManaged, string OutcomeCode);
+public sealed record UpdateStatusResult(string CurrentVersion, string? LatestVersion, bool IsUpdateAvailable, string? ReleaseNotes, Uri? ReleaseUri, DateTimeOffset? ReleasedAt, bool IsPreRelease, string OutcomeCode);

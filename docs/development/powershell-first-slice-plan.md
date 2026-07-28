@@ -2543,7 +2543,7 @@ Deployment or publishing.
 
 ### Status
 
-Planned
+Committed
 
 ### Objective
 
