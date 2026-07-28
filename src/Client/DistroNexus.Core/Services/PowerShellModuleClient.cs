@@ -159,6 +159,7 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string GetWorkspaceOperationCommand = "Get-DistroNexusWorkspaceOperation";
     private const string StopWorkspaceOperationCommand = "Stop-DistroNexusWorkspaceOperation";
     private const string GetTemplateCommand = "Get-DistroNexusTemplate";
+    private const string GetTemplateOptionsCommand = "Get-DistroNexusTemplateOption";
     private const string TestTemplateCompatibilityCommand = "Test-DistroNexusTemplateCompatibility";
     private const string ImportTemplatePreviewCommand = "Get-DistroNexusTemplateImportPreview";
     private const string ImportTemplateCommand = "Import-DistroNexusTemplate";
@@ -230,6 +231,13 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
         var result = await _powerShellService.ExecuteModuleCmdletAsync(GetTemplateCommand, new() { ["Id"] = templateId }, new ModuleCallOptions { ParseAsJson = true }, cancellationToken);
         ThrowIfFailed(result);
         return ReadEnvelopeValue<TemplateDisplay>(result.Output, "Template");
+    }
+    public async Task<IReadOnlyList<TemplateOptionDisplay>> GetTemplateOptionsAsync(string templateId, CancellationToken cancellationToken = default)
+    {
+        ValidateTemplateIdentifier(templateId, nameof(templateId));
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(GetTemplateOptionsCommand, new() { ["TemplateId"] = templateId }, new ModuleCallOptions { ParseAsJson = true }, cancellationToken);
+        ThrowIfFailed(result);
+        return ReadEnvelopeList<TemplateOptionDisplay>(result.Output, "Options");
     }
     public async Task<bool> TestTemplateCompatibilityAsync(string templateId, string distributionName, CancellationToken cancellationToken = default)
     { ValidateTemplateIdentifier(templateId, nameof(templateId)); ValidateName(distributionName, nameof(distributionName)); var result = await ExecuteJsonAsync<TemplateCompatibilityClientResult>(TestTemplateCompatibilityCommand, new() { ["TemplateId"] = templateId, ["DistributionName"] = distributionName }, cancellationToken); return result.IsCompatible; }

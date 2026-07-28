@@ -386,7 +386,9 @@ public sealed partial class PlatformCapabilityService : IPlatformCapabilityServi
 
     private static readonly DependencyProbe[] DependencyCommands =
     [
-        new(CapabilityId.WindowsTerminal, "wt.exe", ["--version"]),
+        // Windows Terminal exposes no non-interactive version probe: `wt.exe --version`
+        // opens its Help/About dialog. Presence is checked with where.exe above instead.
+        new(CapabilityId.WindowsTerminal, "wt.exe", Array.Empty<string>()),
         new(CapabilityId.VisualStudioCode, "code.cmd", ["--version"]),
         new(CapabilityId.DockerDesktop, "com.docker.cli.exe", ["-Version"]),
         new(CapabilityId.Podman, "podman.exe", ["--version"]),

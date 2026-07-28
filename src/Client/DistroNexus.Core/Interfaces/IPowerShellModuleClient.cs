@@ -210,6 +210,7 @@ public interface IPowerShellModuleClient
 
     Task<IReadOnlyList<TemplateDisplay>> GetTemplatesAsync(bool forceRefresh = false, string? query = null, string? category = null, CancellationToken cancellationToken = default);
     Task<TemplateDisplay?> GetTemplateAsync(string templateId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TemplateOptionDisplay>> GetTemplateOptionsAsync(string templateId, CancellationToken cancellationToken = default);
     Task<bool> TestTemplateCompatibilityAsync(string templateId, string distributionName, CancellationToken cancellationToken = default);
     Task<TemplateApplyPreviewResult> PreviewTemplateApplyAsync(string instanceName, string templateId, IReadOnlyDictionary<string,string> variables, bool declineRecoveryOffer, CancellationToken cancellationToken = default);
     Task<TemplateApplyExecuteResult> StartTemplateApplyAsync(string previewToken, CancellationToken cancellationToken = default);

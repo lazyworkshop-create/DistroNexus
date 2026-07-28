@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DistroNexus.Core.Interfaces;
+using DistroNexus.Core.Models;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -14,6 +15,8 @@ namespace DistroNexus.Desktop.Wizard.Steps;
 /// </summary>
 public partial class TemplateApplyStep : WizardStepBase
 {
+    internal static Func<bool>? RecoveryDeclineConfirmationOverride { get; set; }
+    internal static Func<bool>? CancelConfirmationOverride { get; set; }
     private static readonly string[] ErrorKeywords =
     [
         "error",
@@ -34,9 +37,13 @@ public partial class TemplateApplyStep : WizardStepBase
         "deprecated"
     ];
 
-    private readonly ITemplateService _templateService;
+    private readonly IPowerShellModuleClient _moduleClient;
     private readonly ILogger _logger;
-    private CancellationTokenSource? _applyCts;
+    private string? _operationId;
+    private TaskCompletionSource<string?>? _operationIdReady;
+    private Task? _cancelTask;
+    private bool _cancellationRequested;
+    private readonly object _cancelGate = new();
 
     public override string StepId => "template-apply";
     public override string Title => "Applying Template";
@@ -65,9 +72,9 @@ public partial class TemplateApplyStep : WizardStepBase
         RebuildFilteredOutput();
     }
 
-    public TemplateApplyStep(ITemplateService templateService, ILogger logger)
+    public TemplateApplyStep(IPowerShellModuleClient moduleClient, ILogger logger)
     {
-        _templateService = templateService ?? throw new ArgumentNullException(nameof(templateService));
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -120,55 +127,41 @@ public partial class TemplateApplyStep : WizardStepBase
         if (Context == null || Workflow == null)
             return;
 
-        _applyCts = new CancellationTokenSource();
+        _operationIdReady = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        _cancelTask = null;
+        _cancellationRequested = false;
         Context.IsInstalling = true;
         Context.InstallProgress = 0;
         Context.InstallStatusMessage = $"Applying template: {Context.SelectedTemplate?.Name}...";
 
         try
         {
-            var recoveryOffer = await _templateService.GetRecoveryOfferAsync(Context.InstanceName, _applyCts.Token);
-            if (recoveryOffer.IsAvailable && !ConfirmRecoveryDecline())
-                throw new OperationCanceledException("Template application was paused so the user can create a recovery point.");
-            if (Context.SelectedTemplate != null && Context.SelectedTemplate.IsCustom && !ConfirmCustomTemplateApplication(Context.SelectedTemplate.Name))
+            var variables = Context.TemplateVariableSelections;
+            var preview = await _moduleClient.PreviewTemplateApplyAsync(Context.InstanceName, Context.SelectedTemplate!.Id, variables, false);
+            if (preview.RequiresRecoveryDecline)
             {
-                throw new OperationCanceledException("Custom template application was cancelled by user confirmation.");
+                if (!ConfirmRecoveryDecline()) throw new OperationCanceledException("Template application was paused so the user can create a recovery point.");
+                preview = await _moduleClient.PreviewTemplateApplyAsync(Context.InstanceName, Context.SelectedTemplate.Id, variables, true);
             }
-
-            var tplProgress = new Progress<DistroNexus.Core.Models.TemplateProgress>(p =>
+            if (string.IsNullOrWhiteSpace(preview.PreviewToken)) throw new InvalidOperationException("Template application preview was not approved.");
+            _operationId = (await _moduleClient.StartTemplateApplyAsync(preview.PreviewToken)).OperationId;
+            _operationIdReady.TrySetResult(_operationId);
+            if (_cancellationRequested) _ = GetOrStartCancellation(_operationId);
+            var templateResult = await WaitForCompletionAsync(_operationId);
+            if (templateResult.State == TemplateOperationState.Cancelled)
             {
-                Context.InstallProgress = p.PercentComplete;
-                Context.InstallStatusMessage = $"Template: {p.StatusMessage}";
-
-                if (!string.IsNullOrWhiteSpace(p.LatestOutput))
-                {
-                    AppendTemplateOutput(p.CurrentScript, p.LatestOutput);
-                }
-            });
-
-            var templateResult = await _templateService.ApplyTemplateAsync(
-                Context.SelectedTemplate!.Id,
-                Context.InstanceName,
-                Context.TemplateVariableSelections.Count > 0 ? Context.TemplateVariableSelections : null,
-                tplProgress,
-                _applyCts.Token);
-
-            if (!templateResult.Success)
-            {
-                var firstError = templateResult.Errors.FirstOrDefault() ?? templateResult.Message;
-                throw new InvalidOperationException($"Template application failed: {firstError}");
+                Context.InstallFailed = true;
+                Context.InstallCompleted = false;
+                Context.ResultMessage = "Template application was cancelled by user.";
+                return;
             }
+            if (templateResult.State != TemplateOperationState.Succeeded)
+                throw new InvalidOperationException($"Template application failed: {templateResult.Message}");
 
             Context.InstallProgress = 100;
             Context.InstallCompleted = true;
             Context.InstallFailed = false;
-            Context.ResultMessage = $"Template '{Context.SelectedTemplate.Name}' applied ({templateResult.ExecutedScripts.Count} scripts, {templateResult.Duration.TotalSeconds:F1}s).";
-        }
-        catch (OperationCanceledException)
-        {
-            Context.InstallFailed = true;
-            Context.InstallCompleted = false;
-            Context.ResultMessage = "Template application was cancelled by user.";
+            Context.ResultMessage = $"Template '{Context.SelectedTemplate.Name}' applied ({templateResult.ExecutedScripts.Count} scripts).";
         }
         catch (Exception ex)
         {
@@ -181,9 +174,23 @@ public partial class TemplateApplyStep : WizardStepBase
         {
             Context.IsInstalling = false;
             CanCancel = false;
-            _applyCts?.Dispose();
-            _applyCts = null;
+            _operationIdReady?.TrySetResult(null);
+            _operationIdReady = null;
+            _operationId = null;
             await Workflow.GoNextAsync();
+        }
+    }
+
+    private async Task<TemplateApplyOperationStatus> WaitForCompletionAsync(string operationId)
+    {
+        while (true)
+        {
+            var status = await _moduleClient.GetTemplateApplyOperationStatusAsync(operationId);
+            Context!.InstallProgress = status.TotalScripts == 0 ? 0 : status.CompletedScripts * 100d / status.TotalScripts;
+            Context.InstallStatusMessage = $"Template: {status.Message}";
+            if (!string.IsNullOrWhiteSpace(status.Message)) AppendTemplateOutput(status.CurrentScript ?? "Template", status.Message);
+            if (status.State is TemplateOperationState.Succeeded or TemplateOperationState.Failed or TemplateOperationState.Cancelled or TemplateOperationState.Interrupted) return status;
+            await Task.Delay(TimeSpan.FromMilliseconds(350));
         }
     }
 
@@ -211,7 +218,7 @@ public partial class TemplateApplyStep : WizardStepBase
         RebuildFilteredOutput();
     }
 
-    private static bool ConfirmRecoveryDecline() => MessageBox.Show(
+    private static bool ConfirmRecoveryDecline() => RecoveryDeclineConfirmationOverride?.Invoke() ?? MessageBox.Show(
         DistroNexus.Desktop.Properties.Resources.ResourceManager.GetString("Recovery_OfferTemplate") ?? "Recovery point available.",
         DistroNexus.Desktop.Properties.Resources.ResourceManager.GetString("Recovery_OfferTitle") ?? "Optional recovery point", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes;
 
@@ -283,26 +290,49 @@ public partial class TemplateApplyStep : WizardStepBase
     }
 
     [RelayCommand]
-    private void Cancel()
+    private async Task CancelAsync()
     {
-        var confirmed = DistroNexus.Desktop.Views.ConfirmDialog.Show(
+        var confirmed = CancelConfirmationOverride?.Invoke() ?? DistroNexus.Desktop.Views.ConfirmDialog.Show(
             Properties.Resources.TitleCancelInstallation,
             "Cancel template application?",
             "Yes");
 
-        if (confirmed)
+        if (!confirmed) return;
+        CanCancel = false;
+        _cancellationRequested = true;
+        var id = _operationId ?? await (_operationIdReady?.Task ?? Task.FromResult<string?>(null));
+        if (string.IsNullOrWhiteSpace(id)) return;
+        await GetOrStartCancellation(id);
+    }
+
+    private Task GetOrStartCancellation(string operationId)
+    {
+        lock (_cancelGate) return _cancelTask ??= RequestCancellationAsync(operationId);
+    }
+
+    private async Task RequestCancellationAsync(string operationId)
+    {
+        TemplateApplyCancelResult result;
+        try
         {
-            _applyCts?.Cancel();
-            CanCancel = false;
+            result = await _moduleClient.CancelTemplateApplyAsync(operationId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Template cancellation request failed for {OperationId}", operationId);
+            return;
+        }
+
+        if (!result.Accepted) return;
+        var status = await WaitForCompletionAsync(operationId);
+        if (Context is not null && status.State == TemplateOperationState.Cancelled)
+        {
+            Context.InstallFailed = true;
+            Context.InstallCompleted = false;
+            Context.ResultMessage = "Template application was cancelled by user.";
         }
     }
 
-    private static bool ConfirmCustomTemplateApplication(string templateName)
-    {
-        var message = $"You are about to apply a custom template '{templateName}'. Continue?";
-        var result = MessageBox.Show(message, "Custom Template Confirmation", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-        return result == MessageBoxResult.Yes;
-    }
 }
 
 public enum TemplateOutputSeverity

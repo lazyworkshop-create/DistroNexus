@@ -25,7 +25,7 @@ public sealed class S13DesktopCompositionAndLocalizationTests
         {
             "services.AddPlatformCapabilities()", "services.AddHealthCenter()",
             "IRecoveryPointService", "IMonitoringService", "IUsbDeviceService", "IWorkspaceService",
-            "IContainerRuntimeService", "ITemplateMarketplaceService", "HealthCenterViewModel",
+            "IContainerRuntimeService", "IPowerShellModuleClient", "HealthCenterViewModel",
             "UsbDevicesViewModel", "WorkspacesViewModel", "ApplicationsViewModel", "HealthCenterPage",
             "UsbDevicesPage", "WorkspacesPage", "ApplicationsPage"
         })

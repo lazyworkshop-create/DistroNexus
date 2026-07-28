@@ -19,6 +19,8 @@ public class PlatformCapabilityServiceTests
 
         Assert.Equal(CapabilityStatus.Supported, snapshot.OptionalDependencies[CapabilityId.WindowsTerminal].Status);
         Assert.DoesNotContain(runner.Requests, request => string.Equals(request.FileName, "wt.exe", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(runner.Requests, request => request.Arguments.Contains("--version", StringComparer.OrdinalIgnoreCase)
+            && string.Equals(request.FileName, "wt.exe", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

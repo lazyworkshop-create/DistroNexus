@@ -12,7 +12,6 @@ public class InstallWizardWorkflowViewModelTests
     private readonly Mock<ICatalogService> _mockCatalogService;
     private readonly Mock<IPowerShellModuleClient> _mockModuleClient;
     private readonly Mock<ISettingsService> _mockSettingsService;
-    private readonly Mock<ITemplateService> _mockTemplateService;
     private readonly Mock<ILogger<InstallWizardWorkflowViewModel>> _mockLogger;
 
     public InstallWizardWorkflowViewModelTests()
@@ -20,7 +19,6 @@ public class InstallWizardWorkflowViewModelTests
         _mockCatalogService = new Mock<ICatalogService>();
         _mockModuleClient = new Mock<IPowerShellModuleClient>();
         _mockSettingsService = new Mock<ISettingsService>();
-        _mockTemplateService = new Mock<ITemplateService>();
         _mockLogger = new Mock<ILogger<InstallWizardWorkflowViewModel>>();
 
         _mockSettingsService
@@ -42,9 +40,9 @@ public class InstallWizardWorkflowViewModelTests
             Category = "dotnet"
         };
 
-        _mockTemplateService
-            .Setup(service => service.GetTemplateByIdAsync("template-a", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expectedTemplate);
+        _mockModuleClient
+            .Setup(service => service.GetTemplateAsync("template-a", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TemplateDisplay("template-a", expectedTemplate.Name, "", expectedTemplate.Category, "1", "", [], [], 0, 0, false, false, TemplateTrustState.Untrusted, []));
 
         var viewModel = CreateViewModel();
         viewModel.SetStartupRequest(new InstallWizardStartupRequest { TemplateId = "template-a" });
@@ -60,9 +58,9 @@ public class InstallWizardWorkflowViewModelTests
     [Fact]
     public async Task Initialize_WithInvalidTemplatePayload_FallsBackToGenericWithWarning()
     {
-        _mockTemplateService
-            .Setup(service => service.GetTemplateByIdAsync("missing-template", It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Template?)null);
+        _mockModuleClient
+            .Setup(service => service.GetTemplateAsync("missing-template", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((TemplateDisplay?)null);
 
         var viewModel = CreateViewModel();
         viewModel.SetStartupRequest(new InstallWizardStartupRequest { TemplateId = "missing-template" });
@@ -131,7 +129,6 @@ public class InstallWizardWorkflowViewModelTests
         return new InstallWizardWorkflowViewModel(
             _mockModuleClient.Object,
             _mockSettingsService.Object,
-            _mockTemplateService.Object,
             _mockLogger.Object);
     }
 }

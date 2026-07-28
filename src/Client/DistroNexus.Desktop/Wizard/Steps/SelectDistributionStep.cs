@@ -13,7 +13,6 @@ namespace DistroNexus.Desktop.Wizard.Steps;
 public partial class SelectDistributionStep : WizardStepBase
 {
     private readonly IPowerShellModuleClient _moduleClient;
-    private readonly ITemplateService _templateService;
     private readonly ILogger _logger;
 
     public override string StepId => "select-distribution";
@@ -26,10 +25,9 @@ public partial class SelectDistributionStep : WizardStepBase
     [ObservableProperty]
     private bool _isLoading;
 
-    public SelectDistributionStep(IPowerShellModuleClient moduleClient, ITemplateService templateService, ILogger logger)
+    public SelectDistributionStep(IPowerShellModuleClient moduleClient, ILogger logger)
     {
         _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
-        _templateService = templateService ?? throw new ArgumentNullException(nameof(templateService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -115,7 +113,7 @@ public partial class SelectDistributionStep : WizardStepBase
 
             try
             {
-                var isCompatible = await _templateService.IsTemplateCompatibleAsync(Context.SelectedTemplate.Id, distributionName);
+                var isCompatible = await _moduleClient.TestTemplateCompatibilityAsync(Context.SelectedTemplate.Id, distributionName);
                 if (!isCompatible)
                 {
                     Context.StartupWarningMessage = string.Format(

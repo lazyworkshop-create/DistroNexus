@@ -14,7 +14,6 @@ public partial class InstallWizardWorkflowViewModel : ObservableObject
 {
     private readonly IPowerShellModuleClient _moduleClient;
     private readonly ISettingsService _settingsService;
-    private readonly ITemplateService _templateService;
     private readonly ILogger<InstallWizardWorkflowViewModel> _logger;
     private InstallWizardStartupRequest? _startupRequest;
 
@@ -29,12 +28,10 @@ public partial class InstallWizardWorkflowViewModel : ObservableObject
     public InstallWizardWorkflowViewModel(
         IPowerShellModuleClient moduleClient,
         ISettingsService settingsService,
-        ITemplateService templateService,
         ILogger<InstallWizardWorkflowViewModel> logger)
     {
         _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
-        _templateService = templateService ?? throw new ArgumentNullException(nameof(templateService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         _workflow = CreateWorkflow();
@@ -48,14 +45,14 @@ public partial class InstallWizardWorkflowViewModel : ObservableObject
         workflow.Completed += OnWorkflowCompleted;
 
         // Add steps in order
-        workflow.AddStep(new SelectDistributionStep(_moduleClient, _templateService, _logger));
+        workflow.AddStep(new SelectDistributionStep(_moduleClient, _logger));
         workflow.AddStep(new InstallPathStep(_settingsService, _moduleClient, _logger));
         workflow.AddStep(new UserConfigurationStep(_settingsService, _logger));
-        workflow.AddStep(new SelectTemplateStep(_templateService, _logger));
-        workflow.AddStep(new TemplateOptionsStep());
+        workflow.AddStep(new SelectTemplateStep(_moduleClient, _logger));
+        workflow.AddStep(new TemplateOptionsStep(_moduleClient));
         workflow.AddStep(new ReviewStep());
         workflow.AddStep(new ProgressStep(_moduleClient, _logger));
-        workflow.AddStep(new TemplateApplyStep(_templateService, _logger));
+        workflow.AddStep(new TemplateApplyStep(_moduleClient, _logger));
         workflow.AddStep(new ResultStep());
 
         return workflow;
@@ -131,10 +128,10 @@ public partial class InstallWizardWorkflowViewModel : ObservableObject
         {
             try
             {
-                var template = await _templateService.GetTemplateByIdAsync(_startupRequest.TemplateId);
+                var template = await _moduleClient.GetTemplateAsync(_startupRequest.TemplateId);
                 if (template != null)
                 {
-                    Workflow.Context.SelectedTemplate = template;
+                    Workflow.Context.SelectedTemplate = TemplatePresentationMapper.ToTemplate(template);
                     Workflow.Context.ApplyTemplateAfterInstall = true;
                 }
                 else

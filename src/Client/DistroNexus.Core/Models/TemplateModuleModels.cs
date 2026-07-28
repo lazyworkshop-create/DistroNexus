@@ -19,6 +19,21 @@ public sealed record TemplateDisplay(
     TemplateTrustState TrustState,
     IReadOnlyList<TemplateCapability> Capabilities);
 
+/// <summary>
+/// Bounded presentation schema for the wizard's template variable selector.
+/// It deliberately excludes template script, package, path and preflight material.
+/// </summary>
+public sealed record TemplateOptionDisplay(
+    string Key,
+    string Label,
+    string Description,
+    TemplateOptionType Type,
+    bool Required,
+    string DefaultValue,
+    IReadOnlyList<TemplateOptionValueDisplay> Values);
+
+public sealed record TemplateOptionValueDisplay(string Value, string Label, string Description);
+
 public sealed record TemplateSourceDisplay(
     string Id,
     string Url,
