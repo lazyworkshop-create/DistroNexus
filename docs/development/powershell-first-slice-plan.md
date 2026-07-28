@@ -2336,15 +2336,15 @@ One accepted workspace module/client and presentation migration slice.
 
 Live WSL workspace execution, shortcut/file-picker implementation and all unrelated capability families.
 
-## Slice S41: Template and marketplace module migration
+## Slice S41a: Retire unsafe template executor
 
 ### Status
 
-Planned
+Committed (`b6f4f39`)
 
 ### Objective
 
-Make template catalog, marketplace and application module-owned, including tokenized template apply, durable status/cancel and a fixed worker.
+Remove the public mutable-template executor before any module replacement exists, so no product path can directly run caller-provided template script material.
 
 ### Sources
 
@@ -2356,7 +2356,7 @@ S40
 
 ### Allowed Paths
 
-Template/marketplace Core services/contracts/grants/operations/tests; TemplateWorker and packaging; WorkspaceBridge template routes/tests; template public commands/manifest/Pester tests; typed module client/tests; TemplatesViewModel and template wizard consumers/tests; template requirements/design/decision/contract/plan.
+`src/PowerShell/DistroNexus.psd1`, retired template executor/automation public scripts, and focused Pester unit/integration tests.
 
 ### Excluded Paths
 
@@ -2364,38 +2364,120 @@ New template content, generic scripting/process execution, USB/elevation, unrela
 
 ### Contract and Documentation
 
-Implement exactly the cmdlet-to-route and typed record matrix in `docs/contracts/template-module-v1-contract.md`. Apply token binds immutable approved material, variables, instance and the current Core-shaped recovery offer/explicit-decline decision. With an available offer, no token is issued until WPF confirms decline and requests a fresh preview; no unproven recovery action or rollback claim is made. `Apply-DistroNexusTemplate` is removed from the manifest rather than retained with a mutable compatibility shape.
+`Apply-DistroNexusTemplate` is removed from the manifest rather than retained with a mutable compatibility shape; non-dry-run automation fails closed pending the reviewed v1 route.
 
 ### Implementation Scope
 
-Add DPAPI/SID apply, marketplace-review grant, and operation stores with the contract's atomic consumption, lock, terminal-state and stale-worker recovery semantics. Replace the marketplace service's in-memory review token dictionary so review-to-approve works across fresh Bridge processes. Add a fixed packaged `DistroNexus.TemplateWorker` whose only user-controlled input is an opaque operation ID. Refactor Core execution into a grant-bound worker entry point using an internal `ITemplateGrantedExecutionRuntime`, not `BridgeReadOnlyPowerShellService`: Core stages only revalidated grant-bound material under its operation root and runtime permits only fixed `wsl.exe ... bash` or `pwsh.exe ... -File` process forms. Retire unsafe direct apply behavior; remove direct Desktop template/marketplace services; preserve Core marketplace candidate-promotion safeguards. Do not accept script text, paths, worker commands or arbitrary Bridge routes from callers.
+Delete the unsafe public implementation/export and replace obsolete tests with retirement/fail-closed assertions.
 
 ### Test Scope
 
-Add `TemplateApplyGrantStoreTests`, `TemplateMarketplaceReviewGrantStoreTests`, `TemplateApplyOperationStoreTests`, `TemplateWorkerTests`, `TemplateGrantedExecutionRuntimeTests`, named-template-route Bridge protocol tests, typed-client/WPF routing tests, and Pester command/manifest tests. Cover unknown-field and size rejection, exact source/template/manifest/artifact identity, cross-process review-to-approve and review-token SID/expiry/replay/tamper, compatibility `Compatible`/`Incompatible`, recovery offer/decline-required/decline recording, apply-grant SID/expiry/replay/tamper, launch failure/stale worker lock, prepared/claimed pending-script state and claimed-worker-death no-retry interruption, forged execution plan and operation-record SID/state/instance/pending-hash mismatch, fixed two process forms/timeout/cancellation, cancellation before, after claim/before child start, and during each script, status/cancel races, and no candidate promotion on failure/cancellation.
+Assert the command is absent from the manifest/module and that automation cannot fall back to direct execution.
 
 ### Acceptance Criteria
 
-- Desktop template and marketplace consumers have no direct business-service path.
-- Apply executes only a Core-issued token bound to approved immutable template material.
-- Cancel/status/recovery outcomes are durable and truthful across module processes.
-- Targeted xUnit, Pester Unit and Debug build pass; live WSL UAT is recorded separately.
+- No public PowerShell path invokes mutable template script content.
+- Pester Unit/Integration and Debug build pass.
 
 ### Verification Commands
 
 ```text
-dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Template|FullyQualifiedName~Marketplace|FullyQualifiedName~PowerShellModuleClient|FullyQualifiedName~WorkspaceBridgeProtocol"
 pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Unit
+pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Integration
 dotnet build src/Client/DistroNexus.slnx -c Debug
 ```
 
 ### Commit Boundary
 
-One accepted template/marketplace module and presentation migration slice.
+One accepted safety-retirement slice.
 
 ### Out of Scope
 
 Live template execution/recovery UAT, publishing and unrelated capability families.
+
+## Slice S41b: Template catalog and marketplace typed module boundary
+
+### Status
+
+Planned
+
+### Objective
+
+Expose catalog, compatibility, marketplace source/discovery/review/history and local template content operations through fixed typed v1 module/Bridge/client contracts, including durable review grants.
+
+### Dependencies
+
+S41a
+
+### Allowed Paths
+
+Template marketplace Core services/models/stores/tests; WorkspaceBridge template catalog/marketplace routes/tests; PowerShell template catalog/marketplace commands/manifest/Pester tests; `IPowerShellModuleClient` and implementation/tests; contract/design/plan only if needed for accepted rework.
+
+### Excluded Paths
+
+Template apply grant/operation/worker/runtime, Desktop consumers, template content, USB/elevation, unrelated lifecycle/workspace and live WSL mutation.
+
+### Acceptance Criteria
+
+- Every listed catalog/marketplace public command uses only fixed v1 typed routes.
+- Marketplace review-to-approve succeeds across a fresh Bridge process with DPAPI/SID/expiry/replay protection.
+- Targeted xUnit/Pester and Debug build pass.
+
+## Slice S41c: Reviewed template application worker and runtime
+
+### Status
+
+Planned
+
+### Dependencies
+
+S41b
+
+### Objective
+
+Implement tokenized template preview/execute/status/cancel, durable grants/operations, fixed packaged worker and grant-bound execution runtime.
+
+### Allowed Paths
+
+Template apply Core contracts/stores/runtime/tests; TemplateWorker/packaging; WorkspaceBridge apply routes/tests; apply public commands/manifest/Pester; typed client/tests; design/contract/plan only if needed for accepted rework.
+
+### Excluded Paths
+
+Desktop consumers, marketplace catalog/source behavior except worker composition, template content, unrelated runtime paths and live WSL mutation.
+
+### Acceptance Criteria
+
+- Only a Core-issued token starts a same-SID durable operation.
+- Fixed worker/runtime obeys provenance, pending-script, cancellation and interruption contracts.
+- Targeted xUnit/Pester and Debug build pass.
+
+## Slice S41d: Template presentation migration and closure
+
+### Status
+
+Planned
+
+### Dependencies
+
+S41b, S41c
+
+### Objective
+
+Move template page and wizard consumers to typed module client operations and close template structural/conformance gaps.
+
+### Allowed Paths
+
+`src/Client/DistroNexus.Desktop` template page/wizard consumers and their tests; typed client surface/tests; structural tests; plan and release evidence.
+
+### Excluded Paths
+
+Core execution semantics, generic scripting, template content, USB/elevation, release/publishing and live WSL mutation.
+
+### Acceptance Criteria
+
+- Desktop template consumers have no direct `ITemplateService` or `ITemplateMarketplaceService` dependency.
+- WPF only requests typed operations, displays results and gathers consent.
+- Targeted xUnit/Pester/Debug build pass; disposable WSL UAT remains recorded externally.
 
 ## Slice S08: Conformance and release-evidence closure
 
