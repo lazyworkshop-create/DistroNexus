@@ -49,7 +49,7 @@ var globalConfiguration = new WslConfigService(NullLogger<WslConfigService>.Inst
 var globalConfigurationGateway = new GlobalConfigurationService(globalConfiguration, globalConfiguration, capabilities, Path.Combine(applicationRoot, "global-configuration-grants"));
 var backups = new BackupService(bridgePowerShell, NullLogger<BackupService>.Instance, applicationRoot);
 var fixedBackups = new FixedBackupRuntime(instances, processes, applicationRoot);
-if (args.Length > 0)
+if (args.Length > 0 && string.Equals(args[0], "--run-backup-schedule", StringComparison.Ordinal))
 {
     if (args.Length != 2 || !string.Equals(args[0], "--run-backup-schedule", StringComparison.Ordinal) || args[1].Length != 32 || args[1].Any(c => !Uri.IsHexDigit(c)))
     {
@@ -101,6 +101,12 @@ var handlers = Enum.GetValues<WorkspaceActionType>()
     .Select(type => (IWorkspaceActionHandler)new WorkspaceActionHandler(type, runtime, gate))
     .ToArray();
 var service = new WorkspaceService(runtime, root, handlers: handlers);
+var operationStore = new WorkspaceOperationStore(Path.Combine(root ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DistroNexus"), "workspace-operations"));
+if (args.Length == 2 && args[0] == "--run-workspace-operation" && args[1].Length == 64 && args[1].All(Uri.IsHexDigit))
+{
+    await service.RunOperationAsync(args[1]);
+    return;
+}
 var marketplace = new TemplateMarketplaceService(root);
 var outputGate = new object();
 void WriteFrame(BridgeResponse frame)
@@ -118,26 +124,27 @@ while ((line = Console.ReadLine()) is not null)
         var payload = request.Payload?.GetRawText() ?? string.Empty;
         object? value = request.Operation! switch
         {
-            "list" => await service.ListAsync(),
-            "save" => await service.SaveAsync(ParseDefinition(payload, options), request.ExpectedRevision ?? throw new ArgumentException("Expected revision is required.")),
-            "previewSave" => await service.PreviewSaveAsync(ParseDefinition(payload, options), request.ExpectedRevision ?? throw new ArgumentException("Expected revision is required.")),
-            "duplicate" => await DuplicateAsync(service, request),
-            "previewDuplicate" => await service.PreviewDuplicateAsync(request.Id ?? throw new ArgumentException("Workspace id is required."), request.Name ?? throw new ArgumentException("Workspace name is required."), request.ExpectedRevision ?? throw new ArgumentException("Expected revision is required.")),
-            "export" => await service.ExportAsync(request.Id ?? throw new ArgumentException("Workspace id is required."), request.ExpectedRevision ?? throw new ArgumentException("Expected revision is required.")),
-            "previewExportDryRun" => await service.PreviewExportDryRunAsync(request.Id ?? throw new ArgumentException("Workspace id is required."), request.ExpectedRevision ?? throw new ArgumentException("Expected revision is required.")),
-            "previewImport" => await service.PreviewImportAsync(payload),
-            "import" => await service.ImportAsync(payload, request.Token ?? throw new ArgumentException("Import token is required."), request.ExpectedRevision ?? throw new ArgumentException("Expected revision is required.")),
-            "previewImportDryRun" => await service.PreviewImportDryRunAsync(payload, request.ExpectedRevision ?? throw new ArgumentException("Expected revision is required.")),
-            "approveTrust" => await service.ApproveTrustAsync(request.Id ?? throw new ArgumentException("Workspace id is required."), request.ExpectedRevision ?? throw new ArgumentException("Expected revision is required.")),
-            "previewApproveTrust" => await service.PreviewApproveTrustAsync(request.Id ?? throw new ArgumentException("Workspace id is required."), request.ExpectedRevision ?? throw new ArgumentException("Expected revision is required.")),
-            "previewLaunch" => await service.PreviewLaunchAsync(request.Id ?? throw new ArgumentException("Workspace id is required.")),
-            "previewLaunchDryRun" => await service.PreviewLaunchDryRunAsync(request.Id ?? throw new ArgumentException("Workspace id is required.")),
-            "launch" => await LaunchAsync(request),
-            "previewRetry" => await service.PreviewRetryAsync(request.Id ?? throw new ArgumentException("Workspace id is required."), request.ActionId ?? throw new ArgumentException("Action id is required.")),
-            "retry" => await RetryAsync(request),
-            "remove" => await RemoveAsync(service, request),
-            "previewRemove" => await service.PreviewRemoveAsync(request.Id ?? throw new ArgumentException("Workspace id is required."), request.ExpectedRevision ?? throw new ArgumentException("Expected revision is required.")),
-            "previewRetryDryRun" => await service.PreviewRetryDryRunAsync(request.Id ?? throw new ArgumentException("Workspace id is required."), request.ActionId ?? throw new ArgumentException("Action id is required."), request.ExpectedRevision ?? throw new ArgumentException("Expected revision is required.")),
+            "workspace.list.v1" => await service.ListAsync(),
+            "workspace.save.preview.v1" => await WorkspaceSavePreviewV1Async(request),
+            "workspace.save.execute.v1" => await WorkspaceSaveV1Async(request),
+            "workspace.duplicate.preview.v1" => await WorkspaceDuplicatePreviewV1Async(request),
+            "workspace.duplicate.execute.v1" => await WorkspaceDuplicateV1Async(request),
+            "workspace.remove.preview.v1" => await WorkspaceRemovePreviewV1Async(request),
+            "workspace.remove.execute.v1" => await WorkspaceRemoveV1Async(request),
+            "workspace.import.preview.v1" => await WorkspaceImportPreviewV1Async(request),
+            "workspace.import.execute.v1" => await WorkspaceImportV1Async(request),
+            "workspace.export.preview.v1" => await WorkspaceExportPreviewV1Async(request),
+            "workspace.export.execute.v1" => await WorkspaceExportV1Async(request),
+            "workspace.trust.preview.v1" => await WorkspaceTrustPreviewV1Async(request),
+            "workspace.trust.execute.v1" => await WorkspaceTrustV1Async(request),
+            "workspace.launch.preview.v1" => await WorkspaceLaunchPreviewV1Async(request),
+            "workspace.launch.execute.v1" => await WorkspaceLaunchV1Async(request),
+            "workspace.retry.preview.v1" => await WorkspaceRetryPreviewV1Async(request),
+            "workspace.retry.execute.v1" => await WorkspaceRetryV1Async(request),
+            "workspace.close.preview.v1" => await WorkspaceClosePreviewV1Async(request),
+            "workspace.close.execute.v1" => await WorkspaceCloseV1Async(request),
+            "workspace.operation.status.v1" => await WorkspaceStatusV1Async(request),
+            "workspace.cancel.v1" => await WorkspaceCancelV1Async(request),
             "previewPodmanUnit" => await PreviewPodmanUnitAsync(request),
             "executePodmanUnit" => await ExecutePodmanUnitAsync(request),
             "previewPodmanConnection" => await PreviewPodmanConnectionAsync(request),
@@ -1020,7 +1027,45 @@ async Task<WorkspaceActionResult> RetryAsync(BridgeRequest request)
 static async Task<object> RemoveAsync(IWorkspaceService service, BridgeRequest request) { await service.RemoveAsync(request.Id ?? throw new ArgumentException("Workspace id is required."), request.ExpectedRevision ?? throw new ArgumentException("Expected revision is required.")); return new { }; }
 static Task<WorkspaceDefinition> DuplicateAsync(IWorkspaceService service, BridgeRequest request) => service.DuplicateAsync(request.Id ?? throw new ArgumentException("Workspace id is required."), request.Name ?? throw new ArgumentException("Workspace name is required."), request.ExpectedRevision ?? throw new ArgumentException("Expected revision is required."));
 static WorkspaceDefinition ParseDefinition(string payload, JsonSerializerOptions options) => JsonSerializer.Deserialize<WorkspaceDefinition>(payload, options) ?? throw new ArgumentException("Workspace definition is required.");
+async Task<WorkspaceOperationPreview> WorkspaceSavePreviewV1Async(BridgeRequest request) { ValidatePayload(request,["Definition","ExpectedRevision"],["Definition","ExpectedRevision"]); var p=ParsePayload<WorkspaceSavePayload>(request); return await service.PreviewSaveTokenAsync(p.Definition,p.ExpectedRevision); }
+async Task<WorkspaceDefinition> WorkspaceSaveV1Async(BridgeRequest request) { var p=WorkspaceToken(request); return await service.SaveTokenAsync(p.PreviewToken); }
+async Task<WorkspaceOperationPreview> WorkspaceDuplicatePreviewV1Async(BridgeRequest request) { ValidatePayload(request,["Id","Name","ExpectedRevision"],["Id","Name","ExpectedRevision"]); var p=ParsePayload<WorkspaceDuplicatePayload>(request); return await service.PreviewDuplicateTokenAsync(p.Id,p.Name,p.ExpectedRevision); }
+async Task<WorkspaceDefinition> WorkspaceDuplicateV1Async(BridgeRequest request) => await service.DuplicateTokenAsync(WorkspaceToken(request).PreviewToken);
+async Task<WorkspaceOperationPreview> WorkspaceRemovePreviewV1Async(BridgeRequest request) { var p=WorkspaceId(request); return await service.PreviewRemoveTokenAsync(p.Id,p.ExpectedRevision); }
+async Task<object> WorkspaceRemoveV1Async(BridgeRequest request) { await service.RemoveTokenAsync(WorkspaceToken(request).PreviewToken); return new { }; }
+async Task<WorkspaceImportPreview> WorkspaceImportPreviewV1Async(BridgeRequest request) { ValidatePayload(request,["Content"],["Content"]); return await service.PreviewImportTokenAsync(ParsePayload<WorkspaceImportPayload>(request).Content); }
+async Task<WorkspaceDefinition> WorkspaceImportV1Async(BridgeRequest request) => await service.ImportTokenAsync(WorkspaceToken(request).PreviewToken);
+async Task<WorkspaceOperationPreview> WorkspaceExportPreviewV1Async(BridgeRequest request) { var p=WorkspaceId(request); return await service.PreviewExportTokenAsync(p.Id,p.ExpectedRevision); }
+async Task<WorkspaceExportResult> WorkspaceExportV1Async(BridgeRequest request) => await service.ExportTokenAsync(WorkspaceToken(request).PreviewToken);
+async Task<WorkspaceOperationPreview> WorkspaceTrustPreviewV1Async(BridgeRequest request) { var p=WorkspaceId(request); return await service.PreviewTrustTokenAsync(p.Id,p.ExpectedRevision); }
+async Task<WorkspaceDefinition> WorkspaceTrustV1Async(BridgeRequest request) => await service.TrustTokenAsync(WorkspaceToken(request).PreviewToken);
+async Task<WorkspaceLaunchPreview> WorkspaceLaunchPreviewV1Async(BridgeRequest request) { ValidatePayload(request,["Id"],["Id"]); return await service.PreviewLaunchTokenAsync(ParsePayload<WorkspaceLaunchIdPayload>(request).Id); }
+async Task<WorkspaceOperationStarted> WorkspaceLaunchV1Async(BridgeRequest request) { var started=await service.StartOperationAsync(WorkspaceToken(request).PreviewToken,"launch"); await StartWorkspaceWorkerAsync(started.OperationId); return started; }
+async Task<WorkspaceLaunchPreview> WorkspaceRetryPreviewV1Async(BridgeRequest request) { ValidatePayload(request,["Id","ActionId"],["Id","ActionId"]); var p=ParsePayload<WorkspaceRetryPayload>(request); return await service.PreviewRetryTokenAsync(p.Id,p.ActionId); }
+async Task<WorkspaceOperationStarted> WorkspaceRetryV1Async(BridgeRequest request) { var started=await service.StartOperationAsync(WorkspaceToken(request).PreviewToken,"retry"); await StartWorkspaceWorkerAsync(started.OperationId); return started; }
+async Task<WorkspaceLaunchPreview> WorkspaceClosePreviewV1Async(BridgeRequest request) { ValidatePayload(request,["Id"],["Id"]); return await service.PreviewCloseTokenAsync(ParsePayload<WorkspaceLaunchIdPayload>(request).Id); }
+async Task<WorkspaceActionResult> WorkspaceCloseV1Async(BridgeRequest request) => await service.CloseTokenAsync(WorkspaceToken(request).PreviewToken);
+async Task<WorkspaceOperationStatus> WorkspaceStatusV1Async(BridgeRequest request) { ValidatePayload(request,["OperationId"],["OperationId"]); var r=await operationStore.RecoverAsync(ParsePayload<WorkspaceOperationIdPayload>(request).OperationId); return new(r.Progress,r.IsTerminal,r.Result); }
+async Task<object> WorkspaceCancelV1Async(BridgeRequest request) { ValidatePayload(request,["OperationId"],["OperationId"]); await operationStore.RequestCancelAsync(ParsePayload<WorkspaceOperationIdPayload>(request).OperationId); return new { }; }
+async Task StartWorkspaceWorkerAsync(string operationId)
+{
+    var assembly=Path.Combine(AppContext.BaseDirectory,"WorkspaceWorker","DistroNexus.WorkspaceWorker.dll");
+    try { WorkspaceWorkerIdentity.EnsureApprovedWorker(System.Reflection.AssemblyName.GetAssemblyName(assembly), System.Reflection.Assembly.GetExecutingAssembly().GetName().Version ?? throw new InvalidOperationException()); }
+    catch { var op=await operationStore.ReadAsync(operationId); await operationStore.WriteAsync(op with { IsTerminal=true, Outcome="Failed", ErrorCode="Workspace.WorkerIdentityInvalid" }); return; }
+    try { var info=new ProcessStartInfo("dotnet") { UseShellExecute=false, CreateNoWindow=true }; info.ArgumentList.Add(assembly); info.ArgumentList.Add(operationId); info.Environment["DISTRONEXUS_WORKSPACE_STORE_ROOT"]=root ?? string.Empty; _ = Process.Start(info) ?? throw new InvalidOperationException(); }
+    catch { var op=await operationStore.ReadAsync(operationId); await operationStore.WriteAsync(op with { IsTerminal=true, Outcome="Failed", ErrorCode="Workspace.WorkerStartFailed" }); }
+}
+WorkspaceIdPayload WorkspaceId(BridgeRequest request) { ValidatePayload(request,["Id","ExpectedRevision"],["Id","ExpectedRevision"]); return ParsePayload<WorkspaceIdPayload>(request); }
+WorkspaceTokenPayload WorkspaceToken(BridgeRequest request) { ValidatePayload(request,["PreviewToken"],["PreviewToken"]); return ParsePayload<WorkspaceTokenPayload>(request); }
 public sealed record BridgeRequest(string Operation, Guid? Id, JsonElement? Payload, long? ExpectedRevision, string? Token = null, string? Name = null, Guid? ActionId = null);
+public sealed record WorkspaceSavePayload(WorkspaceDefinition Definition, long ExpectedRevision);
+public sealed record WorkspaceDuplicatePayload(Guid Id, string Name, long ExpectedRevision);
+public sealed record WorkspaceIdPayload(Guid Id, long ExpectedRevision);
+public sealed record WorkspaceTokenPayload(string PreviewToken);
+public sealed record WorkspaceImportPayload(string Content);
+public sealed record WorkspaceLaunchIdPayload(Guid Id);
+public sealed record WorkspaceRetryPayload(Guid Id, Guid ActionId);
+public sealed record WorkspaceOperationIdPayload(string OperationId);
 public sealed record InstanceNamePayload(string Name, bool KeepAlive = false);
 public sealed record InstanceResourcePayload(string Name);
 public sealed record InstanceSparsePayload(string Name, bool Enabled);

@@ -29,6 +29,10 @@ public sealed record WorkspaceLaunchPreview(Guid WorkspaceId, long Revision, IRe
     IReadOnlyList<WorkspacePreflightResult>? PreflightResults = null,
     bool InstanceAvailable = true);
 public sealed record WorkspaceActionResult(Guid ActionId, WorkspaceActionOutcome Outcome, string Code, string? Detail = null);
+public sealed record WorkspaceOperationPreview(string PreviewToken, Guid? WorkspaceId, long? Revision, IReadOnlyList<string> Effects);
+public sealed record WorkspaceExportResult(string Content);
+public sealed record WorkspaceOperationStarted(string OperationId);
+public sealed record WorkspaceOperationStatus(IReadOnlyList<WorkspaceActionResult> Progress, bool IsTerminal, WorkspaceLaunchResult? Result = null);
 public sealed record WorkspaceLaunchResult(Guid WorkspaceId, IReadOnlyList<WorkspaceActionResult> Actions, bool Cancelled)
 { public bool Succeeded => !Cancelled && Actions.All(x => x.Outcome is WorkspaceActionOutcome.Succeeded or WorkspaceActionOutcome.Skipped); }
 public sealed record WorkspacePreflightResult(string Kind, string Value, bool Succeeded, string Code, string? Detail = null);

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Reflection;
 using System.Text.Json;
 using DistroNexus.Core.Models;
 using DistroNexus.Core.Services;
@@ -29,43 +30,47 @@ public sealed class WorkspaceBridgeProtocolTests
         Assert.Equal(0, launches);
     }
     [Fact]
-    public async Task Lifecycle_UsesCoreStoreAndEnforcesRevisions()
+    public async Task WorkspaceV1Routes_UseClosedPayloadsAndSingleUseDurableTokens()
     {
         await using var bridge = await BridgeProcess.StartAsync();
 
-        var empty = await bridge.SendAsync("list");
+        var empty = await bridge.SendAsync("workspace.list.v1");
         Assert.True(empty.GetProperty("Succeeded").GetBoolean());
         Assert.Equal(0, empty.GetProperty("Value").GetArrayLength());
 
         var definition = JsonDocument.Parse("""
             {"Id":"b2acbf0d-27d7-496e-937c-612ec37ac5ee","DisplayName":"Bridge workspace","InstanceName":"Ubuntu","PreflightChecks":[],"ActionGroups":[],"ClosePolicy":{"Mode":"None","ServiceNames":[]},"TrustState":"Untrusted"}
             """).RootElement.Clone();
-        var preview = await bridge.SendAsync("previewImport", payload: definition);
+        var preview = await bridge.SendAsync("workspace.save.preview.v1", payload: JsonSerializer.SerializeToElement(new { Definition = definition, ExpectedRevision = 0 }));
         Assert.True(preview.GetProperty("Succeeded").GetBoolean());
-        var token = preview.GetProperty("Value").GetProperty("ImportToken").GetString();
+        var token = preview.GetProperty("Value").GetProperty("PreviewToken").GetString();
         Assert.False(string.IsNullOrWhiteSpace(token));
 
-        var missingExpectedRevision = await bridge.SendAsync("import", payload: definition, token: token);
-        Assert.False(missingExpectedRevision.GetProperty("Succeeded").GetBoolean());
-        var imported = await bridge.SendAsync("import", payload: definition, expectedRevision: 0, token: token);
+        var malformed = await bridge.SendAsync("workspace.save.execute.v1", payload: definition);
+        Assert.False(malformed.GetProperty("Succeeded").GetBoolean());
+        var imported = await bridge.SendAsync("workspace.save.execute.v1", payload: JsonSerializer.SerializeToElement(new { PreviewToken = token }));
         Assert.True(imported.GetProperty("Succeeded").GetBoolean());
         var saved = imported.GetProperty("Value");
         var id = saved.GetProperty("Id").GetGuid();
         Assert.Equal(1, saved.GetProperty("Revision").GetInt64());
         Assert.Equal("Untrusted", saved.GetProperty("TrustState").GetString());
+        var replay = await bridge.SendAsync("workspace.save.execute.v1", payload: JsonSerializer.SerializeToElement(new { PreviewToken = token }));
+        Assert.False(replay.GetProperty("Succeeded").GetBoolean());
 
-        var approved = await bridge.SendAsync("approveTrust", id, expectedRevision: 1);
+        var trustPreview = await bridge.SendAsync("workspace.trust.preview.v1", payload: JsonSerializer.SerializeToElement(new { Id = id, ExpectedRevision = 1 }));
+        var approved = await bridge.SendAsync("workspace.trust.execute.v1", payload: JsonSerializer.SerializeToElement(new { PreviewToken = trustPreview.GetProperty("Value").GetProperty("PreviewToken").GetString() }));
         Assert.True(approved.GetProperty("Succeeded").GetBoolean());
         Assert.Equal("Trusted", approved.GetProperty("Value").GetProperty("TrustState").GetString());
         Assert.Equal(2, approved.GetProperty("Value").GetProperty("Revision").GetInt64());
 
-        var conflict = await bridge.SendAsync("remove", id, expectedRevision: 1);
+        var conflict = await bridge.SendAsync("workspace.remove.preview.v1", payload: JsonSerializer.SerializeToElement(new { Id = id, ExpectedRevision = 1 }));
         Assert.False(conflict.GetProperty("Succeeded").GetBoolean());
         Assert.Equal("Workspace.ConflictOrState", conflict.GetProperty("ErrorCode").GetString());
 
-        var removed = await bridge.SendAsync("remove", id, expectedRevision: 2);
+        var removePreview = await bridge.SendAsync("workspace.remove.preview.v1", payload: JsonSerializer.SerializeToElement(new { Id = id, ExpectedRevision = 2 }));
+        var removed = await bridge.SendAsync("workspace.remove.execute.v1", payload: JsonSerializer.SerializeToElement(new { PreviewToken = removePreview.GetProperty("Value").GetProperty("PreviewToken").GetString() }));
         Assert.True(removed.GetProperty("Succeeded").GetBoolean());
-        var finalList = await bridge.SendAsync("list");
+        var finalList = await bridge.SendAsync("workspace.list.v1");
         Assert.Equal(0, finalList.GetProperty("Value").GetArrayLength());
     }
 
@@ -76,6 +81,72 @@ public sealed class WorkspaceBridgeProtocolTests
         var response = await bridge.SendAsync("launch");
         Assert.False(response.GetProperty("Succeeded").GetBoolean());
         Assert.Equal("Workspace.Bridge.Invalid", response.GetProperty("ErrorCode").GetString());
+    }
+
+    [Fact]
+    public async Task DurableOperationStore_CancelsAndRecoversAnInterruptedWorker()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "DistroNexus-operation-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var store = new WorkspaceOperationStore(root);
+            var operationId = new string('a', 64);
+            await store.CreateAsync(new WorkspaceOperationRecord(operationId, WorkspaceOperationStore.CurrentSid(), "launch", Guid.NewGuid(), null, 1, [], false, false));
+            Assert.True(await store.RequestCancelAsync(operationId));
+            var recovered = await store.RecoverAsync(operationId);
+            Assert.True(recovered.CancellationRequested);
+            Assert.True(recovered.IsTerminal);
+            Assert.Equal("Workspace.WorkerInterrupted", recovered.ErrorCode);
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public async Task DurableOperationStore_PreservesCancelWhenWorkerPublishesProgress()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "DistroNexus-operation-race-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var store = new WorkspaceOperationStore(root); var id = new string('b', 64);
+            var record = new WorkspaceOperationRecord(id, WorkspaceOperationStore.CurrentSid(), "launch", Guid.NewGuid(), null, 1, [], false, false);
+            await store.CreateAsync(record);
+            var workerSnapshot = await store.ReadAsync(id);
+            await Task.WhenAll(store.RequestCancelAsync(id), store.WriteAsync(workerSnapshot with { Progress = [new WorkspaceActionResult(Guid.NewGuid(), WorkspaceActionOutcome.Succeeded, "ok")] }));
+            Assert.True((await store.ReadAsync(id)).CancellationRequested);
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public async Task PackagedWorker_HandsOperationToBridgeHostComposition()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "DistroNexus-operation-host-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var id = new string('c', 64); var store = new WorkspaceOperationStore(Path.Combine(root, "workspace-operations"));
+            await store.CreateAsync(new WorkspaceOperationRecord(id, WorkspaceOperationStore.CurrentSid(), "launch", Guid.NewGuid(), null, 1, [], false, false));
+            var worker = Path.Combine(FindRoot(), "src", "Client", "DistroNexus.WorkspaceBridge", "bin", "Debug", "net10.0", "WorkspaceWorker", "DistroNexus.WorkspaceWorker.dll");
+            using var process = Process.Start(new ProcessStartInfo("dotnet") { UseShellExecute = false, Environment = { ["DISTRONEXUS_WORKSPACE_STORE_ROOT"] = root }, ArgumentList = { worker, id } })!;
+            await process.WaitForExitAsync();
+            var terminal = await store.ReadAsync(id);
+            Assert.True(terminal.IsTerminal);
+            Assert.NotEqual("Workspace.WorkerCompositionUnavailable", terminal.ErrorCode);
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public void WorkerIdentity_RejectsVersionMismatch()
+    {
+        var candidate = new AssemblyName("DistroNexus.WorkspaceBridge") { Version = new Version(1, 0, 0, 0) };
+        Assert.Throws<InvalidOperationException>(() => WorkspaceWorkerIdentity.EnsureApprovedBridge(candidate, new Version(1, 0, 0, 1)));
+    }
+
+    [Fact]
+    public void WorkerIdentity_RejectsWrongWorkerAssembly()
+    {
+        var candidate = new AssemblyName("DistroNexus.WorkspaceBridge") { Version = new Version(1, 0, 0, 0) };
+        Assert.Throws<InvalidOperationException>(() => WorkspaceWorkerIdentity.EnsureApprovedWorker(candidate, new Version(1, 0, 0, 0)));
     }
 
     [Fact]
@@ -418,55 +489,48 @@ public sealed class WorkspaceBridgeProtocolTests
     }
 
     [Fact]
-    public async Task DryRunMutations_AreStructuredAndDoNotPersistOrIssueTokens()
+    public async Task WorkspaceV1PreviewDoesNotPersistAndExecuteRequiresItsDurableToken()
     {
         await using var bridge = await BridgeProcess.StartAsync();
         var definition = JsonDocument.Parse("""
             {"Id":"d2acbf0d-27d7-496e-937c-612ec37ac5ee","DisplayName":"Dry run","InstanceName":"Ubuntu","PreflightChecks":[],"ActionGroups":[],"ClosePolicy":{"Mode":"None","ServiceNames":[]},"TrustState":"Trusted"}
             """).RootElement.Clone();
 
-        var create = await bridge.SendAsync("previewSave", payload: definition, expectedRevision: 0);
+        var create = await bridge.SendAsync("workspace.save.preview.v1", payload: JsonSerializer.SerializeToElement(new { Definition = definition, ExpectedRevision = 0 }));
         Assert.True(create.GetProperty("Succeeded").GetBoolean());
         var value = create.GetProperty("Value");
-        Assert.True(value.GetProperty("SchemaValid").GetBoolean());
-        Assert.False(value.TryGetProperty("LaunchToken", out _));
-        Assert.False(value.TryGetProperty("ImportToken", out _));
-        Assert.Equal(0, (await bridge.SendAsync("list")).GetProperty("Value").GetArrayLength());
+        Assert.False(string.IsNullOrWhiteSpace(value.GetProperty("PreviewToken").GetString()));
+        Assert.Equal(0, (await bridge.SendAsync("workspace.list.v1")).GetProperty("Value").GetArrayLength());
 
-        var import = await bridge.SendAsync("previewImportDryRun", payload: definition, expectedRevision: 0);
-        Assert.True(import.GetProperty("Succeeded").GetBoolean());
-        Assert.False(import.GetProperty("Value").TryGetProperty("ImportToken", out _));
-        Assert.Equal(0, (await bridge.SendAsync("list")).GetProperty("Value").GetArrayLength());
-
-        var saved = await bridge.SendAsync("save", payload: definition, expectedRevision: 0);
+        var saved = await bridge.SendAsync("workspace.save.execute.v1", payload: JsonSerializer.SerializeToElement(new { PreviewToken = value.GetProperty("PreviewToken").GetString() }));
         var id = saved.GetProperty("Value").GetProperty("Id").GetGuid();
-        var export = await bridge.SendAsync("previewExportDryRun", id, expectedRevision: 1);
+        var export = await bridge.SendAsync("workspace.export.preview.v1", payload: JsonSerializer.SerializeToElement(new { Id = id, ExpectedRevision = 1 }));
         Assert.True(export.GetProperty("Succeeded").GetBoolean());
-        Assert.True(export.GetProperty("Value").GetProperty("SchemaValid").GetBoolean());
-        Assert.False(export.GetProperty("Value").TryGetProperty("LaunchToken", out _));
-        Assert.False(export.GetProperty("Value").TryGetProperty("ImportToken", out _));
+        Assert.False(string.IsNullOrWhiteSpace(export.GetProperty("Value").GetProperty("PreviewToken").GetString()));
     }
 
     [Fact]
-    public async Task Export_RequiresAndEnforcesTheExpectedRevision()
+    public async Task WorkspaceV1ExportRejectsStaleRevisionAndConsumesOnlyPreviewToken()
     {
         await using var bridge = await BridgeProcess.StartAsync();
         var definition = JsonDocument.Parse("""
             {"Id":"e2acbf0d-27d7-496e-937c-612ec37ac5ee","DisplayName":"Export revision","InstanceName":"Ubuntu","PreflightChecks":[],"ActionGroups":[],"ClosePolicy":{"Mode":"None","ServiceNames":[]},"TrustState":"Trusted"}
             """).RootElement.Clone();
-        var saved = await bridge.SendAsync("save", payload: definition, expectedRevision: 0);
+        var savePreview = await bridge.SendAsync("workspace.save.preview.v1", payload: JsonSerializer.SerializeToElement(new { Definition = definition, ExpectedRevision = 0 }));
+        var saved = await bridge.SendAsync("workspace.save.execute.v1", payload: JsonSerializer.SerializeToElement(new { PreviewToken = savePreview.GetProperty("Value").GetProperty("PreviewToken").GetString() }));
         Assert.True(saved.GetProperty("Succeeded").GetBoolean());
         var id = saved.GetProperty("Value").GetProperty("Id").GetGuid();
 
-        var missing = await bridge.SendAsync("export", id);
+        var missing = await bridge.SendAsync("workspace.export.preview.v1", payload: JsonSerializer.SerializeToElement(new { Id = id }));
         Assert.False(missing.GetProperty("Succeeded").GetBoolean());
-        var stale = await bridge.SendAsync("export", id, expectedRevision: 0);
+        var stale = await bridge.SendAsync("workspace.export.preview.v1", payload: JsonSerializer.SerializeToElement(new { Id = id, ExpectedRevision = 0 }));
         Assert.False(stale.GetProperty("Succeeded").GetBoolean());
         Assert.Equal("Workspace.ConflictOrState", stale.GetProperty("ErrorCode").GetString());
 
-        var exported = await bridge.SendAsync("export", id, expectedRevision: 1);
+        var exportPreview = await bridge.SendAsync("workspace.export.preview.v1", payload: JsonSerializer.SerializeToElement(new { Id = id, ExpectedRevision = 1 }));
+        var exported = await bridge.SendAsync("workspace.export.execute.v1", payload: JsonSerializer.SerializeToElement(new { PreviewToken = exportPreview.GetProperty("Value").GetProperty("PreviewToken").GetString() }));
         Assert.True(exported.GetProperty("Succeeded").GetBoolean());
-        Assert.Contains("Export revision", exported.GetProperty("Value").GetString(), StringComparison.Ordinal);
+        Assert.Contains("Export revision", exported.GetProperty("Value").GetProperty("Content").GetString(), StringComparison.Ordinal);
     }
 
     [Fact]

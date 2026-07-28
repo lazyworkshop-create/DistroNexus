@@ -14,6 +14,8 @@ public sealed class WorkspaceService : IWorkspaceService
     private readonly IWorkspaceRuntime _runtime;
     private readonly IReadOnlyDictionary<WorkspaceActionType, IWorkspaceActionHandler> _handlers;
     private readonly IWorkspaceDecisionProvider? _decisions;
+    private readonly WorkspaceGrantStore _grants;
+    private readonly WorkspaceOperationStore _operations;
     private readonly ConcurrentDictionary<string, (Guid Id, long Revision, DateTimeOffset Expires)> _tokens = new();
     private readonly ConcurrentDictionary<string, (Guid Id, string Digest, long DocumentRevision, DateTimeOffset Expires)> _importTokens = new();
     private readonly ConcurrentDictionary<string, (Guid Id, Guid ActionId, long Revision, DateTimeOffset Expires)> _retryTokens = new();
@@ -25,7 +27,78 @@ public sealed class WorkspaceService : IWorkspaceService
         _handlers = (handlers ?? []).GroupBy(handler => handler.Type).ToDictionary(group => group.Key, group => group.Single());
         var root = appDataDirectory ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DistroNexus");
         _store = new VersionedJsonStore<List<WorkspaceDefinition>>(Path.Combine(root, "workspaces.json"), 1, n => n.Deserialize<List<WorkspaceDefinition>>(_json) ?? [], serializerOptions: _json);
+        _grants = new WorkspaceGrantStore(Path.Combine(root, "workspace-grants"));
+        _operations = new WorkspaceOperationStore(Path.Combine(root, "workspace-operations"));
     }
+    // Fixed-protocol facade. Execute methods intentionally receive no caller-selected state.
+    public async Task<WorkspaceOperationPreview> PreviewSaveTokenAsync(WorkspaceDefinition value, long revision, CancellationToken ct = default) { var p = await PreviewSaveAsync(value, revision, ct); return new(await IssueAsync("save", new SaveGrant(value, revision), ct), p.WorkspaceId, p.Revision, p.Preconditions); }
+    public async Task<WorkspaceDefinition> SaveTokenAsync(string token, CancellationToken ct = default) { var g = await TakeAsync<SaveGrant>(token, "save", ct); return await SaveAsync(g.Definition, g.ExpectedRevision, ct); }
+    public async Task<WorkspaceOperationPreview> PreviewDuplicateTokenAsync(Guid id, string name, long revision, CancellationToken ct = default) { var p = await PreviewDuplicateAsync(id,name,revision,ct); return new(await IssueAsync("duplicate",new DuplicateGrant(id,name,revision),ct),p.WorkspaceId,p.Revision,p.Preconditions); }
+    public async Task<WorkspaceDefinition> DuplicateTokenAsync(string token, CancellationToken ct = default) { var g=await TakeAsync<DuplicateGrant>(token,"duplicate",ct); return await DuplicateAsync(g.Id,g.Name,g.ExpectedRevision,ct); }
+    public async Task<WorkspaceOperationPreview> PreviewRemoveTokenAsync(Guid id,long revision,CancellationToken ct=default) { var p=await PreviewRemoveAsync(id,revision,ct); return new(await IssueAsync("remove",new IdGrant(id,revision),ct),p.WorkspaceId,p.Revision,p.Preconditions); }
+    public async Task RemoveTokenAsync(string token,CancellationToken ct=default) { var g=await TakeAsync<IdGrant>(token,"remove",ct); await RemoveAsync(g.Id,g.ExpectedRevision,ct); }
+    public async Task<WorkspaceOperationPreview> PreviewExportTokenAsync(Guid id,long revision,CancellationToken ct=default) { var p=await PreviewExportDryRunAsync(id,revision,ct); return new(await IssueAsync("export",new IdGrant(id,revision),ct),p.WorkspaceId,p.Revision,p.Preconditions); }
+    public async Task<WorkspaceExportResult> ExportTokenAsync(string token,CancellationToken ct=default) { var g=await TakeAsync<IdGrant>(token,"export",ct); return new(await ExportAsync(g.Id,g.ExpectedRevision,ct)); }
+    public async Task<WorkspaceOperationPreview> PreviewTrustTokenAsync(Guid id,long revision,CancellationToken ct=default) { var p=await PreviewApproveTrustAsync(id,revision,ct); return new(await IssueAsync("trust",new IdGrant(id,revision),ct),p.WorkspaceId,p.Revision,p.Preconditions); }
+    public async Task<WorkspaceDefinition> TrustTokenAsync(string token,CancellationToken ct=default) { var g=await TakeAsync<IdGrant>(token,"trust",ct); return await ApproveTrustAsync(g.Id,g.ExpectedRevision,ct); }
+    public async Task<WorkspaceLaunchPreview> PreviewLaunchTokenAsync(Guid id,CancellationToken ct=default) { var p=await PreviewLaunchCoreAsync(id,false,ct); if(string.IsNullOrWhiteSpace(p.LaunchToken) && (p.RequiresTrust || !p.InstanceAvailable)) return p; return p with { LaunchToken=await IssueAsync("launch",new IdGrant(id,p.Revision),ct) }; }
+    public async Task<(Guid Id,long Revision)> LaunchTokenAsync(string token,CancellationToken ct=default) { var g=await TakeAsync<IdGrant>(token,"launch",ct); return (g.Id,g.ExpectedRevision); }
+    public async Task<WorkspaceLaunchPreview> PreviewRetryTokenAsync(Guid id,Guid actionId,CancellationToken ct=default) { var p=await PreviewRetryAsync(id,actionId,ct); return p with { LaunchToken=await IssueAsync("retry",new RetryGrant(id,actionId,p.Revision),ct) }; }
+    public async Task<(Guid Id,Guid ActionId,long Revision)> RetryTokenAsync(string token,CancellationToken ct=default) { var g=await TakeAsync<RetryGrant>(token,"retry",ct); return (g.Id,g.ActionId,g.ExpectedRevision); }
+    public async Task<WorkspaceLaunchPreview> PreviewCloseTokenAsync(Guid id,CancellationToken ct=default) { var p=await PreviewCloseAsync(id,ct); return p with { LaunchToken=await IssueAsync("close",new IdGrant(id,p.Revision),ct) }; }
+    public async Task<WorkspaceActionResult> CloseTokenAsync(string token,CancellationToken ct=default) { var g=await TakeAsync<IdGrant>(token,"close",ct); var p=await PreviewCloseAsync(g.Id,ct); return await CloseAsync(g.Id,g.ExpectedRevision,p.LaunchToken,ct); }
+    public async Task<WorkspaceLaunchResult> LaunchDirectAsync(Guid id,long revision,IProgress<WorkspaceActionResult>? progress=null,CancellationToken ct=default) { var p=await PreviewLaunchAsync(id,ct); return await LaunchAsync(id,revision,p.LaunchToken,progress,ct); }
+    public async Task<WorkspaceActionResult> RetryDirectAsync(Guid id,Guid actionId,long revision,CancellationToken ct=default) { var p=await PreviewRetryAsync(id,actionId,ct); return await RetryAsync(id,actionId,revision,p.LaunchToken,ct); }
+    public async Task<WorkspaceImportPreview> PreviewImportTokenAsync(string content,CancellationToken ct=default)
+    {
+        var parsed = Parse(content) with { TrustState = WorkspaceTrustState.Untrusted, TrustedAt = null, Revision = 0 };
+        var commands = parsed.ActionGroups.SelectMany(x => x.Actions).Where(x => x.Type is WorkspaceActionType.LinuxCommand or WorkspaceActionType.ShellScript).Select(x => string.Join(' ', x.Arguments)).ToArray();
+        var documentRevision = (await ReadAsync(ct)).Revision;
+        return new WorkspaceImportPreview(parsed, commands, commands.Length == 0 ? [] : ["Imported command content will not run until explicitly trusted."], await IssueAsync("import", new ImportGrant(content, documentRevision), ct));
+    }
+    public async Task<WorkspaceDefinition> ImportTokenAsync(string token,CancellationToken ct=default)
+    {
+        var g=await TakeAsync<ImportGrant>(token,"import",ct); var definition=Parse(g.Content) with { TrustState=WorkspaceTrustState.Untrusted, TrustedAt=null, Revision=0 };
+        var current=await ReadAsync(ct); if (current.Revision != g.ExpectedRevision) throw new InvalidOperationException("Workspace.StateChanged");
+        if (current.Value.Any(x=>x.Id==definition.Id)) definition=definition with { Id=Guid.NewGuid() };
+        var imported=definition with { Revision=1 }; current.Value.Add(imported); await WriteAsync(current.Value,current.Revision,ct); return imported;
+    }
+    public async Task<WorkspaceOperationStarted> StartOperationAsync(string token, string kind, CancellationToken ct = default)
+    {
+        var operationId = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+        Guid id; Guid? actionId; long revision;
+        if (kind == "launch") { var grant=await TakeAsync<IdGrant>(token,kind,ct); id=grant.Id; actionId=null; revision=grant.ExpectedRevision; }
+        else if (kind == "retry") { var grant=await TakeAsync<RetryGrant>(token,kind,ct); id=grant.Id; actionId=grant.ActionId; revision=grant.ExpectedRevision; }
+        else throw new InvalidOperationException("Workspace.PreviewInvalid");
+        await _operations.CreateAsync(new WorkspaceOperationRecord(operationId, WorkspaceOperationStore.CurrentSid(), kind, id, actionId, revision, [], false, false), ct);
+        return new WorkspaceOperationStarted(operationId);
+    }
+    public Task<WorkspaceOperationStatus> GetOperationStatusAsync(string operationId, CancellationToken ct = default) => GetOperationStatusCoreAsync(operationId, ct);
+    private async Task<WorkspaceOperationStatus> GetOperationStatusCoreAsync(string operationId, CancellationToken ct) { var r=await _operations.RecoverAsync(operationId,ct); return new(r.Progress,r.IsTerminal,r.Result); }
+    public async Task<bool> CancelOperationAsync(string operationId, CancellationToken ct = default) => await _operations.RequestCancelAsync(operationId, ct);
+    public async Task RunOperationAsync(string operationId, CancellationToken ct = default)
+    {
+        using var workerLock=_operations.TryAcquireWorkerLock(operationId) ?? throw new InvalidOperationException("Workspace.OperationInProgress");
+        var record=await _operations.ReadAsync(operationId,ct); if(record.IsTerminal) return;
+        var progress=new List<WorkspaceActionResult>();
+        try {
+            var item=(await ReadAsync(ct)).Value.Single(x=>x.Id==record.WorkspaceId); if(item.Revision!=record.Revision) throw new InvalidOperationException("Workspace.StateChanged");
+            using var linked=CancellationTokenSource.CreateLinkedTokenSource(ct);
+            var actions=record.ActionId is { } actionId ? [item.ActionGroups.SelectMany(x=>x.Actions).Single(x=>x.Id==actionId)] : item.ActionGroups.SelectMany(x=>x.Actions).ToArray();
+            foreach(var action in actions) { if((await _operations.ReadAsync(operationId,ct)).CancellationRequested) throw new OperationCanceledException(); var actionResult=await ExecuteOne(item,action,null,linked.Token); progress.Add(actionResult); await _operations.WriteAsync(record with { Progress=progress },ct); if(actionResult.Outcome==WorkspaceActionOutcome.Failed) break; }
+            var outcome=progress.Any(x=>x.Outcome==WorkspaceActionOutcome.Failed)?"Failed":"Succeeded"; var result=new WorkspaceLaunchResult(item.Id,progress,false);
+            await _operations.WriteAsync(record with { Progress=progress, IsTerminal=true, Outcome=outcome, Result=result, ErrorCode=outcome=="Failed"?"Workspace.Failed":null },ct);
+        } catch(OperationCanceledException) { await _operations.WriteAsync(record with { Progress=progress,IsTerminal=true,Outcome="Cancelled",ErrorCode="Workspace.Cancelled",Result=new WorkspaceLaunchResult(record.WorkspaceId,progress,true) },CancellationToken.None); }
+          catch(Exception) { await _operations.WriteAsync(record with { Progress=progress,IsTerminal=true,Outcome="Failed",ErrorCode="Workspace.Failed",Result=new WorkspaceLaunchResult(record.WorkspaceId,progress,false) },CancellationToken.None); }
+    }
+    private Task<string> IssueAsync<T>(string kind,T grant,CancellationToken ct) => _grants.IssueAsync(kind,JsonSerializer.Serialize(grant,_json),TimeSpan.FromMinutes(5),ct);
+    private async Task<T> TakeAsync<T>(string token,string kind,CancellationToken ct) => JsonSerializer.Deserialize<T>((await _grants.ConsumeAsync(token,kind,ct)).Payload,_json) ?? throw new InvalidOperationException("Workspace.PreviewInvalid");
+    private sealed record SaveGrant(WorkspaceDefinition Definition,long ExpectedRevision);
+    private sealed record DuplicateGrant(Guid Id,string Name,long ExpectedRevision);
+    private sealed record IdGrant(Guid Id,long ExpectedRevision);
+    private sealed record ImportGrant(string Content,long ExpectedRevision);
+    private sealed record LaunchGrant(Guid Id,long Revision,Guid? ActionId);
+    private sealed record RetryGrant(Guid Id,Guid ActionId,long ExpectedRevision);
     public async Task<IReadOnlyList<WorkspaceDefinition>> ListAsync(CancellationToken ct = default) => (await ReadAsync(ct)).Value.OrderBy(x => x.DisplayName, StringComparer.OrdinalIgnoreCase).ToArray();
     public async Task<WorkspaceDefinition> SaveAsync(WorkspaceDefinition definition, long expectedRevision, CancellationToken ct = default)
     {

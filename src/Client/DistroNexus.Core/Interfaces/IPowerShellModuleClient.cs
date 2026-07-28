@@ -183,6 +183,30 @@ public interface IPowerShellModuleClient
     Task<IReadOnlyList<string>> GetDiagnosticLogOptionsAsync(CancellationToken cancellationToken = default);
     Task<DiagnosticReportPreview> GetDiagnosticReportPreviewAsync(DiagnosticReportFormat format, IReadOnlyList<string> selectedLogIds, CancellationToken cancellationToken = default);
     Task<DiagnosticReportExportResult> ExportDiagnosticReportAsync(string snapshotToken, string destinationFileName, int? deadlineMilliseconds = null, CancellationToken cancellationToken = default);
+
+    // Workspace operations are deliberately token-only at execute time. Presentation callers
+    // cannot substitute IDs, revisions, definitions, or action IDs after preview.
+    Task<IReadOnlyList<WorkspaceDefinition>> GetWorkspacesAsync(CancellationToken cancellationToken = default);
+    Task<WorkspaceOperationPreview> PreviewWorkspaceSaveAsync(WorkspaceDefinition definition, long expectedRevision, CancellationToken cancellationToken = default);
+    Task<WorkspaceDefinition> SaveWorkspaceAsync(string previewToken, CancellationToken cancellationToken = default);
+    Task<WorkspaceOperationPreview> PreviewWorkspaceDuplicateAsync(Guid id, string name, long expectedRevision, CancellationToken cancellationToken = default);
+    Task<WorkspaceDefinition> DuplicateWorkspaceAsync(string previewToken, CancellationToken cancellationToken = default);
+    Task<WorkspaceOperationPreview> PreviewWorkspaceRemoveAsync(Guid id, long expectedRevision, CancellationToken cancellationToken = default);
+    Task RemoveWorkspaceAsync(string previewToken, CancellationToken cancellationToken = default);
+    Task<WorkspaceImportPreview> PreviewWorkspaceImportAsync(string content, CancellationToken cancellationToken = default);
+    Task<WorkspaceDefinition> ImportWorkspaceAsync(string previewToken, CancellationToken cancellationToken = default);
+    Task<WorkspaceOperationPreview> PreviewWorkspaceExportAsync(Guid id, long expectedRevision, CancellationToken cancellationToken = default);
+    Task<WorkspaceExportResult> ExportWorkspaceAsync(string previewToken, CancellationToken cancellationToken = default);
+    Task<WorkspaceOperationPreview> PreviewWorkspaceTrustAsync(Guid id, long expectedRevision, CancellationToken cancellationToken = default);
+    Task<WorkspaceDefinition> ApproveWorkspaceTrustAsync(string previewToken, CancellationToken cancellationToken = default);
+    Task<WorkspaceLaunchPreview> PreviewWorkspaceLaunchAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<WorkspaceOperationStarted> LaunchWorkspaceAsync(string previewToken, CancellationToken cancellationToken = default);
+    Task<WorkspaceLaunchPreview> PreviewWorkspaceRetryAsync(Guid id, Guid actionId, CancellationToken cancellationToken = default);
+    Task<WorkspaceOperationStarted> RetryWorkspaceAsync(string previewToken, CancellationToken cancellationToken = default);
+    Task<WorkspaceLaunchPreview> PreviewWorkspaceCloseAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<WorkspaceActionResult> CloseWorkspaceAsync(string previewToken, CancellationToken cancellationToken = default);
+    Task<WorkspaceOperationStatus> GetWorkspaceOperationStatusAsync(string operationId, CancellationToken cancellationToken = default);
+    Task StopWorkspaceOperationAsync(string operationId, CancellationToken cancellationToken = default);
 }
 
 public sealed record FixedExplorerResult(bool Succeeded, string OutcomeCode);

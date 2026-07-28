@@ -1,176 +1,44 @@
-Describe 'Workspace commands use the Core WorkspaceBridge' {
+Describe 'Workspace commands use only closed v1 bridge routes' {
   BeforeAll { Import-Module "$PSScriptRoot/../../../../src/PowerShell/DistroNexus.psd1" -Force }
-  BeforeEach { $env:DISTRONEXUS_WORKSPACE_STORE_ROOT = Join-Path $TestDrive ([guid]::NewGuid().ToString()) }
-  AfterEach { Remove-Item Env:DISTRONEXUS_WORKSPACE_STORE_ROOT -ErrorAction SilentlyContinue }
 
-  It 'uses the persistent packaged protocol for create, update, duplicate, export and remove' {
-    $item = New-DistroNexusWorkspace -Name demo -Instance Ubuntu -ExpectedRevision 0
-    $item.Revision | Should -Be 1
-    $changed = Set-DistroNexusWorkspace -Id $item.Id -Name changed -ExpectedRevision 1
-    $changed.DisplayName | Should -Be 'changed'
-    $duplicate = Copy-DistroNexusWorkspace -Id $item.Id -Name duplicate -ExpectedRevision 2
-    $out = Join-Path $TestDrive 'workspace.json'; Export-DistroNexusWorkspace -Id $item.Id -Path $out -ExpectedRevision 2
-    (Get-Content -LiteralPath $out -Raw | ConvertFrom-Json).DisplayName | Should -Be 'changed'
-    Remove-DistroNexusWorkspace -Id $item.Id -ExpectedRevision 2 -Confirm:$false
-    Remove-DistroNexusWorkspace -Id $duplicate.Id -ExpectedRevision 1 -Confirm:$false
-    @(Get-DistroNexusWorkspace).Count | Should -Be 0
-  }
-
-  It 'rejects a stale revision before writing an export file' {
-    $item = New-DistroNexusWorkspace -Name export-revision -Instance Ubuntu -ExpectedRevision 0
-    Set-DistroNexusWorkspace -Id $item.Id -Name changed -ExpectedRevision 1 | Out-Null
-    $out = Join-Path $TestDrive 'stale-workspace.json'
-
-    { Export-DistroNexusWorkspace -Id $item.Id -Path $out -ExpectedRevision 1 } | Should -Throw '*Conflict*'
-    Test-Path -LiteralPath $out | Should -BeFalse
-    Export-DistroNexusWorkspace -Id $item.Id -Path $out -ExpectedRevision 2
-    (Get-Content -LiteralPath $out -Raw | ConvertFrom-Json).DisplayName | Should -Be 'changed'
-  }
-
-  It 'preserves a Core import token and enforces optimistic revisions' {
-    $path = Join-Path $TestDrive 'import.json'
-    @{ Id=[guid]::NewGuid(); DisplayName='import'; InstanceName='Ubuntu'; PreflightChecks=@(); ActionGroups=@(); ClosePolicy=@{Mode='None';ServiceNames=@()}; TrustState='Trusted'; MissingInstanceRemediation='BlockWithGuidance' } | ConvertTo-Json -Depth 8 | Set-Content $path
-    $preview = Get-DistroNexusWorkspaceImportPreview -Path $path
-    $item = Import-DistroNexusWorkspace -Path $path -ImportToken $preview.ImportToken -ExpectedRevision 0
-    $item.TrustState | Should -Be 'Untrusted'
-    { Approve-DistroNexusWorkspaceTrust -Id $item.Id -ExpectedRevision 0 -Confirm:$false } | Should -Throw '*Conflict*'
-    (Approve-DistroNexusWorkspaceTrust -Id $item.Id -ExpectedRevision 1 -Confirm:$false).TrustState | Should -Be 'Trusted'
-    { Import-DistroNexusWorkspace -Path $path -ImportToken $preview.ImportToken -ExpectedRevision 0 } | Should -Throw '*preview*'
-  }
-
-  It 'requires import creation revision zero and rejects a stale preview' {
-    $path = Join-Path $TestDrive 'import.json'
-    @{ Id=[guid]::NewGuid(); DisplayName='import'; InstanceName='Ubuntu'; PreflightChecks=@(); ActionGroups=@(); ClosePolicy=@{Mode='None';ServiceNames=@()}; TrustState='Trusted'; MissingInstanceRemediation='BlockWithGuidance' } | ConvertTo-Json -Depth 8 | Set-Content $path
-    $preview = Get-DistroNexusWorkspaceImportPreview -Path $path
-    { Import-DistroNexusWorkspace -Path $path -ImportToken $preview.ImportToken -ExpectedRevision 1 } | Should -Throw '*expected revision must be zero*'
-    New-DistroNexusWorkspace -Name competing -Instance Ubuntu -ExpectedRevision 0 | Out-Null
-    { Import-DistroNexusWorkspace -Path $path -ImportToken $preview.ImportToken -ExpectedRevision 0 } | Should -Throw '*stale*'
-  }
-
-  It 'does not mutate Bridge state under WhatIf' {
-    $before = @(Get-DistroNexusWorkspace).Count
-    New-DistroNexusWorkspace -Name test -Instance Ubuntu -ExpectedRevision 0 -WhatIf
-    @(Get-DistroNexusWorkspace).Count | Should -Be $before
-  }
-
-  It 'routes every workspace mutator through a token-free Core dry-run under WhatIf' {
-    $id = [guid]'11111111-1111-1111-1111-111111111111'; $actionId = [guid]::NewGuid()
-    $path = Join-Path $TestDrive 'whatif-import.json'
-    @{ Id=$id; DisplayName='dry'; InstanceName='Ubuntu'; PreflightChecks=@(); ActionGroups=@(); ClosePolicy=@{Mode='None';ServiceNames=@()}; TrustState='Trusted'; MissingInstanceRemediation='BlockWithGuidance' } | ConvertTo-Json -Depth 8 | Set-Content $path
+  It 'uses token-only save, export and remove execution payloads' {
     InModuleScope DistroNexus {
-      $script:workspaceBridgeRequests = @()
+      $script:requests = @()
       Mock Invoke-DistroNexusWorkspaceBridge {
-        param($Operation, $Id, $ActionId, $Payload, $ExpectedRevision, $Token, $Name)
-        $script:workspaceBridgeRequests += [pscustomobject]@{ Operation=$Operation; Token=$Token }
-        if ($Operation -eq 'list') { return @([pscustomobject]@{ Id=[guid]'11111111-1111-1111-1111-111111111111'; Revision=1; DisplayName='before'; InstanceName='Ubuntu' }) }
-        return [pscustomobject]@{ Operation=$Operation; SchemaValid=$true; Preconditions=@('validated'); ActionResults=@(); PreflightResults=@() }
+        param($Operation,$Payload)
+        $script:requests += [pscustomobject]@{ Operation=$Operation; Payload=$Payload }
+        if ($Operation -like '*.preview.v1') { return [pscustomobject]@{ PreviewToken=('a' * 64) } }
+        if ($Operation -eq 'workspace.export.execute.v1') { return [pscustomobject]@{ Content='{}' } }
       }
-    }
-    New-DistroNexusWorkspace -Name dry -Instance Ubuntu -ExpectedRevision 0 -WhatIf | Should -Not -BeNullOrEmpty
-    Set-DistroNexusWorkspace -Id $id -Name changed -ExpectedRevision 1 -WhatIf | Should -Not -BeNullOrEmpty
-    Copy-DistroNexusWorkspace -Id $id -Name copy -ExpectedRevision 1 -WhatIf | Should -Not -BeNullOrEmpty
-    Remove-DistroNexusWorkspace -Id $id -ExpectedRevision 1 -WhatIf | Should -Not -BeNullOrEmpty
-    Import-DistroNexusWorkspace -Path $path -ExpectedRevision 0 -WhatIf | Should -Not -BeNullOrEmpty
-    Approve-DistroNexusWorkspaceTrust -Id $id -ExpectedRevision 1 -WhatIf | Should -Not -BeNullOrEmpty
-    Retry-DistroNexusWorkspaceAction -Id $id -ActionId $actionId -ExpectedRevision 1 -WhatIf | Should -Not -BeNullOrEmpty
-    Invoke-DistroNexusWorkspace -Id $id -ExpectedRevision 1 -WhatIf | Should -Not -BeNullOrEmpty
-    $whatIfExport = Join-Path $TestDrive 'whatif-export.json'
-    Export-DistroNexusWorkspace -Id $id -Path $whatIfExport -ExpectedRevision 1 -WhatIf | Should -Not -BeNullOrEmpty
-    Test-Path -LiteralPath $whatIfExport | Should -BeFalse
-    InModuleScope DistroNexus {
-      $operations = @($script:workspaceBridgeRequests | ForEach-Object Operation)
-      $operations | Should -Contain 'previewSave'
-      $operations | Should -Contain 'previewDuplicate'
-      $operations | Should -Contain 'previewRemove'
-      $operations | Should -Contain 'previewImportDryRun'
-      $operations | Should -Contain 'previewApproveTrust'
-      $operations | Should -Contain 'previewRetryDryRun'
-      $operations | Should -Contain 'previewLaunchDryRun'
-      $operations | Should -Contain 'previewExportDryRun'
-      $operations | Should -Not -Contain 'launch'
-      $operations | Should -Not -Contain 'retry'
-      @($script:workspaceBridgeRequests | Where-Object { -not [string]::IsNullOrWhiteSpace($_.Token) }).Count | Should -Be 0
+      $id = [guid]::NewGuid()
+      Get-DistroNexusWorkspaceSavePreview -Definition @{ Id=$id } -ExpectedRevision 0 | Out-Null
+      Save-DistroNexusWorkspace -PreviewToken ('a' * 64) -Confirm:$false | Out-Null
+      Get-DistroNexusWorkspaceExportPreview -Id $id -ExpectedRevision 1 | Out-Null
+      Export-DistroNexusWorkspace -PreviewToken ('a' * 64) -Confirm:$false | Out-Null
+      Get-DistroNexusWorkspaceRemovePreview -Id $id -ExpectedRevision 1 | Out-Null
+      Remove-DistroNexusWorkspace -PreviewToken ('a' * 64) -Confirm:$false | Out-Null
+      $script:requests.Operation | Should -Be @('workspace.save.preview.v1','workspace.save.execute.v1','workspace.export.preview.v1','workspace.export.execute.v1','workspace.remove.preview.v1','workspace.remove.execute.v1')
+      @($script:requests | Where-Object { $_.Operation -like '*.execute.v1' -and $_.Payload.Keys.Count -ne 1 }).Count | Should -Be 0
     }
   }
 
-  It 'routes a trusted launch token and revision to the Core bridge without launching locally' {
-    $id = [guid]::NewGuid()
+  It 'does not call the bridge for token-consuming WhatIf operations' {
     InModuleScope DistroNexus {
-      $script:workspaceBridgeRequests = @()
-      Mock Invoke-DistroNexusWorkspaceBridge {
-        param($Operation, $Id, $ActionId, $Payload, $ExpectedRevision, $Token, $Name)
-        $script:workspaceBridgeRequests += [pscustomobject]@{ Operation=$Operation; Id=$Id; ActionId=$ActionId; ExpectedRevision=$ExpectedRevision; Token=$Token }
-        if ($Operation -eq 'previewLaunch') { return [pscustomobject]@{ LaunchToken='core-preview-token'; Revision=7 } }
-        return [pscustomobject]@{ WorkspaceId=$Id; Actions=@([pscustomobject]@{ Outcome='Succeeded'; Code='Workspace.Action.Succeeded' }); Cancelled=$false }
-      }
-    }
-    Invoke-DistroNexusWorkspace -Id $id -ExpectedRevision 7 -LaunchToken 'core-preview-token' -Confirm:$false | Out-Null
-    InModuleScope DistroNexus {
-      $script:workspaceBridgeRequests.Count | Should -Be 2
-      $script:workspaceBridgeRequests[0].Operation | Should -Be 'previewLaunch'
-      $script:workspaceBridgeRequests[1].Operation | Should -Be 'launch'
-      $script:workspaceBridgeRequests[1].ExpectedRevision | Should -Be 7
-      $script:workspaceBridgeRequests[1].Token | Should -Be 'core-preview-token'
+      Mock Invoke-DistroNexusWorkspaceBridge { throw 'must not execute' }
+      Save-DistroNexusWorkspace -PreviewToken ('a' * 64) -WhatIf
+      Invoke-DistroNexusWorkspace -PreviewToken ('a' * 64) -WhatIf
+      Stop-DistroNexusWorkspaceOperation -OperationId ('b' * 64) -WhatIf
+      Should -Invoke Invoke-DistroNexusWorkspaceBridge -Times 0 -Exactly
     }
   }
 
-  It 'routes an action-scoped capability failure retry through Core preview and token validation' {
-    $id = [guid]::NewGuid(); $actionId = [guid]::NewGuid()
+  It 'uses v1 operation status and cancellation routes' {
     InModuleScope DistroNexus {
-      $script:workspaceBridgeRequests = @()
-      Mock Invoke-DistroNexusWorkspaceBridge {
-        param($Operation, $Id, $ActionId, $Payload, $ExpectedRevision, $Token, $Name)
-        $script:workspaceBridgeRequests += [pscustomobject]@{ Operation=$Operation; Id=$Id; ActionId=$ActionId; ExpectedRevision=$ExpectedRevision; Token=$Token }
-        if ($Operation -eq 'previewRetry') { return [pscustomobject]@{ LaunchToken='retry-token'; Revision=4; Commands=@('Workspace.VisualStudioCode') } }
-        return [pscustomobject]@{ ActionId=$ActionId; Outcome='Failed'; Code='Workspace.Action.Failed'; Detail='Workspace.Capability.VisualStudioCode.Capability.Dependency.NotInstalled' }
-      }
-    }
-    $preview = Get-DistroNexusWorkspaceActionRetryPreview -Id $id -ActionId $actionId
-    $result = Retry-DistroNexusWorkspaceAction -Id $id -ActionId $actionId -ExpectedRevision $preview.Revision -RetryToken $preview.LaunchToken -Confirm:$false
-    $result.Outcome | Should -Be 'Failed'
-    $result.ActionId | Should -Be $actionId
-    InModuleScope DistroNexus {
-      $script:workspaceBridgeRequests[0].Operation | Should -Be 'previewRetry'
-      $script:workspaceBridgeRequests[1].Operation | Should -Be 'retry'
-      $script:workspaceBridgeRequests[1].ActionId | Should -Not -Be ([guid]::Empty)
-      $script:workspaceBridgeRequests[1].ExpectedRevision | Should -Be 4
-      $script:workspaceBridgeRequests[1].Token | Should -Be 'retry-token'
-    }
-  }
-
-  It 'imports and runs a non-bridge command when an unavailable bridge path is selected' {
-    Remove-Module DistroNexus -Force -ErrorAction SilentlyContinue
-    $old = $env:DISTRONEXUS_WORKSPACE_BRIDGE_PATH
-    try {
-      $env:DISTRONEXUS_WORKSPACE_BRIDGE_PATH = Join-Path $TestDrive 'missing-bridge.dll'
-      { Import-Module "$PSScriptRoot/../../../../src/PowerShell/DistroNexus.psd1" -Force } | Should -Not -Throw
-      (Get-DistroNexusInstanceTag -Name '__distronexus_s02_bridge_unavailable__').Name | Should -Be '__distronexus_s02_bridge_unavailable__'
-      try { Get-DistroNexusWorkspace; throw 'Expected WorkspaceBridge failure.' } catch { $_.FullyQualifiedErrorId | Should -Be 'DistroNexus.WorkspaceBridgeUnavailable' }
-    } finally {
-      if ($null -eq $old) { Remove-Item Env:DISTRONEXUS_WORKSPACE_BRIDGE_PATH -ErrorAction SilentlyContinue } else { $env:DISTRONEXUS_WORKSPACE_BRIDGE_PATH = $old }
-      Import-Module "$PSScriptRoot/../../../../src/PowerShell/DistroNexus.psd1" -Force
-    }
-  }
-
-  It 'rejects an arbitrary bridge override instead of executing it' {
-    Remove-Module DistroNexus -Force -ErrorAction SilentlyContinue
-    $old = $env:DISTRONEXUS_WORKSPACE_BRIDGE_PATH
-    $fake = Join-Path $TestDrive 'bridge.ps1'; $log = Join-Path $TestDrive 'bridge.log'
-    @"
-`$line = [Console]::ReadLine()
-`$request = `$line | ConvertFrom-Json
-`$request.Operation | Set-Content -LiteralPath '$log' -NoNewline
-@{ Succeeded = `$true; Value = @(); ErrorCode = `$null; ErrorMessage = `$null } | ConvertTo-Json -Compress
-"@ | Set-Content -LiteralPath $fake -Encoding utf8
-    try {
-      $env:DISTRONEXUS_WORKSPACE_BRIDGE_PATH = $fake
-      { Import-Module "$PSScriptRoot/../../../../src/PowerShell/DistroNexus.psd1" -Force } | Should -Not -Throw
-      { Get-DistroNexusWorkspace } | Should -Throw '*path overrides are not supported*'
-      Test-Path -LiteralPath $log | Should -BeFalse
-    } finally {
-      Remove-Module DistroNexus -Force -ErrorAction SilentlyContinue
-      if ($null -eq $old) { Remove-Item Env:DISTRONEXUS_WORKSPACE_BRIDGE_PATH -ErrorAction SilentlyContinue } else { $env:DISTRONEXUS_WORKSPACE_BRIDGE_PATH = $old }
-      Import-Module "$PSScriptRoot/../../../../src/PowerShell/DistroNexus.psd1" -Force
+      Mock Invoke-DistroNexusWorkspaceBridge { [pscustomobject]@{ IsTerminal=$false } }
+      Get-DistroNexusWorkspaceOperation -OperationId ('a' * 64) | Out-Null
+      Stop-DistroNexusWorkspaceOperation -OperationId ('a' * 64) -Confirm:$false | Out-Null
+      Should -Invoke Invoke-DistroNexusWorkspaceBridge -Times 1 -ParameterFilter { $Operation -eq 'workspace.operation.status.v1' -and $Payload.OperationId -eq ('a' * 64) }
+      Should -Invoke Invoke-DistroNexusWorkspaceBridge -Times 1 -ParameterFilter { $Operation -eq 'workspace.cancel.v1' -and $Payload.OperationId -eq ('a' * 64) }
     }
   }
 }

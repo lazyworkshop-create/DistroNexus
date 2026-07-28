@@ -16,4 +16,5 @@
   <Project Path="DistroNexus.UsbElevatedHelper/DistroNexus.UsbElevatedHelper.csproj" />
   <Project Path="DistroNexus.Tests/DistroNexus.Tests.csproj" />
   <Project Path="DistroNexus.WorkspaceBridge/DistroNexus.WorkspaceBridge.csproj" />
+  <Project Path="DistroNexus.WorkspaceWorker/DistroNexus.WorkspaceWorker.csproj" />
 </Solution>

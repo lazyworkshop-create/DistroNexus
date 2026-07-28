@@ -11,6 +11,15 @@ namespace DistroNexus.Core.Services;
 /// </summary>
 public sealed class PowerShellModuleClient : IPowerShellModuleClient
 {
+    private static readonly HashSet<string> RegisteredWorkspaceOperations = new(StringComparer.Ordinal)
+    {
+        "Get-DistroNexusWorkspace", "Get-DistroNexusWorkspaceSavePreview", "Save-DistroNexusWorkspace",
+        "Get-DistroNexusWorkspaceDuplicatePreview", "Copy-DistroNexusWorkspace", "Get-DistroNexusWorkspaceRemovePreview", "Remove-DistroNexusWorkspace",
+        "Get-DistroNexusWorkspaceImportPreview", "Import-DistroNexusWorkspace", "Get-DistroNexusWorkspaceExportPreview", "Export-DistroNexusWorkspace",
+        "Get-DistroNexusWorkspaceTrustPreview", "Approve-DistroNexusWorkspaceTrust", "Get-DistroNexusWorkspaceLaunchPreview", "Invoke-DistroNexusWorkspace",
+        "Get-DistroNexusWorkspaceRetryPreview", "Retry-DistroNexusWorkspaceAction", "Get-DistroNexusWorkspaceClosePreview", "Close-DistroNexusWorkspace",
+        "Get-DistroNexusWorkspaceOperation", "Stop-DistroNexusWorkspaceOperation"
+    };
     private const string GetInstanceTagsCommand = "Get-DistroNexusInstanceTag";
     private const string AddInstanceTagCommand = "Add-DistroNexusInstanceTag";
     private const string SetInstanceTagsCommand = "Set-DistroNexusInstanceTag";
@@ -124,12 +133,65 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string GetDiagnosticLogOptionsCommand = "Get-DistroNexusDiagnosticLogOption";
     private const string GetDiagnosticReportPreviewCommand = "Get-DistroNexusDiagnosticReportPreview";
     private const string ExportDiagnosticReportCommand = "Export-DistroNexusDiagnosticReport";
+    private const string GetWorkspacesCommand = "Get-DistroNexusWorkspace";
+    private const string PreviewWorkspaceSaveCommand = "Get-DistroNexusWorkspaceSavePreview";
+    private const string SaveWorkspaceCommand = "Save-DistroNexusWorkspace";
+    private const string PreviewWorkspaceDuplicateCommand = "Get-DistroNexusWorkspaceDuplicatePreview";
+    private const string DuplicateWorkspaceCommand = "Copy-DistroNexusWorkspace";
+    private const string PreviewWorkspaceRemoveCommand = "Get-DistroNexusWorkspaceRemovePreview";
+    private const string RemoveWorkspaceCommand = "Remove-DistroNexusWorkspace";
+    private const string PreviewWorkspaceImportCommand = "Get-DistroNexusWorkspaceImportPreview";
+    private const string ImportWorkspaceCommand = "Import-DistroNexusWorkspace";
+    private const string PreviewWorkspaceExportCommand = "Get-DistroNexusWorkspaceExportPreview";
+    private const string ExportWorkspaceCommand = "Export-DistroNexusWorkspace";
+    private const string PreviewWorkspaceTrustCommand = "Get-DistroNexusWorkspaceTrustPreview";
+    private const string ApproveWorkspaceTrustCommand = "Approve-DistroNexusWorkspaceTrust";
+    private const string PreviewWorkspaceLaunchCommand = "Get-DistroNexusWorkspaceLaunchPreview";
+    private const string LaunchWorkspaceCommand = "Invoke-DistroNexusWorkspace";
+    private const string PreviewWorkspaceRetryCommand = "Get-DistroNexusWorkspaceRetryPreview";
+    private const string RetryWorkspaceCommand = "Retry-DistroNexusWorkspaceAction";
+    private const string PreviewWorkspaceCloseCommand = "Get-DistroNexusWorkspaceClosePreview";
+    private const string CloseWorkspaceCommand = "Close-DistroNexusWorkspace";
+    private const string GetWorkspaceOperationCommand = "Get-DistroNexusWorkspaceOperation";
+    private const string StopWorkspaceOperationCommand = "Stop-DistroNexusWorkspaceOperation";
     private readonly IPowerShellService _powerShellService;
 
     public PowerShellModuleClient(IPowerShellService powerShellService)
     {
         _powerShellService = powerShellService ?? throw new ArgumentNullException(nameof(powerShellService));
     }
+
+    public async Task<IReadOnlyList<WorkspaceDefinition>> GetWorkspacesAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(GetWorkspacesCommand, options: new ModuleCallOptions { ParseAsJson = true }, cancellationToken: cancellationToken);
+        ThrowIfFailed(result);
+        if (string.IsNullOrWhiteSpace(result.Output)) return [];
+        using var document = JsonDocument.Parse(result.Output);
+        return document.RootElement.ValueKind == JsonValueKind.Array
+            ? JsonSerializer.Deserialize<List<WorkspaceDefinition>>(result.Output, JsonOptions) ?? []
+            : [JsonSerializer.Deserialize<WorkspaceDefinition>(result.Output, JsonOptions) ?? throw new InvalidOperationException("The module returned an invalid workspace.")];
+    }
+
+    public Task<WorkspaceOperationPreview> PreviewWorkspaceSaveAsync(WorkspaceDefinition definition, long expectedRevision, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceOperationPreview>(PreviewWorkspaceSaveCommand, new() { ["Definition"] = definition, ["ExpectedRevision"] = expectedRevision }, cancellationToken);
+    public Task<WorkspaceDefinition> SaveWorkspaceAsync(string previewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceDefinition>(SaveWorkspaceCommand, TokenParameters(previewToken), cancellationToken);
+    public Task<WorkspaceOperationPreview> PreviewWorkspaceDuplicateAsync(Guid id, string name, long expectedRevision, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceOperationPreview>(PreviewWorkspaceDuplicateCommand, new() { ["Id"] = id, ["Name"] = name, ["ExpectedRevision"] = expectedRevision }, cancellationToken);
+    public Task<WorkspaceDefinition> DuplicateWorkspaceAsync(string previewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceDefinition>(DuplicateWorkspaceCommand, TokenParameters(previewToken), cancellationToken);
+    public Task<WorkspaceOperationPreview> PreviewWorkspaceRemoveAsync(Guid id, long expectedRevision, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceOperationPreview>(PreviewWorkspaceRemoveCommand, new() { ["Id"] = id, ["ExpectedRevision"] = expectedRevision }, cancellationToken);
+    public async Task RemoveWorkspaceAsync(string previewToken, CancellationToken cancellationToken = default) => await ExecuteJsonAsync<object>(RemoveWorkspaceCommand, TokenParameters(previewToken), cancellationToken);
+    public Task<WorkspaceImportPreview> PreviewWorkspaceImportAsync(string content, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceImportPreview>(PreviewWorkspaceImportCommand, new() { ["Content"] = content }, cancellationToken);
+    public Task<WorkspaceDefinition> ImportWorkspaceAsync(string previewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceDefinition>(ImportWorkspaceCommand, TokenParameters(previewToken), cancellationToken);
+    public Task<WorkspaceOperationPreview> PreviewWorkspaceExportAsync(Guid id, long expectedRevision, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceOperationPreview>(PreviewWorkspaceExportCommand, new() { ["Id"] = id, ["ExpectedRevision"] = expectedRevision }, cancellationToken);
+    public Task<WorkspaceExportResult> ExportWorkspaceAsync(string previewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceExportResult>(ExportWorkspaceCommand, TokenParameters(previewToken), cancellationToken);
+    public Task<WorkspaceOperationPreview> PreviewWorkspaceTrustAsync(Guid id, long expectedRevision, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceOperationPreview>(PreviewWorkspaceTrustCommand, new() { ["Id"] = id, ["ExpectedRevision"] = expectedRevision }, cancellationToken);
+    public Task<WorkspaceDefinition> ApproveWorkspaceTrustAsync(string previewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceDefinition>(ApproveWorkspaceTrustCommand, TokenParameters(previewToken), cancellationToken);
+    public Task<WorkspaceLaunchPreview> PreviewWorkspaceLaunchAsync(Guid id, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceLaunchPreview>(PreviewWorkspaceLaunchCommand, new() { ["Id"] = id }, cancellationToken);
+    public Task<WorkspaceOperationStarted> LaunchWorkspaceAsync(string previewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceOperationStarted>(LaunchWorkspaceCommand, TokenParameters(previewToken), cancellationToken);
+    public Task<WorkspaceLaunchPreview> PreviewWorkspaceRetryAsync(Guid id, Guid actionId, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceLaunchPreview>(PreviewWorkspaceRetryCommand, new() { ["Id"] = id, ["ActionId"] = actionId }, cancellationToken);
+    public Task<WorkspaceOperationStarted> RetryWorkspaceAsync(string previewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceOperationStarted>(RetryWorkspaceCommand, TokenParameters(previewToken), cancellationToken);
+    public Task<WorkspaceLaunchPreview> PreviewWorkspaceCloseAsync(Guid id, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceLaunchPreview>(PreviewWorkspaceCloseCommand, new() { ["Id"] = id }, cancellationToken);
+    public Task<WorkspaceActionResult> CloseWorkspaceAsync(string previewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceActionResult>(CloseWorkspaceCommand, TokenParameters(previewToken), cancellationToken);
+    public Task<WorkspaceOperationStatus> GetWorkspaceOperationStatusAsync(string operationId, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceOperationStatus>(GetWorkspaceOperationCommand, new() { ["OperationId"] = operationId }, cancellationToken);
+    public async Task StopWorkspaceOperationAsync(string operationId, CancellationToken cancellationToken = default) => await ExecuteJsonAsync<object>(StopWorkspaceOperationCommand, new() { ["OperationId"] = operationId, ["Confirm"] = false }, cancellationToken);
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<WslInstance>> GetInstancesAsync(CancellationToken cancellationToken = default)
@@ -674,6 +736,8 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
 
     private async Task<T> ExecuteJsonAsync<T>(string command, Dictionary<string, object> parameters, CancellationToken cancellationToken)
     {
+        if (command.Contains("Workspace", StringComparison.Ordinal) && !RegisteredWorkspaceOperations.Contains(command))
+            throw new InvalidOperationException("The workspace module operation is not registered.");
         var result = await _powerShellService.ExecuteModuleCmdletAsync(command, parameters, new ModuleCallOptions { ParseAsJson = true }, cancellationToken);
         ThrowIfFailed(result);
         return JsonSerializer.Deserialize<T>(result.Output, JsonOptions)
@@ -689,6 +753,11 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     }
 
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true, Converters = { new JsonStringEnumConverter() } };
+    private static Dictionary<string, object> TokenParameters(string previewToken)
+    {
+        if (string.IsNullOrWhiteSpace(previewToken)) throw new ArgumentException("A Core-issued workspace preview token is required.", nameof(previewToken));
+        return new() { ["PreviewToken"] = previewToken, ["Confirm"] = false };
+    }
 
     private static void ValidateName(string value, string parameterName)
     {
