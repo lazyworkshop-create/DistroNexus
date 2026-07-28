@@ -2336,6 +2336,67 @@ One accepted workspace module/client and presentation migration slice.
 
 Live WSL workspace execution, shortcut/file-picker implementation and all unrelated capability families.
 
+## Slice S41: Template and marketplace module migration
+
+### Status
+
+Planned
+
+### Objective
+
+Make template catalog, marketplace and application module-owned, including tokenized template apply, durable status/cancel and a fixed worker.
+
+### Sources
+
+`docs/specs/template-module-requirements.md` FR-001 through FR-004; `docs/specs/template-module-design.md`; `docs/architecture/template-apply-recovery-decision.md`; `docs/contracts/template-module-v1-contract.md`.
+
+### Dependencies
+
+S40
+
+### Allowed Paths
+
+Template/marketplace Core services/contracts/grants/operations/tests; TemplateWorker and packaging; WorkspaceBridge template routes/tests; template public commands/manifest/Pester tests; typed module client/tests; TemplatesViewModel and template wizard consumers/tests; template requirements/design/decision/contract/plan.
+
+### Excluded Paths
+
+New template content, generic scripting/process execution, USB/elevation, unrelated lifecycle/workspace behavior, release/publishing workflows and live WSL mutation.
+
+### Contract and Documentation
+
+Implement exactly the cmdlet-to-route and typed record matrix in `docs/contracts/template-module-v1-contract.md`. Apply token binds immutable approved material, variables, instance and the current Core-shaped recovery offer/explicit-decline decision. With an available offer, no token is issued until WPF confirms decline and requests a fresh preview; no unproven recovery action or rollback claim is made. `Apply-DistroNexusTemplate` is removed from the manifest rather than retained with a mutable compatibility shape.
+
+### Implementation Scope
+
+Add DPAPI/SID apply, marketplace-review grant, and operation stores with the contract's atomic consumption, lock, terminal-state and stale-worker recovery semantics. Replace the marketplace service's in-memory review token dictionary so review-to-approve works across fresh Bridge processes. Add a fixed packaged `DistroNexus.TemplateWorker` whose only user-controlled input is an opaque operation ID. Refactor Core execution into grant-bound worker entry point; retire unsafe direct apply behavior; remove direct Desktop template/marketplace services; preserve Core marketplace candidate-promotion safeguards. Do not accept script text, paths, worker commands or arbitrary Bridge routes from callers.
+
+### Test Scope
+
+Add `TemplateApplyGrantStoreTests`, `TemplateMarketplaceReviewGrantStoreTests`, `TemplateApplyOperationStoreTests`, `TemplateWorkerTests`, named-template-route Bridge protocol tests, typed-client/WPF routing tests, and Pester command/manifest tests. Cover unknown-field and size rejection, exact source/template/manifest/artifact identity, cross-process review-to-approve and review-token SID/expiry/replay/tamper, compatibility `Compatible`/`Incompatible`, recovery offer/decline-required/decline recording, apply-grant SID/expiry/replay/tamper, launch failure/stale worker lock, cancellation before and during each script, status/cancel races, and no candidate promotion on failure/cancellation.
+
+### Acceptance Criteria
+
+- Desktop template and marketplace consumers have no direct business-service path.
+- Apply executes only a Core-issued token bound to approved immutable template material.
+- Cancel/status/recovery outcomes are durable and truthful across module processes.
+- Targeted xUnit, Pester Unit and Debug build pass; live WSL UAT is recorded separately.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Template|FullyQualifiedName~Marketplace|FullyQualifiedName~PowerShellModuleClient|FullyQualifiedName~WorkspaceBridgeProtocol"
+pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Unit
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+One accepted template/marketplace module and presentation migration slice.
+
+### Out of Scope
+
+Live template execution/recovery UAT, publishing and unrelated capability families.
+
 ## Slice S08: Conformance and release-evidence closure
 
 ### Status
