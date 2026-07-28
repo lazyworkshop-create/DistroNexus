@@ -16,7 +16,10 @@ public sealed class InstallWizardRoutingGuardTests
         Assert.Contains("ResolveInstallSourceAsync", source, StringComparison.Ordinal);
         Assert.Contains("PreviewPackageAcquisitionAsync", source, StringComparison.Ordinal);
         Assert.Contains("AcquirePackageAsync", source, StringComparison.Ordinal);
-        Assert.Contains("InstallVerifiedInstanceAsync", source, StringComparison.Ordinal);
+        Assert.Contains("PreviewInstallTargetAsync", source, StringComparison.Ordinal);
+        Assert.Contains("InstallVerifiedInstanceWithTargetAsync", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Directory.CreateDirectory", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("DriveInfo", source, StringComparison.Ordinal);
     }
 
     [Fact]

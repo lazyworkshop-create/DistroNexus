@@ -8,7 +8,7 @@ using System.IO;
 
 namespace DistroNexus.Desktop.ViewModels.Tabs;
 
-public partial class ConfigurationTabViewModel(WslInstanceViewModel instance, IDistributionConfigurationService service,
+public partial class ConfigurationTabViewModel(WslInstanceViewModel instance,
     IPowerShellModuleClient moduleClient, IDialogService dialogs) : ObservableObject
 {
     private string? _fingerprint;
@@ -45,9 +45,9 @@ public partial class ConfigurationTabViewModel(WslInstanceViewModel instance, ID
         IsLoading = true; Changed();
         try
         {
-            var doc = await service.ReadAsync(instance.Name); _current = new(doc.Settings.Values, StringComparer.OrdinalIgnoreCase);
-            _fingerprint = doc.Fingerprint; RawPreview = DesiredRawPreview = doc.RawPreview;
-            Diagnostics = string.Join(Environment.NewLine, doc.Diagnostics.Select(d => string.Format(L("Configuration_LineDiagnostic"), d.Line, d.Message)));
+            var doc = await moduleClient.GetInstanceConfigurationAsync(instance.Name); _current = new(doc.Document, StringComparer.OrdinalIgnoreCase);
+            _fingerprint = doc.Fingerprint; RawPreview = DesiredRawPreview = string.Empty;
+            Diagnostics = string.Empty;
             RestartImpact = L("Configuration_InstanceRestart");
             var snapshot = await moduleClient.GetInstanceCapabilitiesAsync(instance.Name);
             var host = await moduleClient.GetHostCapabilitiesAsync();
@@ -74,14 +74,14 @@ public partial class ConfigurationTabViewModel(WslInstanceViewModel instance, ID
         IsSaving = true; Changed();
         try
         {
-            var preview = await service.PreviewAsync(instance.Name, values, _fingerprint!); DesiredRawPreview = preview.DesiredRaw;
+            var preview = await moduleClient.PreviewInstanceConfigurationAsync(instance.Name, values); DesiredRawPreview = RawPreview;
             var affected = instance.IsRunning ? instance.Name : L("Configuration_NoRunningInstances");
-            if (!await dialogs.ShowConfirmAsync(L("Tab_Configuration"), string.Format(L("Configuration_SavePreview"), string.Join(", ", values.Keys), affected, preview.DesiredRaw))) return;
-            var recoveryOffer = await service.GetRecoveryOfferAsync(instance.Name);
-            if (recoveryOffer?.IsAvailable == true && !await dialogs.ShowConfirmAsync(L("Tab_Configuration"), L("Recovery_OfferConfiguration"))) return;
-            var result = await service.SaveAsync(instance.Name, values, _fingerprint!); _fingerprint = result.Fingerprint; RawPreview = DesiredRawPreview;
+            if (!await dialogs.ShowConfirmAsync(L("Tab_Configuration"), string.Format(L("Configuration_SavePreview"), string.Join(", ", preview.ChangeSummary), affected, DesiredRawPreview))) return;
+            var recoveryOffer = await moduleClient.GetInstanceConfigurationRecoveryOfferAsync(instance.Name);
+            if (recoveryOffer.OfferState == "Available" && !await dialogs.ShowConfirmAsync(L("Tab_Configuration"), L("Recovery_OfferConfiguration"))) return;
+            var result = await moduleClient.SaveInstanceConfigurationAsync(preview.PreviewToken); _fingerprint = null; RawPreview = DesiredRawPreview;
             _current = CurrentDesired();
-            await dialogs.ShowAlertAsync(L("Tab_Configuration"), string.Format(L("Configuration_SaveCompleteWithBackup"), result.BackupPath, RestartImpact));
+            await dialogs.ShowAlertAsync(L("Tab_Configuration"), string.Format(L("Configuration_SaveCompleteWithBackup"), result.BackupCreated ? result.RecoveryAction : string.Empty, RestartImpact));
         }
         catch (ConfigurationConflictException ex) { await ShowConfigurationFailureAsync(ex, "write"); _fingerprint = null; }
         catch (ConfigurationValidationException ex) { await ShowConfigurationFailureAsync(ex, "write"); }

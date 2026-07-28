@@ -110,6 +110,12 @@ public interface IPowerShellModuleClient
     Task<PackageJobActionPreviewResult> PreviewPackageDownloadJobActionAsync(string jobId, string action, CancellationToken cancellationToken = default);
     Task<PackageJobActionResult> ExecutePackageDownloadJobActionAsync(string previewToken, CancellationToken cancellationToken = default);
     Task<VerifiedInstallResult> InstallVerifiedInstanceAsync(string packageReference, string name, string installRoot, string username, string shell, string? locale, bool setAsDefault, SecureString? password = null, CancellationToken cancellationToken = default);
+    Task<InstallTargetPreviewResult> PreviewInstallTargetAsync(string installRoot, CancellationToken cancellationToken = default);
+    Task<VerifiedInstallResult> InstallVerifiedInstanceWithTargetAsync(string packageReference, string name, string targetPreviewToken, string username, string shell, string? locale, bool setAsDefault, SecureString? password = null, CancellationToken cancellationToken = default);
+    Task<InstanceConfigurationReadResult> GetInstanceConfigurationAsync(string name, CancellationToken cancellationToken = default);
+    Task<InstanceConfigurationRecoveryResult> GetInstanceConfigurationRecoveryOfferAsync(string name, CancellationToken cancellationToken = default);
+    Task<InstanceConfigurationPreviewResult> PreviewInstanceConfigurationAsync(string name, IReadOnlyDictionary<string, string?> changes, CancellationToken cancellationToken = default);
+    Task<InstanceConfigurationSaveResult> SaveInstanceConfigurationAsync(string previewToken, CancellationToken cancellationToken = default);
 
     Task<PackageCacheLocationResult> GetPackageCacheLocationAsync(CancellationToken cancellationToken = default);
     Task<CacheUsageInfo> GetPackageCacheUsageAsync(CancellationToken cancellationToken = default);

@@ -14,6 +14,18 @@ namespace DistroNexus.Tests.Services;
 public sealed class WorkspaceBridgeProtocolTests
 {
     [Fact]
+    public void S44Routes_DeclareClosedPayloadsAndStableFailureMappings()
+    {
+        var root = FindRoot();
+        var source = File.ReadAllText(Path.Combine(root, "src", "Client", "DistroNexus.WorkspaceBridge", "Program.cs"));
+        foreach (var operation in new[] { "instance.config.read.v1", "instance.config.recovery.v1", "instance.config.preview.v1", "instance.config.execute.v1", "install.target.preview.v1" })
+            Assert.Contains($"\"{operation}\"", source, StringComparison.Ordinal);
+        foreach (var outcome in new[] { "Instance.ConfigInvalidChanges", "Instance.ConfigGrantInvalid", "Instance.ConfigGrantExpired", "Instance.ConfigGrantReplayed", "Instance.ConfigStateChanged", "Instance.ConfigUnavailable", "Install.TargetInvalid", "Install.TargetUnavailable", "Install.TargetInsufficientCapacity", "Install.TargetStateChanged" })
+            Assert.Contains($"\"{outcome}\"", source, StringComparison.Ordinal);
+        Assert.Contains("ValidatePayload(request, [\"Name\", \"Changes\"], [\"Name\", \"Changes\"])", source, StringComparison.Ordinal);
+        Assert.Contains("ValidatePayload(request, [\"InstallRoot\"], [\"InstallRoot\"])", source, StringComparison.Ordinal);
+    }
+    [Fact]
     public async Task PackageJobRoutes_KeepListAndCancelRetryClearExecuteContractsFixed()
     {
         await using var bridge = await BridgeProcess.StartAsync();
@@ -317,6 +329,30 @@ public sealed class WorkspaceBridgeProtocolTests
         Assert.DoesNotContain("secret-root", response.GetRawText(), StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("http", response.GetRawText(), StringComparison.OrdinalIgnoreCase);
         if (!string.IsNullOrEmpty(forbidden)) Assert.DoesNotContain(forbidden, response.GetRawText(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task InstanceConfigurationPreviewRoute_MapsInvalidChangesToTheDocumentedOutcome()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        var response = await bridge.SendAsync("instance.config.preview.v1", payload: JsonDocument.Parse("{\"Name\":\"Ubuntu\",\"Changes\":{\"unsafe.key\":\"value\"}}").RootElement.Clone());
+
+        Assert.False(response.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("Instance.ConfigInvalidChanges", response.GetProperty("ErrorCode").GetString());
+        Assert.Equal("Instance.ConfigInvalidChanges", response.GetProperty("ErrorMessage").GetString());
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("C:\\\\")]
+    public async Task InstallTargetPreviewRoute_MapsInvalidPayloadPathsToTheDocumentedOutcome(string installRoot)
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        var response = await bridge.SendAsync("install.target.preview.v1", payload: JsonPayload(new { InstallRoot = installRoot }));
+
+        Assert.False(response.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("Install.TargetInvalid", response.GetProperty("ErrorCode").GetString());
+        Assert.Equal("Install.TargetInvalid", response.GetProperty("ErrorMessage").GetString());
     }
 
     [Fact]

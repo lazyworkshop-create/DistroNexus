@@ -51,13 +51,13 @@ Acceptance: no USB Core service/watcher reference remains in Desktop. Bind/unbin
 
 Per-instance configuration reads, recovery-offer discovery, preview, and save must use a versioned typed module contract. Desktop must not read/write `wsl.conf`, create recovery state, or call `IDistributionConfigurationService`.
 
-Acceptance: preview returns a same-user, short-lived token bound to instance identity and configuration fingerprint; execute accepts only the token and revalidates state; WPF has no direct configuration service dependency.
+Acceptance: read and recovery results use bounded modeled records and stable outcome codes; preview returns a same-user, short-lived single-use token bound to instance identity, schema revision, canonical modeled changes, configuration fingerprint, and recovery-offer fingerprint; execute accepts only the token and revalidates state; WPF has no direct configuration service dependency. Recovery-offer discovery is read-only; backup/recovery creation remains Core-owned only when save execution requires it.
 
 ### FR-105 Install-target preflight ownership
 
 Install-root validation, capacity checks, and all product-path mutations belong to the module/Core preview contract. Desktop may select a candidate path but must not create/delete directories, validate for write, or treat a drive check as authoritative.
 
-Acceptance: both install presentation paths submit the selected path only to the typed preview operation; no Desktop `Directory.CreateDirectory`, cleanup, or `DriveInfo` path-preflight determines install eligibility.
+Acceptance: both install presentation paths submit the selected path only to the typed target-preview operation; the resulting short-lived token, rather than a raw path, is the only target input to typed verified-install preview/execute. No Desktop `Directory.CreateDirectory`, cleanup, or `DriveInfo` path-preflight determines install eligibility. Existing public `-InstallRoot` parameter sets remain compatibility facades that perform the authoritative module preflight internally; they do not create a raw-path Bridge execute route.
 
 ### FR-106 Diagnostic module replacement
 

@@ -16,7 +16,7 @@ function Get-DistroNexusPackageAcquisitionPreview {
 
 function Invoke-DistroNexusPackageAcquisition {
     <# .SYNOPSIS Acquires exactly the package authorized by a preview token. #>
-    [CmdletBinding(SupportsShouldProcess)]
+    [CmdletBinding(DefaultParameterSetName = 'LegacyRoot', SupportsShouldProcess)]
     param([Parameter(Mandatory)][ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$PreviewToken)
 
     if (-not $PSCmdlet.ShouldProcess('reviewed package acquisition', 'Acquire')) {
@@ -39,7 +39,8 @@ function Install-DistroNexusInstance {
     param(
         [Parameter(Mandatory)][ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$PackageReference,
         [Parameter(Mandatory)][ValidatePattern('^[^\r\n\0]{1,256}$')][string]$Name,
-        [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$InstallRoot,
+        [Parameter(Mandatory, ParameterSetName = 'LegacyRoot')][ValidateNotNullOrEmpty()][string]$InstallRoot,
+        [Parameter(Mandatory, ParameterSetName = 'TargetToken')][ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$TargetPreviewToken,
         [Parameter(Mandatory)][ValidatePattern('^[a-z_][a-z0-9_-]{0,31}$')][string]$Username,
         [Parameter(Mandatory)][ValidateSet('bash', 'zsh', 'fish', 'sh')][string]$Shell,
         [ValidateLength(1, 128)][string]$Locale,
@@ -63,7 +64,12 @@ function Install-DistroNexusInstance {
             finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer) }
         }
 
-        $payload = [ordered]@{ PackageReference = $PackageReference; Name = $Name; InstallRoot = $InstallRoot; Username = $Username; Shell = $Shell; Locale = $Locale; SetAsDefault = [bool]$SetAsDefault }
+        if ($PSCmdlet.ParameterSetName -eq 'LegacyRoot') {
+            $target = Invoke-DistroNexusWorkspaceBridge -Operation 'install.target.preview.v1' -Payload @{ InstallRoot = $InstallRoot }
+            if (-not $target.IsEligible) { throw $target.OutcomeCode }
+            $TargetPreviewToken = $target.PreviewToken
+        }
+        $payload = [ordered]@{ PackageReference = $PackageReference; Name = $Name; TargetPreviewToken = $TargetPreviewToken; Username = $Username; Shell = $Shell; Locale = $Locale; SetAsDefault = [bool]$SetAsDefault }
         if ($envelope) { $payload.SecretEnvelope = $envelope }
         $preview = Invoke-DistroNexusWorkspaceBridge -Operation 'instance.install.preview.v1' -Payload $payload
         Invoke-DistroNexusWorkspaceBridge -Operation 'instance.install.execute.v1' -Payload @{ PreviewToken = $preview.PreviewToken }

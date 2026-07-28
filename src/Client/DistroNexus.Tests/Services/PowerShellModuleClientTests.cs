@@ -529,6 +529,8 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.GetHealthHistoryAsync),
                 nameof(IPowerShellModuleClient.GetHealthRepairPreviewAsync),
                 nameof(IPowerShellModuleClient.GetInstanceCapabilitiesAsync),
+                nameof(IPowerShellModuleClient.GetInstanceConfigurationAsync),
+                nameof(IPowerShellModuleClient.GetInstanceConfigurationRecoveryOfferAsync),
                 nameof(IPowerShellModuleClient.GetInstanceIpAddressAsync),
                 nameof(IPowerShellModuleClient.GetInstanceResourcesAsync),
                 nameof(IPowerShellModuleClient.GetInstancesAsync),
@@ -621,6 +623,10 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.StartTemplateApplyAsync),
                 nameof(IPowerShellModuleClient.StartTerminalAsync),
                 nameof(IPowerShellModuleClient.InstallVerifiedInstanceAsync),
+                nameof(IPowerShellModuleClient.InstallVerifiedInstanceWithTargetAsync),
+                nameof(IPowerShellModuleClient.PreviewInstallTargetAsync),
+                nameof(IPowerShellModuleClient.PreviewInstanceConfigurationAsync),
+                nameof(IPowerShellModuleClient.SaveInstanceConfigurationAsync),
                 nameof(IPowerShellModuleClient.StopInstanceAsync),
                 nameof(IPowerShellModuleClient.TestCatalogSourceAsync),
                 nameof(IPowerShellModuleClient.UpdateCatalogSourceAsync),
@@ -674,6 +680,18 @@ public sealed class PowerShellModuleClientTests
         Assert.DoesNotContain(methods, method => method.Name.Contains("Script", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(methods, method => method.Name.Contains("Command", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(methods, method => method.Name.Equals("ExecuteOperationAsync", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task InstanceConfigurationClient_RejectsUnknownAndOversizedClosedResults()
+    {
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.SetupSequence(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusInstanceConfiguration", It.IsAny<Dictionary<string, object>>(), It.IsAny<ModuleCallOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Name\":\"Ubuntu\",\"SchemaRevision\":1,\"Document\":{},\"Fingerprint\":\"" + new string('a', 64) + "\",\"OutcomeCode\":\"Instance.ConfigRead\",\"Unexpected\":true}" })
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Name\":\"Ubuntu\",\"SchemaRevision\":1,\"Document\":{},\"Fingerprint\":\"" + new string('a', 64) + "\",\"OutcomeCode\":\"" + new string('x', 129) + "\"}" });
+        var client = new PowerShellModuleClient(powerShell.Object);
+        await Assert.ThrowsAsync<JsonException>(() => client.GetInstanceConfigurationAsync("Ubuntu"));
+        await Assert.ThrowsAsync<JsonException>(() => client.GetInstanceConfigurationAsync("Ubuntu"));
     }
 
     [Fact]

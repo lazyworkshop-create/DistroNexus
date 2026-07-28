@@ -85,7 +85,9 @@ public partial class ProgressStep : WizardStepBase
             var package = await _moduleClient.AcquirePackageAsync(acquisition.PreviewToken, _installCts.Token);
             Context.InstallProgress = 55;
             using var password = await PromptForPasswordAsync(Context.CreateUser, _installCts.Token);
-            var result = await _moduleClient.InstallVerifiedInstanceAsync(package.PackageReference, Context.InstanceName, Context.InstallPath, Context.CreateUser ? Context.Username : "root", "bash", null, Context.SetAsDefault, password, _installCts.Token);
+            var target = await _moduleClient.PreviewInstallTargetAsync(Context.InstallPath, _installCts.Token);
+            if (!target.IsEligible) throw new InvalidOperationException(target.OutcomeCode);
+            var result = await _moduleClient.InstallVerifiedInstanceWithTargetAsync(package.PackageReference, Context.InstanceName, target.PreviewToken, Context.CreateUser ? Context.Username : "root", "bash", null, Context.SetAsDefault, password, _installCts.Token);
             if (!result.Succeeded) throw new InvalidOperationException(result.OutcomeCode);
 
             Context.InstallProgress = 100;

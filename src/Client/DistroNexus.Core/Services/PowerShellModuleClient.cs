@@ -63,6 +63,10 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string GetPackageDownloadJobsCommand = "Get-DistroNexusPackageDownloadJob";
     private const string InvokePackageDownloadJobActionCommand = "Invoke-DistroNexusPackageDownloadJobAction";
     private const string InstallVerifiedInstanceCommand = "Install-DistroNexusInstance";
+    private const string GetInstallTargetPreviewCommand = "Get-DistroNexusInstallTargetPreview";
+    private const string GetInstanceConfigurationCommand = "Get-DistroNexusInstanceConfiguration";
+    private const string GetInstanceConfigurationRecoveryCommand = "Get-DistroNexusInstanceConfigurationRecoveryOffer";
+    private const string SaveInstanceConfigurationCommand = "Save-DistroNexusInstanceConfiguration";
     private const string GetPackageCacheLocationCommand = "Get-DistroNexusPackageCacheLocation";
     private const string GetPackageCacheUsageCommand = "Get-DistroNexusPackageCacheUsage";
     private const string RemovePackageCacheCommand = "Remove-DistroNexusPackage";
@@ -439,6 +443,27 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
         return JsonSerializer.Deserialize<VerifiedInstallResult>(result.Output, JsonOptions)
             ?? throw new InvalidOperationException("The module returned an invalid install result.");
     }
+
+    public Task<InstallTargetPreviewResult> PreviewInstallTargetAsync(string installRoot, CancellationToken cancellationToken = default)
+    { if (string.IsNullOrWhiteSpace(installRoot) || installRoot.IndexOfAny(['\r', '\n', '\0']) >= 0) throw new ArgumentException("The install root is invalid.", nameof(installRoot)); return ExecuteS44JsonAsync<InstallTargetPreviewResult>(GetInstallTargetPreviewCommand, new() { ["InstallRoot"] = installRoot }, ["PreviewToken","ExpiresAt","DisplayName","AvailableBytes","RequiredBytes","IsEligible","OutcomeCode"], cancellationToken); }
+    public async Task<VerifiedInstallResult> InstallVerifiedInstanceWithTargetAsync(string packageReference, string name, string targetPreviewToken, string username, string shell, string? locale, bool setAsDefault, SecureString? password = null, CancellationToken cancellationToken = default)
+    {
+        ValidateToken(packageReference, nameof(packageReference)); ValidateToken(targetPreviewToken, nameof(targetPreviewToken)); ValidateName(name, nameof(name)); ValidateName(username, nameof(username));
+        if (shell is not ("bash" or "zsh" or "fish" or "sh")) throw new ArgumentException("The shell is invalid.", nameof(shell));
+        var parameters = new Dictionary<string, object> { ["PackageReference"] = packageReference, ["Name"] = name, ["TargetPreviewToken"] = targetPreviewToken, ["Username"] = username, ["Shell"] = shell, ["SetAsDefault"] = setAsDefault, ["Confirm"] = false };
+        if (locale is not null) parameters["Locale"] = locale;
+        var result = password is null ? await _powerShellService.ExecuteModuleCmdletAsync(InstallVerifiedInstanceCommand, parameters, new ModuleCallOptions { ParseAsJson = true }, cancellationToken) : await _powerShellService.ExecuteModuleCmdletWithSecureStringAsync(InstallVerifiedInstanceCommand, parameters, "Password", password, new ModuleCallOptions { ParseAsJson = true }, cancellationToken);
+        ThrowIfFailed(result); return JsonSerializer.Deserialize<VerifiedInstallResult>(result.Output, JsonOptions) ?? throw new InvalidOperationException("The module returned an invalid install result.");
+    }
+
+    public Task<InstanceConfigurationReadResult> GetInstanceConfigurationAsync(string name, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); return ExecuteS44JsonAsync<InstanceConfigurationReadResult>(GetInstanceConfigurationCommand, new() { ["Name"] = name }, ["Name","SchemaRevision","Document","Fingerprint","OutcomeCode"], cancellationToken); }
+    public Task<InstanceConfigurationRecoveryResult> GetInstanceConfigurationRecoveryOfferAsync(string name, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); return ExecuteS44JsonAsync<InstanceConfigurationRecoveryResult>(GetInstanceConfigurationRecoveryCommand, new() { ["Name"] = name }, ["Name","OfferState","RecoveryFingerprint","OutcomeCode"], cancellationToken); }
+    public Task<InstanceConfigurationPreviewResult> PreviewInstanceConfigurationAsync(string name, IReadOnlyDictionary<string, string?> changes, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); if (changes is null || changes.Count is 0 or > 32) throw new ArgumentException("Configuration changes are invalid.", nameof(changes)); return ExecuteS44JsonAsync<InstanceConfigurationPreviewResult>(SaveInstanceConfigurationCommand, new() { ["Name"] = name, ["Changes"] = changes, ["Preview"] = true }, ["PreviewToken","ExpiresAt","Name","ChangeSummary","OutcomeCode"], cancellationToken); }
+    public Task<InstanceConfigurationSaveResult> SaveInstanceConfigurationAsync(string previewToken, CancellationToken cancellationToken = default)
+    { ValidateToken(previewToken, nameof(previewToken)); return ExecuteS44JsonAsync<InstanceConfigurationSaveResult>(SaveInstanceConfigurationCommand, new() { ["PreviewToken"] = previewToken, ["Confirm"] = false }, ["Name","BackupCreated","RecoveryAction","OutcomeCode"], cancellationToken); }
 
     /// <inheritdoc />
     public Task AddInstanceTagAsync(string name, string tag, CancellationToken cancellationToken = default) =>
@@ -908,6 +933,18 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
         return JsonSerializer.Deserialize<T>(result.Output, JsonOptions)
             ?? throw new InvalidOperationException("The DistroNexus module returned an invalid result.");
     }
+    private async Task<T> ExecuteS44JsonAsync<T>(string command, Dictionary<string, object> parameters, string[] fields, CancellationToken cancellationToken)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(command, parameters, new ModuleCallOptions { ParseAsJson = true }, cancellationToken); ThrowIfFailed(result);
+        using var doc = JsonDocument.Parse(result.Output); if (doc.RootElement.ValueKind != JsonValueKind.Object || doc.RootElement.EnumerateObject().Any(p => !fields.Contains(p.Name, StringComparer.Ordinal))) throw new JsonException("The module returned unknown S44 result fields.");
+        var value = JsonSerializer.Deserialize<T>(result.Output, JsonOptions) ?? throw new JsonException("Invalid S44 result.");
+        if (value is InstanceConfigurationReadResult read && (read.Name.Length is 0 or > 128 || read.SchemaRevision < 1 || read.Document.Count > 32 || read.Document.Any(x => x.Key.Length > 128 || x.Value.Length > 1024) || !Token(read.Fingerprint) || !Outcome(read.OutcomeCode))) throw new JsonException("Invalid configuration read result.");
+        if (value is InstanceConfigurationPreviewResult preview && (!Token(preview.PreviewToken) || preview.ChangeSummary.Count > 32 || preview.ChangeSummary.Any(x => x.Length > 128) || !Outcome(preview.OutcomeCode))) throw new JsonException("Invalid configuration preview result.");
+        if (value is InstallTargetPreviewResult target && (target.DisplayName.Length > 256 || target.AvailableBytes < 0 || target.RequiredBytes < 0 || (!target.IsEligible && !string.IsNullOrEmpty(target.PreviewToken)) || (target.IsEligible && !Token(target.PreviewToken)) || !Outcome(target.OutcomeCode))) throw new JsonException("Invalid target preview result.");
+        return value;
+    }
+    private static bool Token(string? value) => value is { Length: 64 } && value.All(Uri.IsHexDigit);
+    private static bool Outcome(string? value) => value is { Length: > 0 and <= 128 } && value.All(c => char.IsLetterOrDigit(c) || c is '.' or '_' or '-');
 
     private async Task<IReadOnlyList<T>> ExecuteListAsync<T>(string command, Dictionary<string, object>? parameters, CancellationToken cancellationToken)
     {

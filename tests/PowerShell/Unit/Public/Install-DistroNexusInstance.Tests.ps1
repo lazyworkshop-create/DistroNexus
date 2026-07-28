@@ -32,6 +32,7 @@ Describe 'Verified install module contract' -Tag 'Unit', 'Public', 'Install' {
     It 'creates a fixed preview and then executes only the returned token' {
         InModuleScope DistroNexus {
             Mock Invoke-DistroNexusWorkspaceBridge {
+                if ($Operation -eq 'install.target.preview.v1') { return [pscustomobject]@{ IsEligible = $true; PreviewToken = ('c' * 64) } }
                 if ($Operation -eq 'instance.install.preview.v1') { return [pscustomobject]@{ PreviewToken = ('b' * 64) } }
                 return [pscustomobject]@{ Succeeded = $true; Operation = 'Install'; InstanceName = 'Ubuntu'; OutcomeCode = 'Lifecycle.Succeeded' }
             }
@@ -39,7 +40,8 @@ Describe 'Verified install module contract' -Tag 'Unit', 'Public', 'Install' {
             $result = Install-DistroNexusInstance -PackageReference ('a' * 64) -Name Ubuntu -InstallRoot 'D:\WSL' -Username developer -Shell bash -SetAsDefault -Confirm:$false
 
             $result.Succeeded | Should -BeTrue
-            Should -Invoke Invoke-DistroNexusWorkspaceBridge -Times 1 -Exactly -ParameterFilter { $Operation -eq 'instance.install.preview.v1' -and $Payload.PackageReference -eq ('a' * 64) -and $Payload.Name -eq 'Ubuntu' -and $Payload.InstallRoot -eq 'D:\WSL' -and $Payload.Username -eq 'developer' -and $Payload.Shell -eq 'bash' -and $Payload.SetAsDefault }
+            Should -Invoke Invoke-DistroNexusWorkspaceBridge -Times 1 -Exactly -ParameterFilter { $Operation -eq 'install.target.preview.v1' -and $Payload.InstallRoot -eq 'D:\WSL' -and $Payload.Count -eq 1 }
+            Should -Invoke Invoke-DistroNexusWorkspaceBridge -Times 1 -Exactly -ParameterFilter { $Operation -eq 'instance.install.preview.v1' -and $Payload.PackageReference -eq ('a' * 64) -and $Payload.Name -eq 'Ubuntu' -and $Payload.TargetPreviewToken -eq ('c' * 64) -and $Payload.Username -eq 'developer' -and $Payload.Shell -eq 'bash' -and $Payload.SetAsDefault }
             Should -Invoke Invoke-DistroNexusWorkspaceBridge -Times 1 -Exactly -ParameterFilter { $Operation -eq 'instance.install.execute.v1' -and $Payload.PreviewToken -eq ('b' * 64) -and $Payload.Count -eq 1 }
         }
     }

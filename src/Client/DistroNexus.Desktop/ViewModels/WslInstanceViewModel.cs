@@ -608,14 +608,13 @@ public partial class WslInstanceViewModel : ObservableObject
         var networkSvc = _serviceProvider.GetRequiredService<INetworkService>();
         var wslConfigSvc = _serviceProvider.GetRequiredService<IWslConfigService>();
         var dialogSvc = _serviceProvider.GetRequiredService<IDialogService>();
-        var distributionConfigSvc = _serviceProvider.GetRequiredService<IDistributionConfigurationService>();
         var systemdService = _serviceProvider.GetRequiredService<ISystemdService>();
         var networkDiagnostics = _serviceProvider.GetRequiredService<INetworkDiagnosticsService>();
         var firewallOperationBroker = _serviceProvider.GetRequiredService<IFirewallOperationBroker>();
         var networkConfigurationService = _serviceProvider.GetRequiredService<INetworkConfigurationService>();
         var networkStatusAdapter = _serviceProvider.GetRequiredService<INetworkStatusAdapter>();
         var browserLauncher = _serviceProvider.GetRequiredService<IBrowserLauncher>();
-        var vm = new InstanceDetailViewModel(this, wslManager, networkSvc, wslConfigSvc, dialogSvc, distributionConfigSvc, systemdService, networkDiagnostics, firewallOperationBroker, networkConfigurationService, networkStatusAdapter, browserLauncher, _moduleClient);
+        var vm = new InstanceDetailViewModel(this, wslManager, networkSvc, wslConfigSvc, dialogSvc, systemdService, networkDiagnostics, firewallOperationBroker, networkConfigurationService, networkStatusAdapter, browserLauncher, _moduleClient);
         var dialog = new InstanceDetailDialog(vm)
         {
             Owner = Application.Current.MainWindow

@@ -25,6 +25,7 @@ var capabilities = new PlatformCapabilityService(processes);
 var networkStatus = new WindowsNetworkStatusAdapter();
 var portMappings = new BridgeNetworkPortMappingService(processes, networkStatus);
 var distributionConfiguration = new DistributionConfigurationService(processes);
+var instanceConfiguration = new InstanceConfigurationGrantService(distributionConfiguration, root ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DistroNexus"));
 var networkDiagnostics = new NetworkDiagnosticsService(new WslNetworkDiagnosticsAdapter(processes));
 var networkConfiguration = new NetworkConfigurationService(new WslConfigService(NullLogger<WslConfigService>.Instance, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)), capabilities, networkDiagnostics);
 var firewall = new GuardedFirewallOperationBroker();
@@ -276,6 +277,11 @@ while ((line = Console.ReadLine()) is not null)
             "package.acquire.execute.v1" => await AcquirePackageV1Async(request),
             "instance.install.preview.v1" => await PreviewVerifiedInstallV1Async(request),
             "instance.install.execute.v1" => await ExecuteVerifiedInstallV1Async(request),
+            "install.target.preview.v1" => await PreviewInstallTargetV1Async(request),
+            "instance.config.read.v1" => await InstanceConfigurationReadV1Async(request),
+            "instance.config.recovery.v1" => await InstanceConfigurationRecoveryV1Async(request),
+            "instance.config.preview.v1" => await InstanceConfigurationPreviewV1Async(request),
+            "instance.config.execute.v1" => await InstanceConfigurationExecuteV1Async(request),
             "instance.lifecycle.execute.v1" => await LifecycleExecuteV1Async(request),
             "instance.resources.get.v1" => await InstanceResourcesGetV1Async(request),
             "instance.sparse.preview.v1" => await InstanceSparsePreviewV1Async(request),
@@ -366,6 +372,21 @@ while ((line = Console.ReadLine()) is not null)
     catch (DistroNexus.Core.Exceptions.WslOperationFailedException ex) { response = new(false, null, ex.Code.ToString(), ex.Message); }
     catch (InvalidOperationException ex) when (ex.Message is "Wslg.DiscoveryGrantInvalid" or "Wslg.DiscoveryGrantExpired" or "Wslg.ApplicationNotFound" or "Wslg.EntryChanged") { response = new(false, null, ex.Message, ex.Message); }
     catch (InvalidOperationException ex) when (string.Equals(ex.Message, "PackageCache.EntryInvalid", StringComparison.Ordinal)) { response = new(false, null, "PackageCache.EntryInvalid", "Package cache entry is invalid."); }
+    catch (Exception ex) when (IsInstanceConfigurationOperation(request?.Operation))
+    {
+        var code = ex switch
+        {
+            OperationCanceledException => "Instance.ConfigUnavailable",
+            InvalidOperationException when ex.Message is "Instance.ConfigNotFound" or "Instance.ConfigInvalidChanges" or "Instance.ConfigNoChanges" or "Instance.ConfigGrantInvalid" or "Instance.ConfigGrantExpired" or "Instance.ConfigGrantReplayed" or "Instance.ConfigStateChanged" => ex.Message,
+            _ => "Instance.ConfigUnavailable"
+        };
+        response = new(false, null, code, code);
+    }
+    catch (Exception ex) when (IsInstallTargetOperation(request?.Operation))
+    {
+        var code = ex is InvalidOperationException && ex.Message is "Install.TargetInvalid" or "Install.TargetUnavailable" or "Install.TargetInsufficientCapacity" or "Install.TargetStateChanged" ? ex.Message : "Install.TargetUnavailable";
+        response = new(false, null, code, code);
+    }
     catch (Exception ex) when (IsVerifiedInstallOperation(request?.Operation))
     {
         var code = ex switch
@@ -419,6 +440,8 @@ while ((line = Console.ReadLine()) is not null)
 static bool IsVerifiedInstallOperation(string? operation) => operation is
     "install.source.resolve.v1" or "package.acquire.preview.v1" or "package.acquire.execute.v1" or
     "instance.install.preview.v1" or "instance.install.execute.v1";
+static bool IsInstanceConfigurationOperation(string? operation) => operation is "instance.config.read.v1" or "instance.config.recovery.v1" or "instance.config.preview.v1" or "instance.config.execute.v1";
+static bool IsInstallTargetOperation(string? operation) => operation is "install.target.preview.v1";
 
 static bool IsTemplateOperation(string? operation) => operation?.StartsWith("template.", StringComparison.Ordinal) == true;
 static bool IsTemplateOutcome(string value) => value is
@@ -552,15 +575,25 @@ async Task<PackageJobActionResult> PackageJobActionExecuteV1Async(BridgeRequest 
 { ValidatePayload(request, ["PreviewToken"], ["PreviewToken"]); return await packageJobs.ExecuteActionAsync(ParsePayload<PackageJobExecutePayload>(request).PreviewToken); }
 async Task<InstallPreview> PreviewVerifiedInstallV1Async(BridgeRequest request)
 {
-    ValidatePayload(request, ["PackageReference", "Name", "InstallRoot", "Username", "Shell", "Locale", "SetAsDefault", "SecretEnvelope"], ["PackageReference", "Name", "InstallRoot", "Username", "Shell", "SetAsDefault"]);
+    ValidatePayload(request, ["PackageReference", "Name", "TargetPreviewToken", "Username", "Shell", "Locale", "SetAsDefault", "SecretEnvelope"], ["PackageReference", "Name", "TargetPreviewToken", "Username", "Shell", "SetAsDefault"]);
     var payload = ParsePayload<VerifiedInstallPreviewPayload>(request);
-    return await verifiedInstall.PreviewInstallAsync(payload.PackageReference, payload.Name, payload.InstallRoot, payload.Username, payload.Shell, payload.Locale, payload.SetAsDefault, payload.SecretEnvelope);
+    return await verifiedInstall.PreviewInstallAsync(payload.PackageReference, payload.Name, payload.TargetPreviewToken, payload.Username, payload.Shell, payload.Locale, payload.SetAsDefault, payload.SecretEnvelope);
 }
+async Task<InstallTargetPreviewResult> PreviewInstallTargetV1Async(BridgeRequest request)
+{ ValidatePayload(request, ["InstallRoot"], ["InstallRoot"]); return await verifiedInstall.PreviewTargetAsync(ParsePayload<InstallTargetPreviewPayload>(request).InstallRoot); }
 async Task<VerifiedInstallResult> ExecuteVerifiedInstallV1Async(BridgeRequest request)
 {
     ValidatePayload(request, ["PreviewToken"], ["PreviewToken"]);
     return await verifiedInstall.InstallAsync(ParsePayload<VerifiedInstallExecutePayload>(request).PreviewToken);
 }
+async Task<InstanceConfigurationReadResult> InstanceConfigurationReadV1Async(BridgeRequest request)
+{ ValidatePayload(request, ["Name"], ["Name"]); return await instanceConfiguration.ReadAsync(ParsePayload<InstanceConfigurationNamePayload>(request).Name); }
+async Task<InstanceConfigurationRecoveryResult> InstanceConfigurationRecoveryV1Async(BridgeRequest request)
+{ ValidatePayload(request, ["Name"], ["Name"]); return await instanceConfiguration.RecoveryAsync(ParsePayload<InstanceConfigurationNamePayload>(request).Name); }
+async Task<InstanceConfigurationPreviewResult> InstanceConfigurationPreviewV1Async(BridgeRequest request)
+{ ValidatePayload(request, ["Name", "Changes"], ["Name", "Changes"]); var payload = ParsePayload<InstanceConfigurationPreviewPayload>(request); return await instanceConfiguration.PreviewAsync(payload.Name, payload.Changes); }
+async Task<InstanceConfigurationSaveResult> InstanceConfigurationExecuteV1Async(BridgeRequest request)
+{ ValidatePayload(request, ["PreviewToken"], ["PreviewToken"]); return await instanceConfiguration.ExecuteAsync(ParsePayload<InstanceConfigurationExecutePayload>(request).PreviewToken); }
 
 JsonObject GetSettings(BridgeRequest request)
 {
@@ -1318,8 +1351,12 @@ public sealed record CredentialExecutePayload(string PreviewToken);
 public sealed record InstallSourcePayload(string PackageId);
 public sealed record PackageAcquisitionPayload(string PackageId);
 public sealed record PackageAcquisitionExecutePayload(string PreviewToken);
-public sealed record VerifiedInstallPreviewPayload(string PackageReference, string Name, string InstallRoot, string Username, string Shell, string? Locale, bool SetAsDefault, string? SecretEnvelope = null);
+public sealed record VerifiedInstallPreviewPayload(string PackageReference, string Name, string TargetPreviewToken, string Username, string Shell, string? Locale, bool SetAsDefault, string? SecretEnvelope = null);
 public sealed record VerifiedInstallExecutePayload(string PreviewToken);
+public sealed record InstallTargetPreviewPayload(string InstallRoot);
+public sealed record InstanceConfigurationNamePayload(string Name);
+public sealed record InstanceConfigurationPreviewPayload(string Name, Dictionary<string, string?> Changes);
+public sealed record InstanceConfigurationExecutePayload(string PreviewToken);
 public sealed record TerminalLaunchPayload(string InstanceName, string? StartPath = null, TerminalKind TerminalKind = TerminalKind.Auto);
 
 /// <summary>Owns the only executable and argument shapes used by fixed external-launch routes.</summary>

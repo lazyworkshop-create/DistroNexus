@@ -61,8 +61,11 @@ public partial class InstallPathStep : WizardStepBase
         // Load default path from settings if not already set
         if (Context != null && string.IsNullOrEmpty(Context.InstallPath))
         {
+            // A typed module call may legitimately return no settings in lightweight
+            // workflow hosts. Keep the selected-path field empty in that case so the
+            // normal target-preview validation owns the eligibility decision.
             var settings = await _moduleClient.GetSettingsAsync();
-            Context.InstallPath = settings.DefaultInstallPath;
+            Context.InstallPath = settings?.DefaultInstallPath ?? string.Empty;
         }
 
         // Generate recommended instance name from distribution name
@@ -179,57 +182,6 @@ public partial class InstallPathStep : WizardStepBase
 
         try
         {
-            var fullPath = Path.GetFullPath(Context.InstallPath);
-            var instancePath = Path.Combine(fullPath, Context.InstanceName);
-
-            // Check if directory already exists
-            if (Directory.Exists(instancePath))
-            {
-                Context.IsPathValid = false;
-                Context.PathValidationMessage = "A directory already exists at this location.";
-                UpdateValidationVisuals(false);
-                return;
-            }
-
-            // Check if parent directory exists or can be created
-            var parentDir = Path.GetDirectoryName(fullPath);
-            if (!string.IsNullOrEmpty(parentDir) && !Directory.Exists(parentDir))
-            {
-                try
-                {
-                    var testPath = Path.Combine(parentDir, ".distronexus_test_" + Guid.NewGuid().ToString("N")[..8]);
-                    Directory.CreateDirectory(testPath);
-                    Directory.Delete(testPath);
-                }
-                catch
-                {
-                    Context.IsPathValid = false;
-                    Context.PathValidationMessage = "Cannot create directory at this location. Check permissions.";
-                    UpdateValidationVisuals(false);
-                    return;
-                }
-            }
-
-            // Check disk space
-            try
-            {
-                var driveInfo = new DriveInfo(Path.GetPathRoot(fullPath) ?? fullPath);
-                const long minimumFreeSpace = 2L * 1024 * 1024 * 1024; // 2GB
-                
-                if (driveInfo.AvailableFreeSpace < minimumFreeSpace)
-                {
-                    Context.IsPathValid = false;
-                    Context.PathValidationMessage = $"Insufficient disk space. Available: {driveInfo.AvailableFreeSpace / (1024.0 * 1024 * 1024):F2}GB, Required: 2GB";
-                    UpdateValidationVisuals(false);
-                    return;
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Could not check disk space");
-                // Don't fail validation if we can't check disk space
-            }
-
             // If instance name exists, mark as invalid
             if (InstanceNameChecked && InstanceNameExists)
             {
@@ -241,7 +193,7 @@ public partial class InstallPathStep : WizardStepBase
 
             // Basic validation passed - full validation happens on Next button click
             Context.IsPathValid = true;
-            Context.PathValidationMessage = $"Instance will be installed to: {instancePath}";
+            Context.PathValidationMessage = "The installation target will be validated before installation.";
             UpdateValidationVisuals(true);
         }
         catch (Exception ex)

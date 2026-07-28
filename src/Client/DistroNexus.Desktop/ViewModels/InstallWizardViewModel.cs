@@ -210,7 +210,9 @@ public partial class InstallWizardViewModel : ObservableObject
             var preview = await _moduleClient.PreviewPackageAcquisitionAsync(source.PackageId, _installCts.Token);
             var package = await _moduleClient.AcquirePackageAsync(preview.PreviewToken, _installCts.Token);
             InstallProgress = 55;
-            var result = await _moduleClient.InstallVerifiedInstanceAsync(package.PackageReference, InstanceName, InstallPath, CreateUser ? Username : "root", "bash", null, SetAsDefault, cancellationToken: _installCts.Token);
+            var target = await _moduleClient.PreviewInstallTargetAsync(InstallPath, _installCts.Token);
+            if (!target.IsEligible) throw new InvalidOperationException(target.OutcomeCode);
+            var result = await _moduleClient.InstallVerifiedInstanceWithTargetAsync(package.PackageReference, InstanceName, target.PreviewToken, CreateUser ? Username : "root", "bash", null, SetAsDefault, cancellationToken: _installCts.Token);
             if (!result.Succeeded) throw new InvalidOperationException(result.OutcomeCode);
 
             InstallProgress = 100;
@@ -471,37 +473,8 @@ public partial class InstallWizardViewModel : ObservableObject
 
         try
         {
-            var fullPath = Path.GetFullPath(InstallPath);
-            var instancePath = Path.Combine(fullPath, InstanceName);
-
-            if (Directory.Exists(instancePath))
-            {
-                IsPathValid = false;
-                PathValidationMessage = Properties.Resources.ValMsgDirExists;
-                return;
-            }
-
-            // Check if parent directory exists or can be created
-            var parentDir = Path.GetDirectoryName(fullPath);
-            if (!string.IsNullOrEmpty(parentDir) && !Directory.Exists(parentDir))
-            {
-                // Check if we can create it
-                try
-                {
-                    var testPath = Path.Combine(parentDir, ".distronexus_test");
-                    Directory.CreateDirectory(testPath);
-                    Directory.Delete(testPath);
-                }
-                catch
-                {
-                    IsPathValid = false;
-                    PathValidationMessage = Properties.Resources.ValMsgCannotCreateDir;
-                    return;
-                }
-            }
-
             IsPathValid = true;
-            PathValidationMessage = string.Format(Properties.Resources.ValMsgInstallTarget, instancePath);
+            PathValidationMessage = "The installation target will be validated before installation.";
         }
         catch (Exception ex)
         {

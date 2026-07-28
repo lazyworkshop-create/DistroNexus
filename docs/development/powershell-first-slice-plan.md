@@ -2662,7 +2662,7 @@ Actual network download UAT, USB, configuration, install, and diagnostics.
 
 ### Status
 
-Planned
+Committed
 
 ### Objective
 
@@ -2678,7 +2678,7 @@ S42.
 
 ### Allowed Paths
 
-Instance-configuration and install-preflight Core/Bridge/module/client contracts and tests; configuration/install Desktop consumers and focused tests; requirements/design/plan.
+`docs/specs/powershell-first-remaining-boundaries-requirements.md`, `docs/specs/powershell-first-remaining-boundaries-design.md`, this plan; `src/Client/DistroNexus.Core/Interfaces/IWslConfigurationService.cs`; configuration/install Core models, grant services, `DistributionConfigurationService.cs`, `VerifiedInstallModels.cs`, `VerifiedInstallService.cs`, `IPowerShellModuleClient.cs`, `PowerShellModuleClient.cs`, and focused tests; `src/Client/DistroNexus.WorkspaceBridge/Program.cs`; `src/PowerShell/DistroNexus.psd1`, instance-configuration/install-target public module commands, `Install-DistroNexusInstance.ps1`, and focused Pester tests; `src/Client/DistroNexus.Desktop/App.xaml.cs`, `WslInstanceViewModel.cs`, `InstanceDetailViewModel.cs`, `ViewModels/Tabs/ConfigurationTabViewModel.cs`, `InstallWizardViewModel.cs`, `Wizard/Steps/InstallPathStep.cs`, `Wizard/Steps/ProgressStep.cs`, related wizard context, and focused xUnit tests.
 
 ### Excluded Paths
 
