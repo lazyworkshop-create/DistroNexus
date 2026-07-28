@@ -1,0 +1,80 @@
+# Remaining PowerShell-First Boundary Technical Design
+
+## Scope and Requirement Traceability
+
+- Requirements: `docs/specs/powershell-first-remaining-boundaries-requirements.md` FR-101 through FR-107.
+- Parent constraints: `docs/specs/powershell-first-requirements.md`, `docs/architecture/powershell-first-decision.md`, and `AGENTS.md`.
+- Exclusions: live WSL/USB/UAC/package/update mutation, signing, publishing, deployment, and generic execution channels.
+
+| Requirement | Design section | Test or verification |
+| --- | --- | --- |
+| FR-101 | Bootstrap/settings/update contract | Module-client, bootstrap, and Desktop routing tests. |
+| FR-102 | Package/download operations | Closed-route, cancellation, and view-model tests. |
+| FR-103 | USB contract | Grant/broker route tests and Desktop structural test; UAT closure. |
+| FR-104 | Instance configuration | Read/preview/execute token and routing tests. |
+| FR-105 | Install target preview | Path/preflight negative tests and install UI routing tests. |
+| FR-106 | Diagnostics | Typed-result/redaction and UI routing tests. |
+| FR-107 | Enforcement | Whole-Desktop structural inventory and build. |
+
+## Architecture and Ownership
+
+Every capability follows `WPF -> IPowerShellModuleClient -> exported cmdlet -> fixed versioned Bridge/Core operation -> typed result`. WPF can obtain an absolute user-selected candidate path or a visual confirmation, but Core is authoritative for product state, host validation, mutation, download jobs, and recovery. `IPowerShellModuleClient` contains one method per public capability operation; it never exposes arbitrary command text, module paths, process arguments, or bridge operation names.
+
+The only Desktop exceptions are rendering/navigation/dialog/clipboard, picking a user input, and opening a module-returned display-safe target with the shell. Bootstrap knows only a product-owned module location from immutable application composition; it imports that module before obtaining global settings. It does not read product settings to choose the module.
+
+## Contracts and Behavior
+
+### Bootstrap/settings/update
+
+Module resolution is not a user setting or command input. `PowerShellService` uses a `ProductModuleLocator` selected from immutable product composition in this order: the packaged module directory adjacent to the signed Desktop/Bridge composition, then the repository development module directory only in an explicit development build. It never reads `%AppData%` settings or an environment/module-path override. If neither trusted location contains a valid manifest/module pair, every typed invocation fails before import with `DistroNexus.ModuleBootstrapUnavailable`; the error contains only the product component name and no attempted path.
+
+`GlobalSettings.PowerShellModulePath` is a legacy compatibility field: bootstrap ignores it; `Get-DistroNexusSettings` returns it as null; `Set-DistroNexusSettings -PowerShellModulePath <nonempty>` returns `Settings.ModulePathRetired` without saving; a successful settings save removes the persisted legacy field. Settings UI removes its editable control. This is an intentional security correction, not an arbitrary module-path compatibility promise.
+
+The exported read commands and typed client signatures are fixed as follows:
+
+| Exported cmdlet | Parameters | Typed client method | Result |
+| --- | --- | --- | --- |
+| `Get-DistroNexusBootstrapSettings` | none | `GetBootstrapSettingsAsync(CancellationToken)` | `BootstrapSettingsResult(Settings, ModuleState)`; successful invocation always returns `ModuleState = Ready` and contains no path. When the locator cannot resolve a trusted module, this method, like every other typed method, fails with `DistroNexus.ModuleBootstrapUnavailable`; it does not fabricate an `Unavailable` result. |
+| `Get-DistroNexusStoreComplianceStatus` | none | `GetStoreComplianceStatusAsync(CancellationToken)` | `StoreComplianceStatusResult(bool IsStoreManaged, string OutcomeCode)`. |
+| `Get-DistroNexusUpdateStatus` | `-IncludePrerelease` (optional, false by default) | `GetUpdateStatusAsync(bool includePrerelease, CancellationToken)` | `UpdateStatusResult(CurrentVersion, LatestVersion?, IsUpdateAvailable, ReleaseNotes?, ReleaseUri?, ReleasedAt?, IsPreRelease, OutcomeCode)`. |
+
+All three are reads and therefore do not use `ShouldProcess`. Their Bridge payloads are respectively `{}`, `{}`, and `{ IncludePrerelease: bool }`; unknown fields are rejected. `CurrentVersion`/`LatestVersion` are bounded normalized version strings, release notes are capped and sanitized, and a release URI is returned only when it is absolute HTTPS, host `github.com`, no userinfo/fragment, and path begins `/LazyWorkshopCreate/DistroNexus/releases`. Network, malformed API, Store-managed, and no-update outcomes are typed `OutcomeCode` values rather than raw exceptions. `PowerShellModuleClient` maps only these cmdlets and rejects unknown output fields. Desktop may call its existing safe browser-launch adapter only after it receives a non-null release URI in a successful typed result; the module never opens a browser.
+
+### Package/download jobs
+
+Existing cache/source commands are used where their typed records already suffice. New fixed routes are `package.jobs.list.v1`, `package.jobs.cancel.preview.v1`, `package.jobs.cancel.execute.v1`, `package.jobs.retry.preview.v1`, `package.jobs.retry.execute.v1`, and `package.jobs.clear.preview.v1`/`.execute.v1`. Read results contain bounded job ids, public state/progress, and safe package labels. Execute accepts only a same-user preview token. No route accepts URLs, file paths, command text, task delegates, or process handles.
+
+### USB
+
+USB uses the already-approved `usb.status.v1`, `usb.list.v1`, `usb.action.preview.v1`, and `usb.action.execute.v1` records. Desktop replaces its watcher with bounded polling of `GetUsbStatusAsync`/`ListUsbDevicesAsync` while visible. Bind/unbind can only complete when the release/security-owned signed broker contract is available; otherwise typed results return the stable unavailable outcome before elevation.
+
+### Instance configuration
+
+Routes are `instance.config.read.v1 { Name }`, `instance.config.recovery.v1 { Name }`, `instance.config.preview.v1 { Name, Changes }`, and `instance.config.execute.v1 { PreviewToken }`. `Changes` is an allow-listed modeled change map with bounded values; no raw `wsl.conf`, section, path, or command crosses the boundary. Preview creates a DPAPI CurrentUser grant bound to SID, instance identity, schema revision, current fingerprint, and canonical changes. Execute accepts only the token, atomically consumes it, revalidates, and returns a sanitized outcome/recovery action.
+
+### Install target and diagnostics
+
+The existing verified-install preview gains any missing authoritative capacity/target result; WPF removes drive/directory write probes and displays its returned requirements. It never creates a candidate directory. Diagnostics use an existing typed report operation when it can express the UI need; otherwise `diagnostic.snapshot.v1` returns a bounded redacted modeled snapshot. No raw `IPowerShellService` result becomes a Desktop contract.
+
+## Data and Execution Semantics
+
+All previews are read-only until an explicit execute, issue short-lived same-user opaque grants, and bind the current request and security-relevant fingerprint. Execute accepts only the grant, revalidates current state, atomically consumes it, and returns stable sanitized success/failure/recovery codes. Download operation state and configuration persistence remain Core-owned. Desktop polling stops when the view is unloaded/cancelled and has no durable state.
+
+## Security and Operations
+
+Public commands use `SupportsShouldProcess` for mutation. Unknown payload fields, malformed identifiers, foreign/expired/replayed grants, stale state, unavailable bridge, and cancellation fail before mutation. Core validates security-sensitive fields again. Errors/results redact host paths, credentials, raw configurations, task delegates, command lines, and broker proof material.
+
+USB signing and real-host activity are not inferred from tests. The implementation must keep S25 blocked until its documented signed-broker authorization is available; it may still migrate read-only USB discovery only if the broker-free contract is independently accepted.
+
+## Verification Strategy
+
+- Unit/component: fixed command/method mappings, payload rejection, consent, grants, cancellation, and result parsing per family.
+- Structural: a whole-Desktop forbidden-reference and forbidden-host-I/O test with explicit UI-only exceptions; no business-service registrations in `App.xaml.cs`.
+- Integration/runtime: targeted xUnit/Pester per slice and Debug/Release builds. Real USB/UAC/WSL/package/update flows are recorded as external UAT.
+
+## Open Items
+
+| Item | Blocking level | Owner | Resolution |
+| --- | --- | --- | --- |
+| USB signed broker contract | Blocker for bind/unbind | Release/security owner | Supply/authorize publisher pin, packaging, and signing evidence. |
+| Real host behavior | Follow-up | Release/UAT owner | Run disposable-host UAT after repository acceptance. |

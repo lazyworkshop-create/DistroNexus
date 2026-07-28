@@ -2279,7 +2279,7 @@ New business capability work.
 
 ### Status
 
-Planned
+Committed
 
 ### Objective
 
@@ -2340,7 +2340,7 @@ Live WSL workspace execution, shortcut/file-picker implementation and all unrela
 
 ### Status
 
-Committed (`b6f4f39`)
+Committed
 
 ### Objective
 
@@ -2399,7 +2399,7 @@ Live template execution/recovery UAT, publishing and unrelated capability famili
 
 ### Status
 
-Committed (`87a173c`)
+Committed
 
 ### Objective
 
@@ -2427,7 +2427,7 @@ Template apply grant/operation/worker/runtime, Desktop consumers, template conte
 
 ### Status
 
-Committed (`5f53c1d`)
+Committed
 
 ### Dependencies
 
@@ -2455,7 +2455,7 @@ Desktop consumers, marketplace catalog/source behavior except worker composition
 
 ### Status
 
-Planned
+Committed
 
 ### Dependencies
 
@@ -2538,3 +2538,302 @@ Closure evidence and conformance tests.
 ### Out of Scope
 
 Deployment or publishing.
+
+## Slice S42: Bootstrap, settings, and host-status presentation boundary
+
+### Status
+
+Planned
+
+### Objective
+
+Desktop startup, global settings, compliance state, and update status use only fixed typed PowerShell module operations.
+
+### Sources
+
+`docs/specs/powershell-first-remaining-boundaries-requirements.md` FR-101 and FR-107; `docs/specs/powershell-first-remaining-boundaries-design.md` Bootstrap/settings/update; boundary inventory evidence.
+
+### Dependencies
+
+S41d.
+
+### Allowed Paths
+
+Bootstrap/settings/update Core/Bridge/module/client contracts and tests; `App.xaml.cs`, settings/wizard consumers and focused Desktop tests; remaining-boundaries requirements/design and this plan.
+
+### Excluded Paths
+
+Package jobs, USB, instance configuration, install path preflight, diagnostics, signing/release/publishing, and live host mutation.
+
+### Contract and Documentation
+
+Add closed bootstrap/settings/compliance/update records and document the immutable module-location bootstrap rule.
+
+### Implementation Scope
+
+Replace direct Desktop settings/compliance/update execution. No generic module location override, raw settings parsing, arbitrary URL, or update download mutation.
+
+### Test Scope
+
+Bootstrap failure, typed mappings, settings/update status rendering, URL validation, and structural dependency rejection.
+
+### Acceptance Criteria
+
+- Desktop performs no direct settings/compliance/update product read or write.
+- Module bootstrap uses immutable product composition only, then obtains settings through the module.
+- Update browser launch consumes only a module-returned validated HTTPS URI.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Settings|FullyQualifiedName~PowerShellModuleClient|FullyQualifiedName~Architecture"
+pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Unit
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+One coherent bootstrap/settings/update contract and named Desktop consumer migration.
+
+### Out of Scope
+
+Download-job actions, USB, configuration, install, diagnostics, and live update UAT.
+
+## Slice S43: Package download-job module boundary
+
+### Status
+
+Planned
+
+### Objective
+
+Package/download task state and mutations use reviewed typed module operations, not Desktop task handlers.
+
+### Sources
+
+Remaining-boundaries requirements FR-102 and design Package/download jobs.
+
+### Dependencies
+
+S42.
+
+### Allowed Paths
+
+Package Core/Bridge/module/client contracts and tests; `PackageManagerViewModel` and focused tests; requirements/design/plan.
+
+### Excluded Paths
+
+USB, instance configuration, install target preflight, diagnostics, release/publishing, and live download mutation.
+
+### Contract and Documentation
+
+Define bounded read results and token-only job mutation contracts; document cancellation and polling behavior.
+
+### Implementation Scope
+
+Remove Desktop download task ownership. No arbitrary URLs, paths, command text, task delegates, or generic process controls.
+
+### Test Scope
+
+Job list/progress bounds, token expiry/replay/state drift, cancellation, retry, clear, and view-model routing.
+
+### Acceptance Criteria
+
+- Desktop owns no product download task state or task handlers.
+- Every job mutation consumes an opaque reviewed token and results are bounded.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Package|FullyQualifiedName~Download|FullyQualifiedName~PowerShellModuleClient|FullyQualifiedName~WorkspaceBridgeProtocol"
+pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Unit
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+One complete package-download contract and PackageManager migration.
+
+### Out of Scope
+
+Actual network download UAT, USB, configuration, install, and diagnostics.
+
+## Slice S44: Instance configuration and install-target presentation migration
+
+### Status
+
+Planned
+
+### Objective
+
+Per-instance configuration and install-root preflight are module/Core-owned, tokenized capability contracts.
+
+### Sources
+
+Remaining-boundaries requirements FR-104, FR-105, and FR-107; design Instance configuration and Install target/diagnostics.
+
+### Dependencies
+
+S42.
+
+### Allowed Paths
+
+Instance-configuration and install-preflight Core/Bridge/module/client contracts and tests; configuration/install Desktop consumers and focused tests; requirements/design/plan.
+
+### Excluded Paths
+
+Package jobs, USB, diagnostics, release/publishing, and live WSL mutation.
+
+### Contract and Documentation
+
+Define fixed configuration read/recovery/preview/execute and authoritative install target/preflight result schemas.
+
+### Implementation Scope
+
+Move configuration and target validation behind tokenized Core-backed routes. No raw `wsl.conf`, Desktop directory creation, or caller-provided execute path.
+
+### Test Scope
+
+Payload rejection, grant expiry/replay/SID/state drift, path/capacity negatives, `WhatIf`, and presentation routing.
+
+### Acceptance Criteria
+
+- Desktop has no `IDistributionConfigurationService` dependency or product-path write preflight.
+- Configuration save and install eligibility use tokenized, Core-revalidated typed operations.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Configuration|FullyQualifiedName~Install|FullyQualifiedName~PowerShellModuleClient|FullyQualifiedName~WorkspaceBridgeProtocol"
+pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Unit
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+One configuration/install-target contract and all named presentation migration.
+
+### Out of Scope
+
+USB, package job state, diagnostics, and real WSL mutation.
+
+## Slice S45: USB read-only migration and secured-action closure
+
+### Status
+
+Blocked
+
+### Objective
+
+Move USB discovery to typed module reads and close action migration only with the accepted broker signing boundary.
+
+### Sources
+
+Remaining-boundaries requirements FR-103 and FR-107; design USB; S25 and the PowerShell-first decision USB amendment.
+
+### Dependencies
+
+S42.
+
+### Allowed Paths
+
+USB read contract/module/client/Desktop consumers/tests and requirements/design/plan only.
+
+### Excluded Paths
+
+Unsigned broker or helper trust changes, generic elevation, signing/release/publishing, and physical-device actions.
+
+### Contract and Documentation
+
+Use only fixed USB status/list/preview/execute records and retain the trusted broker decision.
+
+### Implementation Scope
+
+Migrate only broker-free read/discovery when proven safe; action execution remains blocked by the signed-broker contract.
+
+### Test Scope
+
+Bounded status/list mapping, watcher removal, payload rejection, and structural dependency checks.
+
+### Acceptance Criteria
+
+- Read-only USB presentation has no direct Core service/watcher path.
+- No action path weakens broker identity or elevation authorization.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Usb|FullyQualifiedName~Architecture|FullyQualifiedName~PowerShellModuleClient"
+pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Unit
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+Read-only USB migration only, if unblocked by independent contract acceptance.
+
+### Out of Scope
+
+Bind/unbind implementation, UAC, device mutation, signing, and packaging.
+
+### Blocker
+
+The authorized signed broker packaging/publisher pin required for bind/unbind is absent. Read-only discovery may be split into a ready sub-slice only after its independent contract review proves it does not weaken the action boundary.
+
+## Slice S46: Diagnostics replacement and final Desktop boundary enforcement
+
+### Status
+
+Planned
+
+### Objective
+
+Replace raw diagnostic execution, remove stale Core registrations/dependencies, and enforce the whole-Desktop presentation-only rule.
+
+### Sources
+
+Remaining-boundaries requirements FR-106 and FR-107; design Diagnostics and Verification Strategy.
+
+### Dependencies
+
+S43, S44, S45.
+
+### Allowed Paths
+
+Typed diagnostic contract/client/tests; Desktop composition/view-model cleanup; architecture/inventory tests; requirements/design/plan and release evidence.
+
+### Excluded Paths
+
+USB action implementation without its broker authorization, release/publishing, and live host mutation.
+
+### Contract and Documentation
+
+Define or select a bounded diagnostic snapshot/report contract and publish the UI-only exception inventory.
+
+### Implementation Scope
+
+Remove raw diagnostic execution, stale DI registrations, and forbidden Desktop dependencies. No generic diagnostic scripting.
+
+### Test Scope
+
+Typed diagnostic mapping/redaction/cancellation, full structural forbidden-reference scan, and composition tests.
+
+### Acceptance Criteria
+
+- No Desktop direct Core business service, product-state host-I/O, raw process execution, or `IPowerShellService` diagnostic path remains outside documented UI-only exceptions.
+- Architecture tests enumerate and enforce every exception.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Architecture|FullyQualifiedName~Diagnostic|FullyQualifiedName~ViewModel"
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+Diagnostic replacement plus final composition and structural enforcement.
+
+### Out of Scope
+
+USB action migration without authorization, publishing, and live host UAT.
