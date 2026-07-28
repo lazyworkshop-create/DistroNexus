@@ -12,7 +12,7 @@
 
 ## Dependency Order
 
-S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S18 -> S19 -> S20 -> S06 -> S07 -> S08
+S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S18 -> S19 -> S20 -> S21 -> S06 -> S07 -> S08
 
 ## Slice S01: Verified module contract and migration baseline
 
@@ -1012,6 +1012,66 @@ Diagnostic preview/export module and Bridge contract with focused tests.
 
 Desktop migration and real diagnostic collection UAT.
 
+## Slice S21: Container runtime and Podman presentation-client migration
+
+### Status
+
+Planned
+
+### Objective
+
+Make the exported container-runtime and Podman command contracts the only execution path used by the integrations presentation surface.
+
+### Sources
+
+Requirements FR-001, FR-003 through FR-007; `docs/specs/powershell-first-design.md` Platform-integrated capability contract amendment; `docs/architecture/powershell-first-decision.md`.
+
+### Dependencies
+
+S20
+
+### Allowed Paths
+
+`src/PowerShell/Public/Get-DistroNexusCapability.ps1`, `src/PowerShell/Public/Get-DistroNexusContainerRuntimeStatus.ps1`, `src/PowerShell/Public/Get-DistroNexusPodmanUserUnitPreview.ps1`, `src/PowerShell/Public/Invoke-DistroNexusPodmanUserUnit.ps1`, `src/PowerShell/Public/Get-DistroNexusPodmanConnectionPreview.ps1`, `src/PowerShell/Public/Invoke-DistroNexusPodmanConnection.ps1`, `src/PowerShell/DistroNexus.psd1`, `src/Client/DistroNexus.Core/Interfaces/IPowerShellModuleClient.cs`, `src/Client/DistroNexus.Core/Services/PowerShellModuleClient.cs`, `src/Client/DistroNexus.Tests/Services/PowerShellModuleClientTests.cs`, `src/Client/DistroNexus.Desktop/ViewModels/Tabs/IntegrationsTabViewModel.cs`, matching integration view-model tests, focused Pester/xUnit tests, plan.
+
+### Excluded Paths
+
+Core container runtime adapters and their safety policy, Docker integration, container/image/project CRUD, Podman installation, arbitrary command execution, USB, monitoring, WSLg, terminal, release/publishing surfaces.
+
+### Contract and Documentation
+
+Record the existing fixed container/PODMAN public command names as the sole client contract. Add only explicit typed module-client methods for inventory, the existing `Get-DistroNexusCapability -Name <name> -InstanceOnly` query used to preserve the `InstanceSystemd` gate, user-unit preview/execute, and connection preview/execute. Preserve the Core-issued preview token, TTL, fingerprint, replay, and endpoint-validation semantics without exposing generic cmdlet, Bridge-operation, or raw process arguments.
+
+### Implementation Scope
+
+Replace direct `IContainerRuntimeService` and `IPlatformCapabilityService` execution in `IntegrationsTabViewModel` with typed `IPowerShellModuleClient` calls for the capability data it renders and for container/Podman actions it initiates. Preserve the current `InstanceSystemd` gate exclusively from the typed instance-capability command result. WPF continues to render effects and confirmation UI only; mutation execution goes through the existing public cmdlet's `ShouldProcess` boundary.
+
+### Test Scope
+
+Add command-shape/typed-result tests for every new module-client method; verify invalid values cannot result in command invocation; verify view-model inventory, preview, execute, errors, cancellation, and no direct Core execution. Retain Pester invalid-input, WhatIf/decline, safe endpoint, stale/replayed preview coverage for the existing public command family.
+
+### Acceptance Criteria
+
+- `IntegrationsTabViewModel` has no `IContainerRuntimeService` or `IPlatformCapabilityService` execution dependency.
+- Its inventory and Podman actions reach only the existing exported PowerShell commands through closed typed client methods.
+- No generic module-client execution API, generic Bridge route, Docker integration behavior, or Core container safety change is introduced.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~IntegrationsTabViewModel|FullyQualifiedName~PowerShellModuleClient"
+pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Unit
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+One accepted container-runtime/Podman presentation-client migration slice.
+
+### Out of Scope
+
+All uncontracted platform families and final Desktop-wide structural closure.
+
 ## Slice S06: Platform-integrated command parity
 
 ### Status
@@ -1020,7 +1080,7 @@ Planned
 
 ### Objective
 
-Platform-integrated command parity.
+Platform-integrated command parity. S21 supersedes the already-coded container/PODMAN presentation-client portion; the remaining families require their own contract amendments before implementation.
 
 ### Sources
 
