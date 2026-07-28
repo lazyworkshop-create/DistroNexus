@@ -2399,7 +2399,7 @@ Live template execution/recovery UAT, publishing and unrelated capability famili
 
 ### Status
 
-Planned
+Committed (`87a173c`)
 
 ### Objective
 
