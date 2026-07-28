@@ -19,7 +19,6 @@ public partial class InstallWizardViewModel : ObservableObject
 {
     private readonly IPowerShellModuleClient _moduleClient;
     private readonly IWslManagerService _wslManager;
-    private readonly ITerminalService _terminalService;
     private readonly ISettingsService _settingsService;
     private readonly ILogger<InstallWizardViewModel> _logger;
     private CancellationTokenSource? _installCts;
@@ -121,13 +120,11 @@ public partial class InstallWizardViewModel : ObservableObject
     public InstallWizardViewModel(
         IPowerShellModuleClient moduleClient,
         IWslManagerService wslManager,
-        ITerminalService terminalService,
         ISettingsService settingsService,
         ILogger<InstallWizardViewModel> logger)
     {
         _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
-        _terminalService = terminalService ?? throw new ArgumentNullException(nameof(terminalService));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }

@@ -20,7 +20,6 @@ namespace DistroNexus.Desktop.ViewModels;
 public partial class WslInstanceViewModel : ObservableObject
 {
     private readonly IWslManagerService _wslManager;
-    private readonly ITerminalService _terminalService;
     private readonly ILogger _logger;
     private readonly IPowerShellModuleClient _moduleClient;
     private readonly IBackupService _backupService;
@@ -105,7 +104,6 @@ public partial class WslInstanceViewModel : ObservableObject
     public WslInstanceViewModel(
         WslInstance instance,
         IWslManagerService wslManager,
-        ITerminalService terminalService,
         ILogger logger,
         IPowerShellModuleClient moduleClient,
         IBackupService backupService,
@@ -113,7 +111,6 @@ public partial class WslInstanceViewModel : ObservableObject
     {
         _instance = instance;
         _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
-        _terminalService = terminalService ?? throw new ArgumentNullException(nameof(terminalService));
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
@@ -480,7 +477,7 @@ public partial class WslInstanceViewModel : ObservableObject
         {
             _logger.LogInformation("Opening terminal for instance {Name}", Name);
             
-            var success = await _terminalService.OpenTerminalAsync(Name);
+            var success = (await _moduleClient.StartTerminalAsync(Name)).Succeeded;
             
             if (success)
             {

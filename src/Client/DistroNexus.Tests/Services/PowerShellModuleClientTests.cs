@@ -454,11 +454,13 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.GetPodmanConnectionPreviewAsync),
                 nameof(IPowerShellModuleClient.GetPodmanUserUnitPreviewAsync),
                 nameof(IPowerShellModuleClient.GetSettingsAsync),
+                nameof(IPowerShellModuleClient.GetTerminalStatusAsync),
                 nameof(IPowerShellModuleClient.GetWslgStatusAsync),
                 nameof(IPowerShellModuleClient.InvokeMonitoringProcessActionAsync),
                 nameof(IPowerShellModuleClient.InvokePodmanConnectionAsync),
                 nameof(IPowerShellModuleClient.InvokePodmanUserUnitAsync),
                 nameof(IPowerShellModuleClient.LaunchWslgApplicationAsync),
+                nameof(IPowerShellModuleClient.OpenPackageCacheFolderAsync),
                 nameof(IPowerShellModuleClient.RefreshCatalogAsync),
                 nameof(IPowerShellModuleClient.RemoveCatalogSourceAsync),
                 nameof(IPowerShellModuleClient.RemoveInstanceTagAsync),
@@ -474,6 +476,7 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.SetInstanceTagsAsync),
                 nameof(IPowerShellModuleClient.SetWslgApplicationPinAsync),
                 nameof(IPowerShellModuleClient.StartInstanceAsync),
+                nameof(IPowerShellModuleClient.StartTerminalAsync),
                 nameof(IPowerShellModuleClient.StopInstanceAsync),
                 nameof(IPowerShellModuleClient.TestCatalogSourceAsync),
                 nameof(IPowerShellModuleClient.UpdateCatalogSourceAsync)
@@ -577,6 +580,21 @@ public sealed class PowerShellModuleClientTests
         Assert.Equal(1, (await client.GetPackageCacheUsageAsync()).PackageCount);
         Assert.True((await client.DeletePackageCacheEntryAsync("token")).Deleted);
         Assert.Equal(1, (await client.ClearPackageCacheAsync()).DeletedCount);
+        powerShell.VerifyAll();
+    }
+
+    [Fact]
+    public async Task TerminalOperations_UseOnlyFixedCmdletsAndRejectUnsafePaths()
+    {
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusTerminalStatus", It.Is<Dictionary<string, object>>(p => p.Count == 0), It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>())).ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"WindowsTerminalAvailable\":true,\"CommandPromptAvailable\":true,\"DefaultKind\":\"WindowsTerminal\"}" });
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Start-DistroNexusTerminal", It.Is<Dictionary<string, object>>(p => (string)p["Name"] == "Ubuntu" && (string)p["StartPath"] == "/home/user" && (string)p["TerminalKind"] == "WindowsTerminal"), It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>())).ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Succeeded\":true,\"SelectedKind\":\"WindowsTerminal\",\"OutcomeCode\":\"Terminal.Launched\"}" });
+        powerShell.Setup(x => x.ExecuteModuleCmdletAsync("Open-DistroNexusPackageCacheFolder", It.Is<Dictionary<string, object>>(p => p.Count == 0), It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>())).ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Succeeded\":true,\"SelectedKind\":\"Auto\",\"OutcomeCode\":\"PackageCache.Opened\"}" });
+        var client = new PowerShellModuleClient(powerShell.Object);
+        Assert.Equal(TerminalKind.WindowsTerminal, (await client.GetTerminalStatusAsync()).DefaultKind);
+        Assert.True((await client.StartTerminalAsync("Ubuntu", "/home/user", TerminalKind.WindowsTerminal)).Succeeded);
+        Assert.True((await client.OpenPackageCacheFolderAsync()).Succeeded);
+        await Assert.ThrowsAsync<ArgumentException>(() => client.StartTerminalAsync("Ubuntu", "C:\\outside"));
         powerShell.VerifyAll();
     }
 

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Diagnostics;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using DistroNexus.Core.Services;
@@ -205,6 +206,9 @@ while ((line = Console.ReadLine()) is not null)
             "package-cache.usage.v1" => await GetPackageCacheUsageAsync(request),
             "package-cache.delete.v1" => await DeletePackageCacheAsync(request),
             "package-cache.clear.v1" => await ClearPackageCacheAsync(request),
+            "terminal.status.v1" => GetTerminalStatus(request),
+            "terminal.launch.v1" => await LaunchTerminalAsync(request),
+            "explorer.package-cache.v1" => OpenPackageCacheFolder(request),
             "network.status.v1" => NetworkStatusV1(request),
             "network.ip.v1" => await NetworkIpV1Async(request),
             "network.port-mappings.v1" => await NetworkPortMappingsV1Async(request),
@@ -380,6 +384,41 @@ async Task<PackageCacheClearResult> ClearPackageCacheAsync(BridgeRequest request
     RequireNoPayload(request, "Package cache clear does not accept a payload.");
     return await catalog.ClearPackageCacheAsync();
 }
+
+TerminalStatusResult GetTerminalStatus(BridgeRequest request)
+{
+    RequireNoPayload(request, "Terminal status does not accept a payload.");
+    var commandPrompt = File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "cmd.exe"));
+    var windowsTerminal = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("WT_SESSION")) || File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Microsoft", "WindowsApps", "wt.exe"));
+    return new(windowsTerminal, commandPrompt, windowsTerminal ? TerminalKind.WindowsTerminal : TerminalKind.CommandPrompt);
+}
+
+async Task<TerminalLaunchResult> LaunchTerminalAsync(BridgeRequest request)
+{
+    ValidatePayload(request, ["InstanceName", "StartPath", "TerminalKind"], ["InstanceName"]);
+    var payload = ParsePayload<TerminalLaunchPayload>(request);
+    if (string.IsNullOrWhiteSpace(payload.InstanceName) || payload.InstanceName.Length > 256 || payload.InstanceName.IndexOfAny(['\r', '\n', '\0']) >= 0 || (payload.StartPath is not null && !IsValidLinuxStartPath(payload.StartPath)) || !Enum.IsDefined(payload.TerminalKind)) throw new ArgumentException("Terminal launch payload is invalid.");
+    var known = await instances.GetInstancesAsync();
+    if (!known.Any(instance => string.Equals(instance.Name, payload.InstanceName, StringComparison.OrdinalIgnoreCase))) throw new ArgumentException("Terminal instance is unknown.");
+    var status = GetTerminalStatus(new BridgeRequest("terminal.status.v1", null, null, null));
+    var selected = payload.TerminalKind == TerminalKind.Auto ? status.DefaultKind : payload.TerminalKind;
+    if (selected == TerminalKind.WindowsTerminal && !status.WindowsTerminalAvailable || selected == TerminalKind.CommandPrompt && !status.CommandPromptAvailable) return new(false, selected, "Terminal.Unavailable");
+    Process.Start(FixedLaunchProcess.CreateTerminalStartInfo(selected, payload.InstanceName, payload.StartPath));
+    return new(true, selected, "Terminal.Launched");
+}
+
+TerminalLaunchResult OpenPackageCacheFolder(BridgeRequest request)
+{
+    RequireNoPayload(request, "Package cache explorer does not accept a payload.");
+    var configured = settings.LoadSettings().PackageCachePath;
+    if (string.IsNullOrWhiteSpace(configured)) return new(false, TerminalKind.Auto, "PackageCache.NotConfigured");
+    var root = Path.GetFullPath(configured);
+    if (!Directory.Exists(root)) return new(false, TerminalKind.Auto, "PackageCache.NotFound");
+    Process.Start(FixedLaunchProcess.CreatePackageCacheStartInfo(root));
+    return new(true, TerminalKind.Auto, "PackageCache.Opened");
+}
+
+static bool IsValidLinuxStartPath(string value) => value.Length is > 0 and <= 1024 && value.IndexOfAny(['\r', '\n', '\0', '\\']) < 0 && (value == "~" || (value.StartsWith('/') && !value.Contains("//", StringComparison.Ordinal) && !value.Split('/').Any(segment => segment == "..")));
 
 T? DeserializeOptionalCatalogPayload<T>(BridgeRequest request) where T : class
 {
@@ -748,6 +787,28 @@ public sealed record CatalogSearchPayload(string Query);
 public sealed record CatalogGetPayload(string Id);
 public sealed record CatalogRefreshPayload(string? SourceUrl = null);
 public sealed record PackageCacheDeletePayload(string? CacheEntryId = null, string? DefaultName = null, string? LocalPath = null);
+public sealed record TerminalLaunchPayload(string InstanceName, string? StartPath = null, TerminalKind TerminalKind = TerminalKind.Auto);
+
+/// <summary>Owns the only executable and argument shapes used by fixed external-launch routes.</summary>
+public static class FixedLaunchProcess
+{
+    public static ProcessStartInfo CreateTerminalStartInfo(TerminalKind kind, string instanceName, string? startPath)
+    {
+        var info = new ProcessStartInfo { FileName = kind == TerminalKind.WindowsTerminal ? "wt.exe" : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "cmd.exe"), UseShellExecute = false };
+        var arguments = kind == TerminalKind.WindowsTerminal
+            ? startPath is null ? new[] { "-w", "0", "wsl", "-d", instanceName } : new[] { "-w", "0", "wsl", "-d", instanceName, "--cd", startPath }
+            : startPath is null ? new[] { "/k", "wsl", "-d", instanceName } : new[] { "/k", "wsl", "-d", instanceName, "--cd", startPath };
+        foreach (var argument in arguments) info.ArgumentList.Add(argument);
+        return info;
+    }
+
+    public static ProcessStartInfo CreatePackageCacheStartInfo(string existingCacheRoot)
+    {
+        var info = new ProcessStartInfo { FileName = "explorer.exe", UseShellExecute = false };
+        info.ArgumentList.Add(existingCacheRoot);
+        return info;
+    }
+}
 public sealed record NetworkPortMappingPayload(string Name, string? Protocol = null);
 public sealed record NetworkProbePayload(NetworkProbeRequest Request);
 public sealed record NetworkModePayload(WslNetworkingMode Mode);

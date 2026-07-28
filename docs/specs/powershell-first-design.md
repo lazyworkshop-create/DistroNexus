@@ -130,6 +130,19 @@ Discovery may report parseable unavailable state, but Preview/Execute fail close
 
 Capability results remain the existing bounded, path-free, read-only model. No route accepts probe command text, paths, environment overrides, a WSL version update, repair action or capability mutation. The legacy internal route may remain a private compatibility alias during migration but no module or typed client caller uses it. This slice does not alter Core probe caching, start a distribution, install a component, modify Windows features, or add a generic capability endpoint.
 
+### Terminal and package-cache launch contract amendment
+
+Current WPF consumers call `ITerminalService`, whose implementation assembles PowerShell launch scripts. The private module terminal helper is not an exported product contract. Slice S27 makes each supported launch a fixed module operation and removes both arbitrary script construction and the direct WPF execution path.
+
+| Requirement | Current evidence | S27 contract and ownership | Verification |
+| --- | --- | --- | --- |
+| FR-001, FR-005 | Instance, settings, main and install views directly resolve `ITerminalService`. | Migrated consumers use typed terminal and package-cache methods only; WPF supplies no executable, argument array, URI or host path. | Structural and view-model routing tests. |
+| FR-003, FR-004, FR-006, FR-007 | `TerminalService` creates interpolated `Start-Process` scripts; no exported terminal/cache command or fixed Bridge route exists. | Fixed routes are `terminal.status.v1`, `terminal.launch.v1`, and `explorer.package-cache.v1`. Terminal launch accepts only exact InstanceName, optional Linux StartPath and allow-listed TerminalKind. Package-cache launch accepts no caller payload. | Exact-payload, unknown-field, invalid-name/path/kind, command-array, WhatIf/decline and no-process-on-rejection tests. |
+
+`Get-DistroNexusTerminalStatus` returns only availability and default kind. `Start-DistroNexusTerminal -Name [-StartPath] [-TerminalKind]` uses `SupportsShouldProcess`, validates a known distribution and Linux-only start path (`~` or canonical absolute `/...` with bounded length and no controls/backslashes), then launches only fixed `wt.exe` or `%SystemRoot%\\System32\\cmd.exe` argument arrays. `Open-DistroNexusPackageCacheFolder` also uses `SupportsShouldProcess`; it accepts no path and resolves, canonicalizes and verifies only the configured existing package-cache root before launching fixed `explorer.exe`. Results contain only success, selected kind and stable outcome code.
+
+No route accepts a program, command line, Windows path, URI, environment expansion, raw shell argument, terminal installation request or WSL command. Starting a terminal may start the selected distribution and is therefore an explicit command consent boundary. Future distribution browsing requires a separately designed enum-only contract; this slice does not add it.
+
 ## Data and Execution Semantics
 
 - Data ownership and retention: Core owns settings, cache, catalog, backup, recovery, templates, and configuration persistence. Desktop never writes those stores. Existing retention and cleanup policies remain unchanged.

@@ -398,7 +398,7 @@ generateResolvConf=true
             # Open terminal if requested
             if ($OpenTerminal) {
                 Write-DistroNexusLog "Launching terminal..."
-                Invoke-Terminal -DistributionName $InstanceName
+                Start-DistroNexusTerminal -Name $InstanceName
             }
             
             return $true

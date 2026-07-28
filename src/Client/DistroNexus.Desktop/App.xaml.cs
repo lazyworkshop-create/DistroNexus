@@ -104,7 +104,6 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<IStoreComplianceModeService, StoreComplianceModeService>();
                     services.AddSingleton<INavigationService, NavigationService>();
                     services.AddSingleton<IUpdateService, UpdateService>();
-                    services.AddSingleton<ITerminalService, TerminalService>();
                     services.AddSingleton<IDownloadTaskManager, DownloadTaskManager>();
                     services.AddSingleton<IDockerIntegrationService, DockerIntegrationService>();
                     services.AddSingleton<WslConfigService>();

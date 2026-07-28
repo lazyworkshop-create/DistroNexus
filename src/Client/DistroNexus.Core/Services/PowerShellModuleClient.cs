@@ -35,6 +35,9 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string GetPackageCacheUsageCommand = "Get-DistroNexusPackageCacheUsage";
     private const string RemovePackageCacheCommand = "Remove-DistroNexusPackage";
     private const string ClearPackageCacheCommand = "Clear-DistroNexusPackageCache";
+    private const string GetTerminalStatusCommand = "Get-DistroNexusTerminalStatus";
+    private const string StartTerminalCommand = "Start-DistroNexusTerminal";
+    private const string OpenPackageCacheFolderCommand = "Open-DistroNexusPackageCacheFolder";
     private const string GetContainerRuntimeStatusCommand = "Get-DistroNexusContainerRuntimeStatus";
     private const string GetCapabilityCommand = "Get-DistroNexusCapability";
     private const string GetPodmanUserUnitPreviewCommand = "Get-DistroNexusPodmanUserUnitPreview";
@@ -323,6 +326,18 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
         return JsonSerializer.Deserialize<PackageCacheClearResult>(result.Output, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? throw new InvalidOperationException("The module returned an invalid package cache clear result.");
     }
 
+    public Task<TerminalStatusResult> GetTerminalStatusAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<TerminalStatusResult>(GetTerminalStatusCommand, [], cancellationToken);
+    public Task<TerminalLaunchResult> StartTerminalAsync(string name, string? startPath = null, TerminalKind terminalKind = TerminalKind.Auto, CancellationToken cancellationToken = default)
+    {
+        ValidateName(name, nameof(name));
+        if (startPath is not null && !IsValidLinuxStartPath(startPath)) throw new ArgumentException("The terminal start path is invalid.", nameof(startPath));
+        if (!Enum.IsDefined(terminalKind)) throw new ArgumentOutOfRangeException(nameof(terminalKind));
+        var parameters = new Dictionary<string, object> { ["Name"] = name, ["TerminalKind"] = terminalKind.ToString() };
+        if (startPath is not null) parameters["StartPath"] = startPath;
+        return ExecuteJsonAsync<TerminalLaunchResult>(StartTerminalCommand, parameters, cancellationToken);
+    }
+    public Task<TerminalLaunchResult> OpenPackageCacheFolderAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<TerminalLaunchResult>(OpenPackageCacheFolderCommand, [], cancellationToken);
+
     public async Task<ContainerRuntimeSnapshot> GetContainerRuntimeStatusAsync(string name, CancellationToken cancellationToken = default)
     {
         ValidateName(name, nameof(name));
@@ -419,6 +434,7 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     {
         if (string.IsNullOrWhiteSpace(value) || value.IndexOfAny(['\r', '\n', '\0']) >= 0) throw new ArgumentException("The instance name is invalid.", parameterName);
     }
+    private static bool IsValidLinuxStartPath(string value) => value.Length is > 0 and <= 1024 && value.IndexOfAny(['\r', '\n', '\0', '\\']) < 0 && (value == "~" || (value.StartsWith('/') && !value.Contains("//", StringComparison.Ordinal) && !value.Split('/').Any(segment => segment == "..")));
     private static void ValidateToken(string value, string parameterName)
     {
         if (string.IsNullOrWhiteSpace(value) || value.Length != 64 || value.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("A Core-issued monitoring token is required.", parameterName);

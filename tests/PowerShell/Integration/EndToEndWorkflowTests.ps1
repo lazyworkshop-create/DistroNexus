@@ -41,8 +41,7 @@ Describe "Module Dependencies and Integration" -Tag 'Integration', 'EndToEnd' {
                 "Cache",
                 "Logger", 
                 "Config",
-                "PackageHandler",
-                "TerminalLauncher"
+                "PackageHandler"
             )
 
             # Act & Assert
@@ -107,11 +106,8 @@ Describe "Module Dependencies and Integration" -Tag 'Integration', 'EndToEnd' {
             $module.ExportedFunctions.Keys | Should -Contain $cmdletName
         }
 
-        It "Should use TerminalLauncher in appropriate contexts" {
-            # TerminalLauncher enables optional terminal integration
-            # Available for post-installation workflows
-
-            $module | Should -Not -BeNullOrEmpty
+        It "Should expose fixed terminal commands for appropriate contexts" {
+            $module.ExportedFunctions.Keys | Should -Contain 'Start-DistroNexusTerminal'
         }
     }
 

@@ -28,7 +28,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly IWslManagerService _wslManager;
     private readonly INavigationService _navigationService;
-    private readonly ITerminalService _terminalService;
     private readonly IDownloadTaskManager _downloadTaskManager;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<MainViewModel> _logger;
@@ -104,7 +103,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public MainViewModel(
         IWslManagerService wslManager,
         INavigationService navigationService,
-        ITerminalService terminalService,
         IDownloadTaskManager downloadTaskManager,
         IServiceProvider serviceProvider,
         ILogger<MainViewModel> logger,
@@ -115,7 +113,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
         _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
-        _terminalService = terminalService ?? throw new ArgumentNullException(nameof(terminalService));
         _downloadTaskManager = downloadTaskManager ?? throw new ArgumentNullException(nameof(downloadTaskManager));
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -289,7 +286,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 Instances.Clear();
                 foreach (var instance in instances)
                 {
-                    var vm = new WslInstanceViewModel(instance, _wslManager, _terminalService, _logger, _moduleClient, _backupService, _serviceProvider);
+                    var vm = new WslInstanceViewModel(instance, _wslManager, _logger, _moduleClient, _backupService, _serviceProvider);
                     vm.RefreshRequested += (s, e) => _ = RefreshAsync();
                     vm.TagsChanged += (s, e) => _ = RefreshAvailableTagsAsync();
                     Instances.Add(vm);

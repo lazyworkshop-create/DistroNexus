@@ -12,7 +12,7 @@
 
 ## Dependency Order
 
-S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S18 -> S19 -> S20 -> S21 -> S22 -> S23 -> S24 -> {S25 blocked, S26} -> S06 -> S07 -> S08
+S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S18 -> S19 -> S20 -> S21 -> S22 -> S23 -> S24 -> {S25 blocked, S26 -> S27} -> S06 -> S07 -> S08
 
 ## Slice S01: Verified module contract and migration baseline
 
@@ -1379,6 +1379,66 @@ One accepted platform-capability query and presentation-client migration slice.
 ### Out of Scope
 
 Capability probe algorithm changes, platform mutation, application update, terminal launch, USB elevation, and external runtime UAT.
+
+## Slice S27: Fixed terminal and package-cache launch module migration
+
+### Status
+
+In Progress
+
+### Objective
+
+Make fixed PowerShell terminal and package-cache commands the only supported external-launch path for their migrated WPF consumers.
+
+### Sources
+
+Requirements FR-001 and FR-003 through FR-007; `docs/specs/powershell-first-design.md` Terminal and package-cache launch contract amendment; `docs/architecture/powershell-first-decision.md`.
+
+### Dependencies
+
+S26
+
+### Allowed Paths
+
+`src/Client/DistroNexus.Core/Interfaces/ITerminalService.cs`, `src/Client/DistroNexus.Core/Services/TerminalService.cs`, narrow terminal launch models only if needed, `src/Client/DistroNexus.WorkspaceBridge/Program.cs`, new terminal/package-cache public command files and `src/PowerShell/DistroNexus.psd1`, `IPowerShellModuleClient`, `PowerShellModuleClient`, direct terminal-service WPF consumers and constructor composition support, focused terminal/Bridge/module-client/view-model/Pester/architecture tests, design and plan.
+
+### Excluded Paths
+
+Arbitrary program/path/URI/argument launch, general file browsing, terminal installation, elevation, WSL command execution, application update, USB, release/publishing surfaces.
+
+### Contract and Documentation
+
+Define only `terminal.status.v1`, `terminal.launch.v1`, and `explorer.package-cache.v1`. Launch accepts exact InstanceName, optional Linux StartPath and allow-listed TerminalKind; cache launch has no payload. All launch cmdlets use `ShouldProcess`.
+
+### Implementation Scope
+
+Replace script-string launch construction and direct WPF service usage with fixed typed module contracts. Resolve only known distributions, Linux paths and the configured existing cache root; invoke fixed executables with fixed argument arrays and return redacted result records.
+
+### Test Scope
+
+Cover exact payloads, malformed/unknown fields, invalid names/paths/kinds, no arbitrary process arguments, WhatIf/decline, cache containment/existence, typed client command shapes and module-only view-model routing.
+
+### Acceptance Criteria
+
+- Migrated WPF consumers have no `ITerminalService` execution path.
+- No public or Bridge input can select an executable, host path, URI, command string or raw argument.
+- Rejected, WhatIf and declined requests start no process; accepted launch uses only a fixed executable/argument array.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Terminal|FullyQualifiedName~PowerShellModuleClient|FullyQualifiedName~WorkspaceBridgeProtocol"
+pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Unit
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+One accepted fixed terminal/package-cache module and presentation-client migration slice.
+
+### Out of Scope
+
+Terminal installation, arbitrary browsing/launching, application update, USB elevation and runtime UAT.
 
 ## Slice S06: Platform-integrated command parity
 

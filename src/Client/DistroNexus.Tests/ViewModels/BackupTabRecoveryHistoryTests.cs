@@ -197,7 +197,6 @@ public sealed class BackupTabRecoveryHistoryTests : IDisposable
     private static WslInstanceViewModel Instance() => new(
         new WslInstance { Name = "Ubuntu", State = "Stopped" },
         new Mock<IWslManagerService>().Object,
-        new Mock<ITerminalService>().Object,
         new Mock<ILogger>().Object,
         new Mock<IPowerShellModuleClient>().Object,
         new Mock<IBackupService>().Object,

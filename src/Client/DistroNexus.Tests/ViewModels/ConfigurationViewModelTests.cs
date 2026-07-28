@@ -127,7 +127,7 @@ public class ConfigurationViewModelTests
     public async Task DistributionTab_PreservesAbsentTriStateAndDisablesUnsupportedSystemd()
     {
         var instanceModel = new WslInstance { Name = "Ubuntu", State = "Running", Version = 2 };
-        var instance = new WslInstanceViewModel(instanceModel, Mock.Of<IWslManagerService>(), Mock.Of<ITerminalService>(),
+        var instance = new WslInstanceViewModel(instanceModel, Mock.Of<IWslManagerService>(),
             Mock.Of<ILogger>(), Mock.Of<IPowerShellModuleClient>(), Mock.Of<IBackupService>(), Mock.Of<IServiceProvider>());
         var bytes = Encoding.UTF8.GetBytes("[custom]\nx=y\n"); var source = LosslessIniDocument.Parse(bytes);
         var service = new Mock<IDistributionConfigurationService>();
@@ -165,7 +165,7 @@ public class ConfigurationViewModelTests
     [Fact]
     public async Task DistributionTab_AllowsEnablingSystemdWhenHostCapabilityAndWsl2AreSupported()
     {
-        var instance = new WslInstanceViewModel(new WslInstance { Name = "Ubuntu", State = "Stopped", Version = 2 }, Mock.Of<IWslManagerService>(), Mock.Of<ITerminalService>(),
+        var instance = new WslInstanceViewModel(new WslInstance { Name = "Ubuntu", State = "Stopped", Version = 2 }, Mock.Of<IWslManagerService>(),
             Mock.Of<ILogger>(), Mock.Of<IPowerShellModuleClient>(), Mock.Of<IBackupService>(), Mock.Of<IServiceProvider>());
         var source = LosslessIniDocument.Parse(Encoding.UTF8.GetBytes("[boot]\nsystemd=false\n"));
         var service = new Mock<IDistributionConfigurationService>();
@@ -307,7 +307,7 @@ public class ConfigurationViewModelTests
         yield return [new ConfigurationConflictException("configuration changed: token=super-secret C:\\Users\\alice"), 9201];
     }
 
-    private static WslInstanceViewModel NewInstance() => new(new WslInstance { Name = "Ubuntu", State = "Stopped", Version = 2 }, Mock.Of<IWslManagerService>(), Mock.Of<ITerminalService>(),
+    private static WslInstanceViewModel NewInstance() => new(new WslInstance { Name = "Ubuntu", State = "Stopped", Version = 2 }, Mock.Of<IWslManagerService>(),
         Mock.Of<ILogger>(), Mock.Of<IPowerShellModuleClient>(), Mock.Of<IBackupService>(), Mock.Of<IServiceProvider>());
 
     private static Mock<IDistributionConfigurationService> ReadableConfigurationService(LosslessIniDocument source)

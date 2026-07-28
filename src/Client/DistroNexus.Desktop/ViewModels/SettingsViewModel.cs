@@ -20,7 +20,6 @@ namespace DistroNexus.Desktop.ViewModels;
 public partial class SettingsViewModel : ObservableObject
 {
     private readonly IPowerShellModuleClient _moduleClient;
-    private readonly ITerminalService _terminalService;
     private readonly IStoreComplianceModeService _storeComplianceModeService;
     private readonly ILogger<SettingsViewModel> _logger;
     private System.Timers.Timer? _autoSaveTimer;
@@ -124,7 +123,6 @@ public partial class SettingsViewModel : ObservableObject
 
     public SettingsViewModel(
         ICatalogService catalogService,
-        ITerminalService terminalService,
         IStoreComplianceModeService storeComplianceModeService,
         ILogger<SettingsViewModel> logger,
         IWslConfigService wslConfigService,
@@ -135,7 +133,6 @@ public partial class SettingsViewModel : ObservableObject
     {
         _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         ArgumentNullException.ThrowIfNull(catalogService); // retained constructor compatibility; cache work uses the typed module client.
-        _terminalService = terminalService ?? throw new ArgumentNullException(nameof(terminalService));
         _storeComplianceModeService = storeComplianceModeService ?? throw new ArgumentNullException(nameof(storeComplianceModeService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         WslConfigSection = new WslConfigSectionViewModel(wslConfigService, moduleClient, dialogService, configurationService);
@@ -546,21 +543,8 @@ public partial class SettingsViewModel : ObservableObject
     {
         try
         {
-            var cachePath = (await _moduleClient.GetPackageCacheLocationAsync()).CachePath;
-
-            if (!string.IsNullOrEmpty(cachePath))
-            {
-                var success = await _terminalService.OpenFileExplorerAsync(cachePath);
-                
-                if (!success)
-                {
-                    await ShowAlert(Properties.Resources.ErrorTitle, Properties.Resources.OpenCacheFolderError);
-                }
-            }
-            else
-            {
-                await ShowAlert(Properties.Resources.InformationTitle, Properties.Resources.CachePathNotConfigured);
-            }
+            if (!(await _moduleClient.OpenPackageCacheFolderAsync()).Succeeded)
+                await ShowAlert(Properties.Resources.ErrorTitle, Properties.Resources.OpenCacheFolderError);
         }
         catch (Exception ex)
         {

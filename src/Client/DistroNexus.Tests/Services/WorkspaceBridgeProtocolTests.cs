@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using DistroNexus.Core.Models;
 
 namespace DistroNexus.Tests.Services;
 
@@ -400,6 +401,42 @@ public sealed class WorkspaceBridgeProtocolTests
             Assert.False(invalid.GetProperty("Succeeded").GetBoolean());
             Assert.Equal("Workspace.Bridge.Invalid", invalid.GetProperty("ErrorCode").GetString());
         }
+    }
+
+    [Fact]
+    public async Task TerminalAndPackageCacheLaunchRoutes_RejectUntrustedPayloadsBeforeLaunching()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        var invalid = new[]
+        {
+            await bridge.SendAsync("terminal.status.v1", payload: JsonDocument.Parse("{}").RootElement.Clone()),
+            await bridge.SendAsync("terminal.launch.v1"),
+            await bridge.SendAsync("terminal.launch.v1", payload: JsonDocument.Parse("{\"InstanceName\":\"Ubuntu\",\"StartPath\":\"C:\\\\outside\"}").RootElement.Clone()),
+            await bridge.SendAsync("terminal.launch.v1", payload: JsonDocument.Parse("{\"InstanceName\":\"Ubuntu\",\"Program\":\"cmd.exe\"}").RootElement.Clone()),
+            await bridge.SendAsync("explorer.package-cache.v1", payload: JsonDocument.Parse("{\"Path\":\"C:\\\\outside\"}").RootElement.Clone())
+        };
+        foreach (var response in invalid)
+        {
+            Assert.False(response.GetProperty("Succeeded").GetBoolean());
+            Assert.Equal("Workspace.Bridge.Invalid", response.GetProperty("ErrorCode").GetString());
+        }
+    }
+
+    [Fact]
+    public void FixedExternalLaunchSpecs_AllowOnlyTerminalAndConfiguredCacheArgumentShapes()
+    {
+        var windowsTerminal = FixedLaunchProcess.CreateTerminalStartInfo(TerminalKind.WindowsTerminal, "Ubuntu", "/home/user");
+        Assert.Equal("wt.exe", windowsTerminal.FileName);
+        Assert.False(windowsTerminal.UseShellExecute);
+        Assert.Equal(["-w", "0", "wsl", "-d", "Ubuntu", "--cd", "/home/user"], windowsTerminal.ArgumentList);
+
+        var commandPrompt = FixedLaunchProcess.CreateTerminalStartInfo(TerminalKind.CommandPrompt, "Ubuntu", null);
+        Assert.Equal(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "cmd.exe"), commandPrompt.FileName);
+        Assert.Equal(["/k", "wsl", "-d", "Ubuntu"], commandPrompt.ArgumentList);
+
+        var cache = FixedLaunchProcess.CreatePackageCacheStartInfo(Path.Combine(Path.GetTempPath(), "DistroNexus-cache"));
+        Assert.Equal("explorer.exe", cache.FileName);
+        Assert.Equal([Path.Combine(Path.GetTempPath(), "DistroNexus-cache")], cache.ArgumentList);
     }
 
     [Fact]
