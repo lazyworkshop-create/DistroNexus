@@ -12,7 +12,7 @@
 
 ## Dependency Order
 
-S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S05 -> S06 -> S07 -> S08
+S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S18 -> S19 -> S20 -> S06 -> S07 -> S08
 
 ## Slice S01: Verified module contract and migration baseline
 
@@ -806,6 +806,10 @@ Desktop consumers, real firewall/repair/recovery execution, release/publishing s
 
 Define network and recovery preview/token, diagnostic export, health history, and sanitized error contracts.
 
+### Supersession Note
+
+This broad legacy planning entry is not delegated. Its execution scope is split into S18, S19, and S20 below.
+
 ### Implementation Scope
 
 Expose missing inspection and mutation operations with retained preview/grant/consent behavior.
@@ -833,6 +837,180 @@ Network, recovery, health, and diagnostics command families.
 ### Out of Scope
 
 Live host UAT.
+
+## Slice S18: Versioned systemd, recovery, and health command contracts
+
+### Status
+
+Committed
+
+### Objective
+
+Move existing systemd, recovery, and health module contracts to fixed versioned Bridge identifiers and add their missing typed read, history, and metadata operations.
+
+### Sources
+
+FR-001 through FR-007; `docs/specs/powershell-first-design.md` operational capability contract amendment; `docs/architecture/operational-bridge-versioning-decision.md`.
+
+### Dependencies
+
+S17.
+
+### Allowed Paths
+
+Existing systemd/recovery/health public commands and manifest; WorkspaceBridge; matching Core interfaces/services/models required for declared operations; focused bridge/C#/Pester tests; plan.
+
+### Excluded Paths
+
+Network/firewall/diagnostics, Desktop consumers, generic bridge execution, real host mutation, release/publishing.
+
+### Contract and Documentation
+
+Module calls only versioned `systemd.*.v1`, `recovery.*.v1`, and `health.*.v1` routes. Unversioned routes are private compatibility aliases with identical typed payloads and results. Retention uses `recovery.retention.preview.v1` to issue a one-shot fingerprint-bound token; `recovery.retention.set.v1` accepts that token and rejects missing, stale, replayed, or mismatched state before deletion.
+
+### Implementation Scope
+
+Add fixed versioned route handlers, typed command mappings, and only the missing declared read/history/metadata operations. Preserve existing public names and mutation protections.
+
+### Test Scope
+
+Route alias/version parity, typed validation/results, stale preview/grant failures, WhatIf/decline, cancellation, and unsupported operation errors.
+
+### Acceptance Criteria
+
+- Every supported systemd/recovery/health operation has one exported fixed command path and a versioned Bridge route.
+- No mutation crosses Bridge after WhatIf or declined confirmation.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Systemd|FullyQualifiedName~Recovery|FullyQualifiedName~Health|FullyQualifiedName~WorkspaceBridgeProtocol"
+pwsh -NoProfile -Command "Invoke-Pester -Path tests/PowerShell/Unit/Public"
+```
+
+### Commit Boundary
+
+Versioned systemd, recovery, and health module/Bridge contracts with focused tests.
+
+### Out of Scope
+
+Desktop migration and real host UAT.
+
+## Slice S19: Network and firewall command contracts
+
+### Status
+
+Planned
+
+### Objective
+
+Expose network inspection/configuration and firewall operations only through typed fixed module and Bridge contracts.
+
+### Sources
+
+FR-001 through FR-007; operational capability contract amendment and versioning decision.
+
+### Dependencies
+
+S18.
+
+### Allowed Paths
+
+Network/firewall public commands and manifest; WorkspaceBridge; matching Core interfaces/services/models; focused C#/Pester tests; plan.
+
+### Excluded Paths
+
+Systemd/recovery/health/diagnostics, Desktop consumers, direct host script execution, generic bridge execution, live firewall/network mutation, release/publishing.
+
+### Contract and Documentation
+
+Use only declared `network.*.v1` and `firewall.*.v1` operations; preserve preview, collision, containment, and elevation grant requirements.
+
+### Implementation Scope
+
+Replace direct port-mapping host execution with fixed Bridge routing and add typed network/firewall command mappings without changing Desktop consumers.
+
+### Test Scope
+
+Typed route/result tests, invalid input/no execution, preview/grant/stale failures, WhatIf/decline, cancellation, and unknown operations.
+
+### Acceptance Criteria
+
+- Port mapping is no longer a direct module host script; it is a fixed versioned bridge operation.
+- Every supported firewall mutation retains preview/elevation/consent protections.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Network|FullyQualifiedName~Firewall|FullyQualifiedName~WorkspaceBridgeProtocol"
+pwsh -NoProfile -Command "Invoke-Pester -Path tests/PowerShell/Unit/Public"
+```
+
+### Commit Boundary
+
+Versioned network/firewall module and Bridge contracts with focused tests.
+
+### Out of Scope
+
+Desktop migration and live host UAT.
+
+## Slice S20: Diagnostic preview and export contract
+
+### Status
+
+Planned
+
+### Objective
+
+Expose diagnostic preview and redacted export through a typed PowerShell and Bridge contract.
+
+### Sources
+
+FR-001 through FR-007; operational capability contract amendment and versioning decision.
+
+### Dependencies
+
+S18.
+
+### Allowed Paths
+
+Diagnostic public commands and manifest; WorkspaceBridge; diagnostic Core interfaces/services/models; focused C#/Pester tests; plan.
+
+### Excluded Paths
+
+Network/firewall/systemd/recovery/health, Desktop consumers, arbitrary paths/log collection, generic bridge execution, release/publishing.
+
+### Contract and Documentation
+
+`diagnostics.preview.v1` returns a typed preview token and redacted selection metadata. `diagnostics.export.v1` accepts only that token and validated allowed destination, and uses `ShouldProcess`.
+
+### Implementation Scope
+
+Add typed diagnostic preview/export Core, Bridge, and command contracts; retain Core redaction and token validation as the only export authority.
+
+### Test Scope
+
+Redaction, unsafe destination, stale token, WhatIf/decline, cancellation, and Bridge error tests.
+
+### Acceptance Criteria
+
+- No diagnostic export occurs without an unexpired preview token and PowerShell consent.
+- No raw diagnostic path or unredacted host output enters public errors.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Diagnostic|FullyQualifiedName~WorkspaceBridgeProtocol"
+pwsh -NoProfile -Command "Invoke-Pester -Path tests/PowerShell/Unit/Public"
+```
+
+### Commit Boundary
+
+Diagnostic preview/export module and Bridge contract with focused tests.
+
+### Out of Scope
+
+Desktop migration and real diagnostic collection UAT.
 
 ## Slice S06: Platform-integrated command parity
 

@@ -6,7 +6,7 @@ using DistroNexus.Core.Services;
 using DistroNexus.WorkspaceBridge;
 using Microsoft.Extensions.Logging.Abstractions;
 
-var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, Converters = { new JsonStringEnumConverter(allowIntegerValues: false) } };
+var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow, Converters = { new JsonStringEnumConverter(allowIntegerValues: false) } };
 var root = Environment.GetEnvironmentVariable("DISTRONEXUS_WORKSPACE_STORE_ROOT");
 // Keep this composition deliberately equivalent to the desktop composition.  The
 // bridge is a real execution boundary, not a persistence-only surrogate: Core owns
@@ -107,25 +107,48 @@ while ((line = Console.ReadLine()) is not null)
             "executePodmanConnection" => await ExecutePodmanConnectionAsync(request),
             "containerRuntimeStatus" => await ContainerRuntimeStatusAsync(request),
             "capability" => await GetCapabilitiesAsync(request),
-            "systemdList" => await ListSystemdAsync(request),
-            "systemdPreview" => await PreviewSystemdAsync(request),
-            "systemdExecute" => await ExecuteSystemdAsync(request),
+            "systemdList" => await ListSystemdV1Async(request),
+            "systemdPreview" => await PreviewSystemdV1Async(request),
+            "systemdExecute" => await ExecuteSystemdV1Async(request),
+            "systemd.list.v1" => await ListSystemdV1Async(request),
+            "systemd.preview.v1" => await PreviewSystemdV1Async(request),
+            "systemd.execute.v1" => await ExecuteSystemdV1Async(request),
+            "systemd.details.v1" => await GetSystemdDetailsV1Async(request),
+            "systemd.journal.v1" => await GetSystemdJournalV1Async(request),
             "wslgStatus" => await GetWslgStatusAsync(request),
             "wslgDiscover" => await DiscoverWslgAsync(request),
             "wslgLaunch" => await LaunchWslgAsync(request),
-            "recoveryList" => await recovery.ListAsync(),
-            "recoveryHistory" => await recovery.GetHistoryAsync(),
-            "recoveryVerify" => await recovery.VerifyAsync(request.Id ?? throw new ArgumentException("Recovery id is required.")),
-            "recoveryPreviewCreate" => await PreviewRecoveryCreateAsync(request),
-            "recoveryCreate" => await CreateRecoveryAsync(request),
-            "recoveryPreviewRestore" => await PreviewRecoveryRestoreAsync(request),
-            "recoveryRestore" => await RestoreRecoveryAsync(request),
-            "recoveryPreviewRemove" => await recovery.PreviewDeleteAsync(request.Id ?? throw new ArgumentException("Recovery id is required.")),
-            "recoveryRemove" => await RemoveRecoveryAsync(request),
+            "recoveryList" => await RecoveryListV1Async(request),
+            "recoveryHistory" => await RecoveryHistoryV1Async(request),
+            "recoveryVerify" => await RecoveryVerifyV1Async(request),
+            "recoveryPreviewCreate" => await PreviewRecoveryCreateV1Async(request),
+            "recoveryCreate" => await CreateRecoveryV1Async(request),
+            "recoveryPreviewRestore" => await PreviewRecoveryRestoreV1Async(request),
+            "recoveryRestore" => await RestoreRecoveryV1Async(request),
+            "recoveryPreviewRemove" => await RecoveryPreviewRemoveV1Async(request),
+            "recoveryRemove" => await RemoveRecoveryV1Async(request),
+            "recovery.list.v1" => await RecoveryListV1Async(request),
+            "recovery.history.v1" => await RecoveryHistoryV1Async(request),
+            "recovery.verify.v1" => await RecoveryVerifyV1Async(request),
+            "recovery.preview-create.v1" => await PreviewRecoveryCreateV1Async(request),
+            "recovery.create.v1" => await CreateRecoveryV1Async(request),
+            "recovery.preview-restore.v1" => await PreviewRecoveryRestoreV1Async(request),
+            "recovery.restore.v1" => await RestoreRecoveryV1Async(request),
+            "recovery.preview-remove.v1" => await RecoveryPreviewRemoveV1Async(request),
+            "recovery.remove.v1" => await RemoveRecoveryV1Async(request),
+            "recovery.clone.v1" => await CloneRecoveryV1Async(request),
+            "recovery.notes.v1" => await UpdateRecoveryNotesV1Async(request),
+            "recovery.retention.get.v1" => await GetRecoveryRetentionV1Async(request),
+            "recovery.retention.preview.v1" => await PreviewRecoveryRetentionV1Async(request),
+            "recovery.retention.set.v1" => await SetRecoveryRetentionV1Async(request),
             "monitorSnapshot" => await GetMonitoringSnapshotAsync(request),
-            "healthScan" => await health.ScanAsync(),
-            "healthRepairPreview" => await PreviewHealthRepairAsync(request),
-            "healthRepairExecute" => await ExecuteHealthRepairAsync(request),
+            "healthScan" => await HealthScanV1Async(request),
+            "healthRepairPreview" => await PreviewHealthRepairV1Async(request),
+            "healthRepairExecute" => await ExecuteHealthRepairV1Async(request),
+            "health.scan.v1" => await HealthScanV1Async(request),
+            "health.history.v1" => await HealthHistoryV1Async(request),
+            "health.repair-preview.v1" => await PreviewHealthRepairV1Async(request),
+            "health.repair.v1" => await ExecuteHealthRepairV1Async(request),
             "marketplaceListSources" => await marketplace.GetSourcesAsync(),
             "marketplaceStatus" => await GetMarketplaceStatusAsync(request),
             "marketplaceAddSource" => await AddMarketplaceSourceAsync(request),
@@ -169,6 +192,18 @@ while ((line = Console.ReadLine()) is not null)
     catch (InvalidOperationException ex) when (string.Equals(ex.Message, "PackageCache.EntryInvalid", StringComparison.Ordinal)) { response = new(false, null, "PackageCache.EntryInvalid", "Package cache entry is invalid."); }
     catch (Exception ex) { response = new(false, null, ex is InvalidOperationException ? "Workspace.ConflictOrState" : "Workspace.Bridge.Invalid", ex.Message); }
     WriteFrame(response);
+}
+
+void ValidateEmptyPayload(BridgeRequest request)
+{
+    if (request.Payload is not null) throw new ArgumentException("This bridge operation does not accept a payload.");
+}
+void ValidatePayload(BridgeRequest request, IEnumerable<string> allowed, IEnumerable<string> required)
+{
+    if (request.Payload is not { ValueKind: JsonValueKind.Object } payload) throw new ArgumentException("A typed bridge payload is required.");
+    var names = payload.EnumerateObject().Select(property => property.Name).ToArray();
+    if (names.Any(name => !allowed.Contains(name, StringComparer.OrdinalIgnoreCase)) || required.Any(name => !names.Contains(name, StringComparer.OrdinalIgnoreCase)))
+        throw new ArgumentException("Bridge payload does not match the operation contract.");
 }
 
 string ParseInstanceName(BridgeRequest request)
@@ -394,6 +429,11 @@ async Task<IReadOnlyList<SystemdServiceInfo>> ListSystemdAsync(BridgeRequest req
     var p = JsonSerializer.Deserialize<SystemdPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("systemd payload is required.");
     return await systemd.ListAsync(p.InstanceName, p.Scope);
 }
+async Task<IReadOnlyList<SystemdServiceInfo>> ListSystemdV1Async(BridgeRequest request) { ValidatePayload(request, ["InstanceName", "Scope"], ["InstanceName"]); return await ListSystemdAsync(request); }
+async Task<SystemdOperationPreview> PreviewSystemdV1Async(BridgeRequest request) { ValidatePayload(request, ["InstanceName", "Unit", "Action", "Scope"], ["InstanceName", "Unit", "Action"]); return await PreviewSystemdAsync(request); }
+async Task<SystemdOperationResult> ExecuteSystemdV1Async(BridgeRequest request) { ValidatePayload(request, ["Preview"], ["Preview"]); return await ExecuteSystemdAsync(request); }
+async Task<SystemdServiceDetails?> GetSystemdDetailsV1Async(BridgeRequest request) { ValidatePayload(request, ["InstanceName", "Unit", "Scope"], ["InstanceName", "Unit"]); return await GetSystemdDetailsAsync(request); }
+async Task<IReadOnlyList<SystemdJournalEntry>> GetSystemdJournalV1Async(BridgeRequest request) { ValidatePayload(request, ["InstanceName", "Unit", "Scope", "Search", "LineLimit"], ["InstanceName", "Unit"]); return await GetSystemdJournalAsync(request); }
 async Task<SystemdOperationPreview> PreviewSystemdAsync(BridgeRequest request)
 {
     var p = JsonSerializer.Deserialize<SystemdPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("systemd payload is required.");
@@ -404,6 +444,17 @@ async Task<SystemdOperationResult> ExecuteSystemdAsync(BridgeRequest request)
 {
     var p = JsonSerializer.Deserialize<SystemdPreviewPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("systemd preview is required.");
     return await systemd.ExecuteAsync(p.Preview);
+}
+async Task<SystemdServiceDetails?> GetSystemdDetailsAsync(BridgeRequest request)
+{
+    var p = JsonSerializer.Deserialize<SystemdPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("systemd payload is required.");
+    if (string.IsNullOrWhiteSpace(p.Unit)) throw new ArgumentException("A systemd unit is required.");
+    return await systemd.GetDetailsAsync(p.InstanceName, new SystemdUnitName(p.Unit), p.Scope);
+}
+async Task<IReadOnlyList<SystemdJournalEntry>> GetSystemdJournalAsync(BridgeRequest request)
+{
+    var p = JsonSerializer.Deserialize<SystemdJournalPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("systemd journal payload is required.");
+    return await systemd.GetJournalAsync(p.InstanceName, new SystemdUnitName(p.Unit), p.Scope, p.Search, p.LineLimit);
 }
 async Task<WslgApplicationStatus> GetWslgStatusAsync(BridgeRequest request)
 {
@@ -441,6 +492,46 @@ async Task<object> RestoreRecoveryAsync(BridgeRequest request)
     await recovery.RestoreAsync(p.Request, request.Token ?? throw new ArgumentException("Recovery preview token is required.")); return new { };
 }
 async Task<object> RemoveRecoveryAsync(BridgeRequest request) { await recovery.DeleteAsync(request.Id ?? throw new ArgumentException("Recovery id is required."), request.Token ?? throw new ArgumentException("Recovery preview token is required.")); return new { }; }
+async Task<object> CloneRecoveryAsync(BridgeRequest request)
+{
+    var p = JsonSerializer.Deserialize<RecoveryClonePayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Recovery clone payload is required.");
+    if (string.IsNullOrWhiteSpace(request.Token)) return await recovery.PreviewCloneAsync(p.Request);
+    await recovery.RestoreCloneAsync(p.Request, request.Token); return new { };
+}
+async Task<object> UpdateRecoveryNotesAsync(BridgeRequest request)
+{
+    var p = JsonSerializer.Deserialize<RecoveryNotesPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Recovery metadata payload is required.");
+    await recovery.UpdateNotesAsync(request.Id ?? throw new ArgumentException("Recovery id is required."), p.Description, p.Tags, p.Pinned); return new { };
+}
+async Task<object> GetRecoveryRetentionAsync(BridgeRequest request)
+{
+    var p = JsonSerializer.Deserialize<RecoveryRetentionPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Recovery retention payload is required.");
+    return new { SourceInstance = p.SourceInstance, Maximum = await recovery.GetRetentionAsync(p.SourceInstance) };
+}
+async Task<object> SetRecoveryRetentionAsync(BridgeRequest request)
+{
+    var p = JsonSerializer.Deserialize<RecoveryRetentionPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Recovery retention payload is required.");
+    if (p.Maximum is null) throw new ArgumentException("Recovery retention maximum is required.");
+    await recovery.ApplyRetentionAsync(p.SourceInstance, p.Maximum.Value, request.Token ?? throw new ArgumentException("Recovery retention preview token is required.")); return new { SourceInstance = p.SourceInstance, Maximum = p.Maximum.Value };
+}
+async Task<IReadOnlyList<RecoveryPointSummary>> RecoveryListV1Async(BridgeRequest request) { ValidateEmptyPayload(request); return await recovery.ListAsync(); }
+async Task<IReadOnlyList<RecoveryHistoryEntry>> RecoveryHistoryV1Async(BridgeRequest request) { ValidateEmptyPayload(request); return await recovery.GetHistoryAsync(); }
+async Task<RecoveryPointVerification> RecoveryVerifyV1Async(BridgeRequest request) { ValidateEmptyPayload(request); return await recovery.VerifyAsync(request.Id ?? throw new ArgumentException("Recovery id is required.")); }
+async Task<RecoveryOperationPreview> PreviewRecoveryCreateV1Async(BridgeRequest request) { ValidatePayload(request, ["Request"], ["Request"]); return await PreviewRecoveryCreateAsync(request); }
+async Task<RecoveryPointSummary> CreateRecoveryV1Async(BridgeRequest request) { ValidatePayload(request, ["Request"], ["Request"]); return await CreateRecoveryAsync(request); }
+async Task<RecoveryOperationPreview> PreviewRecoveryRestoreV1Async(BridgeRequest request) { ValidatePayload(request, ["Request"], ["Request"]); return await PreviewRecoveryRestoreAsync(request); }
+async Task<object> RestoreRecoveryV1Async(BridgeRequest request) { ValidatePayload(request, ["Request"], ["Request"]); return await RestoreRecoveryAsync(request); }
+async Task<RecoveryOperationPreview> RecoveryPreviewRemoveV1Async(BridgeRequest request) { ValidateEmptyPayload(request); return await recovery.PreviewDeleteAsync(request.Id ?? throw new ArgumentException("Recovery id is required.")); }
+async Task<object> RemoveRecoveryV1Async(BridgeRequest request) { ValidateEmptyPayload(request); return await RemoveRecoveryAsync(request); }
+async Task<object> CloneRecoveryV1Async(BridgeRequest request) { ValidatePayload(request, ["Request"], ["Request"]); return await CloneRecoveryAsync(request); }
+async Task<object> UpdateRecoveryNotesV1Async(BridgeRequest request) { ValidatePayload(request, ["Description", "Tags", "Pinned"], ["Description", "Tags", "Pinned"]); return await UpdateRecoveryNotesAsync(request); }
+async Task<object> GetRecoveryRetentionV1Async(BridgeRequest request) { ValidatePayload(request, ["SourceInstance"], ["SourceInstance"]); return await GetRecoveryRetentionAsync(request); }
+async Task<RecoveryRetentionPreview> PreviewRecoveryRetentionV1Async(BridgeRequest request) { ValidatePayload(request, ["SourceInstance", "Maximum"], ["SourceInstance", "Maximum"]); var p = JsonSerializer.Deserialize<RecoveryRetentionPayload>(request.Payload!.Value.GetRawText(), options)!; if (p.Maximum is null) throw new ArgumentException("Recovery retention maximum is required."); return await recovery.PreviewRetentionAsync(p.SourceInstance, p.Maximum.Value); }
+async Task<object> SetRecoveryRetentionV1Async(BridgeRequest request) { ValidatePayload(request, ["SourceInstance", "Maximum"], ["SourceInstance", "Maximum"]); return await SetRecoveryRetentionAsync(request); }
+async Task<HealthScanResult> HealthScanV1Async(BridgeRequest request) { ValidateEmptyPayload(request); return await health.ScanAsync(); }
+async Task<IReadOnlyList<HealthHistoryEntry>> HealthHistoryV1Async(BridgeRequest request) { ValidateEmptyPayload(request); return await health.GetHistoryAsync(); }
+async Task<RepairPreview> PreviewHealthRepairV1Async(BridgeRequest request) { ValidatePayload(request, ["Finding"], ["Finding"]); return await PreviewHealthRepairAsync(request); }
+async Task<RepairResult> ExecuteHealthRepairV1Async(BridgeRequest request) { ValidatePayload(request, ["Finding", "Confirmed"], ["Finding", "Confirmed"]); return await ExecuteHealthRepairAsync(request); }
 async Task<MonitoringSample> GetMonitoringSnapshotAsync(BridgeRequest request)
 {
     var p = JsonSerializer.Deserialize<MonitoringPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("Monitoring payload is required.");
@@ -510,11 +601,15 @@ public sealed record PodmanConnectionPayload(string InstanceName, string Name, s
 public sealed record PodmanStatusPayload(string InstanceName);
 public sealed record CapabilityPayload(string? InstanceName, bool InstanceOnly);
 public sealed record SystemdPayload(string InstanceName, string? Unit, SystemdAction? Action, SystemdScope Scope = SystemdScope.User);
+public sealed record SystemdJournalPayload(string InstanceName, string Unit, SystemdScope Scope = SystemdScope.User, string? Search = null, int LineLimit = 200);
 public sealed record SystemdPreviewPayload(SystemdOperationPreview Preview);
 public sealed record WslgInstancePayload(string InstanceName);
 public sealed record WslgApplicationPayload(WslgApplication Application);
 public sealed record RecoveryCreatePayload(RecoveryPointCreateRequest Request);
 public sealed record RecoveryRestorePayload(RecoveryRestoreRequest Request);
+public sealed record RecoveryClonePayload(RecoveryCloneRequest Request);
+public sealed record RecoveryNotesPayload(string Description, IReadOnlyList<string> Tags, bool Pinned);
+public sealed record RecoveryRetentionPayload(string SourceInstance, int? Maximum = null);
 public sealed record MonitoringPayload(string InstanceName);
 public sealed record HealthFindingPayload(HealthFinding Finding);
 public sealed record HealthRepairPayload(HealthFinding Finding, bool Confirmed);

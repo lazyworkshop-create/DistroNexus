@@ -352,6 +352,64 @@ public sealed class WorkspaceBridgeProtocolTests
         Assert.Equal("Package cache entry is invalid.", response.GetProperty("ErrorMessage").GetString());
     }
 
+    [Fact]
+    public async Task OperationalVersionedRoutes_MatchLegacyReadAliasesAndRejectUnsupportedVersions()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+
+        var legacyRecovery = await bridge.SendAsync("recoveryList");
+        var versionedRecovery = await bridge.SendAsync("recovery.list.v1");
+        var versionedHistory = await bridge.SendAsync("health.history.v1");
+        var unsupported = await bridge.SendAsync("health.scan.v2");
+
+        Assert.True(legacyRecovery.GetProperty("Succeeded").GetBoolean());
+        Assert.True(versionedRecovery.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal(legacyRecovery.GetProperty("Value").ValueKind, versionedRecovery.GetProperty("Value").ValueKind);
+        Assert.True(versionedHistory.GetProperty("Succeeded").GetBoolean());
+        Assert.False(unsupported.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("Workspace.Bridge.Invalid", unsupported.GetProperty("ErrorCode").GetString());
+    }
+
+    [Fact]
+    public async Task OperationalRoutes_RejectUnknownPayloadFieldsWithAliasVersionParity()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        var invalid = JsonDocument.Parse("""{"Unexpected":true}""").RootElement.Clone();
+        var pairs = new[]
+        {
+            ("systemdList", "systemd.list.v1"), ("systemdPreview", "systemd.preview.v1"), ("systemdExecute", "systemd.execute.v1"),
+            ("recoveryList", "recovery.list.v1"), ("recoveryHistory", "recovery.history.v1"), ("recoveryVerify", "recovery.verify.v1"),
+            ("recoveryPreviewCreate", "recovery.preview-create.v1"), ("recoveryCreate", "recovery.create.v1"),
+            ("recoveryPreviewRestore", "recovery.preview-restore.v1"), ("recoveryRestore", "recovery.restore.v1"),
+            ("recoveryPreviewRemove", "recovery.preview-remove.v1"), ("recoveryRemove", "recovery.remove.v1"),
+            ("healthScan", "health.scan.v1"), ("healthRepairPreview", "health.repair-preview.v1"), ("healthRepairExecute", "health.repair.v1")
+        };
+        foreach (var (legacy, versioned) in pairs)
+        {
+            var legacyResponse = await bridge.SendAsync(legacy, Guid.NewGuid(), invalid, token: "forged");
+            var versionedResponse = await bridge.SendAsync(versioned, Guid.NewGuid(), invalid, token: "forged");
+            Assert.False(legacyResponse.GetProperty("Succeeded").GetBoolean(), legacy);
+            Assert.False(versionedResponse.GetProperty("Succeeded").GetBoolean(), versioned);
+            Assert.Equal(legacyResponse.GetProperty("ErrorCode").GetString(), versionedResponse.GetProperty("ErrorCode").GetString());
+        }
+    }
+
+    [Fact]
+    public async Task RecoveryRetention_RequiresCurrentPreviewAndRejectsStaleRequestBeforeMutation()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        var payload = JsonDocument.Parse("""{"SourceInstance":"Ubuntu","Maximum":2}""").RootElement.Clone();
+        var noPreview = await bridge.SendAsync("recovery.retention.set.v1", payload: payload);
+        var preview = await bridge.SendAsync("recovery.retention.preview.v1", payload: payload);
+        var stalePayload = JsonDocument.Parse("""{"SourceInstance":"Ubuntu","Maximum":3}""").RootElement.Clone();
+        var stale = await bridge.SendAsync("recovery.retention.set.v1", payload: stalePayload, token: preview.GetProperty("Value").GetProperty("Token").GetString());
+        var retention = await bridge.SendAsync("recovery.retention.get.v1", payload: JsonDocument.Parse("""{"SourceInstance":"Ubuntu"}""").RootElement.Clone());
+
+        Assert.False(noPreview.GetProperty("Succeeded").GetBoolean());
+        Assert.False(stale.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, retention.GetProperty("Value").GetProperty("Maximum").ValueKind);
+    }
+
     private sealed class BridgeProcess : IAsyncDisposable
     {
         private readonly Process process;

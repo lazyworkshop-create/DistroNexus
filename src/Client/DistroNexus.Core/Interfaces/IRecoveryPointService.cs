@@ -18,6 +18,8 @@ public interface IRecoveryPointService
     Task<RecoveryOperationPreview> PreviewDeleteAsync(Guid id, CancellationToken cancellationToken = default);
     /// <summary>Deletes a point only with a current Core-issued deletion preview token. Retention cleanup retains its separate implicit safeguards.</summary>
     Task DeleteAsync(Guid id, string previewToken, CancellationToken cancellationToken = default);
+    Task<RecoveryRetentionPreview> PreviewRetentionAsync(string sourceInstance, int maximum, CancellationToken cancellationToken = default);
+    Task ApplyRetentionAsync(string sourceInstance, int maximum, string previewToken, CancellationToken cancellationToken = default);
     Task ApplyRetentionAsync(string sourceInstance, int maximum, CancellationToken cancellationToken = default);
     Task<int?> GetRetentionAsync(string sourceInstance, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<RecoveryHistoryEntry>> GetHistoryAsync(CancellationToken cancellationToken = default);

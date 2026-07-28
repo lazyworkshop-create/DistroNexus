@@ -19,6 +19,7 @@ public sealed class RecoveryPointService : IRecoveryPointService
     private string StateLockPath => Path.Combine(_root, "recovery-state.lock");
     private string OperationsRoot => Path.Combine(_root, "operations");
     private readonly ConcurrentDictionary<string, RecoveryOperationPreview> _previews = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, RecoveryRetentionPreview> _retentionPreviews = new(StringComparer.Ordinal);
 
     public RecoveryPointService(IRecoveryPointRuntime runtime, IBackupService? backups = null, string? root = null)
     {
@@ -235,7 +236,24 @@ public sealed class RecoveryPointService : IRecoveryPointService
         RecoveryPathSafety.DeleteOwnedPoint(item);
         await RemoveFromCatalogAsync(item.DirectoryPath, ct);
     }
-    public async Task ApplyRetentionAsync(string sourceInstance, int maximum, CancellationToken ct = default)
+    public async Task<RecoveryRetentionPreview> PreviewRetentionAsync(string sourceInstance, int maximum, CancellationToken ct = default)
+    {
+        var snapshot = await RetentionSnapshotAsync(sourceInstance, maximum, ct);
+        var preview = new RecoveryRetentionPreview(Guid.NewGuid().ToString("N"), snapshot.SourceInstance, maximum, snapshot.CurrentMaximum,
+            snapshot.CandidateDeletionCount, Fingerprint(snapshot));
+        _retentionPreviews[preview.Token] = preview;
+        return preview;
+    }
+    public async Task ApplyRetentionAsync(string sourceInstance, int maximum, string previewToken, CancellationToken ct = default)
+    {
+        if (!_retentionPreviews.TryRemove(previewToken ?? "", out var preview)) throw new InvalidOperationException("A current recovery retention preview is required.");
+        var snapshot = await RetentionSnapshotAsync(sourceInstance, maximum, ct);
+        if (!StringComparer.Ordinal.Equals(preview.RequestFingerprint, Fingerprint(snapshot)))
+            throw new InvalidOperationException("Recovery retention changed after its preview; generate a new preview.");
+        await ApplyRetentionCoreAsync(snapshot.SourceInstance, maximum, ct);
+    }
+    public Task ApplyRetentionAsync(string sourceInstance, int maximum, CancellationToken ct = default) => ApplyRetentionCoreAsync(sourceInstance, maximum, ct);
+    private async Task ApplyRetentionCoreAsync(string sourceInstance, int maximum, CancellationToken ct)
     {
         if (maximum < 1) throw new ArgumentOutOfRangeException(nameof(maximum));
         await MutateStateAsync(state =>
@@ -247,6 +265,16 @@ public sealed class RecoveryPointService : IRecoveryPointService
         var candidates = all.Where(x => StringComparer.OrdinalIgnoreCase.Equals(x.Manifest.SourceInstance, sourceInstance) && !x.Manifest.Pinned).OrderByDescending(x => x.Manifest.CreatedAt).ToArray();
         var remaining = all.Count;
         foreach (var item in candidates.Skip(maximum)) { if (remaining <= 1) break; EnsureOwnedPoint(item); RecoveryPathSafety.DeleteOwnedPoint(item); await RemoveFromCatalogAsync(item.DirectoryPath, ct); remaining--; }
+    }
+    private async Task<RetentionSnapshot> RetentionSnapshotAsync(string sourceInstance, int maximum, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(sourceInstance)) throw new ArgumentException("Source instance is required.", nameof(sourceInstance));
+        if (maximum < 1) throw new ArgumentOutOfRangeException(nameof(maximum));
+        var canonical = sourceInstance.Trim();
+        var current = await GetRetentionAsync(canonical, ct);
+        var points = (await ListAsync(ct)).Where(x => StringComparer.OrdinalIgnoreCase.Equals(x.Manifest.SourceInstance, canonical) && !x.Manifest.Pinned)
+            .OrderByDescending(x => x.Manifest.CreatedAt).Select(x => new { x.Manifest.Id, x.Manifest.Sha256, x.Manifest.CreatedAt }).ToArray();
+        return new RetentionSnapshot(canonical, maximum, current, Math.Max(0, points.Length - maximum), points);
     }
     public async Task<int?> GetRetentionAsync(string sourceInstance, CancellationToken ct = default)
     {
@@ -463,6 +491,7 @@ public sealed class RecoveryPointService : IRecoveryPointService
         (state.Catalog ?? []).Select(Path.GetFullPath).Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
         new Dictionary<string, int>((state.Retention ?? new()).Where(x => !string.IsNullOrWhiteSpace(x.Key) && x.Value > 0), StringComparer.OrdinalIgnoreCase));
     private sealed record RecoveryState(int SchemaVersion, List<string>? Catalog, Dictionary<string, int>? Retention);
+    private sealed record RetentionSnapshot(string SourceInstance, int Maximum, int? CurrentMaximum, int CandidateDeletionCount, object Points);
 
     private async Task ReconcileOwnedOperationsAsync(CancellationToken ct)
     {

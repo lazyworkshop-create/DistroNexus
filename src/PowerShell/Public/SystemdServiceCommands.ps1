@@ -6,7 +6,7 @@ function Get-DistroNexusSystemdServicePreview {
         [Parameter(Mandatory)][ValidateSet('Start', 'Stop', 'Restart', 'Enable', 'Disable', 'Reload')][string]$Action,
         [ValidateSet('User', 'System')][string]$Scope = 'User'
     )
-    Invoke-DistroNexusWorkspaceBridge -Operation systemdPreview -Payload @{ InstanceName = $Name; Unit = $Unit; Action = $Action; Scope = $Scope }
+    Invoke-DistroNexusWorkspaceBridge -Operation 'systemd.preview.v1' -Payload @{ InstanceName = $Name; Unit = $Unit; Action = $Action; Scope = $Scope }
 }
 
 function Invoke-DistroNexusSystemdService {
@@ -19,7 +19,7 @@ function Invoke-DistroNexusSystemdService {
         if (-not $PSCmdlet.ShouldProcess("$($Preview.InstanceName):$($Preview.Unit.Value)", [string]$Preview.Action)) {
             return [PSCustomObject]@{ Succeeded = $false; OutcomeCode = 'WhatIf'; PreviewToken = $null }
         }
-        Invoke-DistroNexusWorkspaceBridge -Operation systemdExecute -Payload @{ Preview = $Preview }
+        Invoke-DistroNexusWorkspaceBridge -Operation 'systemd.execute.v1' -Payload @{ Preview = $Preview }
     }
 }
 
