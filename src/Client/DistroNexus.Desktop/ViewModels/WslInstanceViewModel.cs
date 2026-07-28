@@ -23,7 +23,7 @@ public partial class WslInstanceViewModel : ObservableObject
     private readonly ITerminalService _terminalService;
     private readonly ISettingsService _settingsService;
     private readonly ILogger _logger;
-    private readonly ITagService _tagService;
+    private readonly IPowerShellModuleClient _moduleClient;
     private readonly IBackupService _backupService;
     private readonly IServiceProvider _serviceProvider;
 
@@ -109,7 +109,7 @@ public partial class WslInstanceViewModel : ObservableObject
         ITerminalService terminalService,
         ISettingsService settingsService,
         ILogger logger,
-        ITagService tagService,
+        IPowerShellModuleClient moduleClient,
         IBackupService backupService,
         IServiceProvider serviceProvider)
     {
@@ -119,7 +119,7 @@ public partial class WslInstanceViewModel : ObservableObject
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _tagService = tagService ?? throw new ArgumentNullException(nameof(tagService));
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _backupService = backupService ?? throw new ArgumentNullException(nameof(backupService));
     }
 
@@ -454,7 +454,7 @@ public partial class WslInstanceViewModel : ObservableObject
 
             try
             {
-                await _tagService.DeleteInstanceTagsAsync(instanceName);
+                await _moduleClient.SetInstanceTagsAsync(instanceName, []);
             }
             catch (Exception ex)
             {
@@ -597,7 +597,7 @@ public partial class WslInstanceViewModel : ObservableObject
 
             try
             {
-                await _tagService.RenameInstanceTagsAsync(oldName, newName);
+                await _moduleClient.RenameInstanceTagsAsync(oldName, newName);
             }
             catch (Exception tagEx)
             {
@@ -707,7 +707,6 @@ public partial class WslInstanceViewModel : ObservableObject
         var backupSvc = _serviceProvider.GetRequiredService<IBackupService>();
         var recoveryPointSvc = _serviceProvider.GetRequiredService<IRecoveryPointService>();
         var wslConfigSvc = _serviceProvider.GetRequiredService<IWslConfigService>();
-        var tagSvc = _serviceProvider.GetRequiredService<ITagService>();
         var dialogSvc = _serviceProvider.GetRequiredService<IDialogService>();
         var distributionConfigSvc = _serviceProvider.GetRequiredService<IDistributionConfigurationService>();
         var platformCapabilitySvc = _serviceProvider.GetRequiredService<IPlatformCapabilityService>();
@@ -720,7 +719,7 @@ public partial class WslInstanceViewModel : ObservableObject
         var monitoringService = _serviceProvider.GetRequiredService<IMonitoringService>();
         var containerRuntimeService = _serviceProvider.GetRequiredService<IContainerRuntimeService>();
 
-        var vm = new InstanceDetailViewModel(this, wslManager, dockerSvc, networkSvc, backupSvc, recoveryPointSvc, wslConfigSvc, tagSvc, dialogSvc, distributionConfigSvc, platformCapabilitySvc, systemdService, networkDiagnostics, firewallOperationBroker, networkConfigurationService, networkStatusAdapter, browserLauncher, monitoringService, containerRuntimeService);
+        var vm = new InstanceDetailViewModel(this, wslManager, dockerSvc, networkSvc, backupSvc, recoveryPointSvc, wslConfigSvc, dialogSvc, distributionConfigSvc, platformCapabilitySvc, systemdService, networkDiagnostics, firewallOperationBroker, networkConfigurationService, networkStatusAdapter, browserLauncher, monitoringService, containerRuntimeService);
         var dialog = new InstanceDetailDialog(vm)
         {
             Owner = Application.Current.MainWindow
@@ -870,7 +869,7 @@ public partial class WslInstanceViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Prompts user to add a new tag, then calls ITagService to persist it.
+    /// Prompts user to add a new tag through the module contract.
     /// </summary>
     [RelayCommand]
     private async Task AddTagAsync()
@@ -897,7 +896,7 @@ public partial class WslInstanceViewModel : ObservableObject
 
         try
         {
-            await _tagService.AddTagAsync(Name, tagText);
+            await _moduleClient.AddInstanceTagAsync(Name, tagText);
             Tags.Add(tagText);
             OnPropertyChanged(nameof(PrimaryTag));
             TagsChanged?.Invoke(this, EventArgs.Empty);
@@ -927,7 +926,7 @@ public partial class WslInstanceViewModel : ObservableObject
 
         try
         {
-            await _tagService.RemoveTagAsync(Name, tagName);
+            await _moduleClient.RemoveInstanceTagAsync(Name, tagName);
             var existing = Tags.FirstOrDefault(t => t.Equals(tagName, StringComparison.OrdinalIgnoreCase));
             if (existing != null) Tags.Remove(existing);
             OnPropertyChanged(nameof(PrimaryTag));

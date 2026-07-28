@@ -190,15 +190,15 @@ Tag mutation PowerShell consent behavior and focused Pester tests only.
 
 Lifecycle/catalog/cache/backup/settings parity and all Desktop replacement work.
 
-## Slice S04: Configuration, templates, marketplace, and workspace command parity
+## Slice S04: Tag presentation-client migration
 
 ### Status
 
-Planned
+Committed
 
 ### Objective
 
-Configuration, templates, marketplace, and workspace command parity.
+All WPF tag interactions invoke typed PowerShell module operations rather than `ITagService`.
 
 ### Sources
 
@@ -210,43 +210,42 @@ S02
 
 ### Allowed Paths
 
-`src/PowerShell/Private`, configuration/template/marketplace/workspace public command files, matching Core interfaces, `src/Client/DistroNexus.WorkspaceBridge`, focused xUnit/Pester tests, plan
+`src/Client/DistroNexus.Core/Interfaces/IPowerShellModuleClient.cs`, `src/Client/DistroNexus.Core/Services/PowerShellModuleClient.cs`, `src/Client/DistroNexus.Desktop/App.xaml.cs`, `src/Client/DistroNexus.Desktop/ViewModels/ManageTagsViewModel.cs`, `src/Client/DistroNexus.Desktop/ViewModels/SettingsViewModel.cs`, `src/Client/DistroNexus.Desktop/ViewModels/MainViewModel.cs`, `src/Client/DistroNexus.Desktop/ViewModels/WslInstanceViewModel.cs`, `src/Client/DistroNexus.Desktop/ViewModels/InstanceDetailViewModel.cs`, focused xUnit tests, plan
 
 ### Excluded Paths
 
-Desktop consumers, WPF views, real configuration mutation, release/publishing surfaces
+PowerShell public command implementation, Core tag service/schema, bridge, unrelated Desktop surfaces, release/publishing surfaces
 
 ### Contract and Documentation
 
-Define preview/fingerprint, trust, artifact, workspace-action, and result contracts.
+Define fixed typed tag query/mutation methods that map only to the supported tag cmdlets and preserve command error/cancellation semantics.
 
 ### Implementation Scope
 
-Expose missing configuration/template/workspace operations through module routes while preserving path safety, atomic writes, and action gates.
+Replace direct `ITagService` use in the named view models with `IPowerShellModuleClient`; remove their tag-service constructor dependencies and registrations only when no named consumer remains.
 
 ### Test Scope
 
-Stale preview, unsafe path/archive, trust, WhatIf, cancellation, and workflow tests.
+Typed module-client parameter/response tests plus view-model tests proving tag load/mutation behavior uses the typed client.
 
 ### Acceptance Criteria
 
-- No supported configuration/template/workspace workflow is Core/WPF-only.
-- Safety tokens and trust gates remain mandatory.
+- Named WPF tag consumers have no `ITagService` dependency or direct tag-state persistence path.
+- The typed module client cannot accept arbitrary command text and maps each tag action to its fixed exported cmdlet.
 
 ### Verification Commands
 
 ```text
-dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Configuration|FullyQualifiedName~Template|FullyQualifiedName~Workspace"
-pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Unit
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~PowerShellModuleClient|FullyQualifiedName~Tag"
 ```
 
 ### Commit Boundary
 
-Configuration, template, marketplace, and workspace command families.
+Typed tag module-client and named WPF tag-consumer migration.
 
 ### Out of Scope
 
-Desktop replacement and real-host UAT.
+Configuration, template, marketplace, workspace, and other WPF capability families.
 
 ## Slice S05: Network, systemd, firewall, recovery, health, and diagnostics command parity
 

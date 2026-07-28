@@ -200,7 +200,7 @@ public sealed class BackupTabRecoveryHistoryTests : IDisposable
         new Mock<ITerminalService>().Object,
         new Mock<ISettingsService>().Object,
         new Mock<ILogger>().Object,
-        new Mock<ITagService>().Object,
+        new Mock<IPowerShellModuleClient>().Object,
         new Mock<IBackupService>().Object,
         new Mock<IServiceProvider>().Object);
 

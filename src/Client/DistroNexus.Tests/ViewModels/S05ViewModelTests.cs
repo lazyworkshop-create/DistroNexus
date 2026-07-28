@@ -118,5 +118,5 @@ public sealed class S05ViewModelTests
         return new(Instance(), network.Object, dialogs, new DistroNexus.Core.Services.NetworkDiagnosticsService(), firewall.Object, config, status.Object, launcher ?? Mock.Of<IBrowserLauncher>());
     }
     private static Mock<IDialogService> Dialogs(bool confirm = false) { var result = new Mock<IDialogService>(); result.Setup(x => x.ShowConfirmAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(confirm); return result; }
-    private static WslInstanceViewModel Instance() => new(new WslInstance { Name = "Ubuntu", State = "Running", Version = 2 }, Mock.Of<IWslManagerService>(), Mock.Of<ITerminalService>(), Mock.Of<ISettingsService>(), Mock.Of<ILogger>(), Mock.Of<ITagService>(), Mock.Of<IBackupService>(), Mock.Of<IServiceProvider>());
+    private static WslInstanceViewModel Instance() => new(new WslInstance { Name = "Ubuntu", State = "Running", Version = 2 }, Mock.Of<IWslManagerService>(), Mock.Of<ITerminalService>(), Mock.Of<ISettingsService>(), Mock.Of<ILogger>(), Mock.Of<IPowerShellModuleClient>(), Mock.Of<IBackupService>(), Mock.Of<IServiceProvider>());
 }

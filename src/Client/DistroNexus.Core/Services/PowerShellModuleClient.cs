@@ -10,6 +10,10 @@ namespace DistroNexus.Core.Services;
 public sealed class PowerShellModuleClient : IPowerShellModuleClient
 {
     private const string GetInstanceTagsCommand = "Get-DistroNexusInstanceTag";
+    private const string AddInstanceTagCommand = "Add-DistroNexusInstanceTag";
+    private const string SetInstanceTagsCommand = "Set-DistroNexusInstanceTag";
+    private const string RemoveInstanceTagCommand = "Remove-DistroNexusInstanceTag";
+    private const string RenameInstanceTagsCommand = "Rename-DistroNexusInstanceTags";
     private readonly IPowerShellService _powerShellService;
 
     public PowerShellModuleClient(IPowerShellService powerShellService)
@@ -43,6 +47,50 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
         }
 
         return DeserializeTagResults(result.Output);
+    }
+
+    /// <inheritdoc />
+    public Task AddInstanceTagAsync(string name, string tag, CancellationToken cancellationToken = default) =>
+        ExecuteTagMutationAsync(AddInstanceTagCommand, new Dictionary<string, object>
+        {
+            ["Name"] = name,
+            ["Tag"] = tag
+        }, cancellationToken);
+
+    /// <inheritdoc />
+    public Task SetInstanceTagsAsync(string name, IReadOnlyList<string> tags, CancellationToken cancellationToken = default) =>
+        ExecuteTagMutationAsync(SetInstanceTagsCommand, new Dictionary<string, object>
+        {
+            ["Name"] = name,
+            ["Tags"] = tags.ToArray()
+        }, cancellationToken);
+
+    /// <inheritdoc />
+    public Task RemoveInstanceTagAsync(string name, string tag, CancellationToken cancellationToken = default) =>
+        ExecuteTagMutationAsync(RemoveInstanceTagCommand, new Dictionary<string, object>
+        {
+            ["Name"] = name,
+            ["Tag"] = tag
+        }, cancellationToken);
+
+    /// <inheritdoc />
+    public Task RenameInstanceTagsAsync(string oldName, string newName, CancellationToken cancellationToken = default) =>
+        ExecuteTagMutationAsync(RenameInstanceTagsCommand, new Dictionary<string, object>
+        {
+            ["OldName"] = oldName,
+            ["NewName"] = newName
+        }, cancellationToken);
+
+    private async Task ExecuteTagMutationAsync(
+        string command,
+        Dictionary<string, object> parameters,
+        CancellationToken cancellationToken)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(command, parameters, cancellationToken: cancellationToken);
+        if (!result.Success)
+        {
+            throw result.Exception ?? new InvalidOperationException(result.Error ?? "The DistroNexus module operation failed.");
+        }
     }
 
     private static IReadOnlyList<DistroNexusInstanceTagResult> DeserializeTagResults(string output)

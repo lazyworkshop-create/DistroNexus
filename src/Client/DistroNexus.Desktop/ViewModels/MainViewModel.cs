@@ -34,7 +34,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<MainViewModel> _logger;
     private readonly IWslEventWatcher _wslEventWatcher;
-    private readonly ITagService _tagService;
+    private readonly IPowerShellModuleClient _moduleClient;
     private readonly IBackupService _backupService;
     private readonly IDockerIntegrationService _dockerIntegrationService;
     private readonly IDialogService _dialogService;
@@ -112,7 +112,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         IServiceProvider serviceProvider,
         ILogger<MainViewModel> logger,
         IWslEventWatcher wslEventWatcher,
-        ITagService tagService,
+        IPowerShellModuleClient moduleClient,
         IBackupService backupService,
         IDockerIntegrationService dockerIntegrationService,
         IDialogService dialogService)
@@ -125,7 +125,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _wslEventWatcher = wslEventWatcher ?? throw new ArgumentNullException(nameof(wslEventWatcher));
-        _tagService = tagService ?? throw new ArgumentNullException(nameof(tagService));
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _backupService = backupService ?? throw new ArgumentNullException(nameof(backupService));
         _dockerIntegrationService = dockerIntegrationService ?? throw new ArgumentNullException(nameof(dockerIntegrationService));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
@@ -296,7 +296,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 Instances.Clear();
                 foreach (var instance in instances)
                 {
-                    var vm = new WslInstanceViewModel(instance, _wslManager, _terminalService, _settingsService, _logger, _tagService, _backupService, _serviceProvider);
+                    var vm = new WslInstanceViewModel(instance, _wslManager, _terminalService, _settingsService, _logger, _moduleClient, _backupService, _serviceProvider);
                     vm.RefreshRequested += (s, e) => _ = RefreshAsync();
                     vm.TagsChanged += (s, e) => _ = RefreshAvailableTagsAsync();
                     Instances.Add(vm);
@@ -351,7 +351,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 if (ct.IsCancellationRequested) return;
                 try
                 {
-                    var tags = await _tagService.GetTagsAsync(vm.Name);
+                    var tags = (await _moduleClient.GetInstanceTagsAsync(vm.Name)).SingleOrDefault()?.Tags ?? [];
                     await Application.Current.Dispatcher.InvokeAsync(() =>
                     {
                         vm.Tags.Clear();
@@ -380,7 +380,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         try
         {
-            var allTags = await _tagService.GetAllTagsAsync();
+            var allTags = (await _moduleClient.GetInstanceTagsAsync())
+                .SelectMany(result => result.Tags)
+                .Distinct(StringComparer.OrdinalIgnoreCase);
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 // Preserve selection of currently selected tags

@@ -157,7 +157,6 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<IWorkspaceActionHandler>(sp => new WorkspaceActionHandler(WorkspaceActionType.PodmanCompose, sp.GetRequiredService<IWorkspaceRuntime>(), sp.GetRequiredService<IWorkspaceActionCapabilityGate>()));
                     services.AddSingleton<IWorkspaceService, WorkspaceService>();
                     services.AddSingleton<IWorkspaceShortcutWriter, WorkspaceShortcutWriter>();
-                    services.AddSingleton<ITagService, TagService>();
                     services.AddSingleton<IWslEventWatcher, WslEventWatcher>();
                     services.AddSingleton<IWslCliRunner, WslCliRunner>();
                     services.AddPlatformCapabilities();

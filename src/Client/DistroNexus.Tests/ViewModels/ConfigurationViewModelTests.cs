@@ -128,7 +128,7 @@ public class ConfigurationViewModelTests
     {
         var instanceModel = new WslInstance { Name = "Ubuntu", State = "Running", Version = 2 };
         var instance = new WslInstanceViewModel(instanceModel, Mock.Of<IWslManagerService>(), Mock.Of<ITerminalService>(),
-            Mock.Of<ISettingsService>(), Mock.Of<ILogger>(), Mock.Of<ITagService>(), Mock.Of<IBackupService>(), Mock.Of<IServiceProvider>());
+            Mock.Of<ISettingsService>(), Mock.Of<ILogger>(), Mock.Of<IPowerShellModuleClient>(), Mock.Of<IBackupService>(), Mock.Of<IServiceProvider>());
         var bytes = Encoding.UTF8.GetBytes("[custom]\nx=y\n"); var source = LosslessIniDocument.Parse(bytes);
         var service = new Mock<IDistributionConfigurationService>();
         service.Setup(s => s.ReadAsync("Ubuntu", It.IsAny<CancellationToken>())).ReturnsAsync(
@@ -165,7 +165,7 @@ public class ConfigurationViewModelTests
     public async Task DistributionTab_AllowsEnablingSystemdWhenHostCapabilityAndWsl2AreSupported()
     {
         var instance = new WslInstanceViewModel(new WslInstance { Name = "Ubuntu", State = "Stopped", Version = 2 }, Mock.Of<IWslManagerService>(), Mock.Of<ITerminalService>(),
-            Mock.Of<ISettingsService>(), Mock.Of<ILogger>(), Mock.Of<ITagService>(), Mock.Of<IBackupService>(), Mock.Of<IServiceProvider>());
+            Mock.Of<ISettingsService>(), Mock.Of<ILogger>(), Mock.Of<IPowerShellModuleClient>(), Mock.Of<IBackupService>(), Mock.Of<IServiceProvider>());
         var source = LosslessIniDocument.Parse(Encoding.UTF8.GetBytes("[boot]\nsystemd=false\n"));
         var service = new Mock<IDistributionConfigurationService>();
         service.Setup(s => s.ReadAsync("Ubuntu", It.IsAny<CancellationToken>())).ReturnsAsync(new ConfigurationDocument<DistributionConfigurationSettings>(new(new Dictionary<string, string> { ["boot.systemd"] = "false" }), source, [], 0, "fp", RestartScope.Instance, source.ToString()));
@@ -300,7 +300,7 @@ public class ConfigurationViewModelTests
     }
 
     private static WslInstanceViewModel NewInstance() => new(new WslInstance { Name = "Ubuntu", State = "Stopped", Version = 2 }, Mock.Of<IWslManagerService>(), Mock.Of<ITerminalService>(),
-        Mock.Of<ISettingsService>(), Mock.Of<ILogger>(), Mock.Of<ITagService>(), Mock.Of<IBackupService>(), Mock.Of<IServiceProvider>());
+        Mock.Of<ISettingsService>(), Mock.Of<ILogger>(), Mock.Of<IPowerShellModuleClient>(), Mock.Of<IBackupService>(), Mock.Of<IServiceProvider>());
 
     private static Mock<IDistributionConfigurationService> ReadableConfigurationService(LosslessIniDocument source)
     {

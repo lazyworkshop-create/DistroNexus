@@ -41,7 +41,6 @@ public partial class InstanceDetailViewModel : ObservableObject, IAsyncDisposabl
         IBackupService backupService,
         IRecoveryPointService recoveryPointService,
         IWslConfigService wslConfigService,
-        ITagService tagService,
         IDialogService dialogService,
         IDistributionConfigurationService distributionConfigurationService,
         IPlatformCapabilityService platformCapabilityService,
