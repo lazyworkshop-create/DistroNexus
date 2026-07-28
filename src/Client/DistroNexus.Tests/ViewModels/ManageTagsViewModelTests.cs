@@ -17,9 +17,10 @@ public sealed class ManageTagsViewModelTests
         moduleClient
             .Setup(client => client.SetInstanceTagsAsync("Ubuntu", It.Is<IReadOnlyList<string>>(tags => tags.SequenceEqual(new[] { "prod", "docker" })), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        var wslManager = Instances("Ubuntu");
+        moduleClient.Setup(client => client.GetInstancesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new WslInstance { Name = "Ubuntu", State = "Running" }]);
         var item = new TagItemViewModel("dev", 1) { PendingName = "prod", IsRenaming = true };
-        var viewModel = new ManageTagsViewModel(moduleClient.Object, wslManager.Object, Mock.Of<IDialogService>());
+        var viewModel = new ManageTagsViewModel(moduleClient.Object, Mock.Of<IDialogService>());
 
         await viewModel.RenameTagCommand.ExecuteAsync(item);
 
@@ -38,7 +39,8 @@ public sealed class ManageTagsViewModelTests
         var dialogs = new Mock<IDialogService>(MockBehavior.Strict);
         dialogs.Setup(service => service.ShowConfirmAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
         var item = new TagItemViewModel("dev", 1);
-        var viewModel = new ManageTagsViewModel(moduleClient.Object, Instances("Ubuntu").Object, dialogs.Object);
+        moduleClient.Setup(client => client.GetInstancesAsync(It.IsAny<CancellationToken>())).ReturnsAsync([new WslInstance { Name = "Ubuntu" }]);
+        var viewModel = new ManageTagsViewModel(moduleClient.Object, dialogs.Object);
         viewModel.Tags.Add(item);
 
         await viewModel.DeleteTagCommand.ExecuteAsync(item);
@@ -55,7 +57,8 @@ public sealed class ManageTagsViewModelTests
         moduleClient.Setup(client => client.RemoveInstanceTagAsync("Ubuntu", "test", It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         var dialogs = new Mock<IDialogService>(MockBehavior.Strict);
         dialogs.Setup(service => service.ShowConfirmAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
-        var viewModel = new ManageTagsViewModel(moduleClient.Object, Instances("Ubuntu").Object, dialogs.Object);
+        moduleClient.Setup(client => client.GetInstancesAsync(It.IsAny<CancellationToken>())).ReturnsAsync([new WslInstance { Name = "Ubuntu" }]);
+        var viewModel = new ManageTagsViewModel(moduleClient.Object, dialogs.Object);
         viewModel.Tags.Add(new TagItemViewModel("dev", 1) { IsSelected = true });
         viewModel.Tags.Add(new TagItemViewModel("test", 1) { IsSelected = true });
 
@@ -78,11 +81,10 @@ public sealed class ManageTagsViewModelTests
         moduleClient
             .Setup(client => client.GetInstanceTagsAsync("Ubuntu", It.IsAny<CancellationToken>()))
             .ReturnsAsync([new DistroNexusInstanceTagResult("Ubuntu", ["dev", "docker"])]);
-        var wslManager = new Mock<IWslManagerService>(MockBehavior.Strict);
-        wslManager
-            .Setup(service => service.GetInstancesAsync(It.IsAny<CancellationToken>()))
+        moduleClient
+            .Setup(client => client.GetInstancesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([new WslInstance { Name = "Ubuntu", State = "Running" }]);
-        var viewModel = new ManageTagsViewModel(moduleClient.Object, wslManager.Object, Mock.Of<IDialogService>());
+        var viewModel = new ManageTagsViewModel(moduleClient.Object, Mock.Of<IDialogService>());
 
         await viewModel.LoadAsync();
 
@@ -95,11 +97,4 @@ public sealed class ManageTagsViewModelTests
         moduleClient.Verify(client => client.GetInstanceTagsAsync("Ubuntu", It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    private static Mock<IWslManagerService> Instances(params string[] names)
-    {
-        var manager = new Mock<IWslManagerService>(MockBehavior.Strict);
-        manager.Setup(service => service.GetInstancesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(names.Select(name => new WslInstance { Name = name, State = "Running" }).ToList());
-        return manager;
-    }
 }

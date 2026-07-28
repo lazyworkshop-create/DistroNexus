@@ -8,6 +8,60 @@ namespace DistroNexus.Tests.Services;
 public sealed class PowerShellModuleClientTests
 {
     [Fact]
+    public async Task GetInstancesAsync_UsesTheRegisteredCmdletAndMapsModuleResults()
+    {
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(service => service.ExecuteModuleCmdletAsync(
+                "Get-DistroNexusInstance", null, It.Is<ModuleCallOptions>(options => options.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "[{\"Name\":\"Ubuntu\",\"State\":\"Running\",\"Version\":2,\"BasePath\":\"C:\\\\WSL\\\\Ubuntu\",\"DiskSize\":123,\"Distribution\":\"Ubuntu\"}]" });
+        var client = new PowerShellModuleClient(powerShell.Object);
+
+        var instance = Assert.Single(await client.GetInstancesAsync());
+
+        Assert.Equal("Ubuntu", instance.Name);
+        Assert.Equal("Running", instance.State);
+        Assert.Equal(2, instance.Version);
+        Assert.Equal("C:\\WSL\\Ubuntu", instance.InstallPath);
+        Assert.Equal(123, instance.Size);
+        powerShell.Verify(service => service.ExecuteModuleCmdletAsync(
+            "Get-DistroNexusInstance", null, It.Is<ModuleCallOptions>(options => options.ParseAsJson), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData("Start-DistroNexusInstance", "StartInstanceAsync")]
+    [InlineData("Stop-DistroNexusInstance", "StopInstanceAsync")]
+    public async Task InstanceMutation_UsesItsFixedRegisteredCmdlet(string command, string method)
+    {
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(service => service.ExecuteModuleCmdletAsync(command,
+                It.Is<Dictionary<string, object>>(parameters => (string)parameters["Name"] == "Ubuntu"), null,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "True" });
+        var client = new PowerShellModuleClient(powerShell.Object);
+
+        var result = method == "StartInstanceAsync"
+            ? await client.StartInstanceAsync("Ubuntu")
+            : await client.StopInstanceAsync("Ubuntu");
+
+        Assert.True(result);
+        powerShell.VerifyAll();
+    }
+
+    [Fact]
+    public async Task GetInstancesAsync_PreservesCancellation()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
+        powerShell.Setup(service => service.ExecuteModuleCmdletAsync("Get-DistroNexusInstance", null,
+                It.IsAny<ModuleCallOptions>(), cancellation.Token))
+            .Returns(Task.FromCanceled<PowerShellScriptResult>(cancellation.Token));
+        var client = new PowerShellModuleClient(powerShell.Object);
+
+        await Assert.ThrowsAsync<TaskCanceledException>(() => client.GetInstancesAsync(cancellation.Token));
+    }
+
+    [Fact]
     public async Task GetInstanceTagsAsync_UsesTheRegisteredCmdletAndDeserializesAnArray()
     {
         var powerShell = new Mock<IPowerShellService>(MockBehavior.Strict);
@@ -142,10 +196,13 @@ public sealed class PowerShellModuleClientTests
         Assert.Equal(
             [
                 nameof(IPowerShellModuleClient.AddInstanceTagAsync),
+                nameof(IPowerShellModuleClient.GetInstancesAsync),
                 nameof(IPowerShellModuleClient.GetInstanceTagsAsync),
                 nameof(IPowerShellModuleClient.RemoveInstanceTagAsync),
                 nameof(IPowerShellModuleClient.RenameInstanceTagsAsync),
-                nameof(IPowerShellModuleClient.SetInstanceTagsAsync)
+                nameof(IPowerShellModuleClient.SetInstanceTagsAsync),
+                nameof(IPowerShellModuleClient.StartInstanceAsync),
+                nameof(IPowerShellModuleClient.StopInstanceAsync)
             ],
             methods.Select(method => method.Name).Order());
         Assert.DoesNotContain(methods, method => method.Name.Contains("Script", StringComparison.OrdinalIgnoreCase));

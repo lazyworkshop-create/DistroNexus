@@ -14,6 +14,7 @@ public partial class InstallWizardWorkflowViewModel : ObservableObject
 {
     private readonly ICatalogService _catalogService;
     private readonly IWslManagerService _wslManager;
+    private readonly IPowerShellModuleClient _moduleClient;
     private readonly ISettingsService _settingsService;
     private readonly ITemplateService _templateService;
     private readonly ILogger<InstallWizardWorkflowViewModel> _logger;
@@ -30,12 +31,14 @@ public partial class InstallWizardWorkflowViewModel : ObservableObject
     public InstallWizardWorkflowViewModel(
         ICatalogService catalogService,
         IWslManagerService wslManager,
+        IPowerShellModuleClient moduleClient,
         ISettingsService settingsService,
         ITemplateService templateService,
         ILogger<InstallWizardWorkflowViewModel> logger)
     {
         _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
         _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _templateService = templateService ?? throw new ArgumentNullException(nameof(templateService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -52,7 +55,7 @@ public partial class InstallWizardWorkflowViewModel : ObservableObject
 
         // Add steps in order
         workflow.AddStep(new SelectDistributionStep(_catalogService, _templateService, _logger));
-        workflow.AddStep(new InstallPathStep(_settingsService, _wslManager, _logger));
+        workflow.AddStep(new InstallPathStep(_settingsService, _moduleClient, _logger));
         workflow.AddStep(new UserConfigurationStep(_settingsService, _logger));
         workflow.AddStep(new SelectTemplateStep(_templateService, _logger));
         workflow.AddStep(new TemplateOptionsStep());

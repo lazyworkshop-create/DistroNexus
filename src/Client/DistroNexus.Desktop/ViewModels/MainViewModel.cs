@@ -289,7 +289,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
-            var instances = await _wslManager.GetInstancesAsync(combinedCts.Token);
+            var instances = await _moduleClient.GetInstancesAsync(combinedCts.Token);
             
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {

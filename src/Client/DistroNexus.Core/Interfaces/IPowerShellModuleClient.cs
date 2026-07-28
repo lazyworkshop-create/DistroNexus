@@ -1,3 +1,5 @@
+using DistroNexus.Core.Models;
+
 namespace DistroNexus.Core.Interfaces;
 
 /// <summary>
@@ -5,6 +7,15 @@ namespace DistroNexus.Core.Interfaces;
 /// </summary>
 public interface IPowerShellModuleClient
 {
+    /// <summary>Gets installed WSL instances through the module contract.</summary>
+    Task<IReadOnlyList<WslInstance>> GetInstancesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Starts an instance through the module contract.</summary>
+    Task<bool> StartInstanceAsync(string name, CancellationToken cancellationToken = default);
+
+    /// <summary>Stops an instance through the module contract.</summary>
+    Task<bool> StopInstanceAsync(string name, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Gets tags for every instance, or for one instance when <paramref name="name"/> is supplied.
     /// </summary>

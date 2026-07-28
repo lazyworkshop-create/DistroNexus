@@ -1,11 +1,36 @@
 using System.Reflection;
 using System.Reflection.Emit;
+using DistroNexus.Core.Interfaces;
 using DistroNexus.Desktop.ViewModels;
 
 namespace DistroNexus.Tests.ViewModels;
 
 public sealed class WslInstanceTagRoutingTests
 {
+    [Fact]
+    public void MainInstanceLoad_CallsTheTypedModuleClient()
+    {
+        var stateMachine = typeof(MainViewModel)
+            .GetNestedTypes(BindingFlags.NonPublic)
+            .Single(type => type.Name.StartsWith("<LoadInstancesAsync>", StringComparison.Ordinal));
+        var moveNext = stateMachine.GetMethod("MoveNext", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+        Assert.Contains(nameof(IPowerShellModuleClient.GetInstancesAsync), CalledMethodNames(moveNext));
+    }
+
+    [Theory]
+    [InlineData("StopAsync")]
+    [InlineData("ExportInstanceAsync")]
+    public void StopOperations_CallTheTypedModuleClient(string operation)
+    {
+        var stateMachine = typeof(WslInstanceViewModel)
+            .GetNestedTypes(BindingFlags.NonPublic)
+            .Single(type => type.Name.StartsWith($"<{operation}>", StringComparison.Ordinal));
+        var moveNext = stateMachine.GetMethod("MoveNext", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+        Assert.Contains(nameof(IPowerShellModuleClient.StopInstanceAsync), CalledMethodNames(moveNext));
+    }
+
     [Theory]
     [InlineData("AddTagAsync", "AddInstanceTagAsync")]
     [InlineData("RemoveTagAsync", "RemoveInstanceTagAsync")]

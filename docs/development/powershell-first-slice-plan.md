@@ -12,7 +12,7 @@
 
 ## Dependency Order
 
-S01 -> S02 -> S03 -> S04 -> S09 -> S05 -> S06 -> S07 -> S08
+S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S05 -> S06 -> S07 -> S08
 
 ## Slice S01: Verified module contract and migration baseline
 
@@ -305,6 +305,65 @@ Bridge-backed list/start/stop instance module contract and focused tests.
 ### Out of Scope
 
 Desktop lifecycle consumer migration and all other instance lifecycle commands.
+
+## Slice S10: Instance list and stop presentation-client migration
+
+### Status
+
+Committed
+
+### Objective
+
+The WPF consumers of instance listing and stopping invoke fixed typed PowerShell module operations instead of `IWslManagerService`.
+
+### Sources
+
+FR-001, FR-004, FR-005, FR-006; S09; lifecycle UI inventory; `IPowerShellModuleClient` and named view model evidence.
+
+### Dependencies
+
+S09.
+
+### Allowed Paths
+
+`src/Client/DistroNexus.Core/Interfaces/IPowerShellModuleClient.cs`, `src/Client/DistroNexus.Core/Services/PowerShellModuleClient.cs`, `src/Client/DistroNexus.Desktop/ViewModels/MainViewModel.cs`, `src/Client/DistroNexus.Desktop/ViewModels/WslInstanceViewModel.cs`, `src/Client/DistroNexus.Desktop/ViewModels/ManageTagsViewModel.cs`, `src/Client/DistroNexus.Desktop/ViewModels/WslConfigSectionViewModel.cs`, `src/Client/DistroNexus.Desktop/ViewModels/SettingsViewModel.cs`, `src/Client/DistroNexus.Desktop/Wizard/Steps/InstallPathStep.cs`, `src/Client/DistroNexus.Desktop/Wizard/InstallWizardWorkflowViewModel.cs`, directly impacted xUnit tests, plan.
+
+### Excluded Paths
+
+PowerShell public commands, WorkspaceBridge, Core `WslManagerService`, Desktop DI registration, all lifecycle operations except list/start/stop, release/publishing surfaces.
+
+### Contract and Documentation
+
+Extend the closed module client with typed list/start/stop methods only. Define typed list result conversion and cancellation/error behavior; no arbitrary command text or operation identifier may be accepted.
+
+### Implementation Scope
+
+Replace direct list/stop calls in the named consumers. Keep `IWslManagerService` where those objects still need distinct out-of-scope lifecycle methods. Replace it entirely only where no out-of-scope use remains.
+
+### Test Scope
+
+Module-client fixed command/parameter/result/cancellation tests; direct view-model behavior/routing tests for each named list/stop use; compile affected constructor fixtures.
+
+### Acceptance Criteria
+
+- Named WPF list/stop call sites have no direct `GetInstancesAsync` or `StopInstanceAsync` invocation.
+- The typed client maps only to exported Get/Start/Stop instance commands and accepts no arbitrary command text.
+- All directly affected view-model tests and typed-client tests pass.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~PowerShellModuleClient|FullyQualifiedName~Tag|FullyQualifiedName~InstallWizard"
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+Typed instance list/start/stop client contract and named WPF consumer migration.
+
+### Out of Scope
+
+Import/export/install/move/rename/remove/backup lifecycle behavior and their WPF consumers.
 
 ## Slice S05: Network, systemd, firewall, recovery, health, and diagnostics command parity
 

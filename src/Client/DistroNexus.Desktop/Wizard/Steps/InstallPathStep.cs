@@ -15,7 +15,7 @@ namespace DistroNexus.Desktop.Wizard.Steps;
 public partial class InstallPathStep : WizardStepBase
 {
     private readonly ISettingsService _settingsService;
-    private readonly IWslManagerService _wslManager;
+    private readonly IPowerShellModuleClient _moduleClient;
     private readonly ILogger _logger;
     private CancellationTokenSource? _validationCts;
     private System.Threading.Timer? _debounceTimer;
@@ -46,10 +46,10 @@ public partial class InstallPathStep : WizardStepBase
     [ObservableProperty]
     private bool _isValidating;
 
-    public InstallPathStep(ISettingsService settingsService, IWslManagerService wslManager, ILogger logger)
+    public InstallPathStep(ISettingsService settingsService, IPowerShellModuleClient moduleClient, ILogger logger)
     {
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
-        _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -265,7 +265,7 @@ public partial class InstallPathStep : WizardStepBase
 
         try
         {
-            var instances = await _wslManager.GetInstancesAsync();
+            var instances = await _moduleClient.GetInstancesAsync();
             return instances.Any(i => 
                 string.Equals(i.Name, Context.InstanceName, StringComparison.OrdinalIgnoreCase));
         }
@@ -501,7 +501,7 @@ public partial class InstallPathStep : WizardStepBase
         // Check for existing instances and find a unique name
         try
         {
-            var instances = await _wslManager.GetInstancesAsync();
+            var instances = await _moduleClient.GetInstancesAsync();
             while (instances.Any(i => string.Equals(i.Name, instanceName, StringComparison.OrdinalIgnoreCase)))
             {
                 instanceName = $"{baseName}-{counter}";

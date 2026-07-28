@@ -1,6 +1,7 @@
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using DistroNexus.Desktop.Wizard;
+using DistroNexus.Desktop.Wizard.Steps;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -10,6 +11,7 @@ public class InstallWizardWorkflowViewModelTests
 {
     private readonly Mock<ICatalogService> _mockCatalogService;
     private readonly Mock<IWslManagerService> _mockWslManagerService;
+    private readonly Mock<IPowerShellModuleClient> _mockModuleClient;
     private readonly Mock<ISettingsService> _mockSettingsService;
     private readonly Mock<ITemplateService> _mockTemplateService;
     private readonly Mock<ILogger<InstallWizardWorkflowViewModel>> _mockLogger;
@@ -18,6 +20,7 @@ public class InstallWizardWorkflowViewModelTests
     {
         _mockCatalogService = new Mock<ICatalogService>();
         _mockWslManagerService = new Mock<IWslManagerService>();
+        _mockModuleClient = new Mock<IPowerShellModuleClient>();
         _mockSettingsService = new Mock<ISettingsService>();
         _mockTemplateService = new Mock<ITemplateService>();
         _mockLogger = new Mock<ILogger<InstallWizardWorkflowViewModel>>();
@@ -108,11 +111,29 @@ public class InstallWizardWorkflowViewModelTests
         Assert.Null(viewModel.Workflow.Context.SelectedTemplate);
     }
 
+    [Fact]
+    public async Task InstallPathStep_UsesTheModuleClientToChooseAUniqueQuickInstallName()
+    {
+        _mockSettingsService.Setup(service => service.LoadSettings()).Returns(new GlobalSettings { DefaultInstallPath = "C:\\WSL" });
+        _mockModuleClient.Setup(client => client.GetInstancesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new WslInstance { Name = "Ubuntu" }, new WslInstance { Name = "Ubuntu-1" }]);
+        var step = new InstallPathStep(_mockSettingsService.Object, _mockModuleClient.Object, Mock.Of<ILogger>())
+        {
+            Context = new WizardContext { SelectedDistribution = new DistroPackage { Name = "Ubuntu" } }
+        };
+
+        await step.ApplyQuickInstallDefaultsAsync();
+
+        Assert.Equal("Ubuntu-2", step.Context.InstanceName);
+        _mockModuleClient.Verify(client => client.GetInstancesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     private InstallWizardWorkflowViewModel CreateViewModel()
     {
         return new InstallWizardWorkflowViewModel(
             _mockCatalogService.Object,
             _mockWslManagerService.Object,
+            _mockModuleClient.Object,
             _mockSettingsService.Object,
             _mockTemplateService.Object,
             _mockLogger.Object);

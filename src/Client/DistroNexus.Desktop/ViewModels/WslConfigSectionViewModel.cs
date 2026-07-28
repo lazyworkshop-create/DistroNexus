@@ -17,7 +17,7 @@ namespace DistroNexus.Desktop.ViewModels;
 public partial class WslConfigSectionViewModel : ObservableObject
 {
     private readonly IWslConfigService _wslConfigService;
-    private readonly IWslManagerService _wslManager;
+    private readonly IPowerShellModuleClient _moduleClient;
     private readonly IDialogService _dialogService;
     private readonly IWslConfigurationService _configurationService;
     private readonly IPlatformCapabilityService _capabilityService;
@@ -124,13 +124,13 @@ public partial class WslConfigSectionViewModel : ObservableObject
 
     public WslConfigSectionViewModel(
         IWslConfigService wslConfigService,
-        IWslManagerService wslManager,
+        IPowerShellModuleClient moduleClient,
         IDialogService dialogService,
         IWslConfigurationService configurationService,
         IPlatformCapabilityService capabilityService)
     {
         _wslConfigService = wslConfigService ?? throw new ArgumentNullException(nameof(wslConfigService));
-        _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
         _configurationService = configurationService;
         _capabilityService = capabilityService;
@@ -193,7 +193,7 @@ public partial class WslConfigSectionViewModel : ObservableObject
             if (changes.Count == 0) return;
             var preview = await _configurationService.PreviewAsync(changes, _fingerprint!, _availableCapabilities);
             DesiredRaw = preview.DesiredRaw;
-            var running = (await _wslManager.GetInstancesAsync()).Where(i => i.IsRunning).Select(i => i.Name).ToArray();
+            var running = (await _moduleClient.GetInstancesAsync()).Where(i => i.IsRunning).Select(i => i.Name).ToArray();
             var message = string.Format(L("Configuration_SavePreview"),
                 string.Join(", ", preview.ChangedSettings),
                 running.Length == 0 ? L("Configuration_NoRunningInstances") : string.Join(", ", running),

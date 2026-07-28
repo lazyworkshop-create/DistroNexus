@@ -14,12 +14,44 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string SetInstanceTagsCommand = "Set-DistroNexusInstanceTag";
     private const string RemoveInstanceTagCommand = "Remove-DistroNexusInstanceTag";
     private const string RenameInstanceTagsCommand = "Rename-DistroNexusInstanceTags";
+    private const string GetInstancesCommand = "Get-DistroNexusInstance";
+    private const string StartInstanceCommand = "Start-DistroNexusInstance";
+    private const string StopInstanceCommand = "Stop-DistroNexusInstance";
     private readonly IPowerShellService _powerShellService;
 
     public PowerShellModuleClient(IPowerShellService powerShellService)
     {
         _powerShellService = powerShellService ?? throw new ArgumentNullException(nameof(powerShellService));
     }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<WslInstance>> GetInstancesAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(
+            GetInstancesCommand,
+            options: new ModuleCallOptions { ParseAsJson = true },
+            cancellationToken: cancellationToken);
+
+        if (!result.Success)
+        {
+            throw result.Exception ?? new InvalidOperationException(result.Error ?? "The DistroNexus module operation failed.");
+        }
+
+        if (string.IsNullOrWhiteSpace(result.Output))
+        {
+            return Array.Empty<WslInstance>();
+        }
+
+        return DeserializeInstances(result.Output);
+    }
+
+    /// <inheritdoc />
+    public Task<bool> StartInstanceAsync(string name, CancellationToken cancellationToken = default) =>
+        ExecuteInstanceMutationAsync(StartInstanceCommand, name, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<bool> StopInstanceAsync(string name, CancellationToken cancellationToken = default) =>
+        ExecuteInstanceMutationAsync(StopInstanceCommand, name, cancellationToken);
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<DistroNexusInstanceTagResult>> GetInstanceTagsAsync(
@@ -93,6 +125,25 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
         }
     }
 
+    private async Task<bool> ExecuteInstanceMutationAsync(string command, string name, CancellationToken cancellationToken)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(
+            command,
+            new Dictionary<string, object> { ["Name"] = name },
+            cancellationToken: cancellationToken);
+        if (!result.Success)
+        {
+            throw result.Exception ?? new InvalidOperationException(result.Error ?? "The DistroNexus module operation failed.");
+        }
+
+        if (bool.TryParse(result.Output.Trim(), out var success))
+        {
+            return success;
+        }
+
+        throw new InvalidOperationException("The DistroNexus module operation returned an invalid instance lifecycle result.");
+    }
+
     private static IReadOnlyList<DistroNexusInstanceTagResult> DeserializeTagResults(string output)
     {
         var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
@@ -106,4 +157,33 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
         var result = JsonSerializer.Deserialize<DistroNexusInstanceTagResult>(output, options);
         return result is null ? Array.Empty<DistroNexusInstanceTagResult>() : [result];
     }
+
+    private static IReadOnlyList<WslInstance> DeserializeInstances(string output)
+    {
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        using var document = JsonDocument.Parse(output);
+        IReadOnlyList<ModuleInstanceResult?> results = document.RootElement.ValueKind == JsonValueKind.Array
+            ? JsonSerializer.Deserialize<List<ModuleInstanceResult?>>(output, options) ?? []
+            : [JsonSerializer.Deserialize<ModuleInstanceResult>(output, options)];
+
+        return results.OfType<ModuleInstanceResult>().Select(result => new WslInstance
+        {
+            Name = result.Name ?? string.Empty,
+            State = result.State ?? string.Empty,
+            Version = result.Version,
+            InstallPath = result.BasePath ?? string.Empty,
+            Size = result.DiskSize,
+            Distribution = result.Distribution ?? string.Empty,
+            LastAccessed = result.InstallTime
+        }).ToArray();
+    }
+
+    private sealed record ModuleInstanceResult(
+        string? Name,
+        string? State,
+        int Version,
+        string? BasePath,
+        long DiskSize,
+        DateTime? InstallTime,
+        string? Distribution);
 }

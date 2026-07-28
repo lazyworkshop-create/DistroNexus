@@ -40,7 +40,6 @@ public partial class TagItemViewModel : ObservableObject
 public partial class ManageTagsViewModel : ObservableObject
 {
     private readonly IPowerShellModuleClient _moduleClient;
-    private readonly IWslManagerService _wslManager;
     private readonly IDialogService _dialogService;
     private bool _initialized;
 
@@ -52,11 +51,9 @@ public partial class ManageTagsViewModel : ObservableObject
 
     public ManageTagsViewModel(
         IPowerShellModuleClient moduleClient,
-        IWslManagerService wslManager,
         IDialogService dialogService)
     {
         _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
-        _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
     }
 
@@ -73,7 +70,7 @@ public partial class ManageTagsViewModel : ObservableObject
         IsLoading = true;
         try
         {
-            var instances = await _wslManager.GetInstancesAsync();
+            var instances = await _moduleClient.GetInstancesAsync();
             var tagResults = await _moduleClient.GetInstanceTagsAsync();
             var allTags = tagResults.SelectMany(result => result.Tags).Distinct(StringComparer.OrdinalIgnoreCase);
 
@@ -120,7 +117,7 @@ public partial class ManageTagsViewModel : ObservableObject
         IsLoading = true;
         try
         {
-            var instances = await _wslManager.GetInstancesAsync();
+            var instances = await _moduleClient.GetInstancesAsync();
             foreach (var inst in instances)
             {
                 var currentTags = (await _moduleClient.GetInstanceTagsAsync(inst.Name)).SingleOrDefault()?.Tags ?? [];
@@ -164,7 +161,7 @@ public partial class ManageTagsViewModel : ObservableObject
         IsLoading = true;
         try
         {
-            var instances = await _wslManager.GetInstancesAsync();
+            var instances = await _moduleClient.GetInstancesAsync();
             foreach (var inst in instances)
             {
                 await _moduleClient.RemoveInstanceTagAsync(inst.Name, item.Name);
@@ -198,7 +195,7 @@ public partial class ManageTagsViewModel : ObservableObject
         IsLoading = true;
         try
         {
-            var instances = await _wslManager.GetInstancesAsync();
+            var instances = await _moduleClient.GetInstancesAsync();
             foreach (var item in selected)
             {
                 foreach (var inst in instances)

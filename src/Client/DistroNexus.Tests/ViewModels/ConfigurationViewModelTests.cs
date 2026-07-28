@@ -87,19 +87,19 @@ public class ConfigurationViewModelTests
     [Fact]
     public async Task GlobalConfiguration_SaveMarksRestartPendingWithoutShuttingDownWsl()
     {
-        var (vm, configuration, dialogs, manager) = NewGlobalConfigurationViewModel();
+        var (vm, configuration, dialogs, moduleClient) = NewGlobalConfigurationViewModel();
         var preview = new ConfigurationPreview(string.Empty, "[wsl2]\nmemory=4GB\n", ["wsl2.memory"], RestartScope.Wsl);
         configuration.Setup(s => s.PreviewAsync(It.IsAny<IReadOnlyDictionary<string, string?>>(), "fp", It.IsAny<IReadOnlySet<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(preview);
         configuration.Setup(s => s.SaveAsync(It.IsAny<IReadOnlyDictionary<string, string?>>(), "fp", It.IsAny<IReadOnlySet<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ConfigurationSaveResult("new", null, RestartScope.Wsl));
-        manager.Setup(s => s.GetInstancesAsync(It.IsAny<CancellationToken>())).ReturnsAsync([new WslInstance { Name = "Ubuntu", State = "Running" }]);
+        moduleClient.Setup(s => s.GetInstancesAsync(It.IsAny<CancellationToken>())).ReturnsAsync([new WslInstance { Name = "Ubuntu", State = "Running" }]);
 
         await vm.LoadAsync();
         vm.Fields.Single(f => f.Id == "wsl2.memory").Desired = "4GB";
         await vm.SaveAndMarkPendingRestartCommand.ExecuteAsync(null);
 
-        manager.Verify(s => s.ShutdownWslAsync(It.IsAny<CancellationToken>()), Times.Never);
+        moduleClient.Verify(s => s.GetInstancesAsync(It.IsAny<CancellationToken>()), Times.Once);
         Assert.Equal(DistroNexus.Desktop.Properties.Resources.ResourceManager.GetString("Configuration_PendingWslRestart"), vm.PendingRestart);
         dialogs.Verify(d => d.ShowAlertAsync(It.IsAny<string>(), It.Is<string>(m => m.Contains("shutdown is pending", StringComparison.OrdinalIgnoreCase))), Times.Once);
     }
@@ -318,7 +318,7 @@ public class ConfigurationViewModelTests
         return capability;
     }
 
-    private static (WslConfigSectionViewModel ViewModel, Mock<IWslConfigurationService> Configuration, Mock<IDialogService> Dialogs, Mock<IWslManagerService> Manager)
+    private static (WslConfigSectionViewModel ViewModel, Mock<IWslConfigurationService> Configuration, Mock<IDialogService> Dialogs, Mock<IPowerShellModuleClient> ModuleClient)
         NewGlobalConfigurationViewModel(Mock<IWslConfigService>? legacyService = null)
     {
         legacyService ??= new Mock<IWslConfigService>();
@@ -330,11 +330,11 @@ public class ConfigurationViewModelTests
             new ConfigurationDocument<WslConfigurationSettings>(new(new Dictionary<string, string>()), source, [], 0, "fp", RestartScope.Wsl, source.ToString()));
         var dialogs = new Mock<IDialogService>();
         dialogs.Setup(d => d.ShowConfirmAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
-        var manager = new Mock<IWslManagerService>();
-        manager.Setup(s => s.GetInstancesAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
-        var vm = new WslConfigSectionViewModel(legacyService.Object, manager.Object, dialogs.Object,
+        var moduleClient = new Mock<IPowerShellModuleClient>();
+        moduleClient.Setup(s => s.GetInstancesAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        var vm = new WslConfigSectionViewModel(legacyService.Object, moduleClient.Object, dialogs.Object,
             configuration.Object, SupportedGlobalCapabilities().Object);
-        return (vm, configuration, dialogs, manager);
+        return (vm, configuration, dialogs, moduleClient);
     }
 
     private static Mock<IPlatformCapabilityService> SupportedGlobalCapabilities()

@@ -324,7 +324,7 @@ public partial class WslInstanceViewModel : ObservableObject
 
             _logger.LogInformation("Stopping instance {Name}", Name);
             
-            var success = await _wslManager.StopInstanceAsync(Name);
+            var success = await _moduleClient.StopInstanceAsync(Name);
             
             if (success)
             {
@@ -755,7 +755,7 @@ public partial class WslInstanceViewModel : ObservableObject
             IsBusy = true;
             try
             {
-                var stopped = await _wslManager.StopInstanceAsync(Name);
+                var stopped = await _moduleClient.StopInstanceAsync(Name);
                 if (!stopped)
                 {
                     await dialogSvc.ShowAlertAsync(
