@@ -2,6 +2,8 @@ using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using DistroNexus.Core.Services;
 using Moq;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace DistroNexus.Tests.Services;
 
@@ -118,6 +120,70 @@ public sealed class SystemdNetworkServicesTests
         Assert.NotNull(captured);
         runner.Verify(x => x.RunAsync(It.Is<ProcessRequest>(r => r.Arguments.Contains("sudo") && r.Arguments.Contains("--non-interactive")), It.IsAny<CancellationToken>()), Times.Once);
         Assert.DoesNotContain(captured!.Arguments, x => x.Contains("-c", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task DurableGrant_IsSingleUseAcrossFreshServicesAndRejectsExpiredOrForeignIdentityWithoutRunning()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "dn-systemd-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var now = new TestClock(DateTimeOffset.UtcNow);
+            var runs = 0;
+            var runner = new Mock<IProcessRunner>();
+            runner.Setup(x => x.RunAsync(It.IsAny<ProcessRequest>(), It.IsAny<CancellationToken>())).Callback(() => runs++).ReturnsAsync(new ProcessResult(0, "Id=ssh.service\nActiveState=active\nLoadState=loaded", "", TimeSpan.Zero, false, false, false, 1));
+            var a = new SystemdService(runner.Object, CapabilityService(), DistributionConfig(), root, now, () => "sid-a", x => x, x => x);
+            var preview = await a.PreviewAsync("Ubuntu", new SystemdUnitName("ssh.service"), SystemdAction.Start, SystemdScope.User);
+            var b = new SystemdService(runner.Object, CapabilityService(), DistributionConfig(), root, now, () => "sid-a", x => x, x => x);
+            Assert.True((await b.ExecuteAsync(preview.PreviewToken)).Succeeded);
+            Assert.False((await a.ExecuteAsync(preview.PreviewToken)).Succeeded);
+            var foreign = await a.PreviewAsync("Ubuntu", new SystemdUnitName("ssh.service"), SystemdAction.Start, SystemdScope.User);
+            var other = new SystemdService(runner.Object, CapabilityService(), DistributionConfig(), root, now, () => "sid-b", x => x, x => x);
+            Assert.False((await other.ExecuteAsync(foreign.PreviewToken)).Succeeded);
+            var expired = await a.PreviewAsync("Ubuntu", new SystemdUnitName("ssh.service"), SystemdAction.Start, SystemdScope.User);
+            now.Advance(TimeSpan.FromMinutes(3));
+            Assert.False((await a.ExecuteAsync(expired.PreviewToken)).Succeeded);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public async Task DurableGrant_RejectsForgedBoundMismatchAndParallelReplayWithoutExtraRunnerExecution()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "dn-systemd-matrix-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root);
+        try
+        {
+            var now = new TestClock(DateTimeOffset.UtcNow); var calls = 0;
+            var runner = new Mock<IProcessRunner>(); runner.Setup(x => x.RunAsync(It.IsAny<ProcessRequest>(), It.IsAny<CancellationToken>())).Callback(() => calls++).ReturnsAsync(new ProcessResult(0, "Id=ssh.service\nActiveState=active\nLoadState=loaded", "", TimeSpan.Zero, false, false, false, 1));
+            SystemdService New() => new(runner.Object, CapabilityService(), DistributionConfig(), root, now, () => "sid-a", x => x, x => x);
+            var token = new string('a', 32); var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
+            File.WriteAllText(Path.Combine(root, hash + ".bin"), "not-json");
+            Assert.False((await New().ExecuteAsync(token)).Succeeded); Assert.Equal(0, calls);
+            var bad = "{\"Preview\":{\"InstanceName\":\"Other\",\"Unit\":{\"Value\":\"ssh.service\"},\"Action\":\"Start\",\"Scope\":\"User\",\"RequiresLinuxPrivilege\":false,\"Effects\":[],\"Preconditions\":[],\"PreviewToken\":\"different\"},\"ExpiresAt\":\"2099-01-01T00:00:00+00:00\",\"Sid\":\"sid-a\"}";
+            File.WriteAllText(Path.Combine(root, hash + ".bin"), bad);
+            Assert.False((await New().ExecuteAsync(token)).Succeeded); Assert.Equal(0, calls);
+            var preview = await New().PreviewAsync("Ubuntu", new SystemdUnitName("ssh.service"), SystemdAction.Start, SystemdScope.User);
+            var results = await Task.WhenAll(New().ExecuteAsync(preview.PreviewToken), New().ExecuteAsync(preview.PreviewToken));
+            Assert.Equal(1, results.Count(x => x.Succeeded)); Assert.Equal(2, calls);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public async Task DurableGrantCleanup_RemovesExpiredAndCorruptRecordsWithinBound()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "dn-systemd-cleanup-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root);
+        try
+        {
+            var expired = Path.Combine(root, new string('b', 64) + ".bin"); var corrupt = Path.Combine(root, new string('c', 64) + ".bin");
+            File.WriteAllText(expired, "expired"); File.WriteAllText(corrupt, "corrupt"); File.SetLastWriteTimeUtc(expired, DateTime.UtcNow.AddMinutes(-11)); File.SetLastWriteTimeUtc(corrupt, DateTime.UtcNow.AddMinutes(-11));
+            var runner = new Mock<IProcessRunner>();
+            var service = new SystemdService(runner.Object, CapabilityService(), DistributionConfig(), root, new TestClock(DateTimeOffset.UtcNow), () => "sid-a", x => x, x => x);
+            await service.PreviewAsync("Ubuntu", new SystemdUnitName("ssh.service"), SystemdAction.Start, SystemdScope.User);
+            Assert.False(File.Exists(expired)); Assert.False(File.Exists(corrupt));
+        }
+        finally { Directory.Delete(root, true); }
     }
 
     [Fact]
@@ -264,6 +330,7 @@ public sealed class SystemdNetworkServicesTests
         capability.Setup(x => x.GetInstanceSnapshotAsync("Ubuntu", false, It.IsAny<CancellationToken>())).ReturnsAsync(new InstanceCapabilitySnapshot(new InstancePlatformFacts("Ubuntu", 2, null, null, true, true), new Dictionary<CapabilityId, CapabilityResult> { [CapabilityId.InstanceSystemd] = result }, DateTimeOffset.UtcNow));
         return capability.Object;
     }
+    private sealed class TestClock(DateTimeOffset initial) : TimeProvider { private DateTimeOffset value = initial; public override DateTimeOffset GetUtcNow() => value; public void Advance(TimeSpan span) => value += span; }
     private static IDistributionConfigurationService DistributionConfig(string? user = "dev")
     {
         var configuration = new Mock<IDistributionConfigurationService>();

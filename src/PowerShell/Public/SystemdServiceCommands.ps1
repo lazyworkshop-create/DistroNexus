@@ -11,15 +11,12 @@ function Get-DistroNexusSystemdServicePreview {
 
 function Invoke-DistroNexusSystemdService {
     [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
-    param([Parameter(Mandatory, ValueFromPipeline)][psobject]$Preview)
+    param([Parameter(Mandatory, ValueFromPipeline)][ValidatePattern('^[a-fA-F0-9]{32}$')][string]$PreviewToken)
     process {
-        if ([string]::IsNullOrWhiteSpace($Preview.PreviewToken) -or -not $Preview.Unit -or -not $Preview.Action) {
-            throw 'A current Core-issued systemd operation preview is required.'
-        }
-        if (-not $PSCmdlet.ShouldProcess("$($Preview.InstanceName):$($Preview.Unit.Value)", [string]$Preview.Action)) {
+        if (-not $PSCmdlet.ShouldProcess('reviewed systemd operation', 'Execute')) {
             return [PSCustomObject]@{ Succeeded = $false; OutcomeCode = 'WhatIf'; PreviewToken = $null }
         }
-        Invoke-DistroNexusWorkspaceBridge -Operation 'systemd.execute.v1' -Payload @{ Preview = $Preview }
+        Invoke-DistroNexusWorkspaceBridge -Operation 'systemd.execute.v1' -Payload @{ PreviewToken = $PreviewToken }
     }
 }
 
@@ -28,7 +25,7 @@ function Start-DistroNexusSystemdService {
     param([Parameter(Mandatory)][ValidatePattern('^[^\r\n\0]+$')][string]$Name, [Parameter(Mandatory)][ValidatePattern('^[A-Za-z0-9@_.-]+\.(service|socket)$')][string]$Unit, [ValidateSet('User', 'System')][string]$Scope = 'User')
     $preview = Get-DistroNexusSystemdServicePreview -Name $Name -Unit $Unit -Action Start -Scope $Scope
     if ($WhatIfPreference) { return $preview }
-    if ($PSCmdlet.ShouldProcess("${Name}:$Unit", 'Start systemd service')) { Invoke-DistroNexusSystemdService -Preview $preview -Confirm:$false }
+    if ($PSCmdlet.ShouldProcess("${Name}:$Unit", 'Start systemd service')) { Invoke-DistroNexusSystemdService -PreviewToken $preview.PreviewToken -Confirm:$false }
 }
 
 function Stop-DistroNexusSystemdService {
@@ -36,7 +33,7 @@ function Stop-DistroNexusSystemdService {
     param([Parameter(Mandatory)][ValidatePattern('^[^\r\n\0]+$')][string]$Name, [Parameter(Mandatory)][ValidatePattern('^[A-Za-z0-9@_.-]+\.(service|socket)$')][string]$Unit, [ValidateSet('User', 'System')][string]$Scope = 'User')
     $preview = Get-DistroNexusSystemdServicePreview -Name $Name -Unit $Unit -Action Stop -Scope $Scope
     if ($WhatIfPreference) { return $preview }
-    if ($PSCmdlet.ShouldProcess("${Name}:$Unit", 'Stop systemd service')) { Invoke-DistroNexusSystemdService -Preview $preview -Confirm:$false }
+    if ($PSCmdlet.ShouldProcess("${Name}:$Unit", 'Stop systemd service')) { Invoke-DistroNexusSystemdService -PreviewToken $preview.PreviewToken -Confirm:$false }
 }
 
 function Restart-DistroNexusSystemdService {
@@ -44,7 +41,7 @@ function Restart-DistroNexusSystemdService {
     param([Parameter(Mandatory)][ValidatePattern('^[^\r\n\0]+$')][string]$Name, [Parameter(Mandatory)][ValidatePattern('^[A-Za-z0-9@_.-]+\.(service|socket)$')][string]$Unit, [ValidateSet('User', 'System')][string]$Scope = 'User')
     $preview = Get-DistroNexusSystemdServicePreview -Name $Name -Unit $Unit -Action Restart -Scope $Scope
     if ($WhatIfPreference) { return $preview }
-    if ($PSCmdlet.ShouldProcess("${Name}:$Unit", 'Restart systemd service')) { Invoke-DistroNexusSystemdService -Preview $preview -Confirm:$false }
+    if ($PSCmdlet.ShouldProcess("${Name}:$Unit", 'Restart systemd service')) { Invoke-DistroNexusSystemdService -PreviewToken $preview.PreviewToken -Confirm:$false }
 }
 
 function Enable-DistroNexusSystemdService {
@@ -52,7 +49,7 @@ function Enable-DistroNexusSystemdService {
     param([Parameter(Mandatory)][ValidatePattern('^[^\r\n\0]+$')][string]$Name, [Parameter(Mandatory)][ValidatePattern('^[A-Za-z0-9@_.-]+\.(service|socket)$')][string]$Unit, [ValidateSet('User', 'System')][string]$Scope = 'User')
     $preview = Get-DistroNexusSystemdServicePreview -Name $Name -Unit $Unit -Action Enable -Scope $Scope
     if ($WhatIfPreference) { return $preview }
-    if ($PSCmdlet.ShouldProcess("${Name}:$Unit", 'Enable systemd service')) { Invoke-DistroNexusSystemdService -Preview $preview -Confirm:$false }
+    if ($PSCmdlet.ShouldProcess("${Name}:$Unit", 'Enable systemd service')) { Invoke-DistroNexusSystemdService -PreviewToken $preview.PreviewToken -Confirm:$false }
 }
 
 function Disable-DistroNexusSystemdService {
@@ -60,7 +57,7 @@ function Disable-DistroNexusSystemdService {
     param([Parameter(Mandatory)][ValidatePattern('^[^\r\n\0]+$')][string]$Name, [Parameter(Mandatory)][ValidatePattern('^[A-Za-z0-9@_.-]+\.(service|socket)$')][string]$Unit, [ValidateSet('User', 'System')][string]$Scope = 'User')
     $preview = Get-DistroNexusSystemdServicePreview -Name $Name -Unit $Unit -Action Disable -Scope $Scope
     if ($WhatIfPreference) { return $preview }
-    if ($PSCmdlet.ShouldProcess("${Name}:$Unit", 'Disable systemd service')) { Invoke-DistroNexusSystemdService -Preview $preview -Confirm:$false }
+    if ($PSCmdlet.ShouldProcess("${Name}:$Unit", 'Disable systemd service')) { Invoke-DistroNexusSystemdService -PreviewToken $preview.PreviewToken -Confirm:$false }
 }
 
 function Reload-DistroNexusSystemdService {
@@ -68,5 +65,5 @@ function Reload-DistroNexusSystemdService {
     param([Parameter(Mandatory)][ValidatePattern('^[^\r\n\0]+$')][string]$Name, [Parameter(Mandatory)][ValidatePattern('^[A-Za-z0-9@_.-]+\.(service|socket)$')][string]$Unit, [ValidateSet('User', 'System')][string]$Scope = 'User')
     $preview = Get-DistroNexusSystemdServicePreview -Name $Name -Unit $Unit -Action Reload -Scope $Scope
     if ($WhatIfPreference) { return $preview }
-    if ($PSCmdlet.ShouldProcess("${Name}:$Unit", 'Reload systemd service')) { Invoke-DistroNexusSystemdService -Preview $preview -Confirm:$false }
+    if ($PSCmdlet.ShouldProcess("${Name}:$Unit", 'Reload systemd service')) { Invoke-DistroNexusSystemdService -PreviewToken $preview.PreviewToken -Confirm:$false }
 }

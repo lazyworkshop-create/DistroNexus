@@ -149,6 +149,12 @@ No route accepts a program, command line, Windows path, URI, environment expansi
 
 `explorer.wslconfig.v1` accepts no payload and resolves only the current user's existing normal `.wslconfig` file at execution time, rejecting reparse/abnormal paths. `explorer.recovery-point.v1` accepts exactly `{ Id: Guid }`; the Bridge re-finds the point and uses existing `RecoveryPathSafety.IsOwnedPointDirectory` immediately before fixed Explorer start. Public `Open-DistroNexusWslConfigFile` and `Open-DistroNexusRecoveryPointFolder -Id` use `ShouldProcess`; their results are path-free outcome records. The typed client exposes only no-input WSL config reveal and ID-based recovery reveal. No route accepts a path, URI, executable or arguments.
 
+### Systemd durable preview-grant and presentation-client contract amendment
+
+`ServicesTabViewModel` directly holds `ISystemdService`; its in-memory preview map cannot cross the fresh PowerShell/Bridge process used by typed module calls. Slice S29 keeps the existing fixed list/details/journal/preview routes but replaces execute input with only an opaque durable preview token. The Core grant is same-user protected, hash-addressed, short-lived and atomically single-use; it binds instance, normalized unit, action, scope, privilege requirement and issue/expiry. Execution reloads it and repeats capability/precondition checks before the existing fixed systemctl path. No client submits unit/action/effects at execute.
+
+`IPowerShellModuleClient` exposes only typed list/details/journal/preview/invoke methods. ServicesTab uses those methods, retains presentation/filter/clipboard state only, confirms returned effects/preconditions, executes the returned token then refreshes. Public command mutations retain `ShouldProcess`; convenience commands remain thin preview/invoke facades. Exact v1 payload validation rejects unknown fields, invalid names/units/search/line bounds, forged/expired/reused/foreign tokens and no action occurs on rejection. No generic WSL command, shell text, arbitrary unit type expansion or credential storage is introduced.
+
 ## Data and Execution Semantics
 
 - Data ownership and retention: Core owns settings, cache, catalog, backup, recovery, templates, and configuration persistence. Desktop never writes those stores. Existing retention and cleanup policies remain unchanged.

@@ -365,6 +365,7 @@ public sealed class ContainerRuntimeServiceTests
         public Task<SystemdServiceDetails?> GetDetailsAsync(string instanceName, SystemdUnitName unit, SystemdScope scope, CancellationToken cancellationToken = default) => Task.FromResult<SystemdServiceDetails?>(null);
         public Task<SystemdOperationPreview> PreviewAsync(string instanceName, SystemdUnitName unit, SystemdAction action, SystemdScope scope, CancellationToken cancellationToken = default) => Task.FromResult(new SystemdOperationPreview(instanceName, unit, action, scope, false, [], [], $"token-{Interlocked.Increment(ref _previewNumber)}"));
         public Task<SystemdOperationResult> ExecuteAsync(SystemdOperationPreview preview, CancellationToken cancellationToken = default) => Task.FromResult(new SystemdOperationResult(true, "Succeeded", null));
+        public Task<SystemdOperationResult> ExecuteAsync(string previewToken, CancellationToken cancellationToken = default) => Task.FromResult(new SystemdOperationResult(true, "Succeeded", null));
     }
     private sealed class ManualTimeProvider(DateTimeOffset now) : TimeProvider
     {

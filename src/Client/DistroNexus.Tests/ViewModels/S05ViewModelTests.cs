@@ -13,8 +13,8 @@ public sealed class S05ViewModelTests
     [Fact]
     public async Task Services_UsesSelectedScopeAndFiltersRunningItems()
     {
-        var service = new Mock<ISystemdService>();
-        service.Setup(x => x.ListAsync("Ubuntu", SystemdScope.System, It.IsAny<CancellationToken>())).ReturnsAsync([
+        var service = new Mock<IPowerShellModuleClient>();
+        service.Setup(x => x.GetSystemdServicesAsync("Ubuntu", SystemdScope.System, It.IsAny<CancellationToken>())).ReturnsAsync([
             new SystemdServiceInfo(new SystemdUnitName("ssh.service"), "ssh", "active", "running", "enabled", "loaded", SystemdScope.System),
             new SystemdServiceInfo(new SystemdUnitName("cron.service"), "cron", "inactive", "dead", "enabled", "loaded", SystemdScope.System)]);
         var vm = new ServicesTabViewModel(Instance(), service.Object, Dialogs().Object) { RunningOnly = true };
@@ -26,27 +26,27 @@ public sealed class S05ViewModelTests
     public async Task Services_ActionUsesPreviewThenExplicitConfirmation()
     {
         var item = new SystemdServiceInfo(new SystemdUnitName("ssh.service"), "ssh", "active", "running", "enabled", "loaded", SystemdScope.User);
-        var service = new Mock<ISystemdService>();
-        service.Setup(x => x.PreviewAsync("Ubuntu", item.Name, SystemdAction.Stop, SystemdScope.User, It.IsAny<CancellationToken>())).ReturnsAsync(new SystemdOperationPreview("Ubuntu", item.Name, SystemdAction.Stop, SystemdScope.User, false, [], [], "token"));
-        service.Setup(x => x.ExecuteAsync(It.IsAny<SystemdOperationPreview>(), It.IsAny<CancellationToken>())).ReturnsAsync(new SystemdOperationResult(true, "Succeeded", item));
-        service.Setup(x => x.ListAsync("Ubuntu", It.IsAny<SystemdScope>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        var service = new Mock<IPowerShellModuleClient>();
+        service.Setup(x => x.GetSystemdServicePreviewAsync("Ubuntu", item.Name, SystemdAction.Stop, SystemdScope.User, It.IsAny<CancellationToken>())).ReturnsAsync(new SystemdOperationPreview("Ubuntu", item.Name, SystemdAction.Stop, SystemdScope.User, false, [], [], "token"));
+        service.Setup(x => x.InvokeSystemdServiceAsync("token", It.IsAny<CancellationToken>())).ReturnsAsync(new SystemdOperationResult(true, "Succeeded", item));
+        service.Setup(x => x.GetSystemdServicesAsync("Ubuntu", It.IsAny<SystemdScope>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
         var dialogs = Dialogs(true); var vm = new ServicesTabViewModel(Instance(), service.Object, dialogs.Object);
         await vm.StopCommand.ExecuteAsync(item);
         dialogs.Verify(x => x.ShowConfirmAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Once);
-        service.Verify(x => x.ExecuteAsync(It.IsAny<SystemdOperationPreview>(), It.IsAny<CancellationToken>()), Times.Once);
+        service.Verify(x => x.InvokeSystemdServiceAsync("token", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task Services_JournalSeverityFilter_AppliesAfterBoundedServiceQuery()
     {
         var item = new SystemdServiceInfo(new SystemdUnitName("ssh.service"), "ssh", "active", "running", "enabled", "loaded", SystemdScope.System);
-        var service = new Mock<ISystemdService>();
-        service.Setup(x => x.GetDetailsAsync("Ubuntu", item.Name, item.Scope, It.IsAny<CancellationToken>())).ReturnsAsync(new SystemdServiceDetails(item, [], null));
-        service.Setup(x => x.GetJournalAsync("Ubuntu", item.Name, item.Scope, "", 200, It.IsAny<CancellationToken>())).ReturnsAsync([new SystemdJournalEntry("", "Info", "ready"), new SystemdJournalEntry("", "Error", "failed")]);
+        var service = new Mock<IPowerShellModuleClient>();
+        service.Setup(x => x.GetSystemdServiceDetailsAsync("Ubuntu", item.Name, item.Scope, It.IsAny<CancellationToken>())).ReturnsAsync(new SystemdServiceDetails(item, [], null));
+        service.Setup(x => x.GetSystemdServiceJournalAsync("Ubuntu", item.Name, item.Scope, "", 200, It.IsAny<CancellationToken>())).ReturnsAsync([new SystemdJournalEntry("", "Info", "ready"), new SystemdJournalEntry("", "Error", "failed")]);
         var vm = new ServicesTabViewModel(Instance(), service.Object, Dialogs().Object) { JournalSeverity = "Error" };
         await vm.LoadDetailsCommand.ExecuteAsync(item);
         var entry = Assert.Single(vm.Journal); Assert.Equal("Error", entry.Severity);
-        service.Verify(x => x.GetJournalAsync("Ubuntu", item.Name, item.Scope, "", 200, It.IsAny<CancellationToken>()), Times.Once);
+        service.Verify(x => x.GetSystemdServiceJournalAsync("Ubuntu", item.Name, item.Scope, "", 200, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

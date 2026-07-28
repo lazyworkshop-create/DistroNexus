@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Security.Principal;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 
@@ -14,8 +15,13 @@ public sealed class SystemdService : ISystemdService
     private readonly IProcessRunner _runner;
     private readonly IPlatformCapabilityService _capabilities;
     private readonly IDistributionConfigurationService? _distributionConfiguration;
-    private readonly Dictionary<string, SystemdOperationPreview> _previews = new(StringComparer.Ordinal);
-    public SystemdService(IProcessRunner runner, IPlatformCapabilityService capabilities, IDistributionConfigurationService? distributionConfiguration = null) => (_runner, _capabilities, _distributionConfiguration) = (runner, capabilities, distributionConfiguration);
+    private readonly string _grantRoot;
+    private readonly TimeProvider _clock;
+    private readonly Func<string> _sid;
+    private readonly Func<byte[], byte[]> _protect;
+    private readonly Func<byte[], byte[]> _unprotect;
+    public SystemdService(IProcessRunner runner, IPlatformCapabilityService capabilities, IDistributionConfigurationService? distributionConfiguration = null, string? grantRoot = null, TimeProvider? clock = null, Func<string>? sid = null, Func<byte[], byte[]>? protect = null, Func<byte[], byte[]>? unprotect = null)
+    { (_runner, _capabilities, _distributionConfiguration) = (runner, capabilities, distributionConfiguration); _grantRoot = grantRoot ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DistroNexus", "systemd-grants"); _clock = clock ?? TimeProvider.System; _sid = sid ?? CurrentSid; _protect = protect ?? Protect; _unprotect = unprotect ?? Unprotect; }
 
     public async Task<IReadOnlyList<SystemdServiceInfo>> ListAsync(string instanceName, SystemdScope scope, CancellationToken cancellationToken = default)
     {
@@ -53,12 +59,17 @@ public sealed class SystemdService : ISystemdService
         var preview = new SystemdOperationPreview(instanceName, unit, action, scope, requires,
             [$"{action} {unit.Value} in the {scope.ToString().ToLowerInvariant()} service manager."],
             requires ? ["This action uses sudo --non-interactive. Configure passwordless sudo for the permitted systemctl action; DistroNexus never requests or stores a Linux password."] : [], Guid.NewGuid().ToString("N"));
-        _previews[preview.PreviewToken] = preview;
+        PersistGrant(preview);
         return preview;
     }
     public async Task<SystemdOperationResult> ExecuteAsync(SystemdOperationPreview preview, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(preview.PreviewToken) || !_previews.Remove(preview.PreviewToken, out var expected) || expected != preview) return new(false, "PreviewRequired", null, "DN-8001: Generate and confirm a current operation preview before executing.");
+        return await ExecuteAsync(preview.PreviewToken, cancellationToken).ConfigureAwait(false);
+    }
+    public async Task<SystemdOperationResult> ExecuteAsync(string previewToken, CancellationToken cancellationToken = default)
+    {
+        var preview = ConsumeGrant(previewToken);
+        if (preview is null) return new(false, "PreviewRequired", null, "DN-8001: Generate and confirm a current operation preview before executing.");
         await EnsureAvailableAsync(preview.InstanceName, cancellationToken).ConfigureAwait(false);
         var result = await RunAsync(preview.InstanceName, preview.Scope, [ToVerb(preview.Action), preview.Unit.Value], cancellationToken, preview.RequiresLinuxPrivilege).ConfigureAwait(false);
         if (result.ExitCode != 0)
@@ -73,6 +84,39 @@ public sealed class SystemdService : ISystemdService
             return new(false, "PostconditionFailed", details?.Service, "DN-8003: systemd did not report the expected service state after the operation.");
         return new(true, "Succeeded", details?.Service);
     }
+    private void PersistGrant(SystemdOperationPreview preview)
+    {
+        Directory.CreateDirectory(_grantRoot);
+        CleanupGrants();
+        var tokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(preview.PreviewToken)));
+        var record = new DurableSystemdGrant(preview, _clock.GetUtcNow().AddMinutes(2), _sid());
+        var target = Path.Combine(_grantRoot, tokenHash + ".bin"); var temp = target + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        var plain = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(record));
+        File.WriteAllBytes(temp, _protect(plain)); File.Move(temp, target, true);
+    }
+    private void CleanupGrants()
+    {
+        try
+        {
+            foreach (var file in Directory.EnumerateFiles(_grantRoot, "*.bin").OrderBy(x => x, StringComparer.Ordinal).Take(256))
+                if (File.GetLastWriteTimeUtc(file) < _clock.GetUtcNow().UtcDateTime.AddMinutes(-10)) File.Delete(file);
+            foreach (var file in Directory.EnumerateFiles(_grantRoot, "*.consumed.*").Take(256))
+                if (File.GetLastWriteTimeUtc(file) < _clock.GetUtcNow().UtcDateTime.AddMinutes(-10)) File.Delete(file);
+        }
+        catch (IOException) { } catch (UnauthorizedAccessException) { }
+    }
+    private SystemdOperationPreview? ConsumeGrant(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token) || token.Length != 32 || token.Any(c => !Uri.IsHexDigit(c))) return null;
+        var path = Path.Combine(_grantRoot, Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token))) + ".bin");
+        if (!File.Exists(path)) return null;
+        var consumed = path + ".consumed." + Guid.NewGuid().ToString("N");
+        try { File.Move(path, consumed); var grant = JsonSerializer.Deserialize<DurableSystemdGrant>(Encoding.UTF8.GetString(_unprotect(File.ReadAllBytes(consumed)))); File.Delete(consumed); return grant is { ExpiresAt: var expiry } && expiry > _clock.GetUtcNow() && grant.Sid == _sid() && grant.Preview.PreviewToken == token ? grant.Preview : null; } catch (IOException) { return null; } catch (CryptographicException) { return null; } catch (JsonException) { return null; }
+    }
+    private static byte[] Protect(byte[] bytes) => ProtectedData.Protect(bytes, null, DataProtectionScope.CurrentUser);
+    private static byte[] Unprotect(byte[] bytes) => ProtectedData.Unprotect(bytes, null, DataProtectionScope.CurrentUser);
+    private static string CurrentSid() => WindowsIdentity.GetCurrent().User?.Value ?? throw new InvalidOperationException("Current user identity is unavailable.");
+    private sealed record DurableSystemdGrant(SystemdOperationPreview Preview, DateTimeOffset ExpiresAt, string Sid);
     private async Task EnsureAvailableAsync(string instance, CancellationToken ct)
     {
         var snapshot = await _capabilities.GetInstanceSnapshotAsync(instance, false, ct).ConfigureAwait(false);

@@ -55,6 +55,11 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string GetMonitoringSnapshotCommand = "Get-DistroNexusMonitoringSnapshot";
     private const string GetMonitoringProcessActionPreviewCommand = "Get-DistroNexusMonitoringProcessActionPreview";
     private const string InvokeMonitoringProcessActionCommand = "Invoke-DistroNexusMonitoringProcessAction";
+    private const string GetSystemdServicesCommand = "Get-DistroNexusSystemdService";
+    private const string GetSystemdDetailsCommand = "Get-DistroNexusSystemdServiceDetail";
+    private const string GetSystemdJournalCommand = "Get-DistroNexusSystemdServiceJournal";
+    private const string GetSystemdPreviewCommand = "Get-DistroNexusSystemdServicePreview";
+    private const string InvokeSystemdCommand = "Invoke-DistroNexusSystemdService";
     private const string OpenWslConfigFileCommand = "Open-DistroNexusWslConfigFile";
     private const string OpenRecoveryPointFolderCommand = "Open-DistroNexusRecoveryPointFolder";
     private readonly IPowerShellService _powerShellService;
@@ -408,6 +413,16 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     { ValidateToken(snapshotToken, nameof(snapshotToken)); if (processId <= 1 || action is not (MonitoringProcessAction.Terminate or MonitoringProcessAction.Kill or MonitoringProcessAction.Renice)) throw new ArgumentOutOfRangeException(nameof(processId)); return ExecuteJsonAsync<MonitoringProcessActionPreview>(GetMonitoringProcessActionPreviewCommand, new() { ["SnapshotToken"] = snapshotToken, ["ProcessId"] = processId, ["Action"] = action.ToString() }, cancellationToken); }
     public Task<ProcessActionResult> InvokeMonitoringProcessActionAsync(string previewToken, CancellationToken cancellationToken = default)
     { ValidateToken(previewToken, nameof(previewToken)); return ExecuteJsonAsync<ProcessActionResult>(InvokeMonitoringProcessActionCommand, new() { ["PreviewToken"] = previewToken }, cancellationToken); }
+    public Task<IReadOnlyList<SystemdServiceInfo>> GetSystemdServicesAsync(string name, SystemdScope scope, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); return ExecuteJsonAsync<IReadOnlyList<SystemdServiceInfo>>(GetSystemdServicesCommand, new() { ["Name"] = name, ["Scope"] = scope.ToString() }, cancellationToken); }
+    public Task<SystemdServiceDetails?> GetSystemdServiceDetailsAsync(string name, SystemdUnitName unit, SystemdScope scope, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); return ExecuteJsonAsync<SystemdServiceDetails?>(GetSystemdDetailsCommand, new() { ["Name"] = name, ["Unit"] = unit.Value, ["Scope"] = scope.ToString() }, cancellationToken); }
+    public Task<IReadOnlyList<SystemdJournalEntry>> GetSystemdServiceJournalAsync(string name, SystemdUnitName unit, SystemdScope scope, string? search, int lineLimit, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); if (lineLimit is < 1 or > 5000) throw new ArgumentOutOfRangeException(nameof(lineLimit)); return ExecuteJsonAsync<IReadOnlyList<SystemdJournalEntry>>(GetSystemdJournalCommand, new() { ["Name"] = name, ["Unit"] = unit.Value, ["Scope"] = scope.ToString(), ["Search"] = search, ["LineLimit"] = lineLimit }, cancellationToken); }
+    public Task<SystemdOperationPreview> GetSystemdServicePreviewAsync(string name, SystemdUnitName unit, SystemdAction action, SystemdScope scope, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); return ExecuteJsonAsync<SystemdOperationPreview>(GetSystemdPreviewCommand, new() { ["Name"] = name, ["Unit"] = unit.Value, ["Action"] = action.ToString(), ["Scope"] = scope.ToString() }, cancellationToken); }
+    public Task<SystemdOperationResult> InvokeSystemdServiceAsync(string previewToken, CancellationToken cancellationToken = default)
+    { ValidateToken(previewToken, nameof(previewToken)); return ExecuteJsonAsync<SystemdOperationResult>(InvokeSystemdCommand, new() { ["PreviewToken"] = previewToken }, cancellationToken); }
     public Task<FixedExplorerResult> OpenWslConfigFileAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<FixedExplorerResult>(OpenWslConfigFileCommand, null, cancellationToken);
     public Task<FixedExplorerResult> OpenRecoveryPointFolderAsync(Guid id, CancellationToken cancellationToken = default)
     { if (id == Guid.Empty) throw new ArgumentException("A recovery point id is required.", nameof(id)); return ExecuteJsonAsync<FixedExplorerResult>(OpenRecoveryPointFolderCommand, new() { ["Id"] = id }, cancellationToken); }

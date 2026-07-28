@@ -10,7 +10,7 @@ public partial class ServicesTabViewModel : ObservableObject
 {
     public sealed record JournalSeverityOption(string Value, string Display);
     private readonly WslInstanceViewModel _instance;
-    private readonly ISystemdService _services;
+    private readonly IPowerShellModuleClient _services;
     private readonly IDialogService _dialogs;
     private bool _initialized;
     [ObservableProperty] private bool _isLoading;
@@ -33,7 +33,7 @@ public partial class ServicesTabViewModel : ObservableObject
     public IReadOnlyList<JournalSeverityOption> JournalSeverities { get; } =
     [new("All", R("ServicesTab_JournalAll")), new("Info", R("ServicesTab_JournalInfo")), new("Warning", R("ServicesTab_JournalWarning")), new("Error", R("ServicesTab_JournalError"))];
 
-    public ServicesTabViewModel(WslInstanceViewModel instance, ISystemdService services, IDialogService dialogs) => (_instance, _services, _dialogs) = (instance, services, dialogs);
+    public ServicesTabViewModel(WslInstanceViewModel instance, IPowerShellModuleClient services, IDialogService dialogs) => (_instance, _services, _dialogs) = (instance, services, dialogs);
     public async Task InitializeAsync() { if (_initialized) return; _initialized = true; await RefreshAsync(); }
 
     [RelayCommand]
@@ -43,7 +43,7 @@ public partial class ServicesTabViewModel : ObservableObject
         try
         {
             IReadOnlyList<SystemdScope> scopes = UserServicesOnly ? new[] { SystemdScope.User } : new[] { SelectedScope };
-            var source = (await Task.WhenAll(scopes.Select(x => _services.ListAsync(_instance.Name, x)))).SelectMany(x => x);
+            var source = (await Task.WhenAll(scopes.Select(x => _services.GetSystemdServicesAsync(_instance.Name, x)))).SelectMany(x => x);
             Items = new ObservableCollection<SystemdServiceInfo>(source.Where(x => !RunningOnly || x.ActiveState == "active").Where(x => !StoppedOnly || x.ActiveState is "inactive" or "failed").Where(x => !FailedOnly || x.ActiveState == "failed").Where(x => !EnabledOnly || x.EnabledState == "enabled").Where(x => !UserServicesOnly || x.Scope == SystemdScope.User));
         }
         catch (Exception ex) { UnavailableReason = ex.Message; Items = []; }
@@ -64,9 +64,9 @@ public partial class ServicesTabViewModel : ObservableObject
     {
         if (item is null) return;
         SelectedService = item;
-        var details = await _services.GetDetailsAsync(_instance.Name, item.Name, item.Scope);
+        var details = await _services.GetSystemdServiceDetailsAsync(_instance.Name, item.Name, item.Scope);
         Details = details is null ? string.Empty : $"{details.UnitFilePath}{Environment.NewLine}{string.Join(Environment.NewLine, details.Dependencies)}";
-        var entries = await _services.GetJournalAsync(_instance.Name, item.Name, item.Scope, JournalSearch, JournalLineLimit);
+        var entries = await _services.GetSystemdServiceJournalAsync(_instance.Name, item.Name, item.Scope, JournalSearch, JournalLineLimit);
         Journal = new ObservableCollection<SystemdJournalEntry>(entries.Where(x => JournalSeverity == "All" || string.Equals(x.Severity, JournalSeverity, StringComparison.OrdinalIgnoreCase)));
     }
     partial void OnSelectedScopeChanged(SystemdScope value) => _ = RefreshAsync();
@@ -81,10 +81,10 @@ public partial class ServicesTabViewModel : ObservableObject
         if (item is null) return;
         try
         {
-            var preview = await _services.PreviewAsync(_instance.Name, item.Name, action, item.Scope);
+            var preview = await _services.GetSystemdServicePreviewAsync(_instance.Name, item.Name, action, item.Scope);
             var message = string.Join(Environment.NewLine, preview.Effects.Concat(preview.Preconditions));
             if (!await _dialogs.ShowConfirmAsync(R("ServicesTab_ConfirmActionTitle"), message)) return;
-            var outcome = await _services.ExecuteAsync(preview);
+            var outcome = await _services.InvokeSystemdServiceAsync(preview.PreviewToken);
             if (!outcome.Succeeded) await _dialogs.ShowAlertAsync(R("ServicesTab_ActionFailedTitle"), outcome.Guidance ?? outcome.OutcomeCode);
             await RefreshAsync();
         }

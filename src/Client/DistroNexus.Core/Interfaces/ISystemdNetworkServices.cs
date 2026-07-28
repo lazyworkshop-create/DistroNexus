@@ -9,6 +9,7 @@ public interface ISystemdService
     Task<SystemdServiceDetails?> GetDetailsAsync(string instanceName, SystemdUnitName unit, SystemdScope scope, CancellationToken cancellationToken = default);
     Task<SystemdOperationPreview> PreviewAsync(string instanceName, SystemdUnitName unit, SystemdAction action, SystemdScope scope, CancellationToken cancellationToken = default);
     Task<SystemdOperationResult> ExecuteAsync(SystemdOperationPreview preview, CancellationToken cancellationToken = default);
+    Task<SystemdOperationResult> ExecuteAsync(string previewToken, CancellationToken cancellationToken = default);
 }
 
 public interface INetworkDiagnosticsService

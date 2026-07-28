@@ -12,7 +12,7 @@
 
 ## Dependency Order
 
-S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S18 -> S19 -> S20 -> S21 -> S22 -> S23 -> S24 -> {S25 blocked, S26 -> S27 -> S28} -> S06 -> S07 -> S08
+S01 -> S02 -> S03 -> S04 -> S09 -> S10 -> S11 -> S12 -> S13 -> S14 -> S15 -> S16 -> S17 -> S18 -> S19 -> S20 -> S21 -> S22 -> S23 -> S24 -> {S25 blocked, S26 -> S27 -> S28 -> S29} -> S06 -> S07 -> S08
 
 ## Slice S01: Verified module contract and migration baseline
 
@@ -1499,6 +1499,66 @@ One accepted fixed configuration/recovery reveal migration slice.
 ### Out of Scope
 
 General file browsing, recovery mutation, WSL configuration read/write migration, services/network/resources migration, runtime UAT, deployment and publishing.
+
+## Slice S29: Systemd durable module contract and services presentation migration
+
+### Status
+
+In Progress
+
+### Objective
+
+Make the fixed systemd module contract, including durable one-shot preview grants, the only ServicesTab execution path.
+
+### Sources
+
+Requirements FR-001 and FR-003 through FR-007; `docs/specs/powershell-first-design.md` Systemd durable preview-grant and presentation-client contract amendment.
+
+### Dependencies
+
+S28
+
+### Allowed Paths
+
+Narrow Systemd Core service/grant support, WorkspaceBridge Program, systemd public command files, typed module client interface/implementation, `ServicesTabViewModel`, focused Systemd/Core/Bridge/module-client/view-model/Pester tests, design and plan.
+
+### Excluded Paths
+
+Network/Resources/Podman/container, generic process/shell APIs, Linux credential storage, arbitrary unit types/commands, elevation helpers, release/publishing.
+
+### Contract and Documentation
+
+Preserve only `systemd.list.v1`, `systemd.details.v1`, `systemd.journal.v1`, `systemd.preview.v1`, `systemd.execute.v1`; execute accepts exactly PreviewToken. Public mutations retain `ShouldProcess`.
+
+### Implementation Scope
+
+Replace in-memory cross-process previews with protected same-user expiry-bound atomic grants, then migrate ServicesTab to closed typed module calls. Core repeats current capability/precondition/postcondition safeguards.
+
+### Test Scope
+
+Cover fresh preview/execute service instances, forged/expired/reused/foreign/bound-mismatch grants, strict payloads, WhatIf/decline, no execute on rejection, and module-only tab list/details/journal/confirm/refresh behavior.
+
+### Acceptance Criteria
+
+- ServicesTab has no `ISystemdService` dependency or direct systemd execution path.
+- Execute receives only an opaque Core-issued token and survives independent module processes once.
+- No generic WSL/systemctl command or credential input is exposed.
+
+### Verification Commands
+
+```text
+dotnet test src/Client/DistroNexus.Tests/DistroNexus.Tests.csproj -c Debug --filter "FullyQualifiedName~Systemd|FullyQualifiedName~ServicesTabViewModel|FullyQualifiedName~PowerShellModuleClient|FullyQualifiedName~WorkspaceBridgeProtocol"
+pwsh -NoProfile -File tests/PowerShell/TestRunner.ps1 -TestType Unit
+dotnet build src/Client/DistroNexus.slnx -c Debug
+```
+
+### Commit Boundary
+
+One accepted durable systemd module/presentation migration slice.
+
+### Out of Scope
+
+Network/resource changes, systemd installation/repair, real WSL UAT, deployment and publishing.
 
 ## Slice S06: Platform-integrated command parity
 

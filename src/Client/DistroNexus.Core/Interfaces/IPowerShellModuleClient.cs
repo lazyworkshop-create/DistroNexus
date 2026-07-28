@@ -110,6 +110,11 @@ public interface IPowerShellModuleClient
     Task<MonitoringSnapshotResult> GetMonitoringSnapshotAsync(string name, int intervalSeconds, CancellationToken cancellationToken = default);
     Task<MonitoringProcessActionPreview> GetMonitoringProcessActionPreviewAsync(string snapshotToken, int processId, MonitoringProcessAction action, CancellationToken cancellationToken = default);
     Task<ProcessActionResult> InvokeMonitoringProcessActionAsync(string previewToken, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<SystemdServiceInfo>> GetSystemdServicesAsync(string name, SystemdScope scope, CancellationToken cancellationToken = default);
+    Task<SystemdServiceDetails?> GetSystemdServiceDetailsAsync(string name, SystemdUnitName unit, SystemdScope scope, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<SystemdJournalEntry>> GetSystemdServiceJournalAsync(string name, SystemdUnitName unit, SystemdScope scope, string? search, int lineLimit, CancellationToken cancellationToken = default);
+    Task<SystemdOperationPreview> GetSystemdServicePreviewAsync(string name, SystemdUnitName unit, SystemdAction action, SystemdScope scope, CancellationToken cancellationToken = default);
+    Task<SystemdOperationResult> InvokeSystemdServiceAsync(string previewToken, CancellationToken cancellationToken = default);
     Task<FixedExplorerResult> OpenWslConfigFileAsync(CancellationToken cancellationToken = default);
     Task<FixedExplorerResult> OpenRecoveryPointFolderAsync(Guid id, CancellationToken cancellationToken = default);
 }

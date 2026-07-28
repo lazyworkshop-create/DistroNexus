@@ -59,7 +59,7 @@ public partial class InstanceDetailViewModel : ObservableObject, IAsyncDisposabl
         NetworkTab = new NetworkTabViewModel(instance, networkService, dialogService, networkDiagnostics, firewallOperationBroker, networkConfigurationService, networkStatusAdapter, browserLauncher);
         BackupTab = new BackupTabViewModel(instance, backupService, dialogService, recoveryPointService, powerShellModuleClient ?? throw new ArgumentNullException(nameof(powerShellModuleClient)));
         ConfigurationTab = new ConfigurationTabViewModel(instance, distributionConfigurationService, powerShellModuleClient ?? throw new ArgumentNullException(nameof(powerShellModuleClient)), dialogService);
-        ServicesTab = new ServicesTabViewModel(instance, systemdService, dialogService);
+        ServicesTab = new ServicesTabViewModel(instance, powerShellModuleClient ?? throw new ArgumentNullException(nameof(powerShellModuleClient)), dialogService);
         MonitorTab = new MonitorTabViewModel(instance, powerShellModuleClient ?? throw new ArgumentNullException(nameof(powerShellModuleClient)), dialogService);
     }
 

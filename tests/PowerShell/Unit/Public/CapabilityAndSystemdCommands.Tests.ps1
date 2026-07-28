@@ -38,6 +38,18 @@ Describe 'Capability and systemd PowerShell bridge adapters' -Tag 'Unit', 'Publi
         { Get-DistroNexusSystemdServicePreview -Name Ubuntu -Unit "bad.service`nnext" -Action Start } | Should -Throw
         Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 0
     }
+    It 'executes only a Core-issued token payload and never resubmits unit or action' {
+        Mock Invoke-DistroNexusWorkspaceBridge { [pscustomobject]@{ Succeeded=$true; OutcomeCode='Succeeded' } }
+        Invoke-DistroNexusSystemdService -PreviewToken '0123456789abcdef0123456789abcdef' -Confirm:$false | Out-Null
+        Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 1 -Exactly -ParameterFilter { $Operation -eq 'systemd.execute.v1' -and $Payload.Count -eq 1 -and $Payload.PreviewToken -eq '0123456789abcdef0123456789abcdef' }
+    }
+
+    It 'does not execute malformed or WhatIf preview requests' {
+        Mock Invoke-DistroNexusWorkspaceBridge { throw 'must not execute' }
+        { Invoke-DistroNexusSystemdService -PreviewToken 'bad' -Confirm:$false } | Should -Throw
+        Invoke-DistroNexusSystemdService -PreviewToken '0123456789abcdef0123456789abcdef' -WhatIf | Out-Null
+        Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 0 -Exactly
+    }
     It 'uses typed versioned detail and journal routes' {
         Mock Invoke-DistroNexusWorkspaceBridge { [pscustomobject]@{ Operation=$Operation; Payload=$Payload } }
         (Get-DistroNexusSystemdServiceDetail -Name Ubuntu -Unit demo.service).Operation | Should -Be 'systemd.details.v1'

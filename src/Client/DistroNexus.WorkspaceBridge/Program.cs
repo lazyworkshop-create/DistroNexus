@@ -565,7 +565,7 @@ async Task<IReadOnlyList<SystemdServiceInfo>> ListSystemdAsync(BridgeRequest req
 }
 async Task<IReadOnlyList<SystemdServiceInfo>> ListSystemdV1Async(BridgeRequest request) { ValidatePayload(request, ["InstanceName", "Scope"], ["InstanceName"]); return await ListSystemdAsync(request); }
 async Task<SystemdOperationPreview> PreviewSystemdV1Async(BridgeRequest request) { ValidatePayload(request, ["InstanceName", "Unit", "Action", "Scope"], ["InstanceName", "Unit", "Action"]); return await PreviewSystemdAsync(request); }
-async Task<SystemdOperationResult> ExecuteSystemdV1Async(BridgeRequest request) { ValidatePayload(request, ["Preview"], ["Preview"]); return await ExecuteSystemdAsync(request); }
+async Task<SystemdOperationResult> ExecuteSystemdV1Async(BridgeRequest request) { ValidatePayload(request, ["PreviewToken"], ["PreviewToken"]); return await ExecuteSystemdAsync(request); }
 async Task<SystemdServiceDetails?> GetSystemdDetailsV1Async(BridgeRequest request) { ValidatePayload(request, ["InstanceName", "Unit", "Scope"], ["InstanceName", "Unit"]); return await GetSystemdDetailsAsync(request); }
 async Task<IReadOnlyList<SystemdJournalEntry>> GetSystemdJournalV1Async(BridgeRequest request) { ValidatePayload(request, ["InstanceName", "Unit", "Scope", "Search", "LineLimit"], ["InstanceName", "Unit"]); return await GetSystemdJournalAsync(request); }
 async Task<SystemdOperationPreview> PreviewSystemdAsync(BridgeRequest request)
@@ -576,8 +576,8 @@ async Task<SystemdOperationPreview> PreviewSystemdAsync(BridgeRequest request)
 }
 async Task<SystemdOperationResult> ExecuteSystemdAsync(BridgeRequest request)
 {
-    var p = JsonSerializer.Deserialize<SystemdPreviewPayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("systemd preview is required.");
-    return await systemd.ExecuteAsync(p.Preview);
+    var p = JsonSerializer.Deserialize<SystemdExecutePayload>(request.Payload?.GetRawText() ?? "", options) ?? throw new ArgumentException("systemd preview token is required.");
+    return await systemd.ExecuteAsync(p.PreviewToken);
 }
 async Task<SystemdServiceDetails?> GetSystemdDetailsAsync(BridgeRequest request)
 {
@@ -872,6 +872,7 @@ public sealed record CapabilityInstancePayload(string InstanceName);
 public sealed record SystemdPayload(string InstanceName, string? Unit, SystemdAction? Action, SystemdScope Scope = SystemdScope.User);
 public sealed record SystemdJournalPayload(string InstanceName, string Unit, SystemdScope Scope = SystemdScope.User, string? Search = null, int LineLimit = 200);
 public sealed record SystemdPreviewPayload(SystemdOperationPreview Preview);
+public sealed record SystemdExecutePayload(string PreviewToken);
 public sealed record WslgInstancePayload(string InstanceName);
 public sealed record WslgActionPayload(string DiscoveryToken, string ApplicationId);
 public sealed record WslgPinPayload(string DiscoveryToken, string ApplicationId, bool Pinned);
