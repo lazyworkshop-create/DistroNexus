@@ -4,7 +4,7 @@
 
 #define MyAppName "DistroNexus"
 #ifndef MyAppVersion
-  #define MyAppVersion "2.2.1"
+  #define MyAppVersion "2.3.0"
 #endif
 #define MyAppPublisher "LazyWorkshop"
 #define MyAppURL "https://github.com/LazyWorkshopCreate/DistroNexus"

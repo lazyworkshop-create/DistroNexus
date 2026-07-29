@@ -249,7 +249,7 @@
             ProjectUri = 'https://github.com/LazyWorkshopCreate/DistroNexus'
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Version 2.3.0 release candidate - health, recovery, monitoring, workspaces, WSLg, containers, and trusted templates. External Windows/WSL and package acceptance gates remain open.'
+            ReleaseNotes = 'Version 2.3.0 adds health, recovery, monitoring, workspaces, WSLg, container inventory, and trusted templates. See the v2.3.0 release notes for package acceptance and platform validation boundaries.'
         }
     }
 }
