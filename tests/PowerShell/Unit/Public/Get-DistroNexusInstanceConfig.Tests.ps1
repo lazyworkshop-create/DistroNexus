@@ -39,34 +39,26 @@ Describe "Get-DistroNexusInstanceConfig" -Tag 'Unit', 'Public', 'InstanceConfig'
     }
 
     Context "When instance not found" {
-        It "Should write error" {
+        It "Uses the Core resource route" {
             InModuleScope DistroNexus {
-                Mock Get-DistroNexusInstance { return $null } -ModuleName DistroNexus
-
-                $errorRecord = $null
-                Get-DistroNexusInstanceConfig -Name "NonExistent" `
-                    -ErrorVariable errorRecord -ErrorAction SilentlyContinue
-                $errorRecord | Should -Not -BeNullOrEmpty
+                Mock Get-DistroNexusInstanceResources { [pscustomobject]@{ Name='NonExistent'; WslVersion=2; SparseMode=$false } } -ModuleName DistroNexus
+                (Get-DistroNexusInstanceConfig -Name "NonExistent").Name | Should -Be 'NonExistent'
+                Assert-MockCalled Get-DistroNexusInstanceResources -Times 1 -Exactly -ModuleName DistroNexus
             }
         }
     }
 
     Context "When instance exists" {
-        It "Should return PSCustomObject with Name, SparseMode, WslVersion" {
+        It "Should return the path-free resource snapshot" {
             InModuleScope DistroNexus {
-                Mock Get-DistroNexusInstance {
-                    return [PSCustomObject]@{ Name = "Ubuntu-22.04"; State = "Stopped"; Version = 2 }
-                } -ModuleName DistroNexus
-
-                Mock Get-ItemProperty {
-                    return [PSCustomObject]@{ SparseVhd = 0 }
-                } -ModuleName DistroNexus
+                Mock Get-DistroNexusInstanceResources { [pscustomobject]@{ Name='Ubuntu-22.04'; WslVersion=2; SparseMode=$false } } -ModuleName DistroNexus
 
                 $result = Get-DistroNexusInstanceConfig -Name "Ubuntu-22.04"
                 $result | Should -Not -BeNullOrEmpty
                 $result.Name | Should -Be "Ubuntu-22.04"
                 $result.PSObject.Properties.Name | Should -Contain "SparseMode"
                 $result.PSObject.Properties.Name | Should -Contain "WslVersion"
+                $result.PSObject.Properties.Name | Should -Not -Contain "GlobalMemory"
             }
         }
     }
@@ -85,44 +77,12 @@ Describe "Set-DistroNexusInstanceSparseMode" -Tag 'Unit', 'Public', 'InstanceCon
             Get-Command Set-DistroNexusInstanceSparseMode | Should -Not -BeNullOrEmpty
         }
 
-        It "Should require -Name and -Enabled parameters" {
+        It "Should require a Core-issued preview token" {
             { Set-DistroNexusInstanceSparseMode } | Should -Throw
         }
     }
 
-    Context "Guard: WSL v1 instance" {
-        It "Should write error for v1 instance" {
-            InModuleScope DistroNexus {
-                Mock Get-DistroNexusInstance {
-                    return [PSCustomObject]@{ Name = "Ubuntu-old"; State = "Stopped"; Version = 1 }
-                } -ModuleName DistroNexus
-
-                $errorRecord = $null
-                Set-DistroNexusInstanceSparseMode -Name "Ubuntu-old" -Enabled $true `
-                    -ErrorVariable errorRecord -ErrorAction SilentlyContinue
-                $errorRecord | Should -Not -BeNullOrEmpty
-            }
-        }
-    }
-
-    Context "When WSL v2 instance exists" {
-        It "Should call wsl --manage with correct arguments" {
-            InModuleScope DistroNexus {
-                Mock Get-DistroNexusInstance {
-                    return [PSCustomObject]@{ Name = "Ubuntu-22.04"; State = "Stopped"; Version = 2 }
-                } -ModuleName DistroNexus
-
-                $capturedArgs = $null
-                Mock wsl {
-                    param([Parameter(ValueFromRemainingArguments=$true)]$args)
-                    $script:capturedArgs = $args
-                    return ""
-                } -ModuleName DistroNexus
-
-                Set-DistroNexusInstanceSparseMode -Name "Ubuntu-22.04" -Enabled $true -ErrorAction SilentlyContinue
-                # Verify wsl was called (not an error)
-                $true | Should -Be $true
-            }
-        }
+    It "Should reject a non-token mutation request" {
+        { Set-DistroNexusInstanceSparseMode -PreviewToken 'bad' -Confirm:$false } | Should -Throw
     }
 }

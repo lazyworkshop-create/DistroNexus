@@ -45,140 +45,6 @@ function Get-DistroNexusInstanceTag {
     }
 }
 
-function Set-DistroNexusInstanceTag {
-    <#
-    .SYNOPSIS
-        Replaces all tags for a WSL instance with the provided set.
-
-    .PARAMETER Name
-        The WSL instance name.
-
-    .PARAMETER Tags
-        The complete set of tags to assign (replaces any existing tags).
-        Maximum 10 tags; each normalised to lowercase.
-
-    .EXAMPLE
-        Set-DistroNexusInstanceTag -Name "Ubuntu-22.04" -Tags @("dev","docker")
-    #>
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $true, Position = 0)]
-        [ValidateNotNullOrEmpty()]
-        [string]$Name,
-
-        [Parameter(Mandatory = $true, Position = 1)]
-        [AllowEmptyCollection()]
-        [ValidateLength(1, 32)]
-        [string[]]$Tags
-    )
-
-    begin {
-        Initialize-DistroNexusLogger
-    }
-
-    process {
-        if ($Tags.Count -gt 10) {
-            Write-Error "Maximum 10 tags allowed per instance. Got $($Tags.Count)." -ErrorId "DistroNexus.TooManyTags"
-            return
-        }
-
-        $normalised = @($Tags | ForEach-Object { $_.ToLowerInvariant().Trim() } | Select-Object -Unique)
-
-        Set-InstanceTagEntry -Name $Name -Tags $normalised
-
-        Write-DistroNexusLog "Set tags for '$Name': $($normalised -join ', ')"
-    }
-}
-
-function Add-DistroNexusInstanceTag {
-    <#
-    .SYNOPSIS
-        Adds a single tag to a WSL instance.
-
-    .PARAMETER Name
-        The WSL instance name.
-
-    .PARAMETER Tag
-        The tag to add (normalised to lowercase; ignored if already present).
-
-    .EXAMPLE
-        Add-DistroNexusInstanceTag -Name "Ubuntu-22.04" -Tag "docker"
-    #>
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $true, Position = 0)]
-        [ValidateNotNullOrEmpty()]
-        [string]$Name,
-
-        [Parameter(Mandatory = $true, Position = 1)]
-        [ValidateLength(1, 32)]
-        [string]$Tag
-    )
-
-    begin {
-        Initialize-DistroNexusLogger
-    }
-
-    process {
-        $normalised = $Tag.ToLowerInvariant().Trim()
-        $tagMap     = Get-InstanceTagMap
-        $existing   = if ($tagMap.PSObject.Properties[$Name]) { @($tagMap.$Name) } else { @() }
-
-        if ($existing.Count -ge 10) {
-            Write-Error "Instance '$Name' already has 10 tags (maximum). Remove a tag before adding a new one." `
-                -ErrorId "DistroNexus.TooManyTags"
-            return
-        }
-
-        if ($existing -notcontains $normalised) {
-            $existing = @($existing) + $normalised
-            Set-InstanceTagEntry -Name $Name -Tags $existing
-            Write-DistroNexusLog "Added tag '$normalised' to '$Name'"
-        }
-    }
-}
-
-function Remove-DistroNexusInstanceTag {
-    <#
-    .SYNOPSIS
-        Removes a single tag from a WSL instance.
-
-    .PARAMETER Name
-        The WSL instance name.
-
-    .PARAMETER Tag
-        The tag to remove (case-insensitive).
-
-    .EXAMPLE
-        Remove-DistroNexusInstanceTag -Name "Ubuntu-22.04" -Tag "docker"
-    #>
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $true, Position = 0)]
-        [ValidateNotNullOrEmpty()]
-        [string]$Name,
-
-        [Parameter(Mandatory = $true, Position = 1)]
-        [ValidateNotNullOrEmpty()]
-        [string]$Tag
-    )
-
-    begin {
-        Initialize-DistroNexusLogger
-    }
-
-    process {
-        $normalised = $Tag.ToLowerInvariant().Trim()
-        $tagMap     = Get-InstanceTagMap
-        $existing   = if ($tagMap.PSObject.Properties[$Name]) { @($tagMap.$Name) } else { @() }
-
-        $updated = @($existing | Where-Object { $_ -ne $normalised })
-        Set-InstanceTagEntry -Name $Name -Tags $updated
-
-        Write-DistroNexusLog "Removed tag '$normalised' from '$Name' (if it was present)"
-    }
-}
-
 function Rename-DistroNexusInstanceTags {
     <#
     .SYNOPSIS
@@ -198,7 +64,7 @@ function Rename-DistroNexusInstanceTags {
     .EXAMPLE
         Rename-DistroNexusInstanceTags -OldName "Ubuntu" -NewName "Ubuntu-Dev"
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
@@ -209,14 +75,14 @@ function Rename-DistroNexusInstanceTags {
         [string]$NewName
     )
 
-    begin {
-        Initialize-DistroNexusLogger
-    }
-
     process {
         $tagMap = Get-InstanceTagMap
         $tags   = if ($tagMap.PSObject.Properties[$OldName]) { @($tagMap.$OldName) } else { @() }
 
+        if (-not $PSCmdlet.ShouldProcess($OldName, "Migrate tags to '$NewName'")) {
+            return
+        }
+        Initialize-DistroNexusLogger
         # Write tags under the new name
         Set-InstanceTagEntry -Name $NewName -Tags $tags
 
@@ -227,7 +93,7 @@ function Rename-DistroNexusInstanceTags {
     }
 }
 
-# ── Module-private helpers ─────────────────────────────────────────────────────
+# ── Module-private helpers ──────────────────────────────────────────────────────
 
 function Get-TagSettingsFilePath {
     return Join-Path $env:APPDATA "DistroNexus\settings.json"

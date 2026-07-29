@@ -19,14 +19,10 @@ namespace DistroNexus.Desktop.ViewModels;
 /// </summary>
 public partial class PackageManagerViewModel : ObservableObject
 {
-    private readonly ICatalogService _catalogService;
-    private readonly IDownloadService _downloadService;
-    private readonly IDownloadTaskManager _downloadTaskManager;
+    private readonly IPowerShellModuleClient _moduleClient;
     private readonly ILogger<PackageManagerViewModel> _logger;
     private readonly IServiceProvider _serviceProvider;
     
-    // Track active downloads: PackageId -> DownloadTask
-    private readonly Dictionary<string, DownloadTask> _activeDownloads = new();
 
     [ObservableProperty]
     private ObservableCollection<DistroPackage> _packages = new();
@@ -50,15 +46,11 @@ public partial class PackageManagerViewModel : ObservableObject
     private bool _isOfflineMode;
 
     public PackageManagerViewModel(
-        ICatalogService catalogService,
-        IDownloadService downloadService,
-        IDownloadTaskManager downloadTaskManager,
+        IPowerShellModuleClient moduleClient,
         ILogger<PackageManagerViewModel> logger,
         IServiceProvider serviceProvider)
     {
-        _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
-        _downloadService = downloadService ?? throw new ArgumentNullException(nameof(downloadService));
-        _downloadTaskManager = downloadTaskManager ?? throw new ArgumentNullException(nameof(downloadTaskManager));
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
     }
@@ -86,19 +78,13 @@ public partial class PackageManagerViewModel : ObservableObject
 
             _logger.LogInformation("Loading distribution catalog");
 
-            var packages = await _catalogService.LoadCatalogAsync();
+            var packages = await _moduleClient.GetPackagesAsync();
             
             Packages.Clear();
             FilteredPackages.Clear();
             
             foreach (var package in packages)
             {
-                if (IsUiAutomationFakeDownloadEnabled())
-                {
-                    package.IsCached = false;
-                    package.LocalPath = string.Empty;
-                }
-
                 Packages.Add(package);
                 FilteredPackages.Add(package);
             }
@@ -131,7 +117,7 @@ public partial class PackageManagerViewModel : ObservableObject
 
             _logger.LogInformation("Refreshing catalog");
 
-            await _catalogService.RefreshCatalogAsync();
+            await _moduleClient.RefreshCatalogAsync();
             await LoadCatalogAsync();
 
             StatusMessage = Properties.Resources.StatusCatalogRefreshed;
@@ -173,7 +159,7 @@ public partial class PackageManagerViewModel : ObservableObject
         {
             _logger.LogInformation("Searching for '{Query}'", SearchQuery);
 
-            var results = await _catalogService.SearchDistributionsAsync(SearchQuery);
+            var results = await _moduleClient.SearchPackagesAsync(SearchQuery);
             
             FilteredPackages.Clear();
             foreach (var package in results)
@@ -200,94 +186,24 @@ public partial class PackageManagerViewModel : ObservableObject
 
         try
         {
-            if (IsUiAutomationFakeDownloadEnabled())
-            {
-                await SimulateUiAutomationDownloadAsync(package);
-                return;
-            }
-
-            _logger.LogInformation("Queuing download for package {PackageName}", package.Name);
-
-            // Set downloading state
-            package.IsDownloading = true;
-
-            // Use the configured cache path from catalog service
-            var cachePath = _catalogService.GetPackageCachePath();
-            var fileName = !string.IsNullOrWhiteSpace(package.DownloadUrl)
-                ? Path.GetFileName(new Uri(package.DownloadUrl).LocalPath)
-                : $"{package.Id}.tar.gz";
-            
-            var destinationPath = Path.Combine(cachePath, fileName);
-            
-            _logger.LogInformation("Downloading {PackageName} to cache path: {Path}", package.Name, destinationPath);
-            
-            var downloadTask = _downloadTaskManager.AddTask(package, destinationPath);
-            
-            // Track the download
-            lock (_activeDownloads)
-            {
-                _activeDownloads[package.Id] = downloadTask;
-            }
-            
-            // Subscribe to status changes to update UI
-            _ = MonitorDownloadTaskAsync(downloadTask, package);
+            var preview = await _moduleClient.PreviewPackageDownloadJobStartAsync(package.Id);
+            if (string.IsNullOrWhiteSpace(preview.PreviewToken))
+                throw new InvalidOperationException(preview.OutcomeCode);
+            var result = await _moduleClient.StartPackageDownloadJobAsync(preview.PreviewToken);
+            if (string.IsNullOrWhiteSpace(result.JobId))
+                throw new InvalidOperationException(result.OutcomeCode);
 
             StatusMessage = string.Format(Properties.Resources.StatusDownloadQueued, package.Name);
             _logger.LogInformation("Download queued successfully for {PackageName}", package.Name);
         }
         catch (Exception ex)
         {
-            package.IsDownloading = false;
             _logger.LogError(ex, "Failed to queue download");
             StatusMessage = Properties.Resources.StatusQueueFailed;
             await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorQueueDownload, MainViewModel.FormatAlertMessage(ex)));
         }
     }
 
-    private bool IsUiAutomationFakeDownloadEnabled()
-    {
-        var runUiAutomation = Environment.GetEnvironmentVariable("DISTRONEXUS_RUN_UI_AUTOMATION");
-        var fakeDownload = Environment.GetEnvironmentVariable("DISTRONEXUS_UI_AUTOMATION_FAKE_DOWNLOAD");
-
-        return string.Equals(runUiAutomation, "1", StringComparison.OrdinalIgnoreCase)
-            && string.Equals(fakeDownload, "1", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private async Task SimulateUiAutomationDownloadAsync(DistroPackage package)
-    {
-        _logger.LogInformation("Running simulated UI automation download for package {PackageName}", package.Name);
-
-        package.IsDownloading = true;
-        package.DownloadProgress = 5;
-        package.DownloadStatusText = "5 MB / 100 MB";
-        package.DownloadSpeed = "10 MB/s";
-
-        UpdateGroupedPackages();
-
-        await Task.Delay(600);
-        package.DownloadProgress = 35;
-        package.DownloadStatusText = "35 MB / 100 MB";
-        package.DownloadSpeed = "12 MB/s";
-
-        await Task.Delay(600);
-        package.DownloadProgress = 80;
-        package.DownloadStatusText = "80 MB / 100 MB";
-        package.DownloadSpeed = "9 MB/s";
-
-        await Task.Delay(600);
-        package.DownloadProgress = 100;
-        package.DownloadStatusText = "Completed";
-        package.DownloadSpeed = "Completed";
-        package.IsDownloading = false;
-        package.IsCached = true;
-
-        StatusMessage = $"Download completed: {package.Name}";
-        UpdateGroupedPackages();
-    }
-
-    /// <summary>
-    /// Cancels an active download for a package.
-    /// </summary>
     [RelayCommand]
     private async Task CancelDownload(DistroPackage package)
     {
@@ -296,107 +212,17 @@ public partial class PackageManagerViewModel : ObservableObject
 
         try
         {
-            lock (_activeDownloads)
-            {
-                if (_activeDownloads.TryGetValue(package.Id, out var downloadTask))
-                {
-                    _logger.LogInformation("Cancelling download for {PackageName}", package.Name);
-                    downloadTask.CancellationTokenSource?.Cancel();
-                    _activeDownloads.Remove(package.Id);
-                    package.IsDownloading = false;
-                    StatusMessage = string.Format(Properties.Resources.StatusDownloadCancelled, package.Name);
-                }
-            }
+            var job = (await _moduleClient.GetPackageDownloadJobsAsync()).FirstOrDefault(x => x.PackageId == package.Id && x.State is "Queued" or "Running");
+            if (job is null) return;
+            var preview = await _moduleClient.PreviewPackageDownloadJobActionAsync(job.JobId, "cancel");
+            if (string.IsNullOrWhiteSpace(preview.PreviewToken)) throw new InvalidOperationException(preview.OutcomeCode);
+            await _moduleClient.ExecutePackageDownloadJobActionAsync(preview.PreviewToken);
+            StatusMessage = string.Format(Properties.Resources.StatusDownloadCancelled, package.Name);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to cancel download for {PackageName}", package.Name);
             await ShowAlert(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorCancelDownload, MainViewModel.FormatAlertMessage(ex)));
-        }
-    }
-
-    /// <summary>
-    /// Monitors a download task and updates the package status.
-    /// </summary>
-    private async Task MonitorDownloadTaskAsync(DownloadTask downloadTask, DistroPackage package)
-    {
-        try
-        {
-            // Subscribe to task property changes
-            void OnTaskPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-            {
-                if (e.PropertyName == nameof(DownloadTask.Progress))
-                {
-                    package.DownloadProgress = downloadTask.Progress;
-                }
-                else if (e.PropertyName == nameof(DownloadTask.FormattedSpeed))
-                {
-                    package.DownloadSpeed = downloadTask.FormattedSpeed;
-                }
-                else if (e.PropertyName == nameof(DownloadTask.FormattedProgress))
-                {
-                    package.DownloadStatusText = downloadTask.FormattedProgress;
-                }
-            }
-
-            downloadTask.PropertyChanged += OnTaskPropertyChanged;
-
-            // Update initial state
-            package.DownloadProgress = downloadTask.Progress;
-            package.DownloadSpeed = downloadTask.FormattedSpeed;
-            package.DownloadStatusText = downloadTask.FormattedProgress;
-
-            // Poll the task status
-            while (downloadTask.Status == DownloadStatus.Pending || downloadTask.Status == DownloadStatus.Downloading)
-            {
-                // Force UI update for these properties just in case the event didn't fire on UI thread
-                // though ObservableObject should handle it
-                await Task.Delay(500);
-            }
-
-            // Cleanup subscription
-            downloadTask.PropertyChanged -= OnTaskPropertyChanged;
-
-            // Task completed or failed
-            switch (downloadTask.Status)
-            {
-                case DownloadStatus.Completed:
-                    package.IsDownloading = false;
-                    package.IsCached = true;
-                    package.LocalPath = downloadTask.DestinationPath;
-                    package.DownloadProgress = 100;
-                    package.DownloadStatusText = "Completed";
-                    _logger.LogInformation("Download completed for {PackageName} to {Path}", package.Name, downloadTask.DestinationPath);
-                    
-                    // Refresh catalog to update cache status for all packages
-                    // This ensures other packages with the same URL also show as cached
-                    await RefreshCatalogCacheStatusAsync();
-                    break;
-                    
-                case DownloadStatus.Failed:
-                    package.IsDownloading = false;
-                    _logger.LogWarning("Download failed for {PackageName}: {Error}", package.Name, downloadTask.ErrorMessage);
-                    break;
-                    
-                case DownloadStatus.Cancelled:
-                    package.IsDownloading = false;
-                    _logger.LogInformation("Download cancelled for {PackageName}", package.Name);
-                    break;
-            }
-
-            // Remove from active downloads
-            lock (_activeDownloads)
-            {
-                _activeDownloads.Remove(package.Id);
-            }
-
-            // Update UI grouping
-            UpdateGroupedPackages();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error monitoring download task for {PackageName}", package.Name);
-            package.IsDownloading = false;
         }
     }
 
@@ -408,7 +234,7 @@ public partial class PackageManagerViewModel : ObservableObject
         try
         {
             // Reload catalog to get updated cache status and file sizes
-            var refreshedPackages = await _catalogService.LoadCatalogAsync(forceReload: true);
+            var refreshedPackages = await _moduleClient.GetPackagesAsync(forceReload: true);
             
             // Update existing package objects with new cache status
             foreach (var pkg in Packages)
@@ -417,7 +243,6 @@ public partial class PackageManagerViewModel : ObservableObject
                 if (refreshed != null)
                 {
                     pkg.IsCached = refreshed.IsCached;
-                    pkg.LocalPath = refreshed.LocalPath;
                     pkg.FileSize = refreshed.FileSize;
                 }
             }
@@ -557,38 +382,7 @@ public partial class PackageManagerViewModel : ObservableObject
             return $"sha256:{package.Sha256.Trim().ToLowerInvariant()}";
         }
 
-        var fileName = GetFileNameFromPackage(package);
-        if (!string.IsNullOrWhiteSpace(fileName))
-        {
-            return $"file:{fileName.Trim().ToLowerInvariant()}|size:{package.FileSize}";
-        }
-
-        if (!string.IsNullOrWhiteSpace(package.DownloadUrl))
-        {
-            return $"url:{package.DownloadUrl.Trim().ToLowerInvariant()}";
-        }
-
         return $"id:{package.Id}";
-    }
-
-    private static string GetFileNameFromPackage(DistroPackage package)
-    {
-        if (!string.IsNullOrWhiteSpace(package.LocalPath))
-        {
-            return Path.GetFileName(package.LocalPath);
-        }
-
-        if (!string.IsNullOrWhiteSpace(package.DownloadUrl)
-            && Uri.TryCreate(package.DownloadUrl, UriKind.Absolute, out var uri))
-        {
-            var localFileName = Path.GetFileName(uri.LocalPath);
-            if (!string.IsNullOrWhiteSpace(localFileName))
-            {
-                return localFileName;
-            }
-        }
-
-        return string.Empty;
     }
 
     [RelayCommand]
@@ -609,7 +403,7 @@ public partial class PackageManagerViewModel : ObservableObject
         {
             _logger.LogInformation("Deleting cached package {PackageName}", package.Name);
             
-            await _catalogService.DeleteCachedPackageAsync(package.Id);
+            await DeletePackageCacheEntryAsync(package);
 
             // Refresh all package cache states so same-file merged variants stay consistent.
             await RefreshCatalogCacheStatusAsync();
@@ -678,6 +472,17 @@ public partial class PackageManagerViewModel : ObservableObject
         return "An unexpected error occurred while deleting the package.";
     }
 
+    private async Task DeletePackageCacheEntryAsync(DistroPackage package)
+    {
+        var usage = await _moduleClient.GetPackageCacheUsageAsync();
+        var entry = usage.CachedPackages.SingleOrDefault(item =>
+            string.Equals(item.PackageId, package.Id, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(item.Name, package.Name, StringComparison.OrdinalIgnoreCase));
+        if (entry is null || string.IsNullOrWhiteSpace(entry.CacheEntryId))
+            throw new InvalidOperationException("PackageCache.EntryInvalid");
+        await _moduleClient.DeletePackageCacheEntryAsync(entry.CacheEntryId);
+    }
+
     /// <summary>
     /// Re-downloads a package, replacing any existing cached version.
     /// </summary>
@@ -694,7 +499,7 @@ public partial class PackageManagerViewModel : ObservableObject
             // Delete existing cache first if present
             if (package.IsCached)
             {
-                await _catalogService.DeleteCachedPackageAsync(package.Id);
+                await DeletePackageCacheEntryAsync(package);
                 package.IsCached = false;
             }
 
@@ -728,7 +533,8 @@ public partial class PackageManagerViewModel : ObservableObject
                 return;
             }
 
-            await _catalogService.AddCustomSourceAsync(CustomSourceUrl);
+            var name = string.IsNullOrWhiteSpace(uri.Host) ? "Custom source" : uri.Host;
+            await _moduleClient.AddCatalogSourceAsync(new DistroNexusCatalogSourceCreateRequest(name, uri.AbsoluteUri));
             
             CustomSourceUrl = string.Empty;
             IsAddSourcePanelVisible = false;
@@ -770,8 +576,8 @@ public partial class PackageManagerViewModel : ObservableObject
         try
         {
             StatusMessage = "Updating sources...";
-            await _catalogService.RefreshCatalogAsync();
-            await RefreshCatalogAsync();
+            await _moduleClient.RefreshCatalogAsync();
+            await LoadCatalogAsync();
             StatusMessage = "Sources updated successfully";
         }
         catch (Exception ex)
@@ -837,36 +643,12 @@ public partial class PackageManagerViewModel : ObservableObject
             {
                 try
                 {
-                    // Set downloading state
-                    package.IsDownloading = true;
-
-                    // Use the configured cache path from catalog service
-                    var cachePath = _catalogService.GetPackageCachePath();
-                    var fileName = !string.IsNullOrWhiteSpace(package.DownloadUrl)
-                        ? Path.GetFileName(new Uri(package.DownloadUrl).LocalPath)
-                        : $"{package.Id}.tar.gz";
-                    
-                    var destinationPath = Path.Combine(cachePath, fileName);
-                    
-                    _logger.LogInformation("Queuing download for {PackageName} to {Path}", package.Name, destinationPath);
-                    
-                    var downloadTask = _downloadTaskManager.AddTask(package, destinationPath);
-                    
-                    // Track the download
-                    lock (_activeDownloads)
-                    {
-                        _activeDownloads[package.Id] = downloadTask;
-                    }
-                    
-                    // Subscribe to status changes to update UI
-                    _ = MonitorDownloadTaskAsync(downloadTask, package);
-                    
+                    await DownloadPackageAsync(package);
                     successCount++;
                     StatusMessage = $"Queued {successCount} of {packagesToDownload.Count} packages for download...";
                 }
                 catch (Exception ex)
                 {
-                    package.IsDownloading = false;
                     _logger.LogError(ex, "Failed to queue download for {PackageName}", package.Name);
                 }
             }

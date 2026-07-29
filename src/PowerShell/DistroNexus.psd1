@@ -3,7 +3,7 @@
     RootModule = 'DistroNexus.psm1'
 
     # Version number of this module.
-    ModuleVersion = '2.2.1'
+    ModuleVersion = '2.3.0'
 
     # ID used to uniquely identify this module
     GUID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
@@ -29,15 +29,28 @@
         'Start-DistroNexusInstance',
         'Stop-DistroNexusInstance',
         'Get-DistroNexusTemplate',
-        'Apply-DistroNexusTemplate',
+        'Get-DistroNexusTemplateOption',
         'Move-DistroNexusInstance',
         'Rename-DistroNexusInstance',
         'Remove-DistroNexusInstance',
         'Install-DistroNexusInstance',
+        'Get-DistroNexusInstallTargetPreview',
+        'Get-DistroNexusInstallSource',
+        'Get-DistroNexusPackageAcquisitionPreview',
+        'Invoke-DistroNexusPackageAcquisition',
         'Set-DistroNexusCredential',
         'Get-DistroNexusPackage',
         'Save-DistroNexusPackage',
+        'Start-DistroNexusPackageDownload',
+        'Get-DistroNexusPackageDownloadJob',
+        'Invoke-DistroNexusPackageDownloadJobAction',
         'Remove-DistroNexusPackage',
+        'Get-DistroNexusPackageCacheLocation',
+        'Get-DistroNexusPackageCacheUsage',
+        'Get-DistroNexusTerminalStatus',
+        'Start-DistroNexusTerminal',
+        'Open-DistroNexusPackageCacheFolder',
+        'Clear-DistroNexusPackageCache',
         'Update-DistroNexusCatalog',
         'Invoke-DistroNexusTemplateAutomation',
         'Test-DistroNexusTemplateEnvironment',
@@ -45,25 +58,173 @@
         'New-DistroNexusReleaseEvidenceBundle',
         'Compress-DistroNexusInstance',
         'Get-DistroNexusDockerIntegration',
+        'Get-DistroNexusDockerIntegrationPreview',
+        'Set-DistroNexusDockerIntegration',
+        'Get-DistroNexusContainerRuntimeStatus',
+        'Get-DistroNexusCapability',
+        'Get-DistroNexusSystemdService',
+        'Get-DistroNexusSystemdServiceDetail',
+        'Get-DistroNexusSystemdServiceJournal',
+        'Get-DistroNexusSystemdServicePreview',
+        'Invoke-DistroNexusSystemdService',
+        'Start-DistroNexusSystemdService',
+        'Stop-DistroNexusSystemdService',
+        'Restart-DistroNexusSystemdService',
+        'Enable-DistroNexusSystemdService',
+        'Disable-DistroNexusSystemdService',
+        'Reload-DistroNexusSystemdService',
+        'Get-DistroNexusWslgApplication',
+        'Get-DistroNexusWslgStatus',
+        'Start-DistroNexusWslgApplication',
+        'Show-DistroNexusWslgApplicationEntry',
+        'Set-DistroNexusWslgApplicationPin',
+        'Get-DistroNexusRecoveryPoint',
+        'Test-DistroNexusRecoveryPoint',
+        'Get-DistroNexusRecoveryPointCreatePreview',
+        'New-DistroNexusRecoveryPoint',
+        'Get-DistroNexusRecoveryPointRestorePreview',
+        'Restore-DistroNexusRecoveryPoint',
+        'Get-DistroNexusRecoveryPointRemovePreview',
+        'Remove-DistroNexusRecoveryPoint',
+        'Get-DistroNexusRecoveryPointHistory',
+        'Get-DistroNexusRecoveryPointRetention',
+        'Get-DistroNexusRecoveryPointRetentionPreview',
+        'Set-DistroNexusRecoveryPointRetention',
+        'Set-DistroNexusRecoveryPointMetadata',
+        'Get-DistroNexusRecoveryPointMetadataPreview',
+        'Get-DistroNexusRecoveryPointClonePreview',
+        'Copy-DistroNexusRecoveryPoint',
+        'Open-DistroNexusRecoveryPointFolder',
+        'Get-DistroNexusMonitoringSnapshot',
+        'Get-DistroNexusMonitoringProcessActionPreview',
+        'Invoke-DistroNexusMonitoringProcessAction',
+        'Invoke-DistroNexusHealthScan',
+        'Get-DistroNexusHealthHistory',
+        'Get-DistroNexusDiagnosticLogOption',
+        'Get-DistroNexusDiagnosticSnapshot',
+        'Get-DistroNexusHealthRepairPreview',
+        'Repair-DistroNexusHealthFinding',
+        'Get-DistroNexusDiagnosticReportPreview',
+        'Export-DistroNexusDiagnosticReport',
+        'Get-DistroNexusPodmanUserUnitPreview',
+        'Invoke-DistroNexusPodmanUserUnit',
+        'Get-DistroNexusPodmanConnectionPreview',
+        'Invoke-DistroNexusPodmanConnection',
         'Enable-DistroNexusDockerIntegration',
         'Disable-DistroNexusDockerIntegration',
         'Export-DistroNexusInstance',
         'Import-DistroNexusInstance',
+        'Get-DistroNexusLifecycleOperationPreview',
+        'Invoke-DistroNexusLifecycleOperation',
         'Get-DistroNexusWslConfig',
+        'Get-DistroNexusGlobalConfiguration',
+        'Get-DistroNexusGlobalConfigurationPreview',
+        'Set-DistroNexusGlobalConfiguration',
+        'Open-DistroNexusWslConfigFile',
         'Set-DistroNexusWslConfig',
         'Get-DistroNexusInstanceConfig',
+        'Get-DistroNexusInstanceConfiguration',
+        'Get-DistroNexusInstanceConfigurationRecoveryOffer',
+        'Save-DistroNexusInstanceConfiguration',
+        'Get-DistroNexusInstanceResources',
+        'Get-DistroNexusInstanceSparsePreview',
         'Set-DistroNexusInstanceSparseMode',
         'New-DistroNexusBackupSchedule',
         'Remove-DistroNexusBackupSchedule',
         'Get-DistroNexusBackupSchedule',
         'Invoke-DistroNexusBackup',
+        'Get-DistroNexusBackupNotification',
         'Get-DistroNexusPortMapping',
+        'Get-DistroNexusNetworkStatus',
+        'Get-DistroNexusInstanceIpAddress',
+        'Test-DistroNexusNetworkProbe',
+        'Get-DistroNexusNetworkMode',
+        'Get-DistroNexusNetworkModePreview',
+        'Set-DistroNexusNetworkMode',
+        'Get-DistroNexusNetworkSettings',
+        'Get-DistroNexusNetworkSettingsPreview',
+        'Set-DistroNexusNetworkSettings',
+        'Open-DistroNexusNetworkLoopback',
+        'Get-DistroNexusFirewallRule',
+        'Get-DistroNexusFirewallRuleCreatePreview',
+        'New-DistroNexusFirewallRule',
+        'Get-DistroNexusFirewallRuleRemovePreview',
+        'Remove-DistroNexusFirewallRule',
         'Get-DistroNexusInstanceTag',
         'Set-DistroNexusInstanceTag',
         'Add-DistroNexusInstanceTag',
         'Remove-DistroNexusInstanceTag',
         'Rename-DistroNexusInstanceTags',
-        'Get-DistroNexusCache'
+        'Get-DistroNexusCache',
+        'Get-DistroNexusUsbDevice',
+        'Get-DistroNexusUsbStatus',
+        'Connect-DistroNexusUsbDevice',
+        'Disconnect-DistroNexusUsbDevice'
+        ,'Get-DistroNexusSettings'
+        ,'Set-DistroNexusSettings'
+        ,'Reset-DistroNexusSettings'
+        ,'Get-DistroNexusBootstrapSettings'
+        ,'Get-DistroNexusStoreComplianceStatus'
+        ,'Get-DistroNexusUpdateStatus'
+        ,'Get-DistroNexusCatalogSource'
+        ,'Add-DistroNexusCatalogSource'
+        ,'Set-DistroNexusCatalogSource'
+        ,'Remove-DistroNexusCatalogSource'
+        ,'Test-DistroNexusCatalogSource'
+        ,'Set-DistroNexusCatalogSourceActive'
+        ,'Set-DistroNexusCatalogSourceOrder'
+        ,'Get-DistroNexusDefaultCatalogSource'
+        ,'Reset-DistroNexusCatalogSource'
+        ,'Get-DistroNexusWorkspace'
+        ,'Export-DistroNexusWorkspace'
+        ,'New-DistroNexusWorkspace'
+        ,'Set-DistroNexusWorkspace'
+        ,'Copy-DistroNexusWorkspace'
+        ,'Get-DistroNexusWorkspaceImportPreview'
+        ,'Remove-DistroNexusWorkspace'
+        ,'Import-DistroNexusWorkspace'
+        ,'Get-DistroNexusWorkspaceLaunchPreview'
+        ,'Approve-DistroNexusWorkspaceTrust'
+        ,'Invoke-DistroNexusWorkspace'
+        ,'Get-DistroNexusWorkspaceActionRetryPreview'
+        ,'Retry-DistroNexusWorkspaceAction'
+        ,'Get-DistroNexusWorkspaceSavePreview'
+        ,'Save-DistroNexusWorkspace'
+        ,'Get-DistroNexusWorkspaceDuplicatePreview'
+        ,'Get-DistroNexusWorkspaceRemovePreview'
+        ,'Get-DistroNexusWorkspaceExportPreview'
+        ,'Get-DistroNexusWorkspaceTrustPreview'
+        ,'Get-DistroNexusWorkspaceRetryPreview'
+        ,'Get-DistroNexusWorkspaceClosePreview'
+        ,'Close-DistroNexusWorkspace'
+        ,'Get-DistroNexusWorkspaceOperation'
+        ,'Stop-DistroNexusWorkspaceOperation'
+        ,'New-DistroNexusWorkspaceShortcut'
+        ,'Get-DistroNexusTemplateSource'
+        ,'Add-DistroNexusTemplateSource'
+        ,'Set-DistroNexusTemplateSource'
+        ,'Remove-DistroNexusTemplateSource'
+        ,'Approve-DistroNexusTemplateMarketplaceCandidate'
+        ,'Get-DistroNexusTemplateMarketplaceReview'
+        ,'Save-DistroNexusTemplateMarketplaceArtifact'
+        ,'Get-DistroNexusTemplateMarketplaceHistory'
+        ,'Restore-DistroNexusTemplateMarketplaceArtifact'
+        ,'Get-DistroNexusTemplateMarketplaceEntry'
+        ,'Get-DistroNexusTemplateMarketplaceStatus'
+        ,'Test-DistroNexusTemplateCompatibility'
+        ,'Get-DistroNexusTemplateImportPreview'
+        ,'Get-DistroNexusTemplateImportFilePreview'
+        ,'Import-DistroNexusTemplate'
+        ,'Get-DistroNexusProductLogRevealTarget'
+        ,'Get-DistroNexusDockerDesktopInstallUri'
+        ,'Get-DistroNexusTemplateExportPreview'
+        ,'Export-DistroNexusTemplate'
+        ,'Get-DistroNexusTemplateRemovePreview'
+        ,'Remove-DistroNexusTemplate'
+        ,'New-DistroNexusTemplateApplyPreview'
+        ,'Start-DistroNexusTemplateApply'
+        ,'Get-DistroNexusTemplateApplyOperation'
+        ,'Stop-DistroNexusTemplateApply'
     )
 
     # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
@@ -88,7 +249,7 @@
             ProjectUri = 'https://github.com/LazyWorkshopCreate/DistroNexus'
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Version 2.2.0 - Deep instance management: VHDX compaction, Docker Desktop integration, backup scheduling, port visualization, tagging, and internal architecture improvements'
+            ReleaseNotes = 'Version 2.3.0 release candidate - health, recovery, monitoring, workspaces, WSLg, containers, and trusted templates. External Windows/WSL and package acceptance gates remain open.'
         }
     }
 }

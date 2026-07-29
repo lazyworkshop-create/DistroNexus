@@ -14,16 +14,17 @@ sidebar_position: 2
 
 ## Downloading DistroNexus
 
-1.  Go to the [GitHub Releases](https://github.com/LazyWorkshopCreate/DistroNexus/releases) page.
-2.  Choose one of the v2.2.1 assets:
-    *   Installer: `DistroNexus-2.2.1-Setup.exe`
-    *   Portable: `DistroNexus-v2.2.1-Release.zip`
-    *   Self-contained: `DistroNexus-v2.2.1-Release-selfcontained.zip`
+v2.3.0 is currently a repository release candidate, not a published package. Do not assume an
+installer, portable archive, self-contained archive, signature, or Store listing exists yet.
+
+When an approved v2.3.0 package is published, obtain its exact asset name and signature guidance
+from the release record. Until then, build only from the checked-out source using the documented
+local build commands.
 
 ## Running the Application
 
 ### Installer package
-1.  Run `DistroNexus-2.2.1-Setup.exe`.
+1.  Run only the approved installer named by the published release record.
 2.  Complete setup and launch DistroNexus from the Start Menu.
 
 ### Portable / Self-contained package

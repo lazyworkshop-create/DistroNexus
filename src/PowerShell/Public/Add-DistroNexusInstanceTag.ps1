@@ -12,7 +12,7 @@ function Add-DistroNexusInstanceTag {
     .EXAMPLE
         Add-DistroNexusInstanceTag -Name "Ubuntu-22.04" -Tag "docker"
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory = $true, Position = 0)]
         [ValidateNotNullOrEmpty()]
@@ -22,10 +22,6 @@ function Add-DistroNexusInstanceTag {
         [ValidateLength(1, 32)]
         [string]$Tag
     )
-
-    begin {
-        Initialize-DistroNexusLogger
-    }
 
     process {
         $normalised = $Tag.ToLowerInvariant().Trim()
@@ -39,6 +35,10 @@ function Add-DistroNexusInstanceTag {
         }
 
         if ($existing -notcontains $normalised) {
+            if (-not $PSCmdlet.ShouldProcess($Name, "Add tag '$normalised'")) {
+                return
+            }
+            Initialize-DistroNexusLogger
             $updated = @($existing) + $normalised
             Set-InstanceTagEntry -Name $Name -Tags $updated
             Write-DistroNexusLog "Added tag '$normalised' to '$Name'"

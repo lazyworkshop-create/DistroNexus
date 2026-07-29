@@ -12,8 +12,7 @@ namespace DistroNexus.Desktop.Wizard.Steps;
 /// </summary>
 public partial class SelectDistributionStep : WizardStepBase
 {
-    private readonly ICatalogService _catalogService;
-    private readonly ITemplateService _templateService;
+    private readonly IPowerShellModuleClient _moduleClient;
     private readonly ILogger _logger;
 
     public override string StepId => "select-distribution";
@@ -26,10 +25,9 @@ public partial class SelectDistributionStep : WizardStepBase
     [ObservableProperty]
     private bool _isLoading;
 
-    public SelectDistributionStep(ICatalogService catalogService, ITemplateService templateService, ILogger logger)
+    public SelectDistributionStep(IPowerShellModuleClient moduleClient, ILogger logger)
     {
-        _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
-        _templateService = templateService ?? throw new ArgumentNullException(nameof(templateService));
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -53,7 +51,7 @@ public partial class SelectDistributionStep : WizardStepBase
             IsLoading = true;
             _logger.LogInformation("Loading available distributions");
 
-            var packages = await _catalogService.LoadCatalogAsync();
+            var packages = await _moduleClient.GetPackagesAsync();
             AvailableDistributions.Clear();
             
             foreach (var package in packages)
@@ -115,7 +113,7 @@ public partial class SelectDistributionStep : WizardStepBase
 
             try
             {
-                var isCompatible = await _templateService.IsTemplateCompatibleAsync(Context.SelectedTemplate.Id, distributionName);
+                var isCompatible = await _moduleClient.TestTemplateCompatibilityAsync(Context.SelectedTemplate.Id, distributionName);
                 if (!isCompatible)
                 {
                     Context.StartupWarningMessage = string.Format(

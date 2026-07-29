@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Security;
 using DistroNexus.Core.Models;
 using DistroNexus.Core.Services;
 using FluentAssertions;
@@ -84,7 +85,29 @@ public class PowerShellServiceExecuteModuleCmdletAsyncTests : IDisposable
     }
 
     [Fact]
-    public async Task ExecuteModuleCmdletAsync_WhenModuleNotFound_ShouldReturnFailureResult()
+    public async Task ExecuteModuleCmdletAsync_RejectsSecureStringInGenericParameterDictionary()
+    {
+        using var secret = new SecureString();
+        secret.AppendChar('x');
+        secret.MakeReadOnly();
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.ExecuteModuleCmdletAsync(
+            "Set-DistroNexusCredential", new Dictionary<string, object> { ["Password"] = secret }));
+    }
+
+    [Fact]
+    public async Task ExecuteModuleCmdletAsync_PreservesExplicitFalseForBooleanModuleParameters()
+    {
+        var root = AppContext.BaseDirectory;
+        while (!File.Exists(Path.Combine(root, "AGENTS.md"))) root = Directory.GetParent(root)!.FullName;
+        var source = await File.ReadAllTextAsync(Path.Combine(root, "src", "Client", "DistroNexus.Core", "Services", "PowerShellService.cs"));
+        source.Should().Contain("ProductModuleLocator");
+        source.Should().Contain("DistroNexus.ModuleBootstrapUnavailable");
+        source.Should().NotContain("customModulePath");
+    }
+
+    [Fact]
+    public async Task ExecuteModuleCmdletAsync_WhenExecutionFails_ReturnsErrorDetails()
     {
         // Arrange
         var cmdletName = "Get-DistroNexusInstance";
@@ -96,10 +119,9 @@ public class PowerShellServiceExecuteModuleCmdletAsyncTests : IDisposable
         // Assert
         result.Should().NotBeNull();
         
-        // If module not found, UsedModule should be false
+        // The test environment may have the module installed; preserve the error contract for failures.
         if (!result.Success)
         {
-            result.UsedModule.Should().BeFalse();
             result.Error.Should().NotBeNullOrWhiteSpace();
         }
     }

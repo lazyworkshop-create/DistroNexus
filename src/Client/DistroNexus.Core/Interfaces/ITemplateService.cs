@@ -7,6 +7,9 @@ namespace DistroNexus.Core.Interfaces;
 /// </summary>
 public interface ITemplateService
 {
+    /// <summary>Returns the explicit optional recovery-point offer shown before template mutation; it never performs a backup.</summary>
+    Task<RecoveryOffer> GetRecoveryOfferAsync(string instanceName, CancellationToken cancellationToken = default) =>
+        Task.FromResult(new RecoveryOffer(false, instanceName, RecoveryOfferReason.TemplateApplication, "RecoveryOffer.Unavailable"));
     /// <summary>
     /// Loads all available templates.
     /// </summary>

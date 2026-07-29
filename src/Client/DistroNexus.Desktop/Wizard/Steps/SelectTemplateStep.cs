@@ -13,7 +13,7 @@ namespace DistroNexus.Desktop.Wizard.Steps;
 /// </summary>
 public partial class SelectTemplateStep : WizardStepBase
 {
-    private readonly ITemplateService _templateService;
+    private readonly IPowerShellModuleClient _moduleClient;
     private readonly ILogger _logger;
     private List<Template> _allTemplates = [];
 
@@ -96,9 +96,9 @@ public partial class SelectTemplateStep : WizardStepBase
         }
     }
 
-    public SelectTemplateStep(ITemplateService templateService, ILogger logger)
+    public SelectTemplateStep(IPowerShellModuleClient moduleClient, ILogger logger)
     {
-        _templateService = templateService ?? throw new ArgumentNullException(nameof(templateService));
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -192,9 +192,9 @@ public partial class SelectTemplateStep : WizardStepBase
         IsLoading = true;
         try 
         {
-            var loaded = await _templateService.LoadTemplatesAsync();
+            var loaded = await _moduleClient.GetTemplatesAsync();
 
-            _allTemplates = loaded;
+            _allTemplates = loaded.Select(TemplatePresentationMapper.ToTemplate).ToList();
             CategoryOptions = new ObservableCollection<string>(new[] { "All" }
                 .Concat(_allTemplates.Select(t => t.Category).Where(c => !string.IsNullOrWhiteSpace(c)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(c => c)));
             ScenarioTagOptions = new ObservableCollection<string>(new[] { "All" }
@@ -284,7 +284,7 @@ public partial class TemplateVersionSelectionItem : ObservableObject
     [ObservableProperty]
     private string? _selectedValue;
 
-    public TemplateVersionSelectionItem(TemplateVersionOption option, string? selectedValue)
+    public TemplateVersionSelectionItem(TemplateOptionDisplay option, string? selectedValue)
     {
         Key = option.Key;
         Label = option.Label;
@@ -295,7 +295,7 @@ public partial class TemplateVersionSelectionItem : ObservableObject
         var selectedValues = selectedValue?.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(v => v.Trim()).ToList() ?? new List<string>();
         
         Options = new ObservableCollection<TemplateOptionValueItem>(
-            option.Options.Select(o => new TemplateOptionValueItem(o, selectedValues.Contains(o.Value), this))
+            option.Values.Select(o => new TemplateOptionValueItem(o, selectedValues.Contains(o.Value), this))
         );
         
         SelectedValue = selectedValue;
@@ -321,7 +321,7 @@ public partial class TemplateOptionValueItem : ObservableObject
     [ObservableProperty]
     private bool _isSelected;
 
-    public TemplateOptionValueItem(TemplateOptionValue option, bool isSelected, TemplateVersionSelectionItem parent)
+    public TemplateOptionValueItem(TemplateOptionValueDisplay option, bool isSelected, TemplateVersionSelectionItem parent)
     {
         Value = option.Value;
         Label = option.Label;

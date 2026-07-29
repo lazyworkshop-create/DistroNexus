@@ -1,0 +1,1326 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Security;
+using DistroNexus.Core.Interfaces;
+using DistroNexus.Core.Models;
+
+namespace DistroNexus.Core.Services;
+
+/// <summary>
+/// Executes the registered DistroNexus module operations available to the desktop client.
+/// </summary>
+public sealed class PowerShellModuleClient : IPowerShellModuleClient
+{
+    private const int MaxPackageDownloadJobs = 200;
+    private static readonly HashSet<string> RegisteredWorkspaceOperations = new(StringComparer.Ordinal)
+    {
+        "Get-DistroNexusWorkspace", "Get-DistroNexusWorkspaceSavePreview", "Save-DistroNexusWorkspace",
+        "Get-DistroNexusWorkspaceDuplicatePreview", "Copy-DistroNexusWorkspace", "Get-DistroNexusWorkspaceRemovePreview", "Remove-DistroNexusWorkspace",
+        "Get-DistroNexusWorkspaceImportPreview", "Import-DistroNexusWorkspace", "Get-DistroNexusWorkspaceExportPreview", "Export-DistroNexusWorkspace",
+        "Get-DistroNexusWorkspaceTrustPreview", "Approve-DistroNexusWorkspaceTrust", "Get-DistroNexusWorkspaceLaunchPreview", "Invoke-DistroNexusWorkspace",
+        "Get-DistroNexusWorkspaceRetryPreview", "Retry-DistroNexusWorkspaceAction", "Get-DistroNexusWorkspaceClosePreview", "Close-DistroNexusWorkspace",
+        "Get-DistroNexusWorkspaceOperation", "Stop-DistroNexusWorkspaceOperation", "New-DistroNexusWorkspaceShortcut"
+    };
+    private const string GetInstanceTagsCommand = "Get-DistroNexusInstanceTag";
+    private const string AddInstanceTagCommand = "Add-DistroNexusInstanceTag";
+    private const string SetInstanceTagsCommand = "Set-DistroNexusInstanceTag";
+    private const string RemoveInstanceTagCommand = "Remove-DistroNexusInstanceTag";
+    private const string RenameInstanceTagsCommand = "Rename-DistroNexusInstanceTags";
+    private const string GetInstancesCommand = "Get-DistroNexusInstance";
+    private const string PreviewTemplateApplyCommand = "New-DistroNexusTemplateApplyPreview";
+    private const string StartTemplateApplyCommand = "Start-DistroNexusTemplateApply";
+    private const string GetTemplateApplyOperationCommand = "Get-DistroNexusTemplateApplyOperation";
+    private const string StopTemplateApplyCommand = "Stop-DistroNexusTemplateApply";
+    private const string StartInstanceCommand = "Start-DistroNexusInstance";
+    private const string StopInstanceCommand = "Stop-DistroNexusInstance";
+    private const string RemoveInstanceCommand = "Remove-DistroNexusInstance";
+    private const string MoveInstanceCommand = "Move-DistroNexusInstance";
+    private const string RenameInstanceCommand = "Rename-DistroNexusInstance";
+    private const string ExportInstanceCommand = "Export-DistroNexusInstance";
+    private const string ImportInstanceCommand = "Import-DistroNexusInstance";
+    private const string SetCredentialCommand = "Set-DistroNexusCredential";
+    private const string GetInstanceResourcesCommand = "Get-DistroNexusInstanceResources";
+    private const string GetInstanceSparsePreviewCommand = "Get-DistroNexusInstanceSparsePreview";
+    private const string SetInstanceSparseModeCommand = "Set-DistroNexusInstanceSparseMode";
+    private const string CompactInstanceCommand = "Compress-DistroNexusInstance";
+    private const string GetSettingsCommand = "Get-DistroNexusSettings";
+    private const string GetDiagnosticSnapshotCommand = "Get-DistroNexusDiagnosticSnapshot";
+    private const string SetSettingsCommand = "Set-DistroNexusSettings";
+    private const string ResetSettingsCommand = "Reset-DistroNexusSettings";
+    private const string GetCatalogSourcesCommand = "Get-DistroNexusCatalogSource";
+    private const string AddCatalogSourceCommand = "Add-DistroNexusCatalogSource";
+    private const string UpdateCatalogSourceCommand = "Set-DistroNexusCatalogSource";
+    private const string RemoveCatalogSourceCommand = "Remove-DistroNexusCatalogSource";
+    private const string TestCatalogSourceCommand = "Test-DistroNexusCatalogSource";
+    private const string SetCatalogSourceActiveCommand = "Set-DistroNexusCatalogSourceActive";
+    private const string SetCatalogSourceOrderCommand = "Set-DistroNexusCatalogSourceOrder";
+    private const string ResetCatalogSourcesCommand = "Reset-DistroNexusCatalogSource";
+    private const string GetPackagesCommand = "Get-DistroNexusPackage";
+    private const string RefreshCatalogCommand = "Update-DistroNexusCatalog";
+    private const string GetInstallSourceCommand = "Get-DistroNexusInstallSource";
+    private const string GetPackageAcquisitionPreviewCommand = "Get-DistroNexusPackageAcquisitionPreview";
+    private const string InvokePackageAcquisitionCommand = "Invoke-DistroNexusPackageAcquisition";
+    private const string StartPackageDownloadCommand = "Start-DistroNexusPackageDownload";
+    private const string GetPackageDownloadJobsCommand = "Get-DistroNexusPackageDownloadJob";
+    private const string InvokePackageDownloadJobActionCommand = "Invoke-DistroNexusPackageDownloadJobAction";
+    private const string InstallVerifiedInstanceCommand = "Install-DistroNexusInstance";
+    private const string GetInstallTargetPreviewCommand = "Get-DistroNexusInstallTargetPreview";
+    private const string GetInstanceConfigurationCommand = "Get-DistroNexusInstanceConfiguration";
+    private const string GetInstanceConfigurationRecoveryCommand = "Get-DistroNexusInstanceConfigurationRecoveryOffer";
+    private const string SaveInstanceConfigurationCommand = "Save-DistroNexusInstanceConfiguration";
+    private const string GetPackageCacheLocationCommand = "Get-DistroNexusPackageCacheLocation";
+    private const string GetPackageCacheUsageCommand = "Get-DistroNexusPackageCacheUsage";
+    private const string RemovePackageCacheCommand = "Remove-DistroNexusPackage";
+    private const string ClearPackageCacheCommand = "Clear-DistroNexusPackageCache";
+    private const string GetUsbStatusCommand = "Get-DistroNexusUsbStatus";
+    private const string GetUsbDevicesCommand = "Get-DistroNexusUsbDevice";
+    private const string GetTerminalStatusCommand = "Get-DistroNexusTerminalStatus";
+    private const string StartTerminalCommand = "Start-DistroNexusTerminal";
+    private const string OpenPackageCacheFolderCommand = "Open-DistroNexusPackageCacheFolder";
+    private const string GetContainerRuntimeStatusCommand = "Get-DistroNexusContainerRuntimeStatus";
+    private const string GetCapabilityCommand = "Get-DistroNexusCapability";
+    private const string GetPodmanUserUnitPreviewCommand = "Get-DistroNexusPodmanUserUnitPreview";
+    private const string InvokePodmanUserUnitCommand = "Invoke-DistroNexusPodmanUserUnit";
+    private const string GetPodmanConnectionPreviewCommand = "Get-DistroNexusPodmanConnectionPreview";
+    private const string InvokePodmanConnectionCommand = "Invoke-DistroNexusPodmanConnection";
+    private const string GetWslgStatusCommand = "Get-DistroNexusWslgStatus";
+    private const string GetWslgApplicationsCommand = "Get-DistroNexusWslgApplication";
+    private const string StartWslgApplicationCommand = "Start-DistroNexusWslgApplication";
+    private const string RevealWslgApplicationCommand = "Show-DistroNexusWslgApplicationEntry";
+    private const string SetWslgApplicationPinCommand = "Set-DistroNexusWslgApplicationPin";
+    private const string GetDockerIntegrationCommand = "Get-DistroNexusDockerIntegration";
+    private const string GetDockerIntegrationPreviewCommand = "Get-DistroNexusDockerIntegrationPreview";
+    private const string SetDockerIntegrationCommand = "Set-DistroNexusDockerIntegration";
+    private const string GetMonitoringSnapshotCommand = "Get-DistroNexusMonitoringSnapshot";
+    private const string GetMonitoringProcessActionPreviewCommand = "Get-DistroNexusMonitoringProcessActionPreview";
+    private const string InvokeMonitoringProcessActionCommand = "Invoke-DistroNexusMonitoringProcessAction";
+    private const string GetSystemdServicesCommand = "Get-DistroNexusSystemdService";
+    private const string GetSystemdDetailsCommand = "Get-DistroNexusSystemdServiceDetail";
+    private const string GetSystemdJournalCommand = "Get-DistroNexusSystemdServiceJournal";
+    private const string GetSystemdPreviewCommand = "Get-DistroNexusSystemdServicePreview";
+    private const string InvokeSystemdCommand = "Invoke-DistroNexusSystemdService";
+    private const string OpenWslConfigFileCommand = "Open-DistroNexusWslConfigFile";
+    private const string OpenRecoveryPointFolderCommand = "Open-DistroNexusRecoveryPointFolder";
+    private const string GetBackupSchedulesCommand = "Get-DistroNexusBackupSchedule";
+    private const string NewBackupScheduleCommand = "New-DistroNexusBackupSchedule";
+    private const string RemoveBackupScheduleCommand = "Remove-DistroNexusBackupSchedule";
+    private const string InvokeBackupCommand = "Invoke-DistroNexusBackup";
+    private const string ConsumeBackupNotificationsCommand = "Get-DistroNexusBackupNotification";
+    private const string GetRecoveryPointsCommand = "Get-DistroNexusRecoveryPoint";
+    private const string GetRecoveryHistoryCommand = "Get-DistroNexusRecoveryPointHistory";
+    private const string TestRecoveryPointCommand = "Test-DistroNexusRecoveryPoint";
+    private const string GetRecoveryCreatePreviewCommand = "Get-DistroNexusRecoveryPointCreatePreview";
+    private const string NewRecoveryPointCommand = "New-DistroNexusRecoveryPoint";
+    private const string GetRecoveryRemovePreviewCommand = "Get-DistroNexusRecoveryPointRemovePreview";
+    private const string RemoveRecoveryPointCommand = "Remove-DistroNexusRecoveryPoint";
+    private const string GetRecoveryRetentionCommand = "Get-DistroNexusRecoveryPointRetention";
+    private const string GetRecoveryRetentionPreviewCommand = "Get-DistroNexusRecoveryPointRetentionPreview";
+    private const string SetRecoveryRetentionCommand = "Set-DistroNexusRecoveryPointRetention";
+    private const string GetRecoveryRestorePreviewCommand = "Get-DistroNexusRecoveryPointRestorePreview";
+    private const string RestoreRecoveryPointCommand = "Restore-DistroNexusRecoveryPoint";
+    private const string GetRecoveryClonePreviewCommand = "Get-DistroNexusRecoveryPointClonePreview";
+    private const string CopyRecoveryPointCommand = "Copy-DistroNexusRecoveryPoint";
+    private const string GetRecoveryMetadataPreviewCommand = "Get-DistroNexusRecoveryPointMetadataPreview";
+    private const string SetRecoveryMetadataCommand = "Set-DistroNexusRecoveryPointMetadata";
+    private const string GetNetworkStatusCommand = "Get-DistroNexusNetworkStatus";
+    private const string GetInstanceIpAddressCommand = "Get-DistroNexusInstanceIpAddress";
+    private const string GetPortMappingsCommand = "Get-DistroNexusPortMapping";
+    private const string ProbeNetworkCommand = "Test-DistroNexusNetworkProbe";
+    private const string GetNetworkModeCommand = "Get-DistroNexusNetworkMode";
+    private const string GetNetworkModePreviewCommand = "Get-DistroNexusNetworkModePreview";
+    private const string SetNetworkModeCommand = "Set-DistroNexusNetworkMode";
+    private const string GetNetworkSettingsCommand = "Get-DistroNexusNetworkSettings";
+    private const string GetNetworkSettingsPreviewCommand = "Get-DistroNexusNetworkSettingsPreview";
+    private const string SetNetworkSettingsCommand = "Set-DistroNexusNetworkSettings";
+    private const string OpenNetworkLoopbackCommand = "Open-DistroNexusNetworkLoopback";
+    private const string GetFirewallRulesCommand = "Get-DistroNexusFirewallRule";
+    private const string GetFirewallCreatePreviewCommand = "Get-DistroNexusFirewallRuleCreatePreview";
+    private const string CreateFirewallRuleCommand = "New-DistroNexusFirewallRule";
+    private const string GetFirewallRemovePreviewCommand = "Get-DistroNexusFirewallRuleRemovePreview";
+    private const string RemoveFirewallRuleCommand = "Remove-DistroNexusFirewallRule";
+    private const string GetGlobalConfigurationCommand = "Get-DistroNexusGlobalConfiguration";
+    private const string GetGlobalConfigurationPreviewCommand = "Get-DistroNexusGlobalConfigurationPreview";
+    private const string SetGlobalConfigurationCommand = "Set-DistroNexusGlobalConfiguration";
+    private const string ScanHealthCommand = "Invoke-DistroNexusHealthScan";
+    private const string GetHealthHistoryCommand = "Get-DistroNexusHealthHistory";
+    private const string GetHealthRepairPreviewCommand = "Get-DistroNexusHealthRepairPreview";
+    private const string RepairHealthCommand = "Repair-DistroNexusHealthFinding";
+    private const string GetDiagnosticLogOptionsCommand = "Get-DistroNexusDiagnosticLogOption";
+    private const string GetDiagnosticReportPreviewCommand = "Get-DistroNexusDiagnosticReportPreview";
+    private const string ExportDiagnosticReportCommand = "Export-DistroNexusDiagnosticReport";
+    private const string GetWorkspacesCommand = "Get-DistroNexusWorkspace";
+    private const string PreviewWorkspaceSaveCommand = "Get-DistroNexusWorkspaceSavePreview";
+    private const string SaveWorkspaceCommand = "Save-DistroNexusWorkspace";
+    private const string PreviewWorkspaceDuplicateCommand = "Get-DistroNexusWorkspaceDuplicatePreview";
+    private const string DuplicateWorkspaceCommand = "Copy-DistroNexusWorkspace";
+    private const string PreviewWorkspaceRemoveCommand = "Get-DistroNexusWorkspaceRemovePreview";
+    private const string RemoveWorkspaceCommand = "Remove-DistroNexusWorkspace";
+    private const string PreviewWorkspaceImportCommand = "Get-DistroNexusWorkspaceImportPreview";
+    private const string ImportWorkspaceCommand = "Import-DistroNexusWorkspace";
+    private const string PreviewWorkspaceExportCommand = "Get-DistroNexusWorkspaceExportPreview";
+    private const string ExportWorkspaceCommand = "Export-DistroNexusWorkspace";
+    private const string PreviewWorkspaceTrustCommand = "Get-DistroNexusWorkspaceTrustPreview";
+    private const string ApproveWorkspaceTrustCommand = "Approve-DistroNexusWorkspaceTrust";
+    private const string PreviewWorkspaceLaunchCommand = "Get-DistroNexusWorkspaceLaunchPreview";
+    private const string LaunchWorkspaceCommand = "Invoke-DistroNexusWorkspace";
+    private const string PreviewWorkspaceRetryCommand = "Get-DistroNexusWorkspaceRetryPreview";
+    private const string RetryWorkspaceCommand = "Retry-DistroNexusWorkspaceAction";
+    private const string PreviewWorkspaceCloseCommand = "Get-DistroNexusWorkspaceClosePreview";
+    private const string CloseWorkspaceCommand = "Close-DistroNexusWorkspace";
+    private const string GetWorkspaceOperationCommand = "Get-DistroNexusWorkspaceOperation";
+    private const string StopWorkspaceOperationCommand = "Stop-DistroNexusWorkspaceOperation";
+    private const string CreateWorkspaceShortcutCommand = "New-DistroNexusWorkspaceShortcut";
+    private const string GetTemplateCommand = "Get-DistroNexusTemplate";
+    private const string GetTemplateOptionsCommand = "Get-DistroNexusTemplateOption";
+    private const string TestTemplateCompatibilityCommand = "Test-DistroNexusTemplateCompatibility";
+    private const string ImportTemplatePreviewCommand = "Get-DistroNexusTemplateImportPreview";
+    private const string ImportTemplateFilePreviewCommand = "Get-DistroNexusTemplateImportFilePreview";
+    private const string GetProductLogRevealTargetCommand = "Get-DistroNexusProductLogRevealTarget";
+    private const string GetDockerDesktopInstallUriCommand = "Get-DistroNexusDockerDesktopInstallUri";
+    private const string ImportTemplateCommand = "Import-DistroNexusTemplate";
+    private const string ExportTemplatePreviewCommand = "Get-DistroNexusTemplateExportPreview";
+    private const string ExportTemplateCommand = "Export-DistroNexusTemplate";
+    private const string RemoveTemplatePreviewCommand = "Get-DistroNexusTemplateRemovePreview";
+    private const string RemoveTemplateCommand = "Remove-DistroNexusTemplate";
+    private const string GetTemplateSourceCommand = "Get-DistroNexusTemplateSource";
+    private const string GetTemplateMarketplaceEntryCommand = "Get-DistroNexusTemplateMarketplaceEntry";
+    private const string GetTemplateMarketplaceStatusCommand = "Get-DistroNexusTemplateMarketplaceStatus";
+    private const string AddTemplateSourceCommand = "Add-DistroNexusTemplateSource";
+    private const string SetTemplateSourceCommand = "Set-DistroNexusTemplateSource";
+    private const string RemoveTemplateSourceCommand = "Remove-DistroNexusTemplateSource";
+    private const string GetTemplateMarketplaceReviewCommand = "Get-DistroNexusTemplateMarketplaceReview";
+    private const string ApproveTemplateMarketplaceCandidateCommand = "Approve-DistroNexusTemplateMarketplaceCandidate";
+    private const string SaveTemplateMarketplaceArtifactCommand = "Save-DistroNexusTemplateMarketplaceArtifact";
+    private const string GetTemplateMarketplaceHistoryCommand = "Get-DistroNexusTemplateMarketplaceHistory";
+    private const string RestoreTemplateMarketplaceArtifactCommand = "Restore-DistroNexusTemplateMarketplaceArtifact";
+    private readonly IPowerShellService _powerShellService;
+
+    public PowerShellModuleClient(IPowerShellService powerShellService)
+    {
+        _powerShellService = powerShellService ?? throw new ArgumentNullException(nameof(powerShellService));
+    }
+
+    public async Task<IReadOnlyList<WorkspaceDefinition>> GetWorkspacesAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(GetWorkspacesCommand, options: new ModuleCallOptions { ParseAsJson = true }, cancellationToken: cancellationToken);
+        ThrowIfFailed(result);
+        if (string.IsNullOrWhiteSpace(result.Output)) return [];
+        using var document = JsonDocument.Parse(result.Output);
+        return document.RootElement.ValueKind == JsonValueKind.Array
+            ? JsonSerializer.Deserialize<List<WorkspaceDefinition>>(result.Output, JsonOptions) ?? []
+            : [JsonSerializer.Deserialize<WorkspaceDefinition>(result.Output, JsonOptions) ?? throw new InvalidOperationException("The module returned an invalid workspace.")];
+    }
+
+    public Task<WorkspaceOperationPreview> PreviewWorkspaceSaveAsync(WorkspaceDefinition definition, long expectedRevision, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceOperationPreview>(PreviewWorkspaceSaveCommand, new() { ["Definition"] = definition, ["ExpectedRevision"] = expectedRevision }, cancellationToken);
+    public Task<WorkspaceDefinition> SaveWorkspaceAsync(string previewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceDefinition>(SaveWorkspaceCommand, TokenParameters(previewToken), cancellationToken);
+    public Task<WorkspaceOperationPreview> PreviewWorkspaceDuplicateAsync(Guid id, string name, long expectedRevision, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceOperationPreview>(PreviewWorkspaceDuplicateCommand, new() { ["Id"] = id, ["Name"] = name, ["ExpectedRevision"] = expectedRevision }, cancellationToken);
+    public Task<WorkspaceDefinition> DuplicateWorkspaceAsync(string previewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceDefinition>(DuplicateWorkspaceCommand, TokenParameters(previewToken), cancellationToken);
+    public Task<WorkspaceOperationPreview> PreviewWorkspaceRemoveAsync(Guid id, long expectedRevision, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceOperationPreview>(PreviewWorkspaceRemoveCommand, new() { ["Id"] = id, ["ExpectedRevision"] = expectedRevision }, cancellationToken);
+    public async Task RemoveWorkspaceAsync(string previewToken, CancellationToken cancellationToken = default) => await ExecuteJsonAsync<object>(RemoveWorkspaceCommand, TokenParameters(previewToken), cancellationToken);
+    public Task<WorkspaceImportPreview> PreviewWorkspaceImportAsync(string content, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceImportPreview>(PreviewWorkspaceImportCommand, new() { ["Content"] = content }, cancellationToken);
+    public Task<WorkspaceDefinition> ImportWorkspaceAsync(string previewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceDefinition>(ImportWorkspaceCommand, TokenParameters(previewToken), cancellationToken);
+    public Task<WorkspaceOperationPreview> PreviewWorkspaceExportAsync(Guid id, long expectedRevision, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceOperationPreview>(PreviewWorkspaceExportCommand, new() { ["Id"] = id, ["ExpectedRevision"] = expectedRevision }, cancellationToken);
+    public Task<WorkspaceExportResult> ExportWorkspaceAsync(string previewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceExportResult>(ExportWorkspaceCommand, TokenParameters(previewToken), cancellationToken);
+    public Task<WorkspaceOperationPreview> PreviewWorkspaceTrustAsync(Guid id, long expectedRevision, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceOperationPreview>(PreviewWorkspaceTrustCommand, new() { ["Id"] = id, ["ExpectedRevision"] = expectedRevision }, cancellationToken);
+    public Task<WorkspaceDefinition> ApproveWorkspaceTrustAsync(string previewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceDefinition>(ApproveWorkspaceTrustCommand, TokenParameters(previewToken), cancellationToken);
+    public Task<WorkspaceLaunchPreview> PreviewWorkspaceLaunchAsync(Guid id, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceLaunchPreview>(PreviewWorkspaceLaunchCommand, new() { ["Id"] = id }, cancellationToken);
+    public Task<WorkspaceOperationStarted> LaunchWorkspaceAsync(string previewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceOperationStarted>(LaunchWorkspaceCommand, TokenParameters(previewToken), cancellationToken);
+    public Task<WorkspaceLaunchPreview> PreviewWorkspaceRetryAsync(Guid id, Guid actionId, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceLaunchPreview>(PreviewWorkspaceRetryCommand, new() { ["Id"] = id, ["ActionId"] = actionId }, cancellationToken);
+    public Task<WorkspaceOperationStarted> RetryWorkspaceAsync(string previewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceOperationStarted>(RetryWorkspaceCommand, TokenParameters(previewToken), cancellationToken);
+    public Task<WorkspaceLaunchPreview> PreviewWorkspaceCloseAsync(Guid id, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceLaunchPreview>(PreviewWorkspaceCloseCommand, new() { ["Id"] = id }, cancellationToken);
+    public Task<WorkspaceActionResult> CloseWorkspaceAsync(string previewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceActionResult>(CloseWorkspaceCommand, TokenParameters(previewToken), cancellationToken);
+    public Task<WorkspaceOperationStatus> GetWorkspaceOperationStatusAsync(string operationId, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceOperationStatus>(GetWorkspaceOperationCommand, new() { ["OperationId"] = operationId }, cancellationToken);
+    public async Task StopWorkspaceOperationAsync(string operationId, CancellationToken cancellationToken = default) => await ExecuteJsonAsync<object>(StopWorkspaceOperationCommand, new() { ["OperationId"] = operationId, ["Confirm"] = false }, cancellationToken);
+    public async Task<WorkspaceShortcutResult> CreateWorkspaceShortcutAsync(Guid workspaceId, CancellationToken cancellationToken = default)
+    {
+        if (workspaceId == Guid.Empty) throw new ArgumentException("A workspace id is required.", nameof(workspaceId));
+        var result = await ExecuteStrictS46bAsync<WorkspaceShortcutResult>(CreateWorkspaceShortcutCommand, new() { ["WorkspaceId"] = workspaceId, ["Confirm"] = false }, ["OutcomeCode"], cancellationToken);
+        if (result.OutcomeCode is not ("Workspace.ShortcutCreated" or "Workspace.ShortcutInvalid" or "Workspace.ShortcutNotFound" or "Workspace.ShortcutUnavailable"))
+            throw new JsonException("Invalid workspace shortcut result.");
+        return result;
+    }
+
+    public async Task<IReadOnlyList<TemplateDisplay>> GetTemplatesAsync(bool forceRefresh = false, string? query = null, string? category = null, CancellationToken cancellationToken = default)
+    {
+        ValidateOptionalTemplateText(query, nameof(query));
+        ValidateOptionalTemplateText(category, nameof(category));
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(GetTemplateCommand, new() { ["ForceRefresh"] = forceRefresh, ["Query"] = query ?? string.Empty, ["Category"] = category ?? string.Empty }, new ModuleCallOptions { ParseAsJson = true }, cancellationToken);
+        ThrowIfFailed(result);
+        return ReadEnvelopeList<TemplateDisplay>(result.Output, "Templates");
+    }
+    public async Task<TemplateDisplay?> GetTemplateAsync(string templateId, CancellationToken cancellationToken = default)
+    {
+        ValidateTemplateIdentifier(templateId, nameof(templateId));
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(GetTemplateCommand, new() { ["Id"] = templateId }, new ModuleCallOptions { ParseAsJson = true }, cancellationToken);
+        ThrowIfFailed(result);
+        return ReadEnvelopeValue<TemplateDisplay>(result.Output, "Template");
+    }
+    public async Task<IReadOnlyList<TemplateOptionDisplay>> GetTemplateOptionsAsync(string templateId, CancellationToken cancellationToken = default)
+    {
+        ValidateTemplateIdentifier(templateId, nameof(templateId));
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(GetTemplateOptionsCommand, new() { ["TemplateId"] = templateId }, new ModuleCallOptions { ParseAsJson = true }, cancellationToken);
+        ThrowIfFailed(result);
+        return ReadEnvelopeList<TemplateOptionDisplay>(result.Output, "Options");
+    }
+    public async Task<bool> TestTemplateCompatibilityAsync(string templateId, string distributionName, CancellationToken cancellationToken = default)
+    { ValidateTemplateIdentifier(templateId, nameof(templateId)); ValidateName(distributionName, nameof(distributionName)); var result = await ExecuteJsonAsync<TemplateCompatibilityClientResult>(TestTemplateCompatibilityCommand, new() { ["TemplateId"] = templateId, ["DistributionName"] = distributionName }, cancellationToken); return result.IsCompatible; }
+    public Task<TemplateApplyPreviewResult> PreviewTemplateApplyAsync(string instanceName, string templateId, IReadOnlyDictionary<string,string> variables, bool declineRecoveryOffer, CancellationToken cancellationToken = default)
+    { ValidateName(instanceName, nameof(instanceName)); ValidateTemplateIdentifier(templateId, nameof(templateId)); if (variables is null || variables.Count > 64 || variables.Any(x => x.Key.Length > 128 || x.Value.Length > 4096)) throw new ArgumentException("Template variables are invalid.", nameof(variables)); return ExecuteJsonAsync<TemplateApplyPreviewResult>(PreviewTemplateApplyCommand, new() { ["InstanceName"] = instanceName, ["TemplateId"] = templateId, ["Variables"] = variables, ["DeclineRecoveryOffer"] = declineRecoveryOffer, ["Confirm"] = false }, cancellationToken); }
+    public Task<TemplateApplyExecuteResult> StartTemplateApplyAsync(string previewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<TemplateApplyExecuteResult>(StartTemplateApplyCommand, new() { ["PreviewToken"] = ValidateHexToken(previewToken, nameof(previewToken)), ["Confirm"] = false }, cancellationToken);
+    public Task<TemplateApplyOperationStatus> GetTemplateApplyOperationStatusAsync(string operationId, CancellationToken cancellationToken = default) => ExecuteJsonAsync<TemplateApplyOperationStatus>(GetTemplateApplyOperationCommand, new() { ["OperationId"] = ValidateHexToken(operationId, nameof(operationId)) }, cancellationToken);
+    public Task<TemplateApplyCancelResult> CancelTemplateApplyAsync(string operationId, CancellationToken cancellationToken = default) => ExecuteJsonAsync<TemplateApplyCancelResult>(StopTemplateApplyCommand, new() { ["OperationId"] = ValidateHexToken(operationId, nameof(operationId)), ["Confirm"] = false }, cancellationToken);
+    public Task<TemplateLocalPreview> PreviewTemplateImportAsync(string content, CancellationToken cancellationToken = default)
+    { ValidateTemplateContent(content); return ExecuteJsonAsync<TemplateLocalPreview>(ImportTemplatePreviewCommand, new() { ["Content"] = content }, cancellationToken); }
+    public Task<TemplateLocalPreview> PreviewTemplateImportFileAsync(string sourcePath, CancellationToken cancellationToken = default)
+    { ValidateTemplateSourcePath(sourcePath); return ExecuteJsonAsync<TemplateLocalPreview>(ImportTemplateFilePreviewCommand, new() { ["SourcePath"] = sourcePath }, cancellationToken); }
+    public async Task<ProductLogRevealTarget> GetProductLogRevealTargetAsync(CancellationToken cancellationToken = default)
+    {
+        var target = await ExecuteStrictS46bAsync<ProductLogRevealTarget>(GetProductLogRevealTargetCommand, [], ["RevealUri", "OutcomeCode"], cancellationToken);
+        if (target.OutcomeCode is not ("ProductLog.Ready" or "ProductLog.Unavailable" or "ProductLog.Declined") ||
+            (target.OutcomeCode == "ProductLog.Ready" && !IsSafeFileUri(target.RevealUri)) ||
+            (target.OutcomeCode != "ProductLog.Ready" && target.RevealUri is not null)) throw new JsonException("Invalid product log target.");
+        return target;
+    }
+    public async Task<ExternalLaunchTarget> GetDockerDesktopInstallUriAsync(CancellationToken cancellationToken = default)
+    {
+        var target = await ExecuteStrictS46bAsync<ExternalLaunchTarget>(GetDockerDesktopInstallUriCommand, [], ["Uri", "OutcomeCode"], cancellationToken);
+        if (target.OutcomeCode != "ExternalUri.Ready" || target.Uri.AbsoluteUri != "https://www.docker.com/products/docker-desktop/") throw new JsonException("Invalid Docker target.");
+        return target;
+    }
+    public Task<TemplateLocalMutationResult> ImportTemplateAsync(string previewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<TemplateLocalMutationResult>(ImportTemplateCommand, TokenParameters(previewToken), cancellationToken);
+    public Task<TemplateLocalPreview> PreviewTemplateExportAsync(string templateId, CancellationToken cancellationToken = default)
+    { ValidateTemplateIdentifier(templateId, nameof(templateId)); return ExecuteJsonAsync<TemplateLocalPreview>(ExportTemplatePreviewCommand, new() { ["TemplateId"] = templateId }, cancellationToken); }
+    public Task<TemplateExportResult> ExportTemplateAsync(string previewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<TemplateExportResult>(ExportTemplateCommand, TokenParameters(previewToken), cancellationToken);
+    public Task<TemplateLocalPreview> PreviewTemplateRemoveAsync(string templateId, CancellationToken cancellationToken = default)
+    { ValidateTemplateIdentifier(templateId, nameof(templateId)); return ExecuteJsonAsync<TemplateLocalPreview>(RemoveTemplatePreviewCommand, new() { ["TemplateId"] = templateId }, cancellationToken); }
+    public async Task<bool> RemoveTemplateAsync(string previewToken, CancellationToken cancellationToken = default) { var result = await ExecuteJsonAsync<TemplateMarketplaceMutationClientResult>(RemoveTemplateCommand, TokenParameters(previewToken), cancellationToken); return result.Changed; }
+    public async Task<IReadOnlyList<TemplateSourceDisplay>> GetTemplateSourcesAsync(CancellationToken cancellationToken = default) => await ExecuteListAsync<TemplateSourceDisplay>(GetTemplateSourceCommand, null, cancellationToken);
+    public async Task<IReadOnlyList<TemplateMarketplaceEntryDisplay>> GetTemplateMarketplaceEntriesAsync(CancellationToken cancellationToken = default) => await ExecuteListAsync<TemplateMarketplaceEntryDisplay>(GetTemplateMarketplaceEntryCommand, null, cancellationToken);
+    public Task<TemplateMarketplaceStatusDisplay> GetTemplateMarketplaceStatusAsync(string sourceId, string templateId, string manifestDigest, CancellationToken cancellationToken = default)
+    { ValidateTemplateIdentifier(sourceId, nameof(sourceId)); ValidateTemplateIdentifier(templateId, nameof(templateId)); ValidateDigest(manifestDigest, nameof(manifestDigest)); return ExecuteJsonAsync<TemplateMarketplaceStatusDisplay>(GetTemplateMarketplaceStatusCommand, new() { ["SourceId"] = sourceId, ["TemplateId"] = templateId, ["ManifestDigest"] = manifestDigest }, cancellationToken); }
+    public Task<TemplateSourceDisplay> AddTemplateSourceAsync(string url, TemplateSourceKind kind, bool acceptNonHttps, CancellationToken cancellationToken = default)
+    { if (!Uri.TryCreate(url, UriKind.Absolute, out _)) throw new ArgumentException("The template source URL is invalid.", nameof(url)); if (!Enum.IsDefined(kind)) throw new ArgumentOutOfRangeException(nameof(kind)); return ExecuteJsonAsync<TemplateSourceDisplay>(AddTemplateSourceCommand, new() { ["Url"] = url, ["Kind"] = kind.ToString(), ["AcceptNonHttps"] = acceptNonHttps }, cancellationToken); }
+    public Task<TemplateSourceDisplay> SetTemplateSourceEnabledAsync(string sourceId, bool enabled, CancellationToken cancellationToken = default)
+    { ValidateTemplateIdentifier(sourceId, nameof(sourceId)); return ExecuteJsonAsync<TemplateSourceDisplay>(SetTemplateSourceCommand, new() { ["SourceId"] = sourceId, ["Enabled"] = enabled }, cancellationToken); }
+    public async Task<bool> RemoveTemplateSourceAsync(string sourceId, CancellationToken cancellationToken = default)
+    { ValidateTemplateIdentifier(sourceId, nameof(sourceId)); return (await ExecuteJsonAsync<TemplateMarketplaceMutationClientResult>(RemoveTemplateSourceCommand, new() { ["SourceId"] = sourceId }, cancellationToken)).Changed; }
+    public Task<TemplateReviewDisplay> ReviewTemplateMarketplaceCandidateAsync(string sourceId, string templateId, string manifestDigest, CancellationToken cancellationToken = default)
+    { ValidateTemplateIdentifier(sourceId, nameof(sourceId)); ValidateTemplateIdentifier(templateId, nameof(templateId)); ValidateDigest(manifestDigest, nameof(manifestDigest)); return ExecuteJsonAsync<TemplateReviewDisplay>(GetTemplateMarketplaceReviewCommand, new() { ["SourceId"] = sourceId, ["TemplateId"] = templateId, ["ManifestDigest"] = manifestDigest }, cancellationToken); }
+    public Task<TemplateArtifactDisplay> ApproveTemplateMarketplaceCandidateAsync(string reviewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<TemplateArtifactDisplay>(ApproveTemplateMarketplaceCandidateCommand, new() { ["ReviewToken"] = ValidateHexToken(reviewToken, nameof(reviewToken)) }, cancellationToken);
+    public Task<TemplateArtifactDisplay> DownloadTemplateMarketplaceArtifactAsync(string sourceId, string templateId, string manifestDigest, CancellationToken cancellationToken = default)
+    { ValidateTemplateIdentifier(sourceId, nameof(sourceId)); ValidateTemplateIdentifier(templateId, nameof(templateId)); ValidateDigest(manifestDigest, nameof(manifestDigest)); return ExecuteJsonAsync<TemplateArtifactDisplay>(SaveTemplateMarketplaceArtifactCommand, new() { ["SourceId"] = sourceId, ["TemplateId"] = templateId, ["ManifestDigest"] = manifestDigest }, cancellationToken); }
+    public async Task<IReadOnlyList<TemplateArtifactHistoryDisplay>> GetTemplateMarketplaceHistoryAsync(string templateId, CancellationToken cancellationToken = default)
+    { ValidateTemplateIdentifier(templateId, nameof(templateId)); return await ExecuteListAsync<TemplateArtifactHistoryDisplay>(GetTemplateMarketplaceHistoryCommand, new() { ["TemplateId"] = templateId }, cancellationToken); }
+    public async Task<bool> RollbackTemplateMarketplaceArtifactAsync(string templateId, string artifactSha256, CancellationToken cancellationToken = default)
+    { ValidateTemplateIdentifier(templateId, nameof(templateId)); ValidateDigest(artifactSha256, nameof(artifactSha256)); return (await ExecuteJsonAsync<TemplateMarketplaceMutationClientResult>(RestoreTemplateMarketplaceArtifactCommand, new() { ["TemplateId"] = templateId, ["ArtifactSha256"] = artifactSha256 }, cancellationToken)).Changed; }
+    private sealed record TemplateCompatibilityClientResult(bool IsCompatible);
+    private sealed record TemplateMarketplaceMutationClientResult(bool Changed);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<WslInstance>> GetInstancesAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(
+            GetInstancesCommand,
+            options: new ModuleCallOptions { ParseAsJson = true },
+            cancellationToken: cancellationToken);
+        ThrowIfFailed(result);
+        return string.IsNullOrWhiteSpace(result.Output) ? Array.Empty<WslInstance>() : DeserializeInstances(result.Output);
+    }
+
+    public async Task<IReadOnlyList<WslInstance>> GetInstancesAsync(InstanceListRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(
+            GetInstancesCommand,
+            new Dictionary<string, object>
+            {
+                ["IncludeRelease"] = request.IncludeRelease,
+                ["IncludeUser"] = request.IncludeUser,
+                ["SkipDiskSize"] = request.SkipDiskSize,
+                ["ForceUpdate"] = request.ForceRefresh
+            },
+            options: new ModuleCallOptions { ParseAsJson = true },
+            cancellationToken: cancellationToken);
+
+        if (!result.Success)
+        {
+            throw result.Exception ?? new InvalidOperationException(result.Error ?? "The DistroNexus module operation failed.");
+        }
+
+        if (string.IsNullOrWhiteSpace(result.Output))
+        {
+            return Array.Empty<WslInstance>();
+        }
+
+        return DeserializeInstances(result.Output);
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> StartInstanceAsync(string name, CancellationToken cancellationToken = default) =>
+        (await StartInstanceWithResultAsync(name, keepAlive: false, cancellationToken)).Succeeded;
+
+    public Task<InstanceStartResult> StartInstanceWithResultAsync(string name, bool keepAlive, CancellationToken cancellationToken = default) =>
+        ExecuteInstanceMutationAsync<InstanceStartResult>(StartInstanceCommand, name, keepAlive, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<bool> StopInstanceAsync(string name, CancellationToken cancellationToken = default) =>
+        (await ExecuteInstanceMutationAsync<InstanceStopResult>(StopInstanceCommand, name, false, cancellationToken)).Succeeded;
+
+    public Task<InstanceResourceSnapshot> GetInstanceResourcesAsync(string name, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); return ExecuteJsonAsync<InstanceResourceSnapshot>(GetInstanceResourcesCommand, new() { ["Name"] = name }, cancellationToken); }
+    public Task<InstanceSparsePreview> GetInstanceSparsePreviewAsync(string name, bool enabled, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); return ExecuteJsonAsync<InstanceSparsePreview>(GetInstanceSparsePreviewCommand, new() { ["Name"] = name, ["Enabled"] = enabled }, cancellationToken); }
+    public Task<InstanceSparseOperationResult> SetInstanceSparseModeAsync(string previewToken, CancellationToken cancellationToken = default)
+    { if (string.IsNullOrWhiteSpace(previewToken) || previewToken.Length != 64 || previewToken.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("A Core-issued instance sparse preview token is required.", nameof(previewToken)); return ExecuteJsonAsync<InstanceSparseOperationResult>(SetInstanceSparseModeCommand, new() { ["PreviewToken"] = previewToken }, cancellationToken); }
+    public Task<InstanceCompactionResult> CompactInstanceAsync(string name, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); return ExecuteJsonAsync<InstanceCompactionResult>(CompactInstanceCommand, new() { ["Name"] = name }, cancellationToken); }
+    public Task<LifecycleOperationPreview> PreviewRemoveInstanceAsync(string name, bool keepFiles, CancellationToken cancellationToken = default) => PreviewLifecycleAsync(RemoveInstanceCommand, new() { ["Name"] = name, ["KeepFiles"] = keepFiles }, cancellationToken);
+    public Task<LifecycleOperationPreview> PreviewMoveInstanceAsync(string name, string destination, CancellationToken cancellationToken = default) => PreviewLifecycleAsync(MoveInstanceCommand, new() { ["Name"] = name, ["Destination"] = destination }, cancellationToken);
+    public Task<LifecycleOperationPreview> PreviewRenameInstanceAsync(string name, string newName, CancellationToken cancellationToken = default) => PreviewLifecycleAsync(RenameInstanceCommand, new() { ["Name"] = name, ["NewName"] = newName }, cancellationToken);
+    public Task<LifecycleOperationPreview> PreviewExportInstanceAsync(string name, string destination, bool stopRunning, CancellationToken cancellationToken = default) => PreviewLifecycleAsync(ExportInstanceCommand, new() { ["Name"] = name, ["Destination"] = destination, ["StopRunning"] = stopRunning }, cancellationToken);
+    public Task<LifecycleOperationPreview> PreviewImportInstanceAsync(string name, string source, string installPath, CancellationToken cancellationToken = default) => PreviewLifecycleAsync(ImportInstanceCommand, new() { ["Name"] = name, ["Source"] = source, ["InstallPath"] = installPath }, cancellationToken);
+    public Task<LifecycleOperationResult> ExecuteLifecycleOperationAsync(string previewToken, CancellationToken cancellationToken = default)
+    { ValidateToken(previewToken, nameof(previewToken)); return ExecuteJsonAsync<LifecycleOperationResult>(ExecuteLifecycleCommand, new() { ["PreviewToken"] = previewToken }, cancellationToken); }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<DistroNexusInstanceTagResult>> GetInstanceTagsAsync(
+        string? name = null,
+        CancellationToken cancellationToken = default)
+    {
+        var parameters = string.IsNullOrWhiteSpace(name)
+            ? null
+            : new Dictionary<string, object> { ["Name"] = name };
+
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(
+            GetInstanceTagsCommand,
+            parameters,
+            new ModuleCallOptions { ParseAsJson = true },
+            cancellationToken);
+
+        if (!result.Success)
+        {
+            throw result.Exception ?? new InvalidOperationException(result.Error ?? "The DistroNexus module operation failed.");
+        }
+
+        if (string.IsNullOrWhiteSpace(result.Output))
+        {
+            return Array.Empty<DistroNexusInstanceTagResult>();
+        }
+
+        return DeserializeTagResults(result.Output);
+    }
+
+    public async Task<CredentialOperationResult> SetCredentialAsync(string name, string username, SecureString password, CancellationToken cancellationToken = default)
+    {
+        ValidateName(name, nameof(name));
+        ValidateName(username, nameof(username));
+        ArgumentNullException.ThrowIfNull(password);
+        var result = await _powerShellService.ExecuteModuleCmdletWithSecureStringAsync(
+            SetCredentialCommand,
+            new Dictionary<string, object> { ["Name"] = name, ["Username"] = username, ["Confirm"] = false },
+            "Password", password, new ModuleCallOptions { ParseAsJson = true }, cancellationToken);
+        ThrowIfFailed(result);
+        return JsonSerializer.Deserialize<CredentialOperationResult>(result.Output, JsonOptions)
+            ?? throw new InvalidOperationException("The module returned an invalid credential result.");
+    }
+
+    public Task<InstallSourceResolution> ResolveInstallSourceAsync(string packageId, CancellationToken cancellationToken = default)
+    {
+        ValidatePackageId(packageId, nameof(packageId));
+        return ExecuteJsonAsync<InstallSourceResolution>(GetInstallSourceCommand, new() { ["PackageId"] = packageId }, cancellationToken);
+    }
+
+    public Task<PackageAcquisitionPreview> PreviewPackageAcquisitionAsync(string packageId, CancellationToken cancellationToken = default)
+    {
+        ValidatePackageId(packageId, nameof(packageId));
+        return ExecuteJsonAsync<PackageAcquisitionPreview>(GetPackageAcquisitionPreviewCommand, new() { ["PackageId"] = packageId }, cancellationToken);
+    }
+
+    public Task<PackageAcquisitionResult> AcquirePackageAsync(string previewToken, CancellationToken cancellationToken = default)
+    {
+        ValidateToken(previewToken, nameof(previewToken));
+        return ExecuteJsonAsync<PackageAcquisitionResult>(InvokePackageAcquisitionCommand, new() { ["PreviewToken"] = previewToken, ["Confirm"] = false }, cancellationToken);
+    }
+
+    public Task<PackageJobStartPreviewResult> PreviewPackageDownloadJobStartAsync(string packageId, CancellationToken cancellationToken = default)
+    { ValidatePackageId(packageId, nameof(packageId)); return ExecutePackageJobJsonAsync<PackageJobStartPreviewResult>(StartPackageDownloadCommand, new() { ["PackageId"] = packageId, ["Preview"] = true }, cancellationToken); }
+    public Task<PackageJobStartResult> StartPackageDownloadJobAsync(string previewToken, CancellationToken cancellationToken = default)
+    { ValidateToken(previewToken, nameof(previewToken)); return ExecutePackageJobJsonAsync<PackageJobStartResult>(StartPackageDownloadCommand, new() { ["PreviewToken"] = previewToken, ["Confirm"] = false }, cancellationToken); }
+    public async Task<IReadOnlyList<PackageDownloadJob>> GetPackageDownloadJobsAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(GetPackageDownloadJobsCommand, null, new ModuleCallOptions { ParseAsJson = true }, cancellationToken); ThrowIfFailed(result);
+        using var doc = JsonDocument.Parse(result.Output); if (doc.RootElement.ValueKind != JsonValueKind.Array) throw new JsonException("Package jobs must be an array."); if (doc.RootElement.GetArrayLength() > MaxPackageDownloadJobs) throw new JsonException("Package jobs exceed the maximum supported count.");
+        return doc.RootElement.EnumerateArray().Select(ParsePackageJob).ToArray();
+    }
+    public Task<PackageJobActionPreviewResult> PreviewPackageDownloadJobActionAsync(string jobId, string action, CancellationToken cancellationToken = default)
+    { if (string.IsNullOrWhiteSpace(jobId) || jobId.Length != 32 || jobId.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("A package job id is required.", nameof(jobId)); if (action is not ("cancel" or "retry" or "clear")) throw new ArgumentException("The package job action is invalid.", nameof(action)); return ExecutePackageJobJsonAsync<PackageJobActionPreviewResult>(InvokePackageDownloadJobActionCommand, new() { ["JobId"] = jobId, ["Action"] = action, ["Preview"] = true }, cancellationToken); }
+    public Task<PackageJobActionResult> ExecutePackageDownloadJobActionAsync(string previewToken, CancellationToken cancellationToken = default)
+    { ValidateToken(previewToken, nameof(previewToken)); return ExecutePackageJobJsonAsync<PackageJobActionResult>(InvokePackageDownloadJobActionCommand, new() { ["PreviewToken"] = previewToken, ["Confirm"] = false }, cancellationToken); }
+
+    public async Task<VerifiedInstallResult> InstallVerifiedInstanceAsync(string packageReference, string name, string installRoot, string username, string shell, string? locale, bool setAsDefault, SecureString? password = null, CancellationToken cancellationToken = default)
+    {
+        ValidateToken(packageReference, nameof(packageReference));
+        ValidateName(name, nameof(name));
+        ValidateName(username, nameof(username));
+        if (string.IsNullOrWhiteSpace(installRoot) || installRoot.IndexOfAny(['\r', '\n', '\0']) >= 0) throw new ArgumentException("The install root is invalid.", nameof(installRoot));
+        if (shell is not ("bash" or "zsh" or "fish" or "sh")) throw new ArgumentException("The shell is invalid.", nameof(shell));
+        if (locale?.Length > 128 || locale?.IndexOfAny(['\r', '\n', '\0']) >= 0) throw new ArgumentException("The locale is invalid.", nameof(locale));
+        var parameters = new Dictionary<string, object> { ["PackageReference"] = packageReference, ["Name"] = name, ["InstallRoot"] = installRoot, ["Username"] = username, ["Shell"] = shell, ["SetAsDefault"] = setAsDefault, ["Confirm"] = false };
+        if (locale is not null) parameters["Locale"] = locale;
+        var result = password is null
+            ? await _powerShellService.ExecuteModuleCmdletAsync(InstallVerifiedInstanceCommand, parameters, new ModuleCallOptions { ParseAsJson = true }, cancellationToken)
+            : await _powerShellService.ExecuteModuleCmdletWithSecureStringAsync(InstallVerifiedInstanceCommand, parameters, "Password", password, new ModuleCallOptions { ParseAsJson = true }, cancellationToken);
+        ThrowIfFailed(result);
+        return JsonSerializer.Deserialize<VerifiedInstallResult>(result.Output, JsonOptions)
+            ?? throw new InvalidOperationException("The module returned an invalid install result.");
+    }
+
+    public Task<InstallTargetPreviewResult> PreviewInstallTargetAsync(string installRoot, CancellationToken cancellationToken = default)
+    { if (string.IsNullOrWhiteSpace(installRoot) || installRoot.IndexOfAny(['\r', '\n', '\0']) >= 0) throw new ArgumentException("The install root is invalid.", nameof(installRoot)); return ExecuteS44JsonAsync<InstallTargetPreviewResult>(GetInstallTargetPreviewCommand, new() { ["InstallRoot"] = installRoot }, ["PreviewToken","ExpiresAt","DisplayName","AvailableBytes","RequiredBytes","IsEligible","OutcomeCode"], cancellationToken); }
+    public async Task<VerifiedInstallResult> InstallVerifiedInstanceWithTargetAsync(string packageReference, string name, string targetPreviewToken, string username, string shell, string? locale, bool setAsDefault, SecureString? password = null, CancellationToken cancellationToken = default)
+    {
+        ValidateToken(packageReference, nameof(packageReference)); ValidateToken(targetPreviewToken, nameof(targetPreviewToken)); ValidateName(name, nameof(name)); ValidateName(username, nameof(username));
+        if (shell is not ("bash" or "zsh" or "fish" or "sh")) throw new ArgumentException("The shell is invalid.", nameof(shell));
+        var parameters = new Dictionary<string, object> { ["PackageReference"] = packageReference, ["Name"] = name, ["TargetPreviewToken"] = targetPreviewToken, ["Username"] = username, ["Shell"] = shell, ["SetAsDefault"] = setAsDefault, ["Confirm"] = false };
+        if (locale is not null) parameters["Locale"] = locale;
+        var result = password is null ? await _powerShellService.ExecuteModuleCmdletAsync(InstallVerifiedInstanceCommand, parameters, new ModuleCallOptions { ParseAsJson = true }, cancellationToken) : await _powerShellService.ExecuteModuleCmdletWithSecureStringAsync(InstallVerifiedInstanceCommand, parameters, "Password", password, new ModuleCallOptions { ParseAsJson = true }, cancellationToken);
+        ThrowIfFailed(result); return JsonSerializer.Deserialize<VerifiedInstallResult>(result.Output, JsonOptions) ?? throw new InvalidOperationException("The module returned an invalid install result.");
+    }
+
+    public Task<InstanceConfigurationReadResult> GetInstanceConfigurationAsync(string name, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); return ExecuteS44JsonAsync<InstanceConfigurationReadResult>(GetInstanceConfigurationCommand, new() { ["Name"] = name }, ["Name","SchemaRevision","Document","Fingerprint","OutcomeCode"], cancellationToken); }
+    public Task<InstanceConfigurationRecoveryResult> GetInstanceConfigurationRecoveryOfferAsync(string name, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); return ExecuteS44JsonAsync<InstanceConfigurationRecoveryResult>(GetInstanceConfigurationRecoveryCommand, new() { ["Name"] = name }, ["Name","OfferState","RecoveryFingerprint","OutcomeCode"], cancellationToken); }
+    public Task<InstanceConfigurationPreviewResult> PreviewInstanceConfigurationAsync(string name, IReadOnlyDictionary<string, string?> changes, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); if (changes is null || changes.Count is 0 or > 32) throw new ArgumentException("Configuration changes are invalid.", nameof(changes)); return ExecuteS44JsonAsync<InstanceConfigurationPreviewResult>(SaveInstanceConfigurationCommand, new() { ["Name"] = name, ["Changes"] = changes, ["Preview"] = true }, ["PreviewToken","ExpiresAt","Name","ChangeSummary","OutcomeCode"], cancellationToken); }
+    public Task<InstanceConfigurationSaveResult> SaveInstanceConfigurationAsync(string previewToken, CancellationToken cancellationToken = default)
+    { ValidateToken(previewToken, nameof(previewToken)); return ExecuteS44JsonAsync<InstanceConfigurationSaveResult>(SaveInstanceConfigurationCommand, new() { ["PreviewToken"] = previewToken, ["Confirm"] = false }, ["Name","BackupCreated","RecoveryAction","OutcomeCode"], cancellationToken); }
+
+    /// <inheritdoc />
+    public Task AddInstanceTagAsync(string name, string tag, CancellationToken cancellationToken = default) =>
+        ExecuteTagMutationAsync(AddInstanceTagCommand, new Dictionary<string, object>
+        {
+            ["Name"] = name,
+            ["Tag"] = tag
+        }, cancellationToken);
+
+    /// <inheritdoc />
+    public Task SetInstanceTagsAsync(string name, IReadOnlyList<string> tags, CancellationToken cancellationToken = default) =>
+        ExecuteTagMutationAsync(SetInstanceTagsCommand, new Dictionary<string, object>
+        {
+            ["Name"] = name,
+            ["Tags"] = tags.ToArray()
+        }, cancellationToken);
+
+    /// <inheritdoc />
+    public Task RemoveInstanceTagAsync(string name, string tag, CancellationToken cancellationToken = default) =>
+        ExecuteTagMutationAsync(RemoveInstanceTagCommand, new Dictionary<string, object>
+        {
+            ["Name"] = name,
+            ["Tag"] = tag
+        }, cancellationToken);
+
+    /// <inheritdoc />
+    public Task RenameInstanceTagsAsync(string oldName, string newName, CancellationToken cancellationToken = default) =>
+        ExecuteTagMutationAsync(RenameInstanceTagsCommand, new Dictionary<string, object>
+        {
+            ["OldName"] = oldName,
+            ["NewName"] = newName
+        }, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<GlobalSettings> GetSettingsAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(
+            GetSettingsCommand,
+            options: new ModuleCallOptions { ParseAsJson = true },
+            cancellationToken: cancellationToken);
+        if (!result.Success)
+        {
+            throw result.Exception ?? new InvalidOperationException(result.Error ?? "The DistroNexus module operation failed.");
+        }
+
+        if (string.IsNullOrWhiteSpace(result.Output))
+        {
+            return new GlobalSettings();
+        }
+
+        var settings = JsonSerializer.Deserialize<GlobalSettings>(result.Output, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new GlobalSettings();
+        settings.PowerShellModulePath = null;
+        return settings;
+    }
+
+    public async Task<BootstrapSettingsResult> GetBootstrapSettingsAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync("Get-DistroNexusBootstrapSettings", options: new ModuleCallOptions { ParseAsJson = true }, cancellationToken: cancellationToken);
+        ThrowIfFailed(result);
+        var bootstrap = JsonSerializer.Deserialize<BootstrapSettingsResult>(result.Output, StrictJsonOptions) ?? throw new InvalidOperationException("Invalid bootstrap result.");
+        if (bootstrap.ModuleState != "Ready" || bootstrap.Settings is null) throw new InvalidOperationException("Invalid bootstrap result.");
+        bootstrap.Settings.PowerShellModulePath = null;
+        return bootstrap;
+    }
+
+    public async Task<DiagnosticSnapshotResult> GetDiagnosticSnapshotAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(
+            GetDiagnosticSnapshotCommand,
+            options: new ModuleCallOptions { ParseAsJson = true },
+            cancellationToken: cancellationToken);
+        ThrowIfFailed(result);
+        if (result.Output is null || System.Text.Encoding.UTF8.GetByteCount(result.Output) > 16 * 1024)
+            throw new JsonException("Diagnostic snapshot exceeds the maximum envelope size.");
+        using var document = JsonDocument.Parse(result.Output);
+        var allowed = new[] { "ModuleState", "WslState", "BridgeState", "Notices", "OutcomeCode" };
+        if (document.RootElement.ValueKind != JsonValueKind.Object || document.RootElement.EnumerateObject().Any(p => !allowed.Contains(p.Name, StringComparer.Ordinal)))
+            throw new JsonException("Diagnostic snapshot contains unknown fields.");
+        var snapshot = JsonSerializer.Deserialize<DiagnosticSnapshotResult>(result.Output, StrictJsonOptions)
+            ?? throw new JsonException("Invalid diagnostic snapshot.");
+        if (snapshot.ModuleState != "Ready" || snapshot.BridgeState != "Ready" || snapshot.WslState is not ("Ready" or "Unavailable" or "Unknown") ||
+            snapshot.OutcomeCode is not ("Diagnostic.Ready" or "Diagnostic.Degraded") ||
+            (snapshot.WslState == "Ready") != (snapshot.OutcomeCode == "Diagnostic.Ready") || snapshot.Notices is null || snapshot.Notices.Count > 16 ||
+            snapshot.Notices.Any(n => !System.Text.RegularExpressions.Regex.IsMatch(n.Code ?? string.Empty, "^[A-Z][A-Za-z0-9.]{0,63}$") || n.Severity is not ("Info" or "Warning" or "Error") || string.IsNullOrWhiteSpace(n.Message) || n.Message.Length > 256 || n.Message.Any(char.IsControl) || ContainsHostPath(n.Message)))
+            throw new JsonException("Invalid diagnostic snapshot.");
+        return snapshot;
+    }
+
+    private static bool ContainsHostPath(string value) =>
+        System.Text.RegularExpressions.Regex.IsMatch(value, "[A-Za-z]:[\\\\/]") ||
+        System.Text.RegularExpressions.Regex.IsMatch(value, "(^|\\s)(?:\\\\\\\\|//|\\\\\\?\\\\|\\\\\\.\\\\|/)(?:[^\\s]*)");
+
+    public async Task<StoreComplianceStatusResult> GetStoreComplianceStatusAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync("Get-DistroNexusStoreComplianceStatus", options: new ModuleCallOptions { ParseAsJson = true }, cancellationToken: cancellationToken);
+        ThrowIfFailed(result);
+        var status = JsonSerializer.Deserialize<StoreComplianceStatusResult>(result.Output, StrictJsonOptions) ?? throw new InvalidOperationException("Invalid compliance result.");
+        if (string.IsNullOrWhiteSpace(status.OutcomeCode)) throw new InvalidOperationException("Invalid compliance result.");
+        return status;
+    }
+
+    public async Task<UpdateStatusResult> GetUpdateStatusAsync(bool includePrerelease = false, CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync("Get-DistroNexusUpdateStatus", new() { ["IncludePrerelease"] = includePrerelease }, new ModuleCallOptions { ParseAsJson = true }, cancellationToken);
+        ThrowIfFailed(result);
+        var status = JsonSerializer.Deserialize<UpdateStatusResult>(result.Output, StrictJsonOptions) ?? throw new InvalidOperationException("Invalid update result.");
+        if (!IsNormalizedUpdateVersion(status.CurrentVersion) || (status.LatestVersion is not null && !IsNormalizedUpdateVersion(status.LatestVersion)) || status.ReleaseNotes?.Length > 8192 || string.IsNullOrWhiteSpace(status.OutcomeCode)) throw new InvalidOperationException("Invalid update result.");
+        if (status.ReleaseUri is not null && (!status.ReleaseUri.IsAbsoluteUri || status.ReleaseUri.Scheme != Uri.UriSchemeHttps || status.ReleaseUri.Host != "github.com" || !status.ReleaseUri.AbsolutePath.StartsWith("/LazyWorkshopCreate/DistroNexus/releases", StringComparison.Ordinal) || !string.IsNullOrEmpty(status.ReleaseUri.UserInfo) || !string.IsNullOrEmpty(status.ReleaseUri.Fragment))) throw new InvalidOperationException("Invalid update release URI.");
+        return status;
+    }
+
+    /// <inheritdoc />
+    public async Task SaveSettingsAsync(DistroNexusSettingsUpdate settings, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        var parameters = SettingsParameters(settings);
+        if (parameters.Count == 0)
+        {
+            throw new ArgumentException("Specify at least one modeled settings field.", nameof(settings));
+        }
+
+        await ExecuteSettingsMutationAsync(SetSettingsCommand, parameters, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task ResetSettingsAsync(CancellationToken cancellationToken = default) =>
+        ExecuteSettingsMutationAsync(ResetSettingsCommand, null, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<CatalogSource>> GetCatalogSourcesAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(
+            GetCatalogSourcesCommand,
+            options: new ModuleCallOptions { ParseAsJson = true },
+            cancellationToken: cancellationToken);
+        ThrowIfFailed(result);
+
+        if (string.IsNullOrWhiteSpace(result.Output))
+        {
+            return Array.Empty<CatalogSource>();
+        }
+
+        return DeserializeCatalogSources(result.Output);
+    }
+
+    /// <inheritdoc />
+    public async Task<CatalogSource> AddCatalogSourceAsync(
+        DistroNexusCatalogSourceCreateRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(
+            AddCatalogSourceCommand,
+            new Dictionary<string, object>
+            {
+                ["Name"] = request.Name,
+                ["Url"] = request.Url,
+                ["Description"] = request.Description ?? string.Empty,
+                ["IsActive"] = request.IsActive
+            },
+            new ModuleCallOptions { ParseAsJson = true },
+            cancellationToken);
+        ThrowIfFailed(result);
+        return DeserializeCatalogSource(result.Output);
+    }
+
+    /// <inheritdoc />
+    public async Task<CatalogSource> UpdateCatalogSourceAsync(
+        DistroNexusCatalogSourceUpdateRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(
+            UpdateCatalogSourceCommand,
+            new Dictionary<string, object>
+            {
+                ["SourceId"] = request.SourceId,
+                ["Name"] = request.Name,
+                ["Url"] = request.Url,
+                ["Description"] = request.Description ?? string.Empty,
+                ["IsActive"] = request.IsActive
+            },
+            new ModuleCallOptions { ParseAsJson = true },
+            cancellationToken);
+        ThrowIfFailed(result);
+        return DeserializeCatalogSource(result.Output);
+    }
+
+    /// <inheritdoc />
+    public Task<bool> RemoveCatalogSourceAsync(string sourceId, CancellationToken cancellationToken = default) =>
+        ExecuteCatalogSourceBooleanMutationAsync(RemoveCatalogSourceCommand, new Dictionary<string, object> { ["SourceId"] = sourceId }, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<bool> TestCatalogSourceAsync(string url, CancellationToken cancellationToken = default) =>
+        ExecuteCatalogSourceBooleanMutationAsync(TestCatalogSourceCommand, new Dictionary<string, object> { ["Url"] = url }, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<bool> SetCatalogSourceActiveAsync(string sourceId, bool isActive, CancellationToken cancellationToken = default) =>
+        ExecuteCatalogSourceBooleanMutationAsync(SetCatalogSourceActiveCommand, new Dictionary<string, object> { ["SourceId"] = sourceId, ["IsActive"] = isActive }, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<bool> ReorderCatalogSourcesAsync(IReadOnlyList<string> sourceIds, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(sourceIds);
+        return ExecuteCatalogSourceBooleanMutationAsync(SetCatalogSourceOrderCommand, new Dictionary<string, object> { ["SourceId"] = sourceIds.ToArray() }, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<bool> ResetCatalogSourcesAsync(CancellationToken cancellationToken = default) =>
+        ExecuteCatalogSourceBooleanMutationAsync(ResetCatalogSourcesCommand, null, cancellationToken);
+
+    public async Task<IReadOnlyList<DistroPackage>> GetPackagesAsync(string? family = null, bool forceReload = false, CancellationToken cancellationToken = default)
+    {
+        var parameters = new Dictionary<string, object>();
+        if (!string.IsNullOrWhiteSpace(family)) parameters["Family"] = family;
+        if (forceReload) parameters["ForceReload"] = true;
+        return await ExecutePackagesAsync(parameters.Count == 0 ? null : parameters, cancellationToken);
+    }
+
+    public Task<IReadOnlyList<DistroPackage>> SearchPackagesAsync(string query, CancellationToken cancellationToken = default) =>
+        ExecutePackagesAsync(new Dictionary<string, object> { ["Query"] = query }, cancellationToken);
+
+    public async Task<DistroPackage?> GetPackageAsync(string id, CancellationToken cancellationToken = default)
+    {
+        var packages = await ExecutePackagesAsync(new Dictionary<string, object> { ["Id"] = id }, cancellationToken);
+        return packages.FirstOrDefault();
+    }
+
+    public async Task<DistroNexusCatalogRefreshResult> RefreshCatalogAsync(string? sourceUrl = null, CancellationToken cancellationToken = default)
+    {
+        Dictionary<string, object>? parameters = string.IsNullOrWhiteSpace(sourceUrl) ? null : new() { ["SourceUrl"] = sourceUrl };
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(RefreshCatalogCommand, parameters, cancellationToken: cancellationToken);
+        ThrowIfFailed(result);
+        return JsonSerializer.Deserialize<DistroNexusCatalogRefreshResult>(result.Output, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+            ?? throw new InvalidOperationException("The DistroNexus module returned an invalid catalog refresh result.");
+    }
+
+    public async Task<PackageCacheLocationResult> GetPackageCacheLocationAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(GetPackageCacheLocationCommand, options: new ModuleCallOptions { ParseAsJson = true }, cancellationToken: cancellationToken);
+        ThrowIfFailed(result);
+        return JsonSerializer.Deserialize<PackageCacheLocationResult>(result.Output, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? throw new InvalidOperationException("The module returned an invalid package cache location.");
+    }
+
+    public async Task<CacheUsageInfo> GetPackageCacheUsageAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(GetPackageCacheUsageCommand, options: new ModuleCallOptions { ParseAsJson = true }, cancellationToken: cancellationToken);
+        ThrowIfFailed(result);
+        return JsonSerializer.Deserialize<CacheUsageInfo>(result.Output, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? throw new InvalidOperationException("The module returned an invalid package cache usage result.");
+    }
+
+    public async Task<PackageCacheDeleteResult> DeletePackageCacheEntryAsync(string cacheEntryId, CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(RemovePackageCacheCommand, new Dictionary<string, object> { ["CacheEntryId"] = cacheEntryId }, new ModuleCallOptions { ParseAsJson = true }, cancellationToken);
+        ThrowIfFailed(result);
+        return JsonSerializer.Deserialize<PackageCacheDeleteResult>(result.Output, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? throw new InvalidOperationException("The module returned an invalid package cache delete result.");
+    }
+
+    public async Task<PackageCacheClearResult> ClearPackageCacheAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(ClearPackageCacheCommand, options: new ModuleCallOptions { ParseAsJson = true }, cancellationToken: cancellationToken);
+        ThrowIfFailed(result);
+        return JsonSerializer.Deserialize<PackageCacheClearResult>(result.Output, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? throw new InvalidOperationException("The module returned an invalid package cache clear result.");
+    }
+    public async Task<UsbStatusResult> GetUsbStatusAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(GetUsbStatusCommand, null, new ModuleCallOptions { ParseAsJson = true }, cancellationToken); ThrowIfFailed(result);
+        EnsureUsbEnvelopeSize(result.Output);
+        using var document = JsonDocument.Parse(result.Output); EnsureOnly(document.RootElement, ["IsInstalled", "ServiceState", "Version", "SupportsActions", "Reason", "OutcomeCode"]);
+        var value = JsonSerializer.Deserialize<UsbStatusResult>(document.RootElement.GetRawText(), JsonOptions) ?? throw new JsonException("Invalid USB status.");
+        ValidateUsbStatus(value); return value;
+    }
+    public async Task<UsbDeviceListResult> GetUsbDevicesAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(GetUsbDevicesCommand, null, new ModuleCallOptions { ParseAsJson = true }, cancellationToken); ThrowIfFailed(result);
+        EnsureUsbEnvelopeSize(result.Output);
+        using var document = JsonDocument.Parse(result.Output); EnsureOnly(document.RootElement, ["Devices", "OutcomeCode"]);
+        if (!document.RootElement.TryGetProperty("Devices", out var devices) || devices.ValueKind != JsonValueKind.Array || devices.GetArrayLength() > 128) throw new JsonException("Invalid USB device list.");
+        foreach (var item in devices.EnumerateArray()) EnsureOnly(item, ["BusId", "Description", "Availability", "SharedState", "AttachedState", "IsStorage", "Distribution", "Guidance"]);
+        var value = JsonSerializer.Deserialize<UsbDeviceListResult>(document.RootElement.GetRawText(), JsonOptions) ?? throw new JsonException("Invalid USB device list.");
+        ValidateUsbList(value); return value;
+    }
+
+    public Task<TerminalStatusResult> GetTerminalStatusAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<TerminalStatusResult>(GetTerminalStatusCommand, [], cancellationToken);
+    public Task<TerminalLaunchResult> StartTerminalAsync(string name, string? startPath = null, TerminalKind terminalKind = TerminalKind.Auto, CancellationToken cancellationToken = default)
+    {
+        ValidateName(name, nameof(name));
+        if (startPath is not null && !IsValidLinuxStartPath(startPath)) throw new ArgumentException("The terminal start path is invalid.", nameof(startPath));
+        if (!Enum.IsDefined(terminalKind)) throw new ArgumentOutOfRangeException(nameof(terminalKind));
+        var parameters = new Dictionary<string, object> { ["Name"] = name, ["TerminalKind"] = terminalKind.ToString() };
+        if (startPath is not null) parameters["StartPath"] = startPath;
+        return ExecuteJsonAsync<TerminalLaunchResult>(StartTerminalCommand, parameters, cancellationToken);
+    }
+    public Task<TerminalLaunchResult> OpenPackageCacheFolderAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<TerminalLaunchResult>(OpenPackageCacheFolderCommand, [], cancellationToken);
+
+    public async Task<ContainerRuntimeSnapshot> GetContainerRuntimeStatusAsync(string name, CancellationToken cancellationToken = default)
+    {
+        ValidateName(name, nameof(name));
+        return await ExecuteJsonAsync<ContainerRuntimeSnapshot>(GetContainerRuntimeStatusCommand, new() { ["Name"] = name }, cancellationToken);
+    }
+
+    public async Task<InstanceCapabilitySnapshot> GetInstanceCapabilitiesAsync(string name, CancellationToken cancellationToken = default)
+    {
+        ValidateName(name, nameof(name));
+        return await ExecuteJsonAsync<InstanceCapabilitySnapshot>(GetCapabilityCommand, new() { ["Name"] = name }, cancellationToken);
+    }
+
+    public async Task<PlatformCapabilitySnapshot> GetHostCapabilitiesAsync(CancellationToken cancellationToken = default) =>
+        await ExecuteJsonAsync<PlatformCapabilitySnapshot>(GetCapabilityCommand, new() { ["Host"] = true }, cancellationToken);
+
+    public async Task<DistroNexusPodmanUserUnitPreview> GetPodmanUserUnitPreviewAsync(string name, PodmanUserUnit unit, SystemdAction action, CancellationToken cancellationToken = default)
+    {
+        ValidateName(name, nameof(name));
+        ValidatePodmanUnitAction(unit, action);
+        return await ExecuteJsonAsync<DistroNexusPodmanUserUnitPreview>(GetPodmanUserUnitPreviewCommand, new() { ["Name"] = name, ["Unit"] = unit.ToString(), ["Action"] = action.ToString() }, cancellationToken);
+    }
+
+    public async Task<DistroNexusPodmanUserUnitResult> InvokePodmanUserUnitAsync(DistroNexusPodmanUserUnitPreview preview, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(preview);
+        ValidateName(preview.InstanceName, nameof(preview));
+        ValidatePodmanUnitAction(preview.Unit, preview.Action);
+        if (string.IsNullOrWhiteSpace(preview.Token)) throw new ArgumentException("A Core-issued Podman preview token is required.", nameof(preview));
+        return await ExecuteJsonAsync<DistroNexusPodmanUserUnitResult>(InvokePodmanUserUnitCommand, new() { ["PreviewToken"] = preview.Token, ["InstanceName"] = preview.InstanceName, ["Unit"] = preview.Unit.ToString(), ["Action"] = preview.Action.ToString() }, cancellationToken);
+    }
+
+    public async Task<DistroNexusPodmanConnectionPreview> GetPodmanConnectionPreviewAsync(string name, PodmanConnectionRequest request, CancellationToken cancellationToken = default)
+    {
+        ValidateName(name, nameof(name));
+        ArgumentNullException.ThrowIfNull(request);
+        request.Validate();
+        return await ExecuteJsonAsync<DistroNexusPodmanConnectionPreview>(GetPodmanConnectionPreviewCommand, new() { ["Name"] = name, ["ConnectionName"] = request.Name, ["Endpoint"] = request.SafeEndpoint }, cancellationToken);
+    }
+
+    public async Task<PodmanConnectionResult> InvokePodmanConnectionAsync(DistroNexusPodmanConnectionPreview preview, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(preview);
+        ValidateName(preview.InstanceName, nameof(preview));
+        if (string.IsNullOrWhiteSpace(preview.Token)) throw new ArgumentException("A Core-issued Podman preview token is required.", nameof(preview));
+        var request = new PodmanConnectionRequest(preview.Name, new Uri(preview.Endpoint, UriKind.Absolute));
+        request.Validate();
+        return await ExecuteJsonAsync<PodmanConnectionResult>(InvokePodmanConnectionCommand, new() { ["PreviewToken"] = preview.Token, ["InstanceName"] = preview.InstanceName, ["ConnectionName"] = request.Name, ["Endpoint"] = request.SafeEndpoint }, cancellationToken);
+    }
+
+    public Task<WslgApplicationStatus> GetWslgStatusAsync(string name, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); return ExecuteJsonAsync<WslgApplicationStatus>(GetWslgStatusCommand, new() { ["Name"] = name }, cancellationToken); }
+    public Task<WslgDiscoveryResult> DiscoverWslgApplicationsAsync(string name, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); return ExecuteJsonAsync<WslgDiscoveryResult>(GetWslgApplicationsCommand, new() { ["Name"] = name }, cancellationToken); }
+    public Task<WslgActionResult> LaunchWslgApplicationAsync(string token, string applicationId, CancellationToken cancellationToken = default) => ExecuteWslgActionAsync(StartWslgApplicationCommand, token, applicationId, null, cancellationToken);
+    public Task<WslgActionResult> RevealWslgApplicationAsync(string token, string applicationId, CancellationToken cancellationToken = default) => ExecuteWslgActionAsync(RevealWslgApplicationCommand, token, applicationId, null, cancellationToken);
+    public Task<WslgActionResult> SetWslgApplicationPinAsync(string token, string applicationId, bool pinned, CancellationToken cancellationToken = default) => ExecuteWslgActionAsync(SetWslgApplicationPinCommand, token, applicationId, pinned, cancellationToken);
+    public Task<DockerIntegrationSnapshot> GetDockerIntegrationAsync(string name, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); return ExecuteJsonAsync<DockerIntegrationSnapshot>(GetDockerIntegrationCommand, new() { ["Name"] = name }, cancellationToken); }
+    public Task<DockerIntegrationPreview> GetDockerIntegrationPreviewAsync(string name, bool enabled, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); return ExecuteJsonAsync<DockerIntegrationPreview>(GetDockerIntegrationPreviewCommand, new() { ["Name"] = name, ["Enabled"] = enabled }, cancellationToken); }
+    public Task<DockerIntegrationResult> SetDockerIntegrationAsync(string name, bool enabled, string previewToken, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); if (string.IsNullOrWhiteSpace(previewToken) || previewToken.Length != 64 || previewToken.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("A Core-issued Docker integration preview token is required.", nameof(previewToken)); return ExecuteJsonAsync<DockerIntegrationResult>(SetDockerIntegrationCommand, new() { ["Name"] = name, ["Enabled"] = enabled, ["Preview"] = previewToken }, cancellationToken); }
+    public Task<MonitoringSnapshotResult> GetMonitoringSnapshotAsync(string name, int intervalSeconds, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); if (intervalSeconds is not (1 or 2 or 5 or 10)) throw new ArgumentOutOfRangeException(nameof(intervalSeconds)); return ExecuteJsonAsync<MonitoringSnapshotResult>(GetMonitoringSnapshotCommand, new() { ["Name"] = name, ["IntervalSeconds"] = intervalSeconds }, cancellationToken); }
+    public Task<MonitoringProcessActionPreview> GetMonitoringProcessActionPreviewAsync(string snapshotToken, int processId, MonitoringProcessAction action, CancellationToken cancellationToken = default)
+    { ValidateToken(snapshotToken, nameof(snapshotToken)); if (processId <= 1 || action is not (MonitoringProcessAction.Terminate or MonitoringProcessAction.Kill or MonitoringProcessAction.Renice)) throw new ArgumentOutOfRangeException(nameof(processId)); return ExecuteJsonAsync<MonitoringProcessActionPreview>(GetMonitoringProcessActionPreviewCommand, new() { ["SnapshotToken"] = snapshotToken, ["ProcessId"] = processId, ["Action"] = action.ToString() }, cancellationToken); }
+    public Task<ProcessActionResult> InvokeMonitoringProcessActionAsync(string previewToken, CancellationToken cancellationToken = default)
+    { ValidateToken(previewToken, nameof(previewToken)); return ExecuteJsonAsync<ProcessActionResult>(InvokeMonitoringProcessActionCommand, new() { ["PreviewToken"] = previewToken }, cancellationToken); }
+    public Task<IReadOnlyList<SystemdServiceInfo>> GetSystemdServicesAsync(string name, SystemdScope scope, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); return ExecuteJsonAsync<IReadOnlyList<SystemdServiceInfo>>(GetSystemdServicesCommand, new() { ["Name"] = name, ["Scope"] = scope.ToString() }, cancellationToken); }
+    public Task<SystemdServiceDetails?> GetSystemdServiceDetailsAsync(string name, SystemdUnitName unit, SystemdScope scope, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); return ExecuteJsonAsync<SystemdServiceDetails?>(GetSystemdDetailsCommand, new() { ["Name"] = name, ["Unit"] = unit.Value, ["Scope"] = scope.ToString() }, cancellationToken); }
+    public Task<IReadOnlyList<SystemdJournalEntry>> GetSystemdServiceJournalAsync(string name, SystemdUnitName unit, SystemdScope scope, string? search, int lineLimit, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); if (lineLimit is < 1 or > 5000) throw new ArgumentOutOfRangeException(nameof(lineLimit)); return ExecuteJsonAsync<IReadOnlyList<SystemdJournalEntry>>(GetSystemdJournalCommand, new() { ["Name"] = name, ["Unit"] = unit.Value, ["Scope"] = scope.ToString(), ["Search"] = search, ["LineLimit"] = lineLimit }, cancellationToken); }
+    public Task<SystemdOperationPreview> GetSystemdServicePreviewAsync(string name, SystemdUnitName unit, SystemdAction action, SystemdScope scope, CancellationToken cancellationToken = default)
+    { ValidateName(name, nameof(name)); return ExecuteJsonAsync<SystemdOperationPreview>(GetSystemdPreviewCommand, new() { ["Name"] = name, ["Unit"] = unit.Value, ["Action"] = action.ToString(), ["Scope"] = scope.ToString() }, cancellationToken); }
+    public Task<SystemdOperationResult> InvokeSystemdServiceAsync(string previewToken, CancellationToken cancellationToken = default)
+    { ValidateToken(previewToken, nameof(previewToken)); return ExecuteJsonAsync<SystemdOperationResult>(InvokeSystemdCommand, new() { ["PreviewToken"] = previewToken }, cancellationToken); }
+    public Task<FirewallStatus> GetNetworkStatusAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<FirewallStatus>(GetNetworkStatusCommand, [], cancellationToken);
+    public Task<string?> GetInstanceIpAddressAsync(string name, CancellationToken cancellationToken = default) { ValidateName(name, nameof(name)); return ExecuteJsonAsync<string?>(GetInstanceIpAddressCommand, new() { ["Name"] = name }, cancellationToken); }
+    public Task<IReadOnlyList<PortMapping>> GetPortMappingsAsync(string name, string? protocol = null, CancellationToken cancellationToken = default) { ValidateName(name, nameof(name)); var p = new Dictionary<string, object> { ["Name"] = name }; if (protocol is not null) p["Protocol"] = protocol; return ExecuteJsonAsync<IReadOnlyList<PortMapping>>(GetPortMappingsCommand, p, cancellationToken); }
+    public Task<NetworkProbeResult> ProbeNetworkAsync(NetworkProbeRequest request, CancellationToken cancellationToken = default) => ExecuteJsonAsync<NetworkProbeResult>(ProbeNetworkCommand, new() { ["Kind"] = request.Kind.ToString(), ["TargetHost"] = request.Host, ["Port"] = request.Port ?? 0, ["TimeoutSeconds"] = (int)(request.Timeout ?? TimeSpan.FromSeconds(5)).TotalSeconds, ["DistributionName"] = request.DistributionName ?? string.Empty }, cancellationToken);
+    public Task<NetworkingModeGuidance> GetNetworkModeAsync(WslNetworkingMode mode, CancellationToken cancellationToken = default) => ExecuteJsonAsync<NetworkingModeGuidance>(GetNetworkModeCommand, new() { ["Mode"] = mode.ToString() }, cancellationToken);
+    public Task<NetworkModePreview> GetNetworkModePreviewAsync(WslNetworkingMode mode, CancellationToken cancellationToken = default) => ExecuteJsonAsync<NetworkModePreview>(GetNetworkModePreviewCommand, new() { ["Mode"] = mode.ToString() }, cancellationToken);
+    public Task<ConfigurationSaveResult> SetNetworkModeAsync(string previewToken, CancellationToken cancellationToken = default) { ValidateToken(previewToken, nameof(previewToken)); return ExecuteJsonAsync<ConfigurationSaveResult>(SetNetworkModeCommand, new() { ["PreviewToken"] = previewToken }, cancellationToken); }
+    public Task<NetworkSettings> GetNetworkSettingsAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<NetworkSettings>(GetNetworkSettingsCommand, [], cancellationToken);
+    public Task<NetworkSettingsPreview> GetNetworkSettingsPreviewAsync(NetworkSettings settings, CancellationToken cancellationToken = default) => ExecuteJsonAsync<NetworkSettingsPreview>(GetNetworkSettingsPreviewCommand, SettingsParameters(settings), cancellationToken);
+    public Task<ConfigurationSaveResult> SetNetworkSettingsAsync(string previewToken, CancellationToken cancellationToken = default) { ValidateToken(previewToken, nameof(previewToken)); return ExecuteJsonAsync<ConfigurationSaveResult>(SetNetworkSettingsCommand, new() { ["PreviewToken"] = previewToken }, cancellationToken); }
+    public Task<FixedExplorerResult> OpenNetworkLoopbackAsync(string host, int port, CancellationToken cancellationToken = default) { if (host is not ("localhost" or "127.0.0.1" or "::1") || port is < 1 or > 65535) throw new ArgumentException("Only a loopback HTTP endpoint may be opened."); return ExecuteJsonAsync<FixedExplorerResult>(OpenNetworkLoopbackCommand, new() { ["Host"] = host, ["Port"] = port }, cancellationToken); }
+    public Task<IReadOnlyList<FirewallRuleInfo>> GetFirewallRulesAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<IReadOnlyList<FirewallRuleInfo>>(GetFirewallRulesCommand, [], cancellationToken);
+    public Task<FirewallOperationPreview> GetFirewallCreatePreviewAsync(FirewallRuleRequest request, CancellationToken cancellationToken = default) => ExecuteJsonAsync<FirewallOperationPreview>(GetFirewallCreatePreviewCommand, new() { ["Direction"] = request.Direction.ToString(), ["Protocol"] = request.Protocol.ToString(), ["Port"] = request.Port, ["Profiles"] = request.Profiles.ToArray(), ["RemoteScope"] = request.RemoteScope ?? string.Empty, ["ExecutableScope"] = request.ExecutableScope ?? string.Empty }, cancellationToken);
+    public Task<FirewallOperationResult> CreateFirewallRuleAsync(string previewRuleId, CancellationToken cancellationToken = default) => ExecuteJsonAsync<FirewallOperationResult>(CreateFirewallRuleCommand, new() { ["PreviewRuleId"] = previewRuleId }, cancellationToken);
+    public Task<FirewallRemovalPreview> GetFirewallRemovePreviewAsync(string ruleId, CancellationToken cancellationToken = default) => ExecuteJsonAsync<FirewallRemovalPreview>(GetFirewallRemovePreviewCommand, new() { ["RuleId"] = ruleId }, cancellationToken);
+    public Task<FirewallOperationResult> RemoveFirewallRuleAsync(string previewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<FirewallOperationResult>(RemoveFirewallRuleCommand, new() { ["PreviewToken"] = previewToken }, cancellationToken);
+
+    public Task<GlobalConfigurationSnapshot> GetGlobalConfigurationAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<GlobalConfigurationSnapshot>(GetGlobalConfigurationCommand, new(), cancellationToken);
+    public Task<GlobalConfigurationPreview> GetGlobalConfigurationPreviewAsync(IReadOnlyDictionary<string, string?> changes, CancellationToken cancellationToken = default)
+    {
+        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "wsl2.memory", "wsl2.processors", "wsl2.swap", "wsl2.swapFile", "wsl2.pageReporting", "wsl2.localhostForwarding", "wsl2.networkingMode", "wsl2.dnsTunneling", "wsl2.firewall", "wsl2.autoProxy", "wsl2.hostAddressLoopback", "wsl2.ignoredPorts", "wsl2.bestEffortDnsParsing", "wsl2.initialAutoProxyTimeout", "wsl2.kernel", "wsl2.kernelCommandLine", "wsl2.nestedVirtualization", "experimental.autoMemoryReclaim", "experimental.sparseVhd" };
+        if (changes is null || changes.Count is < 1 or > 19 || changes.Any(x => !allowed.Contains(x.Key) || x.Value?.Length > 512 || x.Value?.IndexOfAny(['\0', '\r', '\n']) >= 0)) throw new ArgumentException("Global configuration changes are invalid.", nameof(changes));
+        return ExecuteJsonAsync<GlobalConfigurationPreview>(GetGlobalConfigurationPreviewCommand, new() { ["Changes"] = changes }, cancellationToken);
+    }
+    public Task<GlobalConfigurationApplyResult> SetGlobalConfigurationAsync(string previewToken, CancellationToken cancellationToken = default)
+    { if (string.IsNullOrWhiteSpace(previewToken) || previewToken.Length != 32 || previewToken.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("A Core-issued global configuration preview token is required.", nameof(previewToken)); return ExecuteJsonAsync<GlobalConfigurationApplyResult>(SetGlobalConfigurationCommand, new() { ["PreviewToken"] = previewToken }, cancellationToken); }
+    private static Dictionary<string, object> SettingsParameters(NetworkSettings s) { var p = new Dictionary<string, object>(); if (s.DnsTunneling.HasValue) p["DnsTunneling"] = s.DnsTunneling.Value; if (s.AutoProxy.HasValue) p["AutoProxy"] = s.AutoProxy.Value; if (s.Firewall.HasValue) p["Firewall"] = s.Firewall.Value; if (s.HostAddressLoopback.HasValue) p["HostAddressLoopback"] = s.HostAddressLoopback.Value; if (s.BestEffortDnsParsing.HasValue) p["BestEffortDnsParsing"] = s.BestEffortDnsParsing.Value; if (s.IgnoredPorts is not null) p["IgnoredPorts"] = s.IgnoredPorts; return p; }
+    public Task<FixedExplorerResult> OpenWslConfigFileAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<FixedExplorerResult>(OpenWslConfigFileCommand, null, cancellationToken);
+    public Task<FixedExplorerResult> OpenRecoveryPointFolderAsync(Guid id, CancellationToken cancellationToken = default)
+    { if (id == Guid.Empty) throw new ArgumentException("A recovery point id is required.", nameof(id)); return ExecuteJsonAsync<FixedExplorerResult>(OpenRecoveryPointFolderCommand, new() { ["Id"] = id }, cancellationToken); }
+    public Task<IReadOnlyList<BackupSchedule>> GetBackupSchedulesAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<IReadOnlyList<BackupSchedule>>(GetBackupSchedulesCommand, new() { ["AsJson"] = true }, cancellationToken);
+    public async Task SaveBackupScheduleAsync(BackupSchedule schedule, CancellationToken cancellationToken = default)
+    { ArgumentNullException.ThrowIfNull(schedule); ValidateName(schedule.Name, nameof(schedule)); if (schedule.RetentionCount is < 1 or > 30) throw new ArgumentException("The backup schedule is invalid.", nameof(schedule)); await ExecuteJsonAsync<object>(NewBackupScheduleCommand, new() { ["Name"] = schedule.Name, ["Frequency"] = schedule.Frequency, ["RetentionCount"] = schedule.RetentionCount, ["Time"] = schedule.Time, ["Confirm"] = false }, cancellationToken); }
+    public async Task RemoveBackupScheduleAsync(string instanceName, CancellationToken cancellationToken = default)
+    { ValidateName(instanceName, nameof(instanceName)); await ExecuteJsonAsync<object>(RemoveBackupScheduleCommand, new() { ["Name"] = instanceName, ["Confirm"] = false }, cancellationToken); }
+    public async Task InvokeBackupAsync(string instanceName, string destination, int retentionCount, CancellationToken cancellationToken = default)
+    { ValidateName(instanceName, nameof(instanceName)); if (retentionCount is < 1 or > 30) throw new ArgumentException("The backup request is invalid."); await ExecuteJsonAsync<object>(InvokeBackupCommand, new() { ["Name"] = instanceName, ["RetentionCount"] = retentionCount, ["Confirm"] = false }, cancellationToken); }
+    public Task<IReadOnlyList<BackupNotification>> ConsumeBackupNotificationsAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<IReadOnlyList<BackupNotification>>(ConsumeBackupNotificationsCommand, new() { ["AsJson"] = true }, cancellationToken);
+    public Task<IReadOnlyList<RecoveryPointSummary>> GetRecoveryPointsAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<IReadOnlyList<RecoveryPointSummary>>(GetRecoveryPointsCommand, new() { ["AsJson"] = true }, cancellationToken);
+    public Task<IReadOnlyList<RecoveryHistoryEntry>> GetRecoveryHistoryAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<IReadOnlyList<RecoveryHistoryEntry>>(GetRecoveryHistoryCommand, new() { ["AsJson"] = true }, cancellationToken);
+    public Task<RecoveryPointVerification> VerifyRecoveryPointAsync(Guid id, CancellationToken cancellationToken = default)
+    { if (id == Guid.Empty) throw new ArgumentException("A recovery point id is required.", nameof(id)); return ExecuteJsonAsync<RecoveryPointVerification>(TestRecoveryPointCommand, new() { ["Id"] = id }, cancellationToken); }
+    public Task<RecoveryOperationPreview> GetRecoveryCreatePreviewAsync(RecoveryPointCreateRequest request, CancellationToken cancellationToken = default)
+    { ArgumentNullException.ThrowIfNull(request); ValidateName(request.SourceInstance, nameof(request)); return ExecuteJsonAsync<RecoveryOperationPreview>(GetRecoveryCreatePreviewCommand, new() { ["Name"] = request.SourceInstance, ["RecoveryName"] = request.Name, ["DestinationRoot"] = request.DestinationRoot, ["Format"] = request.Format.ToString() }, cancellationToken); }
+    public Task<RecoveryPointSummary> CreateRecoveryPointAsync(RecoveryOperationPreview preview, RecoveryPointCreateRequest request, CancellationToken cancellationToken = default)
+    { ArgumentNullException.ThrowIfNull(preview); ArgumentNullException.ThrowIfNull(request); ValidateRecoveryToken(preview.Token); return ExecuteJsonAsync<RecoveryPointSummary>(NewRecoveryPointCommand, new() { ["Preview"] = preview, ["Request"] = request, ["Confirm"] = false }, cancellationToken); }
+    public Task<RecoveryOperationPreview> GetRecoveryRemovePreviewAsync(Guid id, CancellationToken cancellationToken = default)
+    { if (id == Guid.Empty) throw new ArgumentException("A recovery point id is required.", nameof(id)); return ExecuteJsonAsync<RecoveryOperationPreview>(GetRecoveryRemovePreviewCommand, new() { ["Id"] = id }, cancellationToken); }
+    public async Task RemoveRecoveryPointAsync(RecoveryOperationPreview preview, Guid id, CancellationToken cancellationToken = default)
+    { ArgumentNullException.ThrowIfNull(preview); if (id == Guid.Empty || preview.RecoveryPointId != id) throw new ArgumentException("A matching recovery preview is required."); ValidateRecoveryToken(preview.Token); await ExecuteJsonAsync<object>(RemoveRecoveryPointCommand, new() { ["Id"] = id, ["Preview"] = preview, ["Confirm"] = false }, cancellationToken); }
+    public Task<int?> GetRecoveryRetentionAsync(string instanceName, CancellationToken cancellationToken = default)
+    { ValidateName(instanceName, nameof(instanceName)); return ExecuteJsonAsync<int?>(GetRecoveryRetentionCommand, new() { ["Name"] = instanceName }, cancellationToken); }
+    public Task<RecoveryRetentionPreview> GetRecoveryRetentionPreviewAsync(string instanceName, int maximum, CancellationToken cancellationToken = default)
+    { ValidateName(instanceName, nameof(instanceName)); if (maximum is < 1 or > 1000) throw new ArgumentOutOfRangeException(nameof(maximum)); return ExecuteJsonAsync<RecoveryRetentionPreview>(GetRecoveryRetentionPreviewCommand, new() { ["Name"] = instanceName, ["Maximum"] = maximum }, cancellationToken); }
+    public async Task SetRecoveryRetentionAsync(RecoveryRetentionPreview preview, CancellationToken cancellationToken = default)
+    { ArgumentNullException.ThrowIfNull(preview); ValidateRecoveryToken(preview.Token); await ExecuteJsonAsync<object>(SetRecoveryRetentionCommand, new() { ["Name"] = preview.SourceInstance, ["Maximum"] = preview.Maximum, ["Preview"] = preview, ["Confirm"] = false }, cancellationToken); }
+    public Task<RecoveryOperationPreview> GetRecoveryRestorePreviewAsync(RecoveryRestoreRequest request, CancellationToken cancellationToken = default)
+    { ArgumentNullException.ThrowIfNull(request); ValidateName(request.TargetInstance, nameof(request)); return ExecuteJsonAsync<RecoveryOperationPreview>(GetRecoveryRestorePreviewCommand, new() { ["Id"] = request.RecoveryPointId, ["TargetInstance"] = request.TargetInstance, ["TargetDirectory"] = request.TargetDirectory }, cancellationToken); }
+    public async Task RestoreRecoveryPointAsync(RecoveryOperationPreview preview, RecoveryRestoreRequest request, CancellationToken cancellationToken = default)
+    { ArgumentNullException.ThrowIfNull(preview); ArgumentNullException.ThrowIfNull(request); ValidateRecoveryToken(preview.Token); await ExecuteJsonAsync<object>(RestoreRecoveryPointCommand, new() { ["Preview"] = preview, ["Request"] = request, ["Confirm"] = false }, cancellationToken); }
+    public Task<RecoveryOperationPreview> GetRecoveryClonePreviewAsync(RecoveryCloneRequest request, CancellationToken cancellationToken = default)
+    { ArgumentNullException.ThrowIfNull(request); ValidateName(request.TargetInstance, nameof(request)); return ExecuteJsonAsync<RecoveryOperationPreview>(GetRecoveryClonePreviewCommand, new() { ["Snapshot"] = request.Snapshot, ["TargetInstance"] = request.TargetInstance, ["TargetDirectory"] = request.TargetDirectory, ["ImportInPlace"] = request.ImportInPlace }, cancellationToken); }
+    public async Task CloneRecoveryPointAsync(RecoveryOperationPreview preview, RecoveryCloneRequest request, CancellationToken cancellationToken = default)
+    { ArgumentNullException.ThrowIfNull(preview); ArgumentNullException.ThrowIfNull(request); ValidateRecoveryToken(preview.Token); await ExecuteJsonAsync<object>(CopyRecoveryPointCommand, new() { ["Preview"] = preview, ["Request"] = request, ["Confirm"] = false }, cancellationToken); }
+    public Task<RecoveryOperationPreview> PreviewRecoveryPointNotesAsync(Guid id, string description, IReadOnlyList<string> tags, bool pinned, CancellationToken cancellationToken = default)
+    {
+        if (id == Guid.Empty || description is null || description.Length > 4096 || tags is null || tags.Count > 32 || tags.Any(x => string.IsNullOrWhiteSpace(x) || x.Length > 128))
+            throw new ArgumentException("Recovery metadata is invalid.");
+        return ExecuteJsonAsync<RecoveryOperationPreview>(GetRecoveryMetadataPreviewCommand, new() { ["Id"] = id, ["Description"] = description, ["Tag"] = tags.ToArray(), ["Pinned"] = pinned }, cancellationToken);
+    }
+    public async Task ExecuteRecoveryPointNotesAsync(string previewToken, CancellationToken cancellationToken = default)
+    {
+        ValidateRecoveryToken(previewToken);
+        await ExecuteJsonAsync<object>(SetRecoveryMetadataCommand, new() { ["Preview"] = new { Token = previewToken }, ["Confirm"] = false }, cancellationToken);
+    }
+    public Task<HealthScanResult> ScanHealthAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<HealthScanResult>(ScanHealthCommand, new() { ["AsJson"] = true }, cancellationToken);
+    public Task<IReadOnlyList<HealthHistoryEntry>> GetHealthHistoryAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<IReadOnlyList<HealthHistoryEntry>>(GetHealthHistoryCommand, new() { ["AsJson"] = true }, cancellationToken);
+    public Task<RepairPreview> GetHealthRepairPreviewAsync(HealthFinding finding, CancellationToken cancellationToken = default)
+    { if (string.IsNullOrWhiteSpace(finding.Id) || string.IsNullOrWhiteSpace(finding.RepairId)) throw new ArgumentException("A repairable health finding is required.", nameof(finding)); return ExecuteJsonAsync<RepairPreview>(GetHealthRepairPreviewCommand, new() { ["Finding"] = finding }, cancellationToken); }
+    public Task<RepairResult> RepairHealthAsync(string previewToken, CancellationToken cancellationToken = default)
+    { if (string.IsNullOrWhiteSpace(previewToken) || previewToken.Length != 32 || previewToken.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("A Core-issued health repair preview token is required.", nameof(previewToken)); return ExecuteJsonAsync<RepairResult>(RepairHealthCommand, new() { ["PreviewToken"] = previewToken, ["Confirm"] = false }, cancellationToken); }
+    public Task<IReadOnlyList<string>> GetDiagnosticLogOptionsAsync(CancellationToken cancellationToken = default) => ExecuteJsonAsync<IReadOnlyList<string>>(GetDiagnosticLogOptionsCommand, new() { ["AsJson"] = true }, cancellationToken);
+    public Task<DiagnosticReportPreview> GetDiagnosticReportPreviewAsync(DiagnosticReportFormat format, IReadOnlyList<string> selectedLogIds, CancellationToken cancellationToken = default)
+    { if (selectedLogIds.Count > 32 || selectedLogIds.Any(string.IsNullOrWhiteSpace)) throw new ArgumentException("Diagnostic log selection is invalid.", nameof(selectedLogIds)); return ExecuteJsonAsync<DiagnosticReportPreview>(GetDiagnosticReportPreviewCommand, new() { ["Format"] = format.ToString(), ["SelectedLogId"] = selectedLogIds.ToArray() }, cancellationToken); }
+    public Task<DiagnosticReportExportResult> ExportDiagnosticReportAsync(string snapshotToken, string destinationFileName, int? deadlineMilliseconds = null, CancellationToken cancellationToken = default)
+    { if (string.IsNullOrWhiteSpace(snapshotToken) || snapshotToken.Length != 32 || snapshotToken.Any(c => !Uri.IsHexDigit(c)) || !string.Equals(destinationFileName, Path.GetFileName(destinationFileName), StringComparison.Ordinal) || string.IsNullOrWhiteSpace(destinationFileName) || deadlineMilliseconds is < 1 or > 30_000) throw new ArgumentException("A Core-issued snapshot token, diagnostic file name, and bounded deadline are required."); var p = new Dictionary<string, object> { ["SnapshotToken"] = snapshotToken, ["DestinationFileName"] = destinationFileName, ["Confirm"] = false }; if (deadlineMilliseconds is not null) p["DeadlineMilliseconds"] = deadlineMilliseconds.Value; return ExecuteJsonAsync<DiagnosticReportExportResult>(ExportDiagnosticReportCommand, p, cancellationToken); }
+    private Task<WslgActionResult> ExecuteWslgActionAsync(string command, string token, string applicationId, bool? pinned, CancellationToken ct)
+    { if (string.IsNullOrWhiteSpace(token) || token.Length != 64 || token.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("A WSLg discovery token is invalid.", nameof(token)); ValidateName(applicationId, nameof(applicationId)); var parameters = new Dictionary<string, object> { ["DiscoveryToken"] = token, ["ApplicationId"] = applicationId }; if (pinned is not null) parameters["Pinned"] = pinned.Value; return ExecuteJsonAsync<WslgActionResult>(command, parameters, ct); }
+
+    private async Task<IReadOnlyList<DistroPackage>> ExecutePackagesAsync(Dictionary<string, object>? parameters, CancellationToken cancellationToken)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(GetPackagesCommand, parameters, new ModuleCallOptions { ParseAsJson = true }, cancellationToken);
+        if (!result.Success) throw result.Exception ?? new InvalidOperationException(result.Error ?? "The DistroNexus module operation failed.");
+        if (string.IsNullOrWhiteSpace(result.Output)) return Array.Empty<DistroPackage>();
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        return result.Output.TrimStart().StartsWith('[')
+            ? JsonSerializer.Deserialize<List<DistroPackage>>(result.Output, options) ?? []
+            : [JsonSerializer.Deserialize<DistroPackage>(result.Output, options) ?? throw new InvalidOperationException("The module returned an invalid package result.")];
+    }
+
+    private async Task<T> ExecutePackageJobJsonAsync<T>(string command, Dictionary<string, object> parameters, CancellationToken cancellationToken)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(command, parameters, new ModuleCallOptions { ParseAsJson = true }, cancellationToken); ThrowIfFailed(result);
+        using var doc = JsonDocument.Parse(result.Output); EnsureOnly(doc.RootElement, typeof(T) == typeof(PackageJobStartPreviewResult) ? ["PreviewToken", "ExpiresAt", "PackageId", "PackageLabel", "OutcomeCode"] : typeof(T) == typeof(PackageJobStartResult) ? ["JobId", "OutcomeCode"] : typeof(T) == typeof(PackageJobActionPreviewResult) ? ["PreviewToken", "ExpiresAt", "JobId", "OutcomeCode"] : ["JobId", "OutcomeCode"]);
+        var value = JsonSerializer.Deserialize<T>(doc.RootElement.GetRawText(), JsonOptions) ?? throw new JsonException("Invalid package job result.");
+        ValidatePackageJobResult(value); return value;
+    }
+
+    private static PackageDownloadJob ParsePackageJob(JsonElement item)
+    {
+        EnsureOnly(item, ["JobId", "PackageId", "PackageLabel", "State", "ProgressPercent", "OutcomeCode"]);
+        var value = JsonSerializer.Deserialize<PackageDownloadJob>(item.GetRawText(), JsonOptions) ?? throw new JsonException("Invalid package job."); ValidatePackageJobResult(value); return value;
+    }
+    private static void EnsureOnly(JsonElement value, IReadOnlyCollection<string> names)
+    {
+        if (value.ValueKind != JsonValueKind.Object || value.EnumerateObject().Any(p => !names.Contains(p.Name, StringComparer.OrdinalIgnoreCase))) throw new JsonException("Unexpected package job response field.");
+    }
+    private static void ValidatePackageJobResult(object value)
+    {
+        static bool Token(string? s) => s?.Length == 64 && s.All(Uri.IsHexDigit); static bool Id(string? s) => s?.Length == 32 && s.All(Uri.IsHexDigit);
+        static bool Outcome(string? s) => !string.IsNullOrWhiteSpace(s) && s.Length <= 128 && s.All(c => char.IsLetterOrDigit(c) || c is '.' or '_');
+        static bool Package(string? s) => !string.IsNullOrWhiteSpace(s) && s.Length <= 128 && System.Text.RegularExpressions.Regex.IsMatch(s, "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$");
+        switch (value)
+        {
+            case PackageJobStartPreviewResult x when ((x.PreviewToken is null) != (x.ExpiresAt is null) || (x.PreviewToken is not null && !Token(x.PreviewToken)) || !Package(x.PackageId) || string.IsNullOrWhiteSpace(x.PackageLabel) || x.PackageLabel.Length > 256 || !Outcome(x.OutcomeCode)): throw new JsonException("Invalid package start preview.");
+            case PackageJobStartResult x when (x.JobId is not null && !Id(x.JobId) || !Outcome(x.OutcomeCode)): throw new JsonException("Invalid package start result.");
+            case PackageJobActionPreviewResult x when ((x.PreviewToken is null) != (x.ExpiresAt is null) || (x.PreviewToken is not null && !Token(x.PreviewToken)) || !Id(x.JobId) || !Outcome(x.OutcomeCode)): throw new JsonException("Invalid package action preview.");
+            case PackageJobActionResult x when (!Id(x.JobId) || !Outcome(x.OutcomeCode)): throw new JsonException("Invalid package action result.");
+            case PackageDownloadJob x when (!Id(x.JobId) || !Package(x.PackageId) || string.IsNullOrWhiteSpace(x.PackageLabel) || x.PackageLabel.Length > 256 || x.State is not ("Queued" or "Running" or "Completed" or "Failed" or "Cancelled" or "Interrupted") || x.ProgressPercent is < 0 or > 100 || !Outcome(x.OutcomeCode)): throw new JsonException("Invalid package job.");
+        }
+    }
+    private static void ValidateUsbStatus(UsbStatusResult value)
+    {
+        if (value.ServiceState is not ("Running" or "Stopped" or "Unknown") || value.SupportsActions || !UsbOutcome(value.OutcomeCode) || !Bounded(value.Reason) ||
+            (value.Version is not null && !System.Text.RegularExpressions.Regex.IsMatch(value.Version, "^[0-9]{1,5}(\\.[0-9]{1,5}){0,3}$")))
+            throw new JsonException("Invalid USB status.");
+    }
+    private static void ValidateUsbList(UsbDeviceListResult value)
+    {
+        if (value.Devices.Count > 128 || !UsbOutcome(value.OutcomeCode)) throw new JsonException("Invalid USB device list.");
+        foreach (var device in value.Devices)
+            if (!System.Text.RegularExpressions.Regex.IsMatch(device.BusId ?? string.Empty, "^[0-9A-Fa-f]{1,3}-[0-9A-Fa-f]{1,3}$") || !Bounded(device.Description) || !Bounded(device.Distribution) || !Bounded(device.Guidance) ||
+                device.Availability is not ("Available" or "Shared" or "Attached" or "NotConnected" or "Unsupported" or "Unknown") ||
+                !UsbStateIsCoherent(device)) throw new JsonException("Invalid USB device result.");
+    }
+    private static bool UsbStateIsCoherent(UsbDeviceResult value) => value.Availability switch
+    {
+        "Available" or "NotConnected" or "Unsupported" or "Unknown" => !value.SharedState && !value.AttachedState,
+        "Shared" => value.SharedState && !value.AttachedState,
+        "Attached" => value.SharedState && value.AttachedState,
+        _ => false
+    };
+    private static void EnsureUsbEnvelopeSize(string? output)
+    {
+        if (output is null || System.Text.Encoding.UTF8.GetByteCount(output) > 64 * 1024) throw new JsonException("USB response exceeds the maximum envelope size.");
+    }
+    private static bool Bounded(string? value) => value is null || value.Length <= 256;
+    private static bool UsbOutcome(string? value) => value is "Usb.Ready" or "Usb.NotInstalled" or "Usb.ServiceUnavailable" or "Usb.ListUnavailable" or "Usb.ListMalformed" or "Usb.BridgeUnavailable";
+
+    private async Task<T> ExecuteJsonAsync<T>(string command, Dictionary<string, object> parameters, CancellationToken cancellationToken)
+    {
+        if (command.Contains("Workspace", StringComparison.Ordinal) && !RegisteredWorkspaceOperations.Contains(command))
+            throw new InvalidOperationException("The workspace module operation is not registered.");
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(command, parameters, new ModuleCallOptions { ParseAsJson = true }, cancellationToken);
+        ThrowIfFailed(result);
+        return JsonSerializer.Deserialize<T>(result.Output, JsonOptions)
+            ?? throw new InvalidOperationException("The DistroNexus module returned an invalid result.");
+    }
+    private async Task<T> ExecuteStrictS46bAsync<T>(string command, Dictionary<string, object> parameters, string[] fields, CancellationToken cancellationToken)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(command, parameters, new ModuleCallOptions { ParseAsJson = true }, cancellationToken);
+        ThrowIfFailed(result);
+        using var document = JsonDocument.Parse(result.Output);
+        if (document.RootElement.ValueKind != JsonValueKind.Object || document.RootElement.EnumerateObject().Any(property => !fields.Contains(property.Name, StringComparer.Ordinal))) throw new JsonException("The module returned unknown S46b result fields.");
+        return JsonSerializer.Deserialize<T>(result.Output, StrictJsonOptions) ?? throw new JsonException("Invalid S46b result.");
+    }
+    private async Task<T> ExecuteS44JsonAsync<T>(string command, Dictionary<string, object> parameters, string[] fields, CancellationToken cancellationToken)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(command, parameters, new ModuleCallOptions { ParseAsJson = true }, cancellationToken); ThrowIfFailed(result);
+        using var doc = JsonDocument.Parse(result.Output); if (doc.RootElement.ValueKind != JsonValueKind.Object || doc.RootElement.EnumerateObject().Any(p => !fields.Contains(p.Name, StringComparer.Ordinal))) throw new JsonException("The module returned unknown S44 result fields.");
+        var value = JsonSerializer.Deserialize<T>(result.Output, JsonOptions) ?? throw new JsonException("Invalid S44 result.");
+        if (value is InstanceConfigurationReadResult read && (read.Name.Length is 0 or > 128 || read.SchemaRevision < 1 || read.Document.Count > 32 || read.Document.Any(x => x.Key.Length > 128 || x.Value.Length > 1024) || !Token(read.Fingerprint) || !Outcome(read.OutcomeCode))) throw new JsonException("Invalid configuration read result.");
+        if (value is InstanceConfigurationPreviewResult preview && (!Token(preview.PreviewToken) || preview.ChangeSummary.Count > 32 || preview.ChangeSummary.Any(x => x.Length > 128) || !Outcome(preview.OutcomeCode))) throw new JsonException("Invalid configuration preview result.");
+        if (value is InstallTargetPreviewResult target && (target.DisplayName.Length > 256 || target.AvailableBytes < 0 || target.RequiredBytes < 0 || (!target.IsEligible && !string.IsNullOrEmpty(target.PreviewToken)) || (target.IsEligible && !Token(target.PreviewToken)) || !Outcome(target.OutcomeCode))) throw new JsonException("Invalid target preview result.");
+        return value;
+    }
+    private static bool Token(string? value) => value is { Length: 64 } && value.All(Uri.IsHexDigit);
+    private static bool Outcome(string? value) => value is { Length: > 0 and <= 128 } && value.All(c => char.IsLetterOrDigit(c) || c is '.' or '_' or '-');
+
+    private async Task<IReadOnlyList<T>> ExecuteListAsync<T>(string command, Dictionary<string, object>? parameters, CancellationToken cancellationToken)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(command, parameters, new ModuleCallOptions { ParseAsJson = true }, cancellationToken);
+        ThrowIfFailed(result);
+        return ReadEnvelopeList<T>(result.Output, null);
+    }
+
+    private static IReadOnlyList<T> ReadEnvelopeList<T>(string? output, string? envelopeName)
+    {
+        if (string.IsNullOrWhiteSpace(output)) return [];
+        using var document = JsonDocument.Parse(output);
+        var root = document.RootElement;
+        if (envelopeName is not null && root.ValueKind == JsonValueKind.Object && root.TryGetProperty(envelopeName, out var envelope)) root = envelope;
+        if (root.ValueKind != JsonValueKind.Array) throw new InvalidOperationException("The DistroNexus module returned an invalid list result.");
+        return JsonSerializer.Deserialize<List<T>>(root.GetRawText(), JsonOptions) ?? [];
+    }
+
+    private static T? ReadEnvelopeValue<T>(string? output, string envelopeName) where T : class
+    {
+        if (string.IsNullOrWhiteSpace(output)) return null;
+        using var document = JsonDocument.Parse(output);
+        var root = document.RootElement;
+        if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty(envelopeName, out var envelope)) root = envelope;
+        return root.ValueKind == JsonValueKind.Null ? null : JsonSerializer.Deserialize<T>(root.GetRawText(), JsonOptions);
+    }
+    private const string ExecuteLifecycleCommand = "Invoke-DistroNexusLifecycleOperation";
+    private Task<LifecycleOperationPreview> PreviewLifecycleAsync(string command, Dictionary<string, object> parameters, CancellationToken cancellationToken)
+    {
+        foreach (var value in parameters.Values.OfType<string>()) ValidateName(value, nameof(parameters));
+        var operation = command switch { RemoveInstanceCommand => "Remove", MoveInstanceCommand => "Move", RenameInstanceCommand => "Rename", ExportInstanceCommand => "Export", ImportInstanceCommand => "Import", _ => throw new ArgumentOutOfRangeException(nameof(command)) };
+        parameters["Operation"] = operation;
+        return ExecuteJsonAsync<LifecycleOperationPreview>("Get-DistroNexusLifecycleOperationPreview", parameters, cancellationToken);
+    }
+
+    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true, Converters = { new JsonStringEnumConverter() } };
+    private static Dictionary<string, object> TokenParameters(string previewToken)
+    {
+        if (string.IsNullOrWhiteSpace(previewToken)) throw new ArgumentException("A Core-issued workspace preview token is required.", nameof(previewToken));
+        return new() { ["PreviewToken"] = previewToken, ["Confirm"] = false };
+    }
+
+    private static string ValidateHexToken(string value, string parameterName)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length != 64 || value.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("A Core-issued template token is required.", parameterName);
+        return value;
+    }
+
+    private static void ValidateDigest(string value, string parameterName)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length != 64 || value.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("A SHA-256 digest is required.", parameterName);
+    }
+
+    private static void ValidateTemplateIdentifier(string value, string parameterName)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length > 256 || value.IndexOfAny(['\r', '\n', '\0']) >= 0) throw new ArgumentException("The template identifier is invalid.", parameterName);
+    }
+
+    private static void ValidateOptionalTemplateText(string? value, string parameterName)
+    {
+        if (value is not null && (value.Length > 256 || value.IndexOfAny(['\r', '\n', '\0']) >= 0))
+            throw new ArgumentException("The template filter is invalid.", parameterName);
+    }
+
+    private static void ValidateTemplateContent(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content) || System.Text.Encoding.UTF8.GetByteCount(content) > 1024 * 1024) throw new ArgumentException("Template content must be non-empty and at most 1 MiB.", nameof(content));
+    }
+    private static void ValidateTemplateSourcePath(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length > 2048 || value.Any(char.IsControl)) throw new ArgumentException("Template source path is invalid.", nameof(value));
+    }
+    private static bool IsSafeFileUri(Uri? uri)
+    {
+        if (uri is not { IsAbsoluteUri: true, IsFile: true } || uri.AbsoluteUri.Length > 2048 || uri.IsUnc || !string.IsNullOrEmpty(uri.Host)) return false;
+        var path = uri.LocalPath;
+        return !string.IsNullOrWhiteSpace(path) && Path.IsPathFullyQualified(path) &&
+            !path.StartsWith("\\\\", StringComparison.Ordinal) && !path.StartsWith("\\\\?\\", StringComparison.Ordinal) &&
+            !string.Equals(Path.GetPathRoot(path), path, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void ValidateName(string value, string parameterName)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.IndexOfAny(['\r', '\n', '\0']) >= 0) throw new ArgumentException("The instance name is invalid.", parameterName);
+    }
+    private static void ValidatePackageId(string value, string parameterName)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length > 128 || value.IndexOfAny(['\r', '\n', '\0']) >= 0) throw new ArgumentException("The package id is invalid.", parameterName);
+    }
+    private static bool IsValidLinuxStartPath(string value) => value.Length is > 0 and <= 1024 && value.IndexOfAny(['\r', '\n', '\0', '\\']) < 0 && (value == "~" || (value.StartsWith('/') && !value.Contains("//", StringComparison.Ordinal) && !value.Split('/').Any(segment => segment == "..")));
+    private static void ValidateToken(string value, string parameterName)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length != 64 || value.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("A Core-issued monitoring token is required.", parameterName);
+    }
+    private static void ValidateRecoveryToken(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length != 32 || value.Any(c => !Uri.IsHexDigit(c))) throw new ArgumentException("A Core-issued recovery preview token is required.", nameof(value));
+    }
+
+    private static void ValidatePodmanUnitAction(PodmanUserUnit unit, SystemdAction action)
+    {
+        if (unit is not (PodmanUserUnit.Service or PodmanUserUnit.Socket) || action is not (SystemdAction.Start or SystemdAction.Stop)) throw new ArgumentOutOfRangeException(nameof(action));
+    }
+
+    private async Task ExecuteTagMutationAsync(
+        string command,
+        Dictionary<string, object> parameters,
+        CancellationToken cancellationToken)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(command, parameters, cancellationToken: cancellationToken);
+        if (!result.Success)
+        {
+            throw result.Exception ?? new InvalidOperationException(result.Error ?? "The DistroNexus module operation failed.");
+        }
+    }
+
+    private async Task ExecuteSettingsMutationAsync(
+        string command,
+        Dictionary<string, object>? parameters,
+        CancellationToken cancellationToken)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(command, parameters, cancellationToken: cancellationToken);
+        if (!result.Success)
+        {
+            throw result.Exception ?? new InvalidOperationException(result.Error ?? "The DistroNexus module operation failed.");
+        }
+    }
+
+    private async Task<bool> ExecuteCatalogSourceBooleanMutationAsync(
+        string command,
+        Dictionary<string, object>? parameters,
+        CancellationToken cancellationToken)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(command, parameters, cancellationToken: cancellationToken);
+        ThrowIfFailed(result);
+        if (bool.TryParse(result.Output?.Trim(), out var success))
+        {
+            return success;
+        }
+
+        throw new InvalidOperationException("The DistroNexus module operation returned an invalid catalog source result.");
+    }
+
+    private static void ThrowIfFailed(PowerShellScriptResult result)
+    {
+        if (!result.Success)
+        {
+            throw result.Exception ?? new InvalidOperationException(result.Error ?? "The DistroNexus module operation failed.");
+        }
+    }
+
+    private static readonly JsonSerializerOptions StrictJsonOptions = new() { PropertyNameCaseInsensitive = true, UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow };
+    private static bool IsNormalizedUpdateVersion(string value) => System.Text.RegularExpressions.Regex.IsMatch(value, "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?$");
+
+    private static Dictionary<string, object> SettingsParameters(DistroNexusSettingsUpdate settings)
+    {
+        var parameters = new Dictionary<string, object>();
+        Add("DefaultInstallPath", settings.DefaultInstallPath);
+        Add("PackageCachePath", settings.PackageCachePath);
+        Add("TerminalStartPath", settings.TerminalStartPath);
+        Add("DefaultWslVersion", settings.DefaultWslVersion);
+        Add("DefaultUsername", settings.DefaultUsername);
+        Add("DefaultDistributionId", settings.DefaultDistributionId);
+        Add("EnableLogging", settings.EnableLogging);
+        Add("LogPath", settings.LogPath);
+        Add("CheckUpdatesOnStartup", settings.CheckUpdatesOnStartup);
+        Add("CatalogUrl", settings.CatalogUrl);
+        Add("Theme", settings.Theme);
+        Add("Language", settings.Language);
+        Add("ShowConfirmationDialogs", settings.ShowConfirmationDialogs);
+        Add("MaxConcurrentDownloads", settings.MaxConcurrentDownloads);
+        Add("AutoRetryDownloads", settings.AutoRetryDownloads);
+        Add("MaxRetryAttempts", settings.MaxRetryAttempts);
+        Add("AutoSaveEnabled", settings.AutoSaveEnabled);
+        Add("AutoSaveInterval", settings.AutoSaveInterval);
+        return parameters;
+
+        void Add(string name, object? value)
+        {
+            if (value is not null) parameters[name] = value;
+        }
+    }
+
+    private async Task<T> ExecuteInstanceMutationAsync<T>(string command, string name, bool keepAlive, CancellationToken cancellationToken)
+    {
+        ValidateName(name, nameof(name));
+        var parameters = new Dictionary<string, object> { ["Name"] = name };
+        if (command == StartInstanceCommand) parameters["KeepAlive"] = keepAlive;
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(
+            command,
+            parameters,
+            new ModuleCallOptions { ParseAsJson = true },
+            cancellationToken: cancellationToken);
+        if (!result.Success)
+        {
+            throw result.Exception ?? new InvalidOperationException(result.Error ?? "The DistroNexus module operation failed.");
+        }
+
+        return JsonSerializer.Deserialize<T>(result.Output, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+            ?? throw new InvalidOperationException("The DistroNexus module operation returned an invalid instance lifecycle result.");
+    }
+
+    private static IReadOnlyList<DistroNexusInstanceTagResult> DeserializeTagResults(string output)
+    {
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        using var document = JsonDocument.Parse(output);
+        if (document.RootElement.ValueKind == JsonValueKind.Array)
+        {
+            var results = JsonSerializer.Deserialize<List<DistroNexusInstanceTagResult>>(output, options);
+            return results is null ? Array.Empty<DistroNexusInstanceTagResult>() : results;
+        }
+
+        var result = JsonSerializer.Deserialize<DistroNexusInstanceTagResult>(output, options);
+        return result is null ? Array.Empty<DistroNexusInstanceTagResult>() : [result];
+    }
+
+    private static IReadOnlyList<CatalogSource> DeserializeCatalogSources(string output)
+    {
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        using var document = JsonDocument.Parse(output);
+        if (document.RootElement.ValueKind == JsonValueKind.Array)
+        {
+            return JsonSerializer.Deserialize<List<CatalogSource>>(output, options) ?? new List<CatalogSource>();
+        }
+
+        return [DeserializeCatalogSource(output)];
+    }
+
+    private static CatalogSource DeserializeCatalogSource(string? output)
+    {
+        if (string.IsNullOrWhiteSpace(output))
+        {
+            throw new InvalidOperationException("The DistroNexus module operation returned no catalog source result.");
+        }
+
+        return JsonSerializer.Deserialize<CatalogSource>(output, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+            ?? throw new InvalidOperationException("The DistroNexus module operation returned an invalid catalog source result.");
+    }
+
+    private static IReadOnlyList<WslInstance> DeserializeInstances(string output)
+    {
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        using var document = JsonDocument.Parse(output);
+        IReadOnlyList<ModuleInstanceResult?> results = document.RootElement.ValueKind == JsonValueKind.Array
+            ? JsonSerializer.Deserialize<List<ModuleInstanceResult?>>(output, options) ?? []
+            : [JsonSerializer.Deserialize<ModuleInstanceResult>(output, options)];
+
+        return results.OfType<ModuleInstanceResult>().Select(result => new WslInstance
+        {
+            Name = result.Name ?? string.Empty,
+            State = result.State ?? string.Empty,
+            Version = result.Version,
+            InstallPath = result.BasePath ?? string.Empty,
+            Size = result.DiskSize,
+            Distribution = result.Distribution ?? string.Empty,
+            LastAccessed = result.InstallTime
+        }).ToArray();
+    }
+
+    private sealed record ModuleInstanceResult(
+        string? Name,
+        string? State,
+        int Version,
+        string? BasePath,
+        long DiskSize,
+        DateTime? InstallTime,
+        string? Distribution);
+}

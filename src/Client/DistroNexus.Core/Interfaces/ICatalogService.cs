@@ -37,6 +37,10 @@ public interface ICatalogService
     /// <returns>The distribution package, or null if not found.</returns>
     Task<DistroPackage?> GetDistributionByIdAsync(string id, CancellationToken cancellationToken = default);
 
+    /// <summary>Returns stable catalog source/revision provenance for a package download authorization.</summary>
+    Task<string> GetPackageDownloadProvenanceAsync(DistroPackage package, CancellationToken cancellationToken = default) =>
+        Task.FromResult(string.Join("|", package.Metadata.TryGetValue("source", out var source) ? source : "default", package.Metadata.TryGetValue("revision", out var revision) ? revision : package.Version));
+
     /// <summary>
     /// Gets the local cache path for the catalog.
     /// </summary>
@@ -71,9 +75,20 @@ public interface ICatalogService
     /// <returns>The number of files deleted.</returns>
     Task<int> ClearAllCacheAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>Deletes a cache entry authorized by its authenticated opaque identifier.</summary>
+    Task<PackageCacheDeleteResult> DeletePackageCacheEntryAsync(string cacheEntryId, CancellationToken cancellationToken = default);
+
+    /// <summary>Resolves a modeled cache deletion request and deletes only after token verification.</summary>
+    Task<PackageCacheDeleteResult> DeletePackageCacheAsync(PackageCacheDeleteRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>Clears contained cache files while reporting partial failures.</summary>
+    Task<PackageCacheClearResult> ClearPackageCacheAsync(CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Gets the package cache directory path.
     /// </summary>
     /// <returns>The full path to the package cache directory.</returns>
     string GetPackageCachePath();
+
+    PackageCacheLocationResult GetPackageCacheLocation();
 }

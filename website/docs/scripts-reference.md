@@ -6,7 +6,16 @@ sidebar_position: 5
 
 This page documents the DistroNexus PowerShell module command surface.
 
-The authoritative exported commands come from `src/PowerShell/DistroNexus.psd1` and include 36 cmdlets.
+The authoritative exported commands come from `src/PowerShell/DistroNexus.psd1` and currently include 93 functions.
+
+## v2.3 operational command families
+
+- **Capabilities and Health**: `Get-DistroNexusCapability`, `Invoke-DistroNexusHealthScan`, `Get-DistroNexusHealthRepairPreview`, and `Repair-DistroNexusHealthFinding`.
+- **Services and recovery**: `Get-DistroNexusSystemdService`, service previews/actions, recovery-point list/verify/create/restore/remove commands, and `Get-DistroNexusMonitoringSnapshot`.
+- **Linux GUI and containers**: WSLg discovery/launch commands plus Docker/Podman runtime status and preview-backed Podman changes.
+- **Trusted automation**: workspace and marketplace commands retain Core validation, previews, confirmation tokens, and `-WhatIf` behavior.
+
+Use `Get-Command -Module DistroNexus` after importing the installed module for the exact installed surface.
 
 ## Instance Management
 

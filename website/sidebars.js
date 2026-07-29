@@ -21,6 +21,8 @@ const sidebars = {
     'configuration',
     'scripts-reference',
     'privacy-policy',
+    'v2.3-migration',
+    'v2.3-security',
     {
       type: 'link',
       label: 'Template System',

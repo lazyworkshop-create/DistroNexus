@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using System.IO;
+using DistroNexus.Core.Interfaces;
+using DistroNexus.Desktop.Services;
 using System.Windows.Controls;
 
 namespace DistroNexus.Desktop.Wizard.Steps;
@@ -10,6 +11,8 @@ namespace DistroNexus.Desktop.Wizard.Steps;
 /// </summary>
 public partial class ResultStep : WizardStepBase
 {
+    private readonly IPowerShellModuleClient? _moduleClient;
+    private readonly ProductLogRevealLauncher _logRevealLauncher;
     public override string StepId => "result";
     public override string Title => Properties.Resources.ResultCompleteTitle;
     public override string Description => Properties.Resources.ResultCompleteDescription;
@@ -23,7 +26,7 @@ public partial class ResultStep : WizardStepBase
     /// Gets the full installation path.
     /// </summary>
     public string FullInstallPath => Context != null
-        ? Path.Combine(Context.InstallPath, Context.InstanceName)
+        ? $"{Context.InstallPath}\\{Context.InstanceName}"
         : string.Empty;
 
     /// <summary>
@@ -56,51 +59,17 @@ public partial class ResultStep : WizardStepBase
         }
     }
 
-    public ResultStep()
-    {
-    }
+    public ResultStep(IPowerShellModuleClient? moduleClient = null, IBrowserLauncher? browserLauncher = null)
+    { _moduleClient = moduleClient ?? App.ServiceProvider?.GetService(typeof(IPowerShellModuleClient)) as IPowerShellModuleClient; _logRevealLauncher = new ProductLogRevealLauncher(); }
 
     [RelayCommand]
     private async Task OpenLogFolder()
     {
         try
         {
-            // Determine log folder path
-            string logFolder;
-
-            if (Context != null && !string.IsNullOrEmpty(Context.LogFilePath))
-            {
-                // Use log file path from context
-                var logDir = Path.GetDirectoryName(Context.LogFilePath);
-                if (!string.IsNullOrEmpty(logDir) && Directory.Exists(logDir))
-                {
-                    logFolder = logDir;
-                }
-                else
-                {
-                    // Fallback to default
-                    logFolder = GetDefaultLogFolder();
-                }
-            }
-            else
-            {
-                // Use default log folder
-                logFolder = GetDefaultLogFolder();
-            }
-
-            // Ensure folder exists
-            if (!Directory.Exists(logFolder))
-            {
-                Directory.CreateDirectory(logFolder);
-            }
-
-            // Open folder in Windows Explorer
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = logFolder,
-                UseShellExecute = true,
-                Verb = "open"
-            });
+            if (_moduleClient is null) throw new InvalidOperationException("The product log service is unavailable.");
+            var target = await _moduleClient.GetProductLogRevealTargetAsync();
+            if (target.OutcomeCode == "ProductLog.Ready" && target.RevealUri is not null) _logRevealLauncher.Reveal(target.RevealUri);
         }
         catch (Exception ex)
         {
@@ -114,17 +83,6 @@ public partial class ResultStep : WizardStepBase
 
             await uiMessageBox.ShowDialogAsync();
         }
-    }
-
-    /// <summary>
-    /// Gets the default log folder path (AppData\Roaming\DistroNexus\Logs).
-    /// </summary>
-    private static string GetDefaultLogFolder()
-    {
-        return Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "DistroNexus",
-            "Logs");
     }
 
     protected override UserControl CreateContent()

@@ -2,7 +2,7 @@
 
 **中文** | [English](README.md)
 
-> **🎉 版本 2.0 发布！** - 使用 .NET 10 + WPF 完全重写，为 Windows 提供原生体验。
+> **当前源码候选：v2.3.0** — 基于 .NET 10 与 WPF 的健康、恢复、监控、可信自动化、WSLg、容器和模板信任能力；发布包仍需通过外部发布门槛。
 
 **DistroNexus** 是一个现代化的 Windows 应用程序，用于管理 Windows Subsystem for Linux (WSL) 发行版。采用 .NET 10 和 WPF 构建，提供原生、直观的界面用于下载、安装和管理 WSL 实例。
 
@@ -15,28 +15,37 @@
 
 ## ✨ 功能特性
 
-### 1.0 基础能力
-*   **实例管理**：
-    *   ✅ 启动/停止实例
-    *   ✅ 打开实例终端（支持自定义起始路径）
-    *   ✅ 移动到不同驱动器
-    *   ✅ 重命名实例
-    *   ✅ 移除实例
-    *   ✅ 设置或重置默认凭据
-*   **自定义安装**：将 WSL 发行版安装到任意目录
-*   **发行版目录**：从精选源浏览并下载发行版
+### 实例生命周期与存储
 
-### 2.0 新增能力
-*   **原生 Windows UI**：采用 Fluent Design System 的现代 WPF 界面
-*   **深色模式支持**：根据系统偏好自动切换主题
-*   **双语体验**：WPF 客户端界面与项目文档同步支持英文与简体中文
-*   **PowerShell 模块**：15 个 cmdlet，支持自动化与脚本化工作流
-    *   ✅ 可在应用内调用，也可在独立 PowerShell 会话中使用
-    *   ✅ 支持 CI、环境初始化与批量管理的可重复操作
-*   **模板系统**：内置模板可快速完成环境引导
-    *   ✅ 覆盖常见语言运行时、容器与本地开发场景
-    *   ✅ 支持参数化模板执行，满足不同环境定制需求
-*   **包管理体验**：更完善的浏览与下载流程
+- 启动、停止、刷新、重命名、移动、导入、导出和移除 WSL 实例。
+- 使用可配置起始目录在 Windows Terminal 中打开实例。
+- 从精选目录源安装发行版到用户指定路径。
+- 查看 VHDX 使用情况、启用稀疏模式，并压缩单个或多个 WSL 2 磁盘。
+- 设置或重置默认 Linux 凭据。
+
+### 深度实例管理
+
+- 通过实例详情页管理磁盘、资源、集成、网络和备份。
+- 编辑 WSL 全局内存、处理器、交换文件、localhost 转发和网络模式设置。
+- 查看运行实例的监听端口和 WSL IP 信息。
+- 管理受支持 WSL 2 实例的 Docker Desktop 集成。
+- 使用标签、筛选、分组和批量选择组织实例。
+- 监听外部 WSL 状态变化，无需等待固定缓存超时。
+
+### 备份与恢复
+
+- 通过桌面应用或 PowerShell 导入和导出实例。
+- 使用 Windows 任务计划程序创建每日、每周或每月备份计划。
+- 执行即时备份、配置保留数量，并查看最近的成功和失败记录。
+
+### 开发体验与自动化
+
+- 基于 Fluent 风格的原生 WPF 界面，支持自动浅色/深色主题。
+- 桌面界面和文档支持英文与简体中文。
+- 导出 93 个 PowerShell 函数，覆盖生命周期、健康、恢复、监控、配置、服务、WSLg、容器、工作区、可信模板和诊断。
+- 16 套内置开发模板，覆盖 .NET、Node.js、Python、Java、Go、Rust、容器、Kubernetes、数据库、AI/ML 和基础设施工具。
+- 支持参数化模板执行、环境检查、元数据检查、Dry Run、进度反馈和结构化错误码。
+- 支持包下载进度、传输速度、缓存和详细应用日志。
 
 ![DistroNexus 包管理器](docs/promotion/image/20260215181646-Package.png)
 
@@ -52,23 +61,23 @@
 ### 安装
 
 #### 选项 1：安装程序（推荐）
-1. 从 [Releases](https://github.com/LazyWorkshopCreate/DistroNexus/releases) 下载 `DistroNexus-2.0.1-Setup.exe`
+1. v2.3.0 发布后，从 [Releases](https://github.com/LazyWorkshopCreate/DistroNexus/releases) 下载已批准的安装程序
 2. 运行安装程序
 3. 从开始菜单启动
 
 #### 选项 2：便携版
-1. 下载 `DistroNexus-v2.0.1-Release.zip`
+1. 发布后，从 [Releases](https://github.com/LazyWorkshopCreate/DistroNexus/releases) 下载 v2.3.0 便携 ZIP 包
 2. 解压到任意文件夹
 3. 运行 `DistroNexus.Desktop.exe`
 
 #### 选项 3：自包含版（无需 .NET）
-1. 下载 `DistroNexus-v2.0.1-Release-selfcontained.zip`
+1. 发布后，从 [Releases](https://github.com/LazyWorkshopCreate/DistroNexus/releases) 下载 v2.3.0 自包含 ZIP 包
 2. 解压到任意文件夹
 3. 运行 `DistroNexus.Desktop.exe`
 
 ## 🛠️ PowerShell 模块
 
-DistroNexus 2.0 包含用于自动化的 PowerShell 模块：
+DistroNexus 2.3.0 包含用于自动化的 PowerShell 模块：
 
 ```powershell
 # 导入模块
@@ -84,28 +93,23 @@ Install-DistroNexusInstance -DistroName "MyUbuntu" -InstallPath "D:\WSL\MyUbuntu
 Start-DistroNexusInstance -DistroName "Ubuntu-22.04"
 ```
 
-可用的 cmdlet：
-- `Get-DistroNexusInstance` - 列出所有 WSL 实例
-- `Start-DistroNexusInstance` - 启动实例
-- `Stop-DistroNexusInstance` - 停止实例
-- `Move-DistroNexusInstance` - 重定位实例
-- `Rename-DistroNexusInstance` - 重命名实例
-- `Remove-DistroNexusInstance` - 卸载实例
-- `Install-DistroNexusInstance` - 自定义安装
-- `Set-DistroNexusCredential` - 更新凭据
-- `Get-DistroNexusPackage` - 浏览发行版
-- `Save-DistroNexusPackage` - 下载包
-- `Remove-DistroNexusPackage` - 删除缓存包
-- `Update-DistroNexusCatalog` - 刷新目录
-- `Get-DistroNexusTemplate` - 列出内置模板
-- `Apply-DistroNexusTemplate` - 应用模板到实例
-- `Invoke-DistroNexusTemplateAutomation` - 运行模板自动化流程
+模块按能力分组导出 93 个函数：
+
+- **实例**：列出、安装、启动、停止、移动、重命名、移除、设置凭据、导入和导出。
+- **存储与配置**：压缩 VHDX、查看实例配置、管理稀疏模式以及读写 `.wslconfig`。
+- **备份、恢复与诊断**：管理备份计划、创建/验证/还原/安全删除恢复点、查看端口映射、查询实例缓存以及创建发布证据包。
+- **集成与组织**：管理 Docker Desktop 集成和实例标签。
+- **运行与健康**：查询主机能力、扫描和修复健康问题、查看监控快照，以及预览或操作受支持的 systemd 服务。
+- **Linux 应用与容器工具**：发现或启动 WSLg 应用、查看容器运行时，以及管理 Podman 用户单元和连接。
+- **工作区与可信模板**：管理工作区定义和启动；浏览/下载软件包；验证、应用和自动化模板；并管理可信市场源、评审授权、工件、历史和回滚。
+
+权威导出列表见 [`src/PowerShell/DistroNexus.psd1`](src/PowerShell/DistroNexus.psd1)。
 
 ## 🧩 模板系统
 
 ![DistroNexus 模板系统](docs/promotion/image/20260215181721-Template.png)
 
-DistroNexus 内置了模板系统，可将 WSL 实例快速配置为可直接使用的开发环境。
+DistroNexus 内置 16 套模板，可将 WSL 实例快速配置为可直接使用的开发环境。
 
 模板系统文档索引：
 - 综合说明：`docs/development/template-system-comprehensive-guide.md`
@@ -199,7 +203,7 @@ dotnet build src/Client/DistroNexus.slnx -c Release
 .\tools\build.ps1 -Publish -SelfContained -CreateZip -Configuration Release
 
 # 构建 Windows 安装程序（需要 Inno Setup）
-.\tools\build-installer.ps1 -Version 2.0.1
+.\tools\build-installer.ps1 -Version 2.3.0
 
 # 输出将在 release/ 目录中
 ```
@@ -222,7 +226,7 @@ DistroNexus/
 │   │   │   └── Interfaces/               # 服务接口
 │   │   └── DistroNexus.Tests/            # 单元测试
 │   └── PowerShell/
-│       ├── Public/                       # 公开 cmdlet（15 个）
+│       ├── Public/                       # 公开 PowerShell 函数
 │       ├── Private/                      # 内部工具函数
 │       ├── DistroNexus.psd1              # 模块清单
 │       └── DistroNexus.psm1              # 模块脚本
@@ -230,7 +234,7 @@ DistroNexus/
 │   ├── catalog.json                      # 发行版目录
 │   ├── templates.json                    # 模板元数据
 │   └── templates/                        # 模板脚本资源
-├── docs/                                 # 文档
+├── docs/                                 # 需求、架构、指南和发布说明
 │   ├── release_notes/                    # 版本发布说明
 │   └── archive/                          # 历史文档和 v1 比对
 ├── tools/
@@ -238,10 +242,8 @@ DistroNexus/
 │   ├── build-installer.ps1               # 安装程序构建器
 │   ├── package-portable.ps1              # 便携包创建器
 │   └── installer.iss                     # Inno Setup 安装器定义
-├── tests/                                # 测试套件
-│   ├── PowerShell/                       # Pester 测试
-│   ├── CSharp/                           # xUnit 测试
-│   └── TestUtilities/                    # 共享测试工具
+├── tests/
+│   └── PowerShell/                       # Pester 单元和集成测试
 ├── website/                              # Docusaurus 文档网站
 ├── README.md                             # 英文文档
 └── README_CN.md                          # 中文文档
@@ -296,4 +298,4 @@ Get-Module DistroNexus
 
 ---
 
-**DistroNexus v2.0** - 以原生 .NET 性能与体验，在 Windows 上打造你的 Linux 开发环境。
+**DistroNexus v2.3.0** — 在 Windows 上管理、自动化、保护并定制 WSL 环境。

@@ -502,17 +502,13 @@ public partial class WslManagerService : IWslManagerService
                 ["DistroName"] = options.Package?.Name ?? "Ubuntu",
                 ["InstallPath"] = actualInstallPath,  // Use instance-specific path
                 ["InstanceName"] = options.InstanceName,
-                ["AutoDownload"] = true  // Enable auto-download if package not found in cache
+                ["AutoDownload"] = false
             };
 
             // Add optional parameters
             if (!string.IsNullOrWhiteSpace(options.Username) && options.Username != "root")
             {
                 moduleParams["Username"] = options.Username;
-                if (!string.IsNullOrWhiteSpace(options.Password))
-                {
-                    moduleParams["Password"] = "***"; // Don't log actual password
-                }
             }
 
             if (options.InitCommands != null && options.InitCommands.Count > 0)
@@ -927,19 +923,10 @@ public partial class WslManagerService : IWslManagerService
                 return true;
             }
 
-            // Fallback to inline script if module failed
-            _logger.LogWarning("Module execution failed for RemoveInstanceAsync, falling back to inline script");
-            var escapedName = EscapePowerShellString(instanceName);
-            var script = 
-                $"$result = wsl --unregister {escapedName} 2>&1; " +
-                $"$exitCode = $LASTEXITCODE; " +
-                $"if ($exitCode -ne 0) {{ throw \"Failed to remove WSL instance: $result\" }}; " +
-                "'success'";
-
-            await _powerShellService.ExecuteScriptAsync(script, cancellationToken);
-
-            _logger.LogInformation("WSL instance '{InstanceName}' removed successfully using fallback script", instanceName);
-            return true;
+            // Lifecycle removal is module/Bridge-only.  A failed contract must not
+            // silently switch to a raw WSL command path.
+            _logger.LogWarning("Module execution failed for RemoveInstanceAsync; refusing raw WSL fallback");
+            return false;
         }
         catch (Exception ex)
         {
@@ -991,35 +978,12 @@ public partial class WslManagerService : IWslManagerService
                 return;
             }
 
-            // Fallback to inline script if module failed
-            _logger.LogWarning("Module execution failed for MoveInstanceAsync, falling back to inline script");
-            var escapedName = EscapePowerShellString(instanceName);
-            var escapedPath = EscapePowerShellString(newPath);
-            var tempExportPath = EscapePowerShellString(Path.Combine(Path.GetTempPath(), $"{instanceName}_export.tar"));
-            
-            progress?.Report(10);
-
-            // Export, unregister, and import to new location
-            // Note: WSL outputs UTF-16 text, so we clean null characters
-            var script = 
-                $"$result = wsl --export {escapedName} {tempExportPath} 2>&1; " +
-                $"$exitCode = $LASTEXITCODE; " +
-                $"if ($exitCode -ne 0) {{ throw \"Export failed: $result\" }}; " +
-                $"if (-not (Test-Path {escapedPath})) {{ New-Item -ItemType Directory -Path {escapedPath} -Force | Out-Null }}; " +
-                $"$result = wsl --unregister {escapedName} 2>&1; " +
-                $"$exitCode = $LASTEXITCODE; " +
-                $"if ($exitCode -ne 0) {{ Remove-Item {tempExportPath} -Force -ErrorAction SilentlyContinue; throw \"Unregister failed: $result\" }}; " +
-                $"$result = wsl --import {escapedName} {escapedPath} {tempExportPath} 2>&1; " +
-                $"$exitCode = $LASTEXITCODE; " +
-                $"Remove-Item {tempExportPath} -Force -ErrorAction SilentlyContinue; " +
-                $"if ($exitCode -ne 0) {{ throw \"Import failed: $result\" }}; " +
-                "'success'";
-
-            progress?.Report(50);
-            await _powerShellService.ExecuteScriptAsync(script, cancellationToken);
-
-            _logger.LogInformation("WSL instance '{InstanceName}' moved successfully using fallback script", instanceName);
-            progress?.Report(100);
+            _logger.LogWarning("Module execution failed for MoveInstanceAsync; refusing raw WSL fallback");
+            throw new WslOperationFailedException(
+                "The reviewed lifecycle operation could not be completed.",
+                DistroNexusErrorCode.UnknownError,
+                operation: "MoveInstance",
+                instanceName: instanceName);
         }
         catch (Exception ex)
         {
@@ -1062,39 +1026,12 @@ public partial class WslManagerService : IWslManagerService
                 return;
             }
 
-            // Fallback to inline script if module failed
-            _logger.LogWarning("Module execution failed for RenameInstanceAsync, falling back to inline script");
-
-            // Phase 3 (E-08): resolve install path using C# registry — no PS registry calls.
-            var installPath = GetInstallPathFromRegistry(oldName);
-            if (installPath == null)
-                throw new WslOperationFailedException(
-                    $"Instance '{oldName}' not found in registry.",
-                    DistroNexusErrorCode.InstanceNotFound,
-                    operation: "RenameInstance");
-
-            var escapedOldName = EscapePowerShellString(oldName);
-            var escapedNewName = EscapePowerShellString(newName);
-            var escapedInstallPath = EscapePowerShellString(installPath);
-            var tempExportPath = EscapePowerShellString(Path.Combine(Path.GetTempPath(), $"{oldName}_rename.tar"));
-
-            // Install path already resolved in C# — script does not access the registry.
-            var script =
-                $"$result = wsl --export {escapedOldName} {tempExportPath} 2>&1; " +
-                "$exitCode = $LASTEXITCODE; " +
-                $"if ($exitCode -ne 0) {{ throw \"Export failed: $result\" }}; " +
-                $"$result = wsl --unregister {escapedOldName} 2>&1; " +
-                "$exitCode = $LASTEXITCODE; " +
-                $"if ($exitCode -ne 0) {{ Remove-Item {tempExportPath} -Force -ErrorAction SilentlyContinue; throw \"Unregister failed: $result\" }}; " +
-                $"$result = wsl --import {escapedNewName} {escapedInstallPath} {tempExportPath} 2>&1; " +
-                "$exitCode = $LASTEXITCODE; " +
-                $"Remove-Item {tempExportPath} -Force -ErrorAction SilentlyContinue; " +
-                $"if ($exitCode -ne 0) {{ throw \"Import failed: $result\" }}; " +
-                "'success'";
-
-            await _powerShellService.ExecuteScriptAsync(script, cancellationToken);
-
-            _logger.LogInformation("WSL instance renamed successfully using fallback script");
+            _logger.LogWarning("Module execution failed for RenameInstanceAsync; refusing raw WSL fallback");
+            throw new WslOperationFailedException(
+                "The reviewed lifecycle operation could not be completed.",
+                DistroNexusErrorCode.RenameFailed,
+                operation: "RenameInstance",
+                instanceName: oldName);
         }
         catch (Exception ex)
         {
@@ -1104,65 +1041,12 @@ public partial class WslManagerService : IWslManagerService
     }
 
     /// <inheritdoc/>
-    public async Task SetCredentialsAsync(string instanceName, string username, string password, CancellationToken cancellationToken = default)
+    public Task SetCredentialsAsync(string instanceName, string username, System.Security.SecureString password, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(instanceName);
         ArgumentNullException.ThrowIfNull(username);
         ArgumentNullException.ThrowIfNull(password);
-
-        try
-        {
-            _logger.LogInformation("Setting credentials for WSL instance '{InstanceName}'", instanceName);
-
-            // Try using PowerShell module Cmdlet first
-            var moduleParams = new Dictionary<string, object>
-            {
-                ["Name"] = instanceName,
-                ["Username"] = username,
-                ["Password"] = password
-            };
-
-            var moduleResult = await _powerShellService.ExecuteModuleCmdletAsync(
-                "Set-DistroNexusCredential",
-                moduleParams,
-                new ModuleCallOptions
-                {
-                    TimeoutSeconds = NormalOperationTimeoutSeconds,
-                    ParseAsJson = false,
-                    UseModuleFallback = _useModuleFallback
-                },
-                cancellationToken: cancellationToken);
-
-            if (moduleResult.Success)
-            {
-                _logger.LogInformation("Credentials set successfully for WSL instance '{InstanceName}' using module", instanceName);
-                return;
-            }
-
-            // Fallback to inline script if module failed
-            _logger.LogWarning("Module execution failed for SetCredentialsAsync, falling back to inline script");
-            var escapedName = EscapePowerShellString(instanceName);
-            var escapedUsername = EscapePowerShellString(username);
-            var escapedPassword = EscapePowerShellString(password);
-            
-            var script = 
-                $"wsl --distribution {escapedName} -- bash -c \"id -u {escapedUsername} 2>/dev/null || useradd -m -s /bin/bash {escapedUsername}\"; " +
-                $"if ($LASTEXITCODE -ne 0) {{ throw \"Failed to create user\" }}; " +
-                $"wsl --distribution {escapedName} -- bash -c \"echo {escapedPassword} | chpasswd\"; " +
-                $"if ($LASTEXITCODE -ne 0) {{ throw \"Failed to set password\" }}; " +
-                $"wsl --distribution {escapedName} -- bash -c \"echo -e '[user]\\ndefault={escapedUsername}' > /etc/wsl.conf\"; " +
-                $"if ($LASTEXITCODE -ne 0) {{ throw \"Failed to configure default user\" }}; " +
-                "'success'";
-
-            await _powerShellService.ExecuteScriptAsync(script, cancellationToken);
-
-            _logger.LogInformation("Credentials set successfully for WSL instance '{InstanceName}' using fallback script", instanceName);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to set credentials for WSL instance '{InstanceName}'", instanceName);
-            throw;
-        }
+        return Task.FromException(new NotSupportedException("Credential changes must use IPowerShellModuleClient.SetCredentialAsync."));
     }
 
     /// <summary>
@@ -1406,58 +1290,6 @@ public partial class WslManagerService : IWslManagerService
             _logger.LogError(ex, "Failed to force refresh instance {InstanceName}", instanceName);
             return null;
         }
-    }
-
-    /// <inheritdoc/>
-    public async Task CompactInstanceAsync(
-        string instanceName,
-        IProgress<(double Percentage, string Message)>? progress = null,
-        bool whatIf = false,
-        CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrEmpty(instanceName))
-            throw new WslOperationFailedException(
-                "Instance name must not be null or empty.",
-                DistroNexusErrorCode.InstanceNotFound,
-                operation: "CompactInstance");
-
-        cancellationToken.ThrowIfCancellationRequested();
-
-        _logger.LogInformation("Compacting VHDX for instance {InstanceName} (WhatIf={WhatIf})", instanceName, whatIf);
-
-        progress?.Report((5, "Preparing compaction…"));
-
-        var parameters = new Dictionary<string, object>
-        {
-            { "Name",  instanceName },
-            { "Force", true }
-        };
-
-        if (whatIf)
-            parameters["WhatIf"] = true;
-
-        progress?.Report((20, "Running fstrim and compacting VHDX…"));
-
-        var result = await _powerShellService.ExecuteModuleCmdletAsync(
-            "Compress-DistroNexusInstance",
-            parameters: parameters,
-            options: new ModuleCallOptions
-            {
-                TimeoutSeconds  = VeryLongOperationTimeoutSeconds,
-                ParseAsJson     = false,
-                UseModuleFallback = false
-            },
-            cancellationToken: cancellationToken);
-
-        if (result == null || !result.Success)
-        {
-            var error = result?.Error ?? "Unknown error";
-            _logger.LogError("Compaction failed for {InstanceName}: {Error}", instanceName, error);
-            throw new WslOperationFailedException($"Compaction failed for '{instanceName}': {error}", DistroNexusErrorCode.CompactionFailed, operation: "CompactInstance", instanceName: instanceName);
-        }
-
-        progress?.Report((100, "Compaction complete."));
-        _logger.LogInformation("Compaction succeeded for instance {InstanceName}", instanceName);
     }
 
     /// <inheritdoc/>

@@ -5,6 +5,8 @@ namespace DistroNexus.Core.Models;
 /// </summary>
 public class CachedPackageInfo
 {
+    /// <summary>Authenticated opaque authority required to delete this exact cache entry.</summary>
+    public string CacheEntryId { get; set; } = string.Empty;
     /// <summary>
     /// Gets or sets the package ID.
     /// </summary>
@@ -65,6 +67,8 @@ public class CachedPackageInfo
 /// </summary>
 public class CacheUsageInfo
 {
+    /// <summary>Gets whether eligible entries beyond <see cref="CachedPackages"/> exist.</summary>
+    public bool HasMoreEntries { get; set; }
     /// <summary>
     /// Gets or sets the total cache size in bytes.
     /// </summary>

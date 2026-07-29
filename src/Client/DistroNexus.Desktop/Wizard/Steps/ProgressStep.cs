@@ -2,8 +2,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DistroNexus.Core.Interfaces;
 using Microsoft.Extensions.Logging;
-using System.IO;
 using System.Windows.Controls;
+using System.Security;
+using System.Windows;
 
 namespace DistroNexus.Desktop.Wizard.Steps;
 
@@ -12,7 +13,7 @@ namespace DistroNexus.Desktop.Wizard.Steps;
 /// </summary>
 public partial class ProgressStep : WizardStepBase
 {
-    private readonly IWslManagerService _wslManager;
+    private readonly IPowerShellModuleClient _moduleClient;
     private readonly ILogger _logger;
     private CancellationTokenSource? _installCts;
 
@@ -28,9 +29,9 @@ public partial class ProgressStep : WizardStepBase
     [ObservableProperty]
     private bool _canCancel = true;
 
-    public ProgressStep(IWslManagerService wslManager, ILogger logger)
+    public ProgressStep(IPowerShellModuleClient moduleClient, ILogger logger)
     {
-        _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -52,9 +53,6 @@ public partial class ProgressStep : WizardStepBase
 
         ErrorMessage = string.Empty;
 
-        var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        Context.LogFilePath = Path.Combine(appDataPath, "DistroNexus", "logs", "distronexus.log");
-
         Context.IsInstalling = true;
         Context.InstallProgress = 0;
         Context.InstallStatusMessage = "Preparing installation...";
@@ -75,15 +73,18 @@ public partial class ProgressStep : WizardStepBase
             _logger.LogInformation("Starting installation of {DistroName} to {Path}",
                 Context.SelectedDistribution?.Name, Context.InstallPath);
 
-            var options = Context.ToInstallOptions();
-
-            var progress = new Progress<(double percentage, string message)>(p =>
-            {
-                Context.InstallProgress = p.percentage;
-                Context.InstallStatusMessage = p.message;
-            });
-
-            await _wslManager.InstallInstanceAsync(options, progress, _installCts.Token);
+            var packageId = Context.SelectedDistribution?.Id ?? throw new InvalidOperationException("A package is required.");
+            Context.InstallProgress = 15;
+            var source = await _moduleClient.ResolveInstallSourceAsync(packageId, _installCts.Token);
+            Context.InstallProgress = 30;
+            var acquisition = await _moduleClient.PreviewPackageAcquisitionAsync(source.PackageId, _installCts.Token);
+            var package = await _moduleClient.AcquirePackageAsync(acquisition.PreviewToken, _installCts.Token);
+            Context.InstallProgress = 55;
+            using var password = await PromptForPasswordAsync(Context.CreateUser, _installCts.Token);
+            var target = await _moduleClient.PreviewInstallTargetAsync(Context.InstallPath, _installCts.Token);
+            if (!target.IsEligible) throw new InvalidOperationException(target.OutcomeCode);
+            var result = await _moduleClient.InstallVerifiedInstanceWithTargetAsync(package.PackageReference, Context.InstanceName, target.PreviewToken, Context.CreateUser ? Context.Username : "root", "bash", null, Context.SetAsDefault, password, _installCts.Token);
+            if (!result.Succeeded) throw new InvalidOperationException(result.OutcomeCode);
 
             Context.InstallProgress = 100;
             Context.InstallStatusMessage = "Base installation completed.";
@@ -126,6 +127,31 @@ public partial class ProgressStep : WizardStepBase
         }
     }
 
+    private static async Task<SecureString?> PromptForPasswordAsync(bool createUser, CancellationToken cancellationToken)
+    {
+        if (!createUser) return null;
+        cancellationToken.ThrowIfCancellationRequested();
+        var password = new PasswordBox { MinWidth = 220 };
+        var confirmation = new PasswordBox { MinWidth = 220 };
+        var dialog = new Wpf.Ui.Controls.MessageBox
+        {
+            Title = Properties.Resources.WizardStepConfigureUser,
+            Content = new StackPanel { Children = { new TextBlock { Text = Properties.Resources.LabelPassword }, password, new TextBlock { Text = Properties.Resources.LabelConfirmPassword }, confirmation } },
+            PrimaryButtonText = Properties.Resources.ButtonOK,
+            CloseButtonText = Properties.Resources.ButtonCancel
+        };
+        var response = await dialog.ShowDialogAsync();
+        try
+        {
+            if (response != Wpf.Ui.Controls.MessageBoxResult.Primary) throw new OperationCanceledException(cancellationToken);
+            using var entered = password.SecurePassword.Copy();
+            using var repeated = confirmation.SecurePassword.Copy();
+            if (entered.Length < 4 || !SecurePasswordAdapter.AreEqual(entered, repeated)) throw new InvalidOperationException(Properties.Resources.ErrorPasswordMismatch);
+            return entered.Copy();
+        }
+        finally { SecurePasswordAdapter.ClearPassword(password, confirmation); }
+    }
+
     private string BuildErrorContext()
     {
         if (Context == null)
@@ -134,7 +160,7 @@ public partial class ProgressStep : WizardStepBase
         var sb = new System.Text.StringBuilder();
         sb.AppendLine($"Instance Name: {Context.InstanceName}");
         sb.AppendLine($"Distribution: {Context.SelectedDistribution?.Name ?? "N/A"} {Context.SelectedDistribution?.Version ?? ""}".Trim());
-        sb.AppendLine($"Install Path: {MaskPath(Context.InstallPath)}");
+        sb.AppendLine("Install Path: (redacted)");
         sb.AppendLine($"WSL Version: {Context.WslVersion}");
         return sb.ToString().TrimEnd();
     }
@@ -147,30 +173,8 @@ public partial class ProgressStep : WizardStepBase
         var sb = new System.Text.StringBuilder();
         sb.AppendLine($"Instance Name: {Context.InstanceName}");
         sb.AppendLine($"Distribution: {Context.SelectedDistribution?.Name ?? "N/A"} {Context.SelectedDistribution?.Version ?? ""}".Trim());
-        sb.AppendLine($"Install Path: {MaskPath(Context.InstallPath)}");
+        sb.AppendLine("Install Path: (redacted)");
         return sb.ToString().TrimEnd();
-    }
-
-    private static string MaskPath(string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-            return "(none)";
-
-        try
-        {
-            var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            if (!string.IsNullOrEmpty(userProfile) && path.Contains(userProfile, StringComparison.OrdinalIgnoreCase))
-            {
-                var username = Path.GetFileName(userProfile);
-                return path.Replace(username, "***", StringComparison.OrdinalIgnoreCase);
-            }
-
-            return path;
-        }
-        catch
-        {
-            return path;
-        }
     }
 
     [RelayCommand]

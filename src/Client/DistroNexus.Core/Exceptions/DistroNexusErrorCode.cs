@@ -42,6 +42,10 @@ public enum DistroNexusErrorCode
     BackupFailed           = 4006,
     InvalidFrequency       = 4007,
     InstallFailed          = 4008,
+    RecoveryPointInvalid   = 4009,
+    RecoveryTargetReserved = 4010,
+    RecoveryOperationFailed = 4011,
+    RecoveryManualRecoveryRequired = 4012,
 
     // ── Configuration ─────────────────────────────────────────────────────
     WslConfigReadFailed   = 5001,
@@ -51,11 +55,38 @@ public enum DistroNexusErrorCode
     // ── Templates ─────────────────────────────────────────────────────────
     TemplateNotFound       = 6001,
     TemplateScriptFailed   = 6002,
+    TemplateManifestInvalid = 6003,
+    TemplateArtifactIntegrityFailed = 6004,
+    TemplateTrustRequired = 6005,
+    TemplateArtifactUnsafe = 6006,
+
+    // ── Capability / Health / Monitoring ─────────────────────────────────
+    HealthCheckUnavailable = 7001,
+    HealthRepairPreviewInvalid = 7002,
+    HealthRepairConfirmationRequired = 7003,
+    HealthRepairElevationRequired = 7004,
+    HealthRepairFailed = 7005,
+    HealthRepairPostconditionFailed = 7006,
+    DiagnosticExportInvalid = 7007,
+
+    // ── systemd / networking / firewall ─────────────────────────────────
+    SystemdUnavailable = 8001,
+    LinuxPrivilegeRequired = 8002,
+    FirewallElevationRequired = 8003,
+    NetworkProbeFailed = 8004,
+    FirewallOwnershipDenied = 8005,
 
     // ── System / Unknown ──────────────────────────────────────────────────
     WslNotInstalled             = 9001,
     WslVersionTooLow            = 9002,
     OperationTimeout            = 9003,
     PowerShellModuleUnavailable = 9004,
+    ProcessStartFailed           = 9101,
+    ProcessOutputLimitExceeded   = 9102,
+    StoreRevisionConflict        = 9201,
+    StoreSchemaUnsupported       = 9202,
+    StoreDocumentInvalid         = 9203,
+    StoreWriteFailed             = 9204,
+    ValidationFailed             = 9301,
     UnknownError                = 9999,
 }

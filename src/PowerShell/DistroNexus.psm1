@@ -30,6 +30,10 @@ foreach ($import in $privateFunctions) {
     }
 }
 
+# Workspace cmdlets are intentionally Core-owned. The bridge is resolved when a bridge-backed
+# cmdlet runs so module-only commands remain usable in installations without bridge artifacts.
+$ExecutionContext.SessionState.Module.OnRemove = { Stop-DistroNexusWorkspaceBridge }
+
 # Import public cmdlet functions
 $publicFunctions = @(Get-ChildItem -Path "$PSScriptRoot\Public\*.ps1" -ErrorAction SilentlyContinue)
 foreach ($import in $publicFunctions) {
@@ -42,5 +46,7 @@ foreach ($import in $publicFunctions) {
     }
 }
 
-# Export public functions
-Export-ModuleMember -Function $publicFunctions.BaseName
+# Export exactly the manifest contract. Some public files contain related commands,
+# so exporting file base names would omit commands defined in composite files.
+$manifest = Import-PowerShellDataFile -Path (Join-Path $PSScriptRoot 'DistroNexus.psd1')
+Export-ModuleMember -Function $manifest.FunctionsToExport

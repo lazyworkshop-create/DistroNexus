@@ -32,17 +32,13 @@ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
             <TextBlock Text="{lex:Loc LabelPassword}"
                        FontSize="14"
                        Margin="0,0,0,8"/>
-            <ui:PasswordBox Password="{Binding Context.Password, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                           PlaceholderText="{lex:Loc PlaceholderPassword}"
-                           Margin="0,0,0,15"/>
+            <PasswordBox x:Name="PasswordInput" Margin="0,0,0,15"/>
             
             <!-- Confirm Password -->
             <TextBlock Text="{lex:Loc LabelConfirmPassword}"
                        FontSize="14"
                        Margin="0,0,0,8"/>
-            <ui:PasswordBox Password="{Binding Context.ConfirmPassword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                           PlaceholderText="{lex:Loc PlaceholderConfirmPassword}"
-                           Margin="0,0,0,15"/>
+            <PasswordBox x:Name="ConfirmPasswordInput" Margin="0,0,0,15"/>
         </StackPanel>
         
         <!-- WSL Version -->

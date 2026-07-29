@@ -1546,13 +1546,23 @@
     <value>网络模式</value>
   </data>
   <data name="WslConfig_SaveAndRestart" xml:space="preserve">
-    <value>保存并重启 WSL</value>
+    <value>保存并标记 WSL 重启待执行</value>
+  </data>
+  <data name="MarketplaceSourcePlaceholder" xml:space="preserve"><value>https://catalog.example/templates.json</value></data>
+  <data name="MarketplaceTrust" xml:space="preserve"><value>信任</value></data>
+  <data name="MarketplaceRevoke" xml:space="preserve"><value>撤销信任</value></data>
+  <data name="MarketplaceDownload" xml:space="preserve"><value>下载</value></data>
+  <data name="MarketplaceReview" xml:space="preserve"><value>审阅更新</value></data>
+  <data name="MarketplaceRollback" xml:space="preserve"><value>回滚所选版本</value></data>
+  <data name="MarketplaceApprove" xml:space="preserve"><value>批准已审阅候选项</value></data>
+  <data name="WslConfig_SaveAndMarkPendingRestart" xml:space="preserve">
+    <value>保存并标记 WSL 重启待执行</value>
   </data>
   <data name="WslConfig_OpenRawFile" xml:space="preserve">
     <value>打开原始文件</value>
   </data>
   <data name="WslConfig_RestartConfirm" xml:space="preserve">
-    <value>立即运行 wsl --shutdown 以应用更改？所有运行中的 WSL 实例将被停止。</value>
+    <value>更改已保存，但需要完全关闭 WSL 后才会生效。运行中的 WSL 实例将继续运行。</value>
   </data>
   <data name="WslConfig_MemoryWarning" xml:space="preserve">
     <value>内存限制超过主机内存的 80%，可能导致系统不稳定。</value>
@@ -1567,7 +1577,10 @@
     <value>无效的交换空间值，使用 0 禁用，或带 GB/MB 后缀的数字。</value>
   </data>
   <data name="WslConfig_SaveComplete" xml:space="preserve">
-    <value>配置已成功保存。</value>
+    <value>配置已保存，WSL 重启待执行。</value>
+  </data>
+  <data name="WslConfig_SavePendingRestartComplete" xml:space="preserve">
+    <value>配置已保存。需要完全关闭 WSL 后更改才会生效。</value>
   </data>
   <data name="ManageTags_SectionTitle" xml:space="preserve">
     <value>管理标签</value>
@@ -1743,6 +1756,57 @@
   <data name="BackupTab_SelectDestinationTitle" xml:space="preserve">
     <value>选择备份目标文件夹</value>
   </data>
+  <data name="Recovery_Title" xml:space="preserve"><value>恢复点</value></data>
+  <data name="Recovery_Create" xml:space="preserve"><value>创建恢复点</value></data>
+  <data name="Recovery_Tags" xml:space="preserve"><value>标签（以逗号分隔）</value></data>
+  <data name="Recovery_StopAndRestart" xml:space="preserve"><value>停止实例以获得一致导出，然后重启</value></data>
+  <data name="Recovery_Verify" xml:space="preserve"><value>验证</value></data>
+  <data name="Recovery_Reveal" xml:space="preserve"><value>在资源管理器中显示</value></data>
+  <data name="Recovery_Delete" xml:space="preserve"><value>删除</value></data>
+  <data name="Recovery_TargetInstance" xml:space="preserve"><value>新实例名称</value></data>
+  <data name="Recovery_TargetLocation" xml:space="preserve"><value>新实例位置</value></data>
+  <data name="Recovery_Restore" xml:space="preserve"><value>恢复</value></data>
+  <data name="Recovery_ImportInPlace" xml:space="preserve"><value>支持时使用 VHDX 就地导入</value></data>
+  <data name="Recovery_ImportInPlaceUnmanaged" xml:space="preserve"><value>就地导入由 WSL 管理注册位置，不会使用新实例位置字段。</value></data>
+  <data name="Recovery_OfferConfiguration" xml:space="preserve"><value>此配置变更前可创建恢复点。DistroNexus 不会自动创建；请在“备份”选项卡创建后重新执行，或继续而不创建恢复点。</value></data>
+  <data name="Recovery_OfferTemplate" xml:space="preserve"><value>应用模板前可创建恢复点。DistroNexus 不会自动创建；请在“备份”选项卡创建后重新执行，或继续而不创建恢复点。</value></data>
+  <data name="Recovery_OfferRepair" xml:space="preserve"><value>此修复前可创建恢复点。DistroNexus 不会自动创建；请在“备份”选项卡创建后重新运行修复，或选择“取消”停止。</value></data>
+  <data name="Recovery_OfferTitle" xml:space="preserve"><value>可选恢复点</value></data>
+  <data name="Recovery_Pin" xml:space="preserve"><value>固定所选恢复点</value></data>
+  <data name="Recovery_SaveNotes" xml:space="preserve"><value>保存备注</value></data>
+  <data name="Recovery_Clone" xml:space="preserve"><value>克隆</value></data>
+  <data name="Recovery_CreateTitle" xml:space="preserve"><value>创建恢复点</value></data>
+  <data name="Recovery_CreateConfirm" xml:space="preserve"><value>使用所选选项创建恢复点？</value></data>
+  <data name="Recovery_VerifyTitle" xml:space="preserve"><value>恢复点验证</value></data>
+  <data name="Recovery_DeleteTitle" xml:space="preserve"><value>删除恢复点</value></data>
+  <data name="Recovery_DeleteConfirm" xml:space="preserve"><value>删除所选恢复点及其数据？此操作无法撤销。</value></data>
+  <data name="Recovery_RestoreTitle" xml:space="preserve"><value>恢复恢复点</value></data>
+  <data name="Recovery_RestoreComplete" xml:space="preserve"><value>新实例已恢复并通过启动检查。</value></data>
+  <data name="Recovery_CloneTitle" xml:space="preserve"><value>克隆实例</value></data>
+  <data name="Recovery_Retention" xml:space="preserve"><value>保留数量</value></data>
+  <data name="Recovery_ApplyRetention" xml:space="preserve"><value>应用保留策略</value></data>
+  <data name="Recovery_VhdxUnavailable" xml:space="preserve"><value>VHDX 恢复点需要受支持的 WSL 2 导出/导入功能。</value></data>
+  <data name="Recovery_ColumnName" xml:space="preserve"><value>名称</value></data>
+  <data name="Recovery_ColumnCreated" xml:space="preserve"><value>创建时间</value></data>
+  <data name="Recovery_ColumnVerification" xml:space="preserve"><value>验证状态</value></data>
+  <data name="Recovery_Cancel" xml:space="preserve"><value>取消</value></data>
+  <data name="Recovery_CreatePreparing" xml:space="preserve"><value>正在准备创建恢复点…</value></data>
+  <data name="Recovery_RestorePreparing" xml:space="preserve"><value>正在准备恢复…</value></data>
+  <data name="Recovery_ClonePreparing" xml:space="preserve"><value>正在准备克隆实例…</value></data>
+  <data name="Recovery_Status_Validating" xml:space="preserve"><value>正在验证恢复操作…</value></data>
+  <data name="Recovery_Status_Exporting" xml:space="preserve"><value>正在导出恢复数据…</value></data>
+  <data name="Recovery_Status_Verifying" xml:space="preserve"><value>正在验证恢复数据…</value></data>
+  <data name="Recovery_Status_ReservingTarget" xml:space="preserve"><value>正在预留恢复目标…</value></data>
+  <data name="Recovery_Status_Importing" xml:space="preserve"><value>正在导入恢复数据…</value></data>
+  <data name="Recovery_Status_Completed" xml:space="preserve"><value>恢复操作已完成。</value></data>
+  <data name="Recovery_Status_CreatingPayload" xml:space="preserve"><value>正在创建克隆数据…</value></data>
+  <data name="Recovery_Cancelled" xml:space="preserve"><value>恢复操作已取消。若导入已开始，系统会保留诊断证据供手动核对。</value></data>
+  <data name="Recovery_Failed" xml:space="preserve"><value>恢复操作失败。下方显示诊断代码。</value></data>
+  <data name="Recovery_ManualRecoveryRequired" xml:space="preserve"><value>恢复操作可能遗留已注册的实例。系统未尝试自动清理；请使用诊断证据进行手动核对。</value></data>
+  <data name="Recovery_CopyDiagnostic" xml:space="preserve"><value>复制诊断信息</value></data>
+  <data name="Recovery_DefaultName" xml:space="preserve"><value>手动恢复点</value></data>
+  <data name="Recovery_HistoryPoint" xml:space="preserve"><value>恢复点</value></data>
+  <data name="Recovery_HistoryScheduled" xml:space="preserve"><value>计划备份</value></data>
   <data name="Remove_DeleteTask" xml:space="preserve">
     <value>同时删除此备份计划对应的任务计划程序任务？</value>
   </data>
@@ -1786,5 +1850,431 @@
     <value>所选目录不包含 'DistroNexus.psd1'。
 
 请选择包含 PowerShell 模块清单文件的目录。</value>
+  </data>
+  <data name="Capability.Status.Supported" xml:space="preserve"><value>可用</value></data>
+  <data name="Capability.Status.Unsupported" xml:space="preserve"><value>不受支持</value></data>
+  <data name="Capability.Status.Unavailable" xml:space="preserve"><value>缺少前置条件</value></data>
+  <data name="Capability.Status.RequiresUpdate" xml:space="preserve"><value>需要更新</value></data>
+  <data name="Capability.Status.RequiresElevation" xml:space="preserve"><value>需要管理员权限</value></data>
+  <data name="Capability.Status.Unknown" xml:space="preserve"><value>可用性未知</value></data>
+  <data name="Capability.State.Available" xml:space="preserve"><value>可用</value></data>
+  <data name="Capability.Action.None" xml:space="preserve"><value>无需操作。</value></data>
+  <data name="Capability.Action.RunElevated" xml:space="preserve"><value>获得管理员批准后重试此操作。</value></data>
+  <data name="Capability.Action.UpdateWsl" xml:space="preserve"><value>检查并安装已批准的 WSL 更新。</value></data>
+  <data name="Capability.Action.InstallPrerequisite" xml:space="preserve"><value>安装所列前置软件后刷新；DistroNexus 不会自动安装。</value></data>
+  <data name="Capability.Action.ReviewRequirements" xml:space="preserve"><value>检查此主机或发行版的功能要求。</value></data>
+  <data name="Capability.Action.RetryProbe" xml:space="preserve"><value>检查诊断详情并重试能力探测。</value></data>
+  <data name="Capability.Reason.Supported" xml:space="preserve"><value>所需能力可用。</value></data>
+  <data name="Capability.Reason.Unsupported" xml:space="preserve"><value>此主机或发行版不支持所需能力。</value></data>
+  <data name="Capability.Reason.Unavailable" xml:space="preserve"><value>所需组件或运行时不可用。</value></data>
+  <data name="Capability.Reason.RequiresUpdate" xml:space="preserve"><value>检测到的组件版本低于所需版本。</value></data>
+  <data name="Capability.Reason.RequiresElevation" xml:space="preserve"><value>能力检查或操作需要管理员批准。</value></data>
+  <data name="Capability.Reason.Unknown" xml:space="preserve"><value>无法根据探测结果安全确定此能力。</value></data>
+  <data name="Capability.Dependency.NotInstalled" xml:space="preserve"><value>可选依赖未安装。</value></data>
+  <data name="Capability.Dependency.ProbeUnavailable" xml:space="preserve"><value>无法执行依赖探测。</value></data>
+  <data name="Capability.Dependency.RequiresElevation" xml:space="preserve"><value>依赖探测需要管理员权限。</value></data>
+  <data name="Capability.Dependency.VersionDetected" xml:space="preserve"><value>已检测到产品及其版本。</value></data>
+  <data name="Capability.Dependency.VersionMalformed" xml:space="preserve"><value>产品返回了无法识别的版本。</value></data>
+  <data name="Capability.Dependency.VersionProbeFailed" xml:space="preserve"><value>产品版本探测失败。</value></data>
+  <data name="Capability.Feature.CliSupported" xml:space="preserve"><value>已安装的 WSL CLI 声明支持此功能。</value></data>
+  <data name="Capability.Feature.MalformedHelp" xml:space="preserve"><value>WSL 返回了无法识别的帮助输出。</value></data>
+  <data name="Capability.Feature.NotAdvertisedByCli" xml:space="preserve"><value>已安装的 WSL CLI 未声明此功能。</value></data>
+  <data name="Capability.Feature.WslUnavailable" xml:space="preserve"><value>WSL 不可用或需要处理。</value></data>
+  <data name="Capability.Gpu.RequiresRuntimeProbe" xml:space="preserve"><value>GPU 支持需要运行时验证。</value></data>
+  <data name="Capability.Instance.DistributionAbsent" xml:space="preserve"><value>未找到所选发行版。</value></data>
+  <data name="Capability.Instance.IdentityDetected" xml:space="preserve"><value>已检测到发行版标识。</value></data>
+  <data name="Capability.Instance.SystemdDisabled" xml:space="preserve"><value>此发行版未使用 systemd 启动。</value></data>
+  <data name="Capability.Instance.SystemdMalformed" xml:space="preserve"><value>systemd 返回了无法识别的空状态。</value></data>
+  <data name="Capability.Instance.SystemdNotRunning" xml:space="preserve"><value>systemd 可用，但当前未运行。</value></data>
+  <data name="Capability.Instance.SystemdPermissionDenied" xml:space="preserve"><value>systemd 探测需要额外权限。</value></data>
+  <data name="Capability.Instance.SystemdProbeFailed" xml:space="preserve"><value>无法安全确定 systemd 状态。</value></data>
+  <data name="Capability.Instance.SystemdRunning" xml:space="preserve"><value>systemd 正在运行。</value></data>
+  <data name="Capability.Instance.SystemdUnavailable" xml:space="preserve"><value>此发行版中没有 systemctl。</value></data>
+  <data name="Capability.Instance.VersionDetected" xml:space="preserve"><value>已检测到实例的 WSL 版本。</value></data>
+  <data name="Capability.Instance.VersionMalformed" xml:space="preserve"><value>无法解析实例的 WSL 版本。</value></data>
+  <data name="Capability.MirroredNetworking.RequiresVersionMatrix" xml:space="preserve"><value>镜像网络需要受支持版本验证。</value></data>
+  <data name="Capability.Probe.Cancelled" xml:space="preserve"><value>能力探测已取消。</value></data>
+  <data name="Capability.Probe.ExecutableMissing" xml:space="preserve"><value>所需可执行文件不可用。</value></data>
+  <data name="Capability.Probe.Failed" xml:space="preserve"><value>能力探测失败。</value></data>
+  <data name="Capability.Probe.RequiresElevation" xml:space="preserve"><value>能力探测需要管理员权限。</value></data>
+  <data name="Capability.Probe.Supported" xml:space="preserve"><value>能力探测成功。</value></data>
+  <data name="Capability.Probe.TimedOut" xml:space="preserve"><value>能力探测超时。</value></data>
+  <data name="Capability.Probe.UnexpectedFailure" xml:space="preserve"><value>能力探测遇到意外错误。</value></data>
+  <data name="Capability.Systemd.RequiresInstanceProbe" xml:space="preserve"><value>必须按发行版检查 systemd 支持。</value></data>
+  <data name="Capability.Systemd.EnablementSupported" xml:space="preserve"><value>此 WSL 版本支持启用 systemd。</value></data>
+  <data name="Capability.Systemd.VersionTooLow" xml:space="preserve"><value>此 WSL 版本过低，无法启用 systemd。</value></data>
+  <data name="Capability.Systemd.VersionUnknown" xml:space="preserve"><value>无法确定 WSL 版本，因此无法启用 systemd。</value></data>
+  <data name="Capability.Systemd.WslUnavailable" xml:space="preserve"><value>WSL 不可用，因此无法启用 systemd。</value></data>
+  <data name="Capability.TaskScheduler.Available" xml:space="preserve"><value>Windows 任务计划程序可用。</value></data>
+  <data name="Capability.UsbIpd.VersionRequiresValidation" xml:space="preserve"><value>usbipd 版本需要兼容性验证。</value></data>
+  <data name="Capability.Wsl.UpdateAvailable" xml:space="preserve"><value>WSL CLI 报告有可用更新。</value></data>
+  <data name="Capability.Wslg.NotReported" xml:space="preserve"><value>WSL CLI 未报告 WSLg 版本。</value></data>
+  <data name="Capability.Wslg.Supported" xml:space="preserve"><value>WSL CLI 已报告 WSLg 版本。</value></data>
+  <data name="Tab_Configuration" xml:space="preserve"><value>配置</value></data>
+  <data name="ConfigurationTab_BootUser" xml:space="preserve"><value>启动和用户</value></data>
+  <data name="ConfigurationTab_Systemd" xml:space="preserve"><value>启用 systemd</value></data>
+  <data name="ConfigurationTab_BootCommand" xml:space="preserve"><value>启动命令</value></data>
+  <data name="ConfigurationTab_DefaultUser" xml:space="preserve"><value>默认用户</value></data>
+  <data name="ConfigurationTab_Automount" xml:space="preserve"><value>自动挂载</value></data>
+  <data name="ConfigurationTab_Enabled" xml:space="preserve"><value>启用</value></data>
+  <data name="ConfigurationTab_Fstab" xml:space="preserve"><value>处理 fstab</value></data>
+  <data name="ConfigurationTab_Root" xml:space="preserve"><value>根目录</value></data>
+  <data name="ConfigurationTab_Options" xml:space="preserve"><value>选项</value></data>
+  <data name="ConfigurationTab_InteropNetwork" xml:space="preserve"><value>Windows 互操作和网络</value></data>
+  <data name="ConfigurationTab_Interop" xml:space="preserve"><value>启用互操作</value></data>
+  <data name="ConfigurationTab_WindowsPath" xml:space="preserve"><value>附加 Windows PATH</value></data>
+  <data name="ConfigurationTab_Hostname" xml:space="preserve"><value>主机名</value></data>
+  <data name="ConfigurationTab_GenerateHosts" xml:space="preserve"><value>生成 hosts</value></data>
+  <data name="ConfigurationTab_GenerateResolv" xml:space="preserve"><value>生成 resolv.conf</value></data>
+  <data name="ConfigurationTab_RawPreview" xml:space="preserve"><value>原始预览（只读）</value></data>
+  <data name="ConfigurationTab_Save" xml:space="preserve"><value>保存配置</value></data>
+  <data name="Configuration_PendingWslRestart" xml:space="preserve"><value>更改需要完全关闭 WSL。</value></data>
+  <data name="Configuration_UnsupportedReason" xml:space="preserve"><value>检测到的 WSL 能力不支持此设置。</value></data>
+  <data name="Configuration_SavePreview" xml:space="preserve"><value>更改的设置：{0}&#xA;受影响的运行中发行版：{1}&#xA;&#xA;目标文件：&#xA;{2}</value></data>
+  <data name="Configuration_NoRunningInstances" xml:space="preserve"><value>无</value></data>
+  <data name="Configuration_CurrentRaw" xml:space="preserve"><value>当前原始配置</value></data>
+  <data name="Configuration_DesiredRaw" xml:space="preserve"><value>目标原始配置</value></data>
+  <data name="ConfigurationTab_Metadata" xml:space="preserve"><value>启用元数据</value></data>
+  <data name="ConfigurationTab_Umask" xml:space="preserve"><value>umask</value></data>
+  <data name="ConfigurationTab_Case" xml:space="preserve"><value>大小写敏感性（off、dir、force）</value></data>
+  <data name="Configuration_InstanceRestart" xml:space="preserve"><value>终止此发行版后应用更改。</value></data>
+  <data name="Configuration_LineDiagnostic" xml:space="preserve"><value>第 {0} 行：{1}</value></data>
+  <data name="Configuration_SaveCompleteWithBackup" xml:space="preserve"><value>已保存，备份为 {0}。{1}</value></data>
+  <data name="Configuration_Conflict" xml:space="preserve"><value>配置冲突</value></data>
+  <data name="Configuration_Experimental" xml:space="preserve"><value>实验性</value></data>
+  <data name="Configuration_InvalidValue" xml:space="preserve"><value>设置值无效。</value></data>
+  <data name="Configuration_Malformed" xml:space="preserve"><value>配置包含无效行。</value></data>
+  <data name="Configuration_InvalidUser" xml:space="preserve"><value>默认 Linux 用户名无效。</value></data>
+  <data name="Configuration_UserNotFound" xml:space="preserve"><value>默认 Linux 用户不存在于此发行版中。</value></data>
+  <data name="Configuration_TransportError" xml:space="preserve"><value>无法更新发行版配置：{0}</value></data>
+  <data name="Health_Title" xml:space="preserve"><value>健康中心</value></data>
+  <data name="Health_Rescan" xml:space="preserve"><value>重新扫描</value></data>
+  <data name="Health_Cancel" xml:space="preserve"><value>取消</value></data>
+  <data name="Health_DiagnosticPreview" xml:space="preserve"><value>诊断预览</value></data>
+  <data name="Health_Severity" xml:space="preserve"><value>严重程度：</value></data>
+  <data name="Health_Repair" xml:space="preserve"><value>修复</value></data>
+  <data name="Health_Ready" xml:space="preserve"><value>就绪</value></data>
+  <data name="Health_Scanning" xml:space="preserve"><value>正在扫描…</value></data>
+  <data name="Health_Cancelled" xml:space="preserve"><value>扫描已取消</value></data>
+  <data name="Health_Complete" xml:space="preserve"><value>扫描完成：{0} 项发现</value></data>
+  <data name="Health_RepairPreviewUnavailable" xml:space="preserve"><value>修复预览不可用。</value></data>
+  <data name="Health_RepairFailed" xml:space="preserve"><value>修复失败</value></data>
+  <data name="Health_DiagnosticGenerated" xml:space="preserve"><value>已生成诊断预览（{0} 个字符，已脱敏）。</value></data>
+  <data name="Health_SaveDiagnostic" xml:space="preserve"><value>保存诊断报告</value></data>
+  <data name="Health_IncludeLogs" xml:space="preserve"><value>包含可用的应用程序日志：</value></data>
+  <data name="Health_RedactDiagnostic" xml:space="preserve"><value>在诊断报告中脱敏路径和用户名</value></data>
+  <data name="Health_CopyCode" xml:space="preserve"><value>复制代码</value></data>
+  <data name="Health_CancelReport" xml:space="preserve"><value>取消报告</value></data>
+  <data name="Health_CheckingCapabilities" xml:space="preserve"><value>正在检查健康中心前提条件…</value></data>
+  <data name="Health_PrerequisiteUnavailable" xml:space="preserve"><value>健康扫描不可用：{0}</value></data>
+  <data name="Health_WslNotDetected" xml:space="preserve"><value>未检测到 WSL。</value></data>
+  <data name="Health_ScanPhase" xml:space="preserve"><value>正在运行健康检查…</value></data>
+  <data name="Health_ScanFindingPhase" xml:space="preserve"><value>正在评估：{0}</value></data>
+  <data name="Health_ReportPreviewPhase" xml:space="preserve"><value>正在准备脱敏诊断预览…</value></data>
+  <data name="Health_ReportExportPhase" xml:space="preserve"><value>正在保存脱敏诊断报告…</value></data>
+  <data name="Health_ReportCancelled" xml:space="preserve"><value>诊断报告操作已取消。</value></data>
+  <data name="Health_DiagnosticSaved" xml:space="preserve"><value>诊断报告已保存：{0}</value></data>
+  <data name="Health_DiagnosticDetail" xml:space="preserve"><value>诊断详情</value></data>
+  <data name="Health_CopyDetail" xml:space="preserve"><value>复制脱敏详情</value></data>
+  <data name="Health_FindingWslTitle" xml:space="preserve"><value>WSL 版本</value></data>
+  <data name="Health_FindingWslDetail" xml:space="preserve"><value>已评估 WSL 运行时版本和更新状态。</value></data>
+  <data name="Health_FindingKernelTitle" xml:space="preserve"><value>WSL 内核</value></data>
+  <data name="Health_FindingKernelDetail" xml:space="preserve"><value>已评估 WSL 内核版本和可用性。</value></data>
+  <data name="Health_FindingWslgTitle" xml:space="preserve"><value>WSLg 版本</value></data>
+  <data name="Health_FindingWslgDetail" xml:space="preserve"><value>已评估 WSLg 可用性和版本。</value></data>
+  <data name="Health_FindingNetworkTitle" xml:space="preserve"><value>WSL 网络</value></data>
+  <data name="Health_FindingNetworkDetail" xml:space="preserve"><value>已评估网络模式和 WSL 连通性。</value></data>
+  <data name="Health_FindingProxyTitle" xml:space="preserve"><value>代理配置</value></data>
+  <data name="Health_FindingProxyDetail" xml:space="preserve"><value>已评估代理配置，且不会导出凭据。</value></data>
+  <data name="Health_FindingVpnTitle" xml:space="preserve"><value>VPN 连通性</value></data>
+  <data name="Health_FindingVpnDetail" xml:space="preserve"><value>已评估 VPN 相关路由和连通性。</value></data>
+  <data name="Health_FindingTemplateTitle" xml:space="preserve"><value>模板健康</value></data>
+  <data name="Health_FindingTemplateDetail" xml:space="preserve"><value>已评估已记录的模板声明和安装后检查。</value></data>
+  <data name="Health_FindingWindowsTitle" xml:space="preserve"><value>Windows 先决条件</value></data>
+  <data name="Health_FindingWindowsDetail" xml:space="preserve"><value>已评估 Windows 可选功能和虚拟化先决条件。</value></data>
+  <data name="Health_FindingConfigurationTitle" xml:space="preserve"><value>WSL 配置</value></data>
+  <data name="Health_FindingConfigurationDetail" xml:space="preserve"><value>已评估受管理的 WSL 配置值。</value></data>
+  <data name="Health_FindingUnknownTitle" xml:space="preserve"><value>健康发现</value></data>
+  <data name="Health_FindingUnknownDetail" xml:space="preserve"><value>没有可用的其他诊断详情。</value></data>
+  <data name="Health_ScopeHost" xml:space="preserve"><value>主机</value></data>
+  <data name="Health_ScopeInstance" xml:space="preserve"><value>实例：{0}</value></data>
+  <data name="Health_RepairPostconditionUnverified" xml:space="preserve"><value>修复已完成，但无法自动验证其后置条件。请重新扫描健康中心。</value></data>
+  <data name="Health_ErrorFallback" xml:space="preserve"><value>DN-7005：健康操作失败。</value></data>
+  <data name="Health_Error_DN7001" xml:space="preserve"><value>DN-7001：此健康操作不可用。</value></data>
+  <data name="Health_Error_DN7002" xml:space="preserve"><value>DN-7002：修复预览已失效。请重新生成预览。</value></data>
+  <data name="Health_Error_DN7003" xml:space="preserve"><value>DN-7003：需要明确确认修复操作。</value></data>
+  <data name="Health_Error_DN7004" xml:space="preserve"><value>DN-7004：此修复需要提升权限确认。</value></data>
+  <data name="Health_Error_DN7005" xml:space="preserve"><value>DN-7005：健康操作失败。</value></data>
+  <data name="Health_Error_DN7006" xml:space="preserve"><value>DN-7006：修复后置条件未满足。</value></data>
+  <data name="Health_Error_DN7007" xml:space="preserve"><value>DN-7007：诊断导出请求无效。</value></data>
+  <data name="Tab_Services" xml:space="preserve"><value>服务</value></data>
+  <data name="ServicesTab_Refresh" xml:space="preserve"><value>刷新</value></data>
+  <data name="ServicesTab_Name" xml:space="preserve"><value>名称</value></data>
+  <data name="ServicesTab_State" xml:space="preserve"><value>状态</value></data>
+  <data name="ServicesTab_Description" xml:space="preserve"><value>描述</value></data>
+  <data name="ServicesTab_SubState" xml:space="preserve"><value>子状态</value></data>
+  <data name="ServicesTab_FailureState" xml:space="preserve"><value>失败状态</value></data>
+  <data name="ServicesTab_Enabled" xml:space="preserve"><value>已启用</value></data>
+  <data name="ServicesTab_Actions" xml:space="preserve"><value>操作</value></data>
+  <data name="ServicesTab_Start" xml:space="preserve"><value>启动</value></data>
+  <data name="ServicesTab_Stop" xml:space="preserve"><value>停止</value></data>
+  <data name="ServicesTab_Restart" xml:space="preserve"><value>重启</value></data>
+  <data name="ServicesTab_Running" xml:space="preserve"><value>运行中</value></data>
+  <data name="ServicesTab_Stopped" xml:space="preserve"><value>已停止</value></data>
+  <data name="ServicesTab_Failed" xml:space="preserve"><value>失败</value></data>
+  <data name="ServicesTab_User" xml:space="preserve"><value>用户</value></data>
+  <data name="ServicesTab_Enable" xml:space="preserve"><value>启用</value></data>
+  <data name="ServicesTab_Disable" xml:space="preserve"><value>禁用</value></data>
+  <data name="ServicesTab_Reload" xml:space="preserve"><value>重新加载</value></data>
+  <data name="ServicesTab_Details" xml:space="preserve"><value>详情</value></data>
+  <data name="ServicesTab_Journal" xml:space="preserve"><value>日志</value></data>
+  <data name="ServicesTab_Severity" xml:space="preserve"><value>严重程度</value></data>
+  <data name="ServicesTab_Message" xml:space="preserve"><value>消息</value></data>
+  <data name="ServicesTab_CopyJournal" xml:space="preserve"><value>复制日志</value></data>
+  <data name="ServicesTab_ConfirmActionTitle" xml:space="preserve"><value>确认服务操作</value></data>
+  <data name="ServicesTab_ActionFailedTitle" xml:space="preserve"><value>服务操作失败</value></data>
+  <data name="ServicesTab_JournalAll" xml:space="preserve"><value>全部</value></data>
+  <data name="ServicesTab_JournalInfo" xml:space="preserve"><value>信息</value></data>
+  <data name="ServicesTab_JournalWarning" xml:space="preserve"><value>警告</value></data>
+  <data name="ServicesTab_JournalError" xml:space="preserve"><value>错误</value></data>
+  <data name="Network_Mode" xml:space="preserve"><value>网络模式</value></data>
+  <data name="Network_PreviewApply" xml:space="preserve"><value>预览并应用</value></data>
+  <data name="Network_Settings" xml:space="preserve"><value>网络设置</value></data>
+  <data name="Network_DnsTunneling" xml:space="preserve"><value>DNS 隧道</value></data>
+  <data name="Network_BestEffortDnsParsing" xml:space="preserve"><value>尽力解析 DNS</value></data>
+  <data name="Network_AutoProxy" xml:space="preserve"><value>自动代理</value></data>
+  <data name="Network_Firewall" xml:space="preserve"><value>防火墙</value></data>
+  <data name="Network_HostAddressLoopback" xml:space="preserve"><value>主机地址回环</value></data>
+  <data name="Network_IgnoredPorts" xml:space="preserve"><value>忽略的端口</value></data>
+  <data name="Network_ConnectivityDiagnostic" xml:space="preserve"><value>连接诊断</value></data>
+  <data name="Network_RunProbe" xml:space="preserve"><value>运行探测</value></data>
+  <data name="Network_FirewallPreview" xml:space="preserve"><value>防火墙预览</value></data>
+  <data name="Network_AddressFamily" xml:space="preserve"><value>地址族</value></data>
+  <data name="Network_Collision" xml:space="preserve"><value>冲突</value></data>
+  <data name="Network_Open" xml:space="preserve"><value>打开</value></data>
+  <data name="Network_ConfirmModeTitle" xml:space="preserve"><value>确认网络模式</value></data>
+  <data name="Network_ConfirmSettingsTitle" xml:space="preserve"><value>确认网络设置</value></data>
+  <data name="Network_ConfirmFirewallTitle" xml:space="preserve"><value>确认防火墙预览</value></data>
+  <data name="Network_ConfirmFirewallRemovalTitle" xml:space="preserve"><value>确认移除防火墙规则</value></data>
+  <data name="Network_OwnedFirewallRules" xml:space="preserve"><value>DistroNexus 拥有的防火墙规则</value></data>
+  <data name="Network_PreviewRemoveFirewall" xml:space="preserve"><value>预览移除</value></data>
+  <data name="Network_RestartRequired" xml:space="preserve"><value>此更改后需要重启 WSL。</value></data>
+  <data name="Network_NoRestartRequired" xml:space="preserve"><value>无需重启 WSL。</value></data>
+  <data name="Network_ModeApplied" xml:space="preserve"><value>已应用网络模式。</value></data>
+  <data name="Network_SettingsApplied" xml:space="preserve"><value>已应用网络设置。</value></data>
+  <data name="Network_SettingsAppliedRestart" xml:space="preserve"><value>已应用网络设置；请重启 WSL 以完成。</value></data>
+  <data name="Network_ErrorUnsafeBrowserAddress" xml:space="preserve"><value>只能在浏览器中打开本机回环 HTTP(S) 地址。</value></data>
+  <data name="MonitorTab_RefreshInterval" xml:space="preserve"><value>刷新间隔</value></data>
+  <data name="MonitorTab_Seconds" xml:space="preserve"><value>秒</value></data>
+  <data name="MonitorTab_Refresh" xml:space="preserve"><value>刷新</value></data>
+  <data name="MonitorTab_WarningThresholds" xml:space="preserve"><value>警告阈值 (%)</value></data>
+  <data name="MonitorTab_Cpu" xml:space="preserve"><value>CPU</value></data>
+  <data name="MonitorTab_Memory" xml:space="preserve"><value>内存</value></data>
+  <data name="MonitorTab_Filesystem" xml:space="preserve"><value>文件系统</value></data>
+  <data name="MonitorTab_Pid" xml:space="preserve"><value>PID</value></data>
+  <data name="MonitorTab_User" xml:space="preserve"><value>用户</value></data>
+  <data name="MonitorTab_Command" xml:space="preserve"><value>命令</value></data>
+  <data name="MonitorTab_Actions" xml:space="preserve"><value>操作</value></data>
+  <data name="MonitorTab_Terminate" xml:space="preserve"><value>终止</value></data>
+  <data name="MonitorTab_Kill" xml:space="preserve"><value>TERM 超时后强制结束</value></data>
+  <data name="MonitorTab_LowerPriority" xml:space="preserve"><value>降低优先级</value></data>
+  <data name="Tab_Monitor" xml:space="preserve"><value>监控</value></data>
+  <data name="MonitorTab_Unavailable" xml:space="preserve"><value>不可用</value></data>
+  <data name="MonitorTab_CpuDisplay" xml:space="preserve"><value>CPU {0:F1}%</value></data>
+  <data name="MonitorTab_BytesMemoryDisplay" xml:space="preserve"><value>内存 {0:N0} 字节</value></data>
+  <data name="MonitorTab_BytesSwapDisplay" xml:space="preserve"><value>交换空间 {0:N0} 字节</value></data>
+  <data name="MonitorTab_FilesystemUsageDisplay" xml:space="preserve"><value>Linux 文件系统：已用 {0:N0} / 总计 {1:N0} 字节</value></data>
+  <data name="MonitorTab_DiskIoDisplay" xml:space="preserve"><value>磁盘 I/O：{0:N0}/{1:N0} B/s</value></data>
+  <data name="MonitorTab_NetworkDisplay" xml:space="preserve"><value>网络：{0:N0}/{1:N0} B/s</value></data>
+  <data name="MonitorTab_VhdxDisplay" xml:space="preserve"><value>VHDX {0:N0} 字节</value></data>
+  <data name="MonitorTab_ReclaimDisplay" xml:space="preserve"><value>可回收 {0:N0} 字节</value></data>
+  <data name="MonitorTab_LimitsDisplay" xml:space="preserve"><value>限制：内存 {0}；交换空间 {1}；处理器 {2}</value></data>
+  <data name="MonitorTab_SomeMetricsUnavailable" xml:space="preserve"><value>部分指标不可用。</value></data>
+  <data name="MonitorTab_PrivilegedWarning" xml:space="preserve"><value> 此进程具有特权或属于系统进程。</value></data>
+  <data name="MonitorTab_ConfirmAction" xml:space="preserve"><value>确认进程操作</value></data>
+  <data name="MonitorTab_ActionFailed" xml:space="preserve"><value>进程操作失败</value></data>
+  <data name="MonitorTab_Protocol" xml:space="preserve"><value>协议</value></data>
+  <data name="MonitorTab_Address" xml:space="preserve"><value>监听地址</value></data>
+  <data name="MonitorTab_Port" xml:space="preserve"><value>端口</value></data>
+  <data name="MonitorTab_ListenPorts" xml:space="preserve"><value>监听端口</value></data>
+  <data name="Devices_Title" xml:space="preserve"><value>设备</value></data>
+  <data name="Devices_Refresh" xml:space="preserve"><value>刷新</value></data>
+  <data name="Devices_Bind" xml:space="preserve"><value>绑定</value></data>
+  <data name="Devices_Unbind" xml:space="preserve"><value>解绑</value></data>
+  <data name="Devices_Attach" xml:space="preserve"><value>连接到 WSL</value></data>
+  <data name="Devices_Detach" xml:space="preserve"><value>断开连接</value></data>
+  <data name="Devices_Cancel" xml:space="preserve"><value>取消</value></data>
+  <data name="Devices_Ready" xml:space="preserve"><value>发现 {0} 个 USB 设备。</value></data>
+  <data name="Devices_Cancelled" xml:space="preserve"><value>操作已取消。</value></data>
+  <data name="Devices_ConfirmTitle" xml:space="preserve"><value>确认 USB 操作</value></data>
+  <data name="Devices_Succeeded" xml:space="preserve"><value>USB 操作已完成。</value></data>
+  <data name="Devices_DistributionToolTip" xml:space="preserve"><value>仅用于连接操作的 WSL 发行版。</value></data>
+  <data name="Devices_BusIdHeader" xml:space="preserve"><value>总线 ID</value></data>
+  <data name="Devices_HardwareHeader" xml:space="preserve"><value>硬件 ID</value></data>
+  <data name="Devices_DescriptionHeader" xml:space="preserve"><value>说明</value></data>
+  <data name="Devices_StateHeader" xml:space="preserve"><value>状态</value></data>
+  <data name="Devices_AttachmentHeader" xml:space="preserve"><value>WSL 虚拟机连接</value></data>
+  <data name="Devices_CopyDiagnostic" xml:space="preserve"><value>复制诊断信息</value></data>
+  <data name="Devices_Unavailable" xml:space="preserve"><value>usbipd-win 不可用。请安装或修复后再管理 USB 设备。</value></data>
+  <data name="Devices_ServiceStopped" xml:space="preserve"><value>usbipd 服务未运行。请启动 Windows 服务后刷新。</value></data>
+  <data name="Devices_VersionMalformed" xml:space="preserve"><value>usbipd-win 报告了无法识别的版本。可显示设备发现，但已禁用设备操作。</value></data>
+  <data name="Devices_UnsupportedVersion" xml:space="preserve"><value>此 usbipd-win 版本未经批准，不能执行设备操作。</value></data>
+  <data name="Devices_GuidanceSerial" xml:space="preserve"><value>串口设备可能需要 Linux 用户组权限。DistroNexus 不会修改 udev 规则；请遵循发行版的串口设备文档。</value></data>
+  <data name="Devices_GuidanceArduino" xml:space="preserve"><value>Arduino 在所选发行版中可能需要串口用户组权限。DistroNexus 不会安装软件包或修改 udev 规则。</value></data>
+  <data name="Devices_GuidanceAndroid" xml:space="preserve"><value>连接 Android 调试设备后，请在所选发行版中运行 adb。DistroNexus 不会安装 platform tools 或配置设备规则。</value></data>
+  <data name="Devices_GuidanceSmartcard" xml:space="preserve"><value>智能卡中间件和访问策略仍由您负责。请勿将令牌连接到不受信任的发行版。</value></data>
+  <data name="Devices_GuidanceStorage" xml:space="preserve"><value>该设备看起来是 USB 存储设备。连接后设备会暴露给 WSL 虚拟机；继续前请确认备份和所有权。DistroNexus 不会挂载、格式化或修改存储设备。</value></data>
+  <data name="Workspace_Create" xml:space="preserve"><value>创建</value></data>
+  <data name="Workspace_Duplicate" xml:space="preserve"><value>复制</value></data>
+  <data name="Workspace_Remove" xml:space="preserve"><value>删除</value></data>
+  <data name="Workspace_Refresh" xml:space="preserve"><value>刷新</value></data>
+  <data name="Workspace_Preview" xml:space="preserve"><value>预览</value></data>
+  <data name="Workspace_ApproveTrust" xml:space="preserve"><value>批准信任</value></data>
+  <data name="Workspace_Launch" xml:space="preserve"><value>启动</value></data>
+  <data name="Workspace_Close" xml:space="preserve"><value>关闭</value></data>
+  <data name="Workspace_Shortcut" xml:space="preserve"><value>创建快捷方式</value></data>
+  <data name="Workspace_Export" xml:space="preserve"><value>导出</value></data>
+  <data name="Workspace_Import" xml:space="preserve"><value>导入</value></data>
+  <data name="Workspace_Save" xml:space="preserve"><value>保存</value></data>
+  <data name="Workspace_Retry" xml:space="preserve"><value>重试失败操作</value></data>
+  <data name="Workspace_Name" xml:space="preserve"><value>名称</value></data>
+  <data name="Workspace_Instance" xml:space="preserve"><value>实例</value></data>
+  <data name="Workspace_Trust" xml:space="preserve"><value>信任</value></data>
+  <data name="Workspace_Title" xml:space="preserve"><value>工作区</value></data>
+  <data name="Workspace_Cancel" xml:space="preserve"><value>取消</value></data>
+  <data name="Workspace_EditDefinition" xml:space="preserve"><value>编辑完整定义</value></data>
+  <data name="Workspace_SaveDefinition" xml:space="preserve"><value>保存完整定义</value></data>
+  <data name="Workspace_StructuredEditor" xml:space="preserve"><value>工作区编辑器</value></data>
+  <data name="Workspace_StatusEditorLoaded" xml:space="preserve"><value>工作区定义已载入编辑器。</value></data>
+  <data name="Workspace_StatusSaved" xml:space="preserve"><value>工作区定义已保存。</value></data>
+  <data name="Workspace_StatusNotFound" xml:space="preserve"><value>未找到请求的工作区。</value></data>
+  <data name="Workspace_StatusTrustApproved" xml:space="preserve"><value>已批准工作区信任。</value></data>
+  <data name="Workspace_StatusCreated" xml:space="preserve"><value>已创建工作区。</value></data>
+  <data name="Workspace_StatusDuplicated" xml:space="preserve"><value>已复制工作区。</value></data>
+  <data name="Workspace_StatusRemoved" xml:space="preserve"><value>已删除工作区。</value></data>
+  <data name="Workspace_StatusTrustRequired" xml:space="preserve"><value>此工作区运行命令前需要显式信任。</value></data>
+  <data name="Workspace_StatusPreviewReady" xml:space="preserve"><value>启动预览已就绪。</value></data>
+  <data name="Workspace_StatusExportReady" xml:space="preserve"><value>导出内容已就绪，可供审阅和保存。</value></data>
+  <data name="Workspace_StatusImportPreview" xml:space="preserve"><value>导入预览已就绪；导入命令仍不受信任。</value></data>
+  <data name="Workspace_StatusImported" xml:space="preserve"><value>工作区已作为不受信任内容导入。</value></data>
+  <data name="Workspace_ConfirmClose" xml:space="preserve"><value>确认关闭工作区</value></data>
+  <data name="Workspace_StatusClosed" xml:space="preserve"><value>工作区关闭策略已完成。</value></data>
+  <data name="Workspace_StatusShortcut" xml:space="preserve"><value>已创建快捷方式：{0}</value></data>
+  <data name="Workspace_ConfirmRetry" xml:space="preserve"><value>确认重试工作区</value></data><data name="Workspace_ConfirmLaunch" xml:space="preserve"><value>确认启动工作区</value></data><data name="Workspace_StatusLaunchNotConfirmed" xml:space="preserve"><value>未确认启动工作区。</value></data><data name="Workspace_ProgressAction" xml:space="preserve"><value>{0}: {1}</value></data><data name="Workspace_StatusLaunchCompleted" xml:space="preserve"><value>工作区启动完成。</value></data><data name="Workspace_StatusLaunchCancelled" xml:space="preserve"><value>工作区启动已取消。</value></data><data name="Workspace_StatusLaunchFailed" xml:space="preserve"><value>一个或多个工作区操作失败。</value></data>
+  <data name="Workspace_Add" xml:space="preserve"><value>添加</value></data><data name="Workspace_RemoveItem" xml:space="preserve"><value>移除</value></data><data name="Workspace_MoveUp" xml:space="preserve"><value>上移</value></data><data name="Workspace_Parallel" xml:space="preserve"><value>并行</value></data><data name="Workspace_Apply" xml:space="preserve"><value>应用</value></data><data name="Workspace_Required" xml:space="preserve"><value>必填</value></data><data name="Workspace_AddPreflight" xml:space="preserve"><value>添加预检</value></data>
+  <data name="Workspace_Status" xml:space="preserve"><value>状态</value></data><data name="Workspace_Progress" xml:space="preserve"><value>进度</value></data><data name="Workspace_Validation" xml:space="preserve"><value>验证错误</value></data><data name="Workspace_ImportContent" xml:space="preserve"><value>要导入的工作区定义</value></data><data name="Workspace_Groups" xml:space="preserve"><value>操作组</value></data><data name="Workspace_Actions" xml:space="preserve"><value>操作</value></data><data name="Workspace_ActionName" xml:space="preserve"><value>操作名称</value></data><data name="Workspace_ActionType" xml:space="preserve"><value>操作类型</value></data><data name="Workspace_ActionArguments" xml:space="preserve"><value>参数（用 | 分隔）</value></data><data name="Workspace_ActionDependencies" xml:space="preserve"><value>依赖项（操作 ID，用逗号分隔）</value></data><data name="Workspace_ActionTimeout" xml:space="preserve"><value>超时（秒）</value></data><data name="Workspace_ActionFailurePolicy" xml:space="preserve"><value>失败策略</value></data><data name="Workspace_ProjectPath" xml:space="preserve"><value>项目路径</value></data><data name="Workspace_MissingRemediation" xml:space="preserve"><value>缺失实例处理方式</value></data><data name="Workspace_CloseMode" xml:space="preserve"><value>关闭模式</value></data><data name="Workspace_CloseServices" xml:space="preserve"><value>要停止的服务（用逗号分隔）</value></data><data name="Workspace_PreflightKind" xml:space="preserve"><value>预检类型</value></data><data name="Workspace_PreflightValue" xml:space="preserve"><value>预检值</value></data><data name="Workspace_Preflights" xml:space="preserve"><value>预检检查</value></data>
+  <data name="Workspace_FullDefinition" xml:space="preserve"><value>完整工作区定义（JSON）</value></data><data name="Workspace_ConfirmRemove" xml:space="preserve"><value>确认删除工作区</value></data><data name="Workspace_RemovePreview" xml:space="preserve"><value>删除工作区“{0}”。此操作无法撤销。</value></data>
+  <data name="Applications_Title" xml:space="preserve"><value>应用程序</value></data>
+  <data name="Applications_Distribution" xml:space="preserve"><value>WSL 发行版</value></data>
+  <data name="Applications_Search" xml:space="preserve"><value>搜索应用程序</value></data>
+  <data name="Applications_Refresh" xml:space="preserve"><value>刷新</value></data>
+  <data name="Applications_Launch" xml:space="preserve"><value>启动</value></data>
+  <data name="Applications_Pin" xml:space="preserve"><value>固定/取消固定</value></data>
+  <data name="Applications_Copy" xml:space="preserve"><value>复制命令</value></data>
+  <data name="Applications_Reveal" xml:space="preserve"><value>显示入口</value></data>
+  <data name="Applications_Unavailable" xml:space="preserve"><value>此发行版不支持 WSLg。</value></data>
+  <data name="Applications_SelectDistribution" xml:space="preserve"><value>选择 WSL 发行版以发现应用程序。</value></data>
+  <data name="Applications_Discovered" xml:space="preserve"><value>已发现 {0} 个应用程序。</value></data>
+  <data name="Health_WslgWaylandTitle" xml:space="preserve"><value>WSLg Wayland 显示</value></data><data name="Health_WslgWaylandDetail" xml:space="preserve"><value>已检查该实例的 Wayland 显示环境。</value></data>
+  <data name="Health_WslgDisplayTitle" xml:space="preserve"><value>WSLg 显示</value></data><data name="Health_WslgDisplayDetail" xml:space="preserve"><value>已检查该实例的显示环境。</value></data>
+  <data name="Health_WslgAudioTitle" xml:space="preserve"><value>WSLg 音频</value></data><data name="Health_WslgAudioDetail" xml:space="preserve"><value>已检查该实例的音频环境。</value></data>
+  <data name="Health_WslgStaleShortcutTitle" xml:space="preserve"><value>可能过期的 WSLg 快捷方式</value></data><data name="Health_WslgStaleShortcutDetail" xml:space="preserve"><value>发行版状态可能使现有 WSLg 快捷方式不可用。</value></data>
+  <data name="IntegrationsTab_ContainerTitle" xml:space="preserve"><value>容器运行时</value></data>
+  <data name="IntegrationsTab_ContainerReadOnly" xml:space="preserve"><value>容器、映像和 Compose 诊断为只读。Podman 服务和套接字控制需要单独预览并确认。</value></data>
+  <data name="IntegrationsTab_StartSocket" xml:space="preserve"><value>启动套接字</value></data><data name="IntegrationsTab_StopSocket" xml:space="preserve"><value>停止套接字</value></data><data name="IntegrationsTab_StartService" xml:space="preserve"><value>启动服务</value></data><data name="IntegrationsTab_StopService" xml:space="preserve"><value>停止服务</value></data>
+  <data name="IntegrationsTab_ConfigureConnection" xml:space="preserve"><value>配置连接</value></data><data name="IntegrationsTab_ConfirmConnection" xml:space="preserve"><value>确认 Podman 连接</value></data>
+  <data name="IntegrationsTab_ConfirmPodmanAction" xml:space="preserve"><value>确认 Podman 操作</value></data>
+  <data name="IntegrationsTab_RuntimeSummary" xml:space="preserve"><value>{0}: {1}（{2}）</value></data>
+  <data name="IntegrationsTab_RuntimeFailure" xml:space="preserve"><value>{0}: {1}</value></data>
+  <data name="IntegrationsTab_RuntimeInventorySummary" xml:space="preserve"><value>{0}: {1} 个容器，{2} 个映像，{3} 个 Compose 项目</value></data>
+  <data name="IntegrationsTab_ContainerRow" xml:space="preserve"><value>  容器 {0}: {1}（{2}）</value></data>
+  <data name="IntegrationsTab_ImageRow" xml:space="preserve"><value>  映像 {0}:{1}</value></data>
+  <data name="IntegrationsTab_ComposeRow" xml:space="preserve"><value>  Compose {0}: {1}（{2}）</value></data>
+  <data name="IntegrationsTab_ContainerSummaryAutomationName" xml:space="preserve"><value>容器运行时诊断摘要</value></data>
+  <data name="IntegrationsTab_ConnectionNameAutomationName" xml:space="preserve"><value>Podman 连接名称</value></data>
+  <data name="IntegrationsTab_ConnectionEndpointAutomationName" xml:space="preserve"><value>Podman 连接终结点</value></data>
+  <data name="IntegrationsTab_Runtime_DockerDesktop" xml:space="preserve"><value>Docker Desktop</value></data>
+  <data name="IntegrationsTab_Runtime_PodmanWsl" xml:space="preserve"><value>WSL 中的 Podman</value></data>
+  <data name="IntegrationsTab_Runtime_PodmanDesktop" xml:space="preserve"><value>Podman Desktop</value></data>
+  <data name="IntegrationsTab_Availability_Available" xml:space="preserve"><value>可用</value></data>
+  <data name="IntegrationsTab_Availability_Unavailable" xml:space="preserve"><value>不可用</value></data>
+  <data name="IntegrationsTab_Availability_Degraded" xml:space="preserve"><value>降级</value></data>
+  <data name="IntegrationsTab_Health_healthy" xml:space="preserve"><value>正常</value></data>
+  <data name="IntegrationsTab_Health_degraded" xml:space="preserve"><value>降级</value></data>
+  <data name="IntegrationsTab_Health_unavailable" xml:space="preserve"><value>不可用</value></data>
+  <data name="IntegrationsTab_Health_unknown" xml:space="preserve"><value>未知</value></data>
+  <data name="IntegrationsTab_Preview_PodmanUserUnitChange" xml:space="preserve"><value>{0} Podman {1}</value></data>
+  <data name="IntegrationsTab_Preview_SystemdUserScopeRequired" xml:space="preserve"><value>需要 systemd 用户范围。</value></data>
+  <data name="IntegrationsTab_Preview_PodmanConnectionChange" xml:space="preserve"><value>{0} Podman 连接 {1}，终结点 {2}</value></data>
+  <data name="IntegrationsTab_Preview_PodmanReachable" xml:space="preserve"><value>已成功探测 Podman。</value></data>
+  <data name="IntegrationsTab_Preview_NoContainerStorageChange" xml:space="preserve"><value>不会变更容器存储或机器状态。</value></data>
+  <data name="IntegrationsTab_RuntimeDetails" xml:space="preserve"><value>版本：{0}；套接字：{1}；服务：{2}；终结点：{3}</value></data>
+  <data name="IntegrationsTab_ValueUnavailable" xml:space="preserve"><value>不可用</value></data>
+  <data name="IntegrationsTab_State_active" xml:space="preserve"><value>活动</value></data>
+  <data name="IntegrationsTab_State_inactive" xml:space="preserve"><value>未活动</value></data>
+  <data name="IntegrationsTab_State_unknown" xml:space="preserve"><value>未知</value></data>
+  <data name="IntegrationsTab_State_unavailable" xml:space="preserve"><value>不可用</value></data>
+  <data name="IntegrationsTab_PodmanUnavailableWsl2" xml:space="preserve"><value>Podman 控制需要 WSL 2 发行版。</value></data>
+  <data name="IntegrationsTab_PodmanUnavailableRuntime" xml:space="preserve"><value>由于 WSL 中的 Podman 未安装或不可达，Podman 控制不可用。</value></data>
+  <data name="IntegrationsTab_PodmanUnavailableSystemd" xml:space="preserve"><value>Podman 服务和套接字控制需要在此发行版中启用 systemd；连接配置仍可用。</value></data>
+  <data name="IntegrationsTab_PodmanUnavailableService" xml:space="preserve"><value>由于未配置容器运行时服务，Podman 控制不可用。</value></data>
+  <data name="MarketplaceEnable" xml:space="preserve"><value>启用</value></data>
+  <data name="MarketplaceDisable" xml:space="preserve"><value>禁用</value></data>
+  <data name="MarketplaceRemove" xml:space="preserve"><value>删除来源</value></data>
+  <data name="MarketplaceDetails" xml:space="preserve"><value>审阅详情</value></data>
+  <data name="MarketplaceVersion" xml:space="preserve"><value>版本</value></data>
+  <data name="MarketplaceCapabilities" xml:space="preserve"><value>能力</value></data>
+  <data name="MarketplaceScripts" xml:space="preserve"><value>脚本哈希</value></data>
+  <data name="MarketplaceCompatibility" xml:space="preserve"><value>兼容性</value></data>
+  <data name="MarketplaceHealth" xml:space="preserve"><value>健康检查</value></data>
+  <data name="MarketplaceUnsafeSourceTitle" xml:space="preserve"><value>确认开发市场来源</value></data>
+  <data name="MarketplaceUnsafeSourceConfirmation" xml:space="preserve"><value>是否将“{0}”添加为仅开发用途的市场来源？非 HTTPS 或本地来源可在 DistroNexus 外被修改，不能用于生产信任。</value></data>
+  <data name="MarketplaceSourceDeclined" xml:space="preserve"><value>未添加市场来源。</value></data>
+  <data name="MarketplaceReviewTitle" xml:space="preserve"><value>确认市场审阅</value></data>
+  <data name="MarketplaceReviewConfirmation" xml:space="preserve"><value>是否在审阅以下有界差异后，仅批准一个经过验证的候选项执行一次？新增脚本：{0}；删除脚本：{1}；更改脚本：{2}；规范化旧/新文本：{3}；差异状态：{4}；能力：{5}；脚本哈希：{6}；兼容性：{7}；健康检查：{8}。</value></data>
+  <data name="MarketplaceChecksum" xml:space="preserve"><value>工件校验和</value></data>
+  <data name="MarketplaceSignature" xml:space="preserve"><value>发布者签名</value></data>
+  <data name="MarketplaceUpdated" xml:space="preserve"><value>上次更新</value></data>
+  <data name="MarketplaceSourcesLoaded" xml:space="preserve"><value>已加载 {0} 个市场来源。</value></data>
+  <data name="MarketplaceSourcesUnavailable" xml:space="preserve"><value>市场来源不可用。</value></data>
+  <data name="MarketplaceLifecycleTitle" xml:space="preserve"><value>确认市场来源变更</value></data>
+  <data name="MarketplaceEnableConfirmation" xml:space="preserve"><value>是否启用此市场来源？</value></data>
+  <data name="MarketplaceDisableConfirmation" xml:space="preserve"><value>是否禁用此市场来源？禁用时，其已审阅候选项无法执行。</value></data>
+  <data name="MarketplaceRemoveTitle" xml:space="preserve"><value>确认删除市场来源</value></data>
+  <data name="MarketplaceRemoveConfirmation" xml:space="preserve"><value>是否删除此市场来源及其信任关系？不会删除保留的工件。</value></data>
+  <data name="MarketplaceOperationDeclined" xml:space="preserve"><value>未确认市场操作。</value></data>
+  <data name="MarketplaceArtifactVerified" xml:space="preserve"><value>已下载并验证市场工件。</value></data>
+  <data name="MarketplaceNoKnownGoodVersion" xml:space="preserve"><value>没有可用于更新比较的已知良好版本。</value></data>
+  <data name="MarketplaceReviewRequired" xml:space="preserve"><value>需要审阅。脚本变化：{0}；发布者变化：{1}；请求的能力：{2}。</value></data>
+  <data name="MarketplaceNoMaterialChanges" xml:space="preserve"><value>未检测到实质性的市场变化。</value></data>
+  <data name="MarketplaceCandidateApproved" xml:space="preserve"><value>已明确批准市场候选项执行一次经过验证的操作。</value></data>
+  <data name="MarketplaceRollbackTitle" xml:space="preserve"><value>确认市场回滚</value></data>
+  <data name="MarketplaceRollbackConfirmation" xml:space="preserve"><value>是否将已验证市场工件 {0} 恢复为已知良好版本？</value></data>
+  <data name="MarketplaceRollbackComplete" xml:space="preserve"><value>市场回滚已完成。</value></data>
+  <data name="MarketplaceScriptDiff" xml:space="preserve"><value>有界脚本差异</value></data>
+  <data name="MarketplaceDiffAdded" xml:space="preserve"><value>新增</value></data>
+  <data name="MarketplaceDiffRemoved" xml:space="preserve"><value>删除</value></data>
+  <data name="MarketplaceDiffChanged" xml:space="preserve"><value>更改</value></data>
+  <data name="MarketplaceYes" xml:space="preserve"><value>是</value></data>
+  <data name="MarketplaceNo" xml:space="preserve"><value>否</value></data>
+  <data name="MarketplaceOperationFailed" xml:space="preserve"><value>市场操作失败。请检查错误代码 {0}。</value></data>
+  <data name="MarketplaceOperationFailedGeneric" xml:space="preserve"><value>市场操作失败。请查看应用日志中的安全诊断信息。</value></data>
+  <data name="MarketplaceSignatureStatus" xml:space="preserve"><value>签名状态</value></data>
+  <data name="MarketplaceSignatureVerified" xml:space="preserve"><value>已验证</value></data>
+  <data name="MarketplaceSignatureNotPresent" xml:space="preserve"><value>未提供</value></data>
+  <data name="MarketplaceSignatureInvalid" xml:space="preserve"><value>无效</value></data>
+  <data name="MarketplaceTrustState" xml:space="preserve"><value>信任状态</value></data>
+  <data name="MarketplaceTrustReviewRequired" xml:space="preserve"><value>需要审阅</value></data>
+  <data name="MarketplaceTrustApproved" xml:space="preserve"><value>已批准</value></data>
+  <data name="MarketplaceTrustUnavailable" xml:space="preserve"><value>不可用</value></data>
+  <data name="MarketplaceDiffTruncated" xml:space="preserve"><value>已截断至安全审阅上限</value></data>
+  <data name="MarketplaceDiffComplete" xml:space="preserve"><value>完整内容位于安全审阅上限内</value></data>
+  <data name="MarketplaceRemoteSource" xml:space="preserve"><value>远程（HTTPS）</value></data>
+  <data name="MarketplaceUserLocalSource" xml:space="preserve"><value>本地文件</value></data>
+  <data name="ConfirmRemoveWithBackupMessage" xml:space="preserve">
+    <value>是否移除“{0}”并删除其备份计划和备份文件？</value>
+  </data>
+  <data name="TooltipSparseModeEnabled" xml:space="preserve">
+    <value>稀疏 VHDX 会在释放空间时自动收缩磁盘文件。需要 WSL v2 和 Windows 11。启用或禁用后需要重启该实例。</value>
   </data>
 </root>

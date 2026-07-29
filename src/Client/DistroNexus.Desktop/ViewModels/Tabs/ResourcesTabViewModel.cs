@@ -13,8 +13,7 @@ namespace DistroNexus.Desktop.ViewModels.Tabs;
 public partial class ResourcesTabViewModel : ObservableObject
 {
     private readonly WslInstanceViewModel _instance;
-    private readonly IWslManagerService _wslManager;
-    private readonly IWslConfigService _wslConfigService;
+    private readonly IPowerShellModuleClient _moduleClient;
     private readonly IDialogService _dialogService;
     private bool _initialized;
 
@@ -45,13 +44,11 @@ public partial class ResourcesTabViewModel : ObservableObject
 
     public ResourcesTabViewModel(
         WslInstanceViewModel instance,
-        IWslManagerService wslManager,
-        IWslConfigService wslConfigService,
+        IPowerShellModuleClient moduleClient,
         IDialogService dialogService)
     {
         _instance = instance ?? throw new ArgumentNullException(nameof(instance));
-        _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
-        _wslConfigService = wslConfigService ?? throw new ArgumentNullException(nameof(wslConfigService));
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
     }
 
@@ -66,38 +63,11 @@ public partial class ResourcesTabViewModel : ObservableObject
         _instance.IsBusy = true;
         try
         {
-            // Read sparse mode from instance config
-            var configObj = await _wslManager.GetInstanceConfigAsync(_instance.Name);
-            if (configObj is bool boolVal)
-            {
-                SparseMode = boolVal;
-                SparseModeIndeterminate = false;
-                SparseModeStatus = boolVal
-                    ? Properties.Resources.ResourcesTab_SparseModeEnabled
-                    : Properties.Resources.ResourcesTab_SparseModeDisabled;
-            }
-            else if (configObj is IDictionary<string, object?> dict
-                     && dict.TryGetValue("sparse", out var sparseVal)
-                     && sparseVal is bool b)
-            {
-                SparseMode = b;
-                SparseModeIndeterminate = false;
-                SparseModeStatus = b
-                    ? Properties.Resources.ResourcesTab_SparseModeEnabled
-                    : Properties.Resources.ResourcesTab_SparseModeDisabled;
-            }
-            else
-            {
-                SparseMode = null;
-                SparseModeIndeterminate = true;
-                SparseModeStatus = Properties.Resources.ResourcesTab_SparseModeUnknown;
-            }
-
-            // Read global WSL config
-            var wslConfig = await _wslConfigService.GetWslConfigAsync();
-            MemoryDisplay = wslConfig.Memory ?? "—";
-            CpuDisplay = wslConfig.Processors.HasValue ? wslConfig.Processors.Value.ToString() : "—";
-            SwapDisplay = wslConfig.Swap ?? "—";
+            var snapshot = await _moduleClient.GetInstanceResourcesAsync(_instance.Name);
+            SparseMode = snapshot.SparseMode;
+            SparseModeIndeterminate = false;
+            SparseModeStatus = snapshot.SparseMode ? Properties.Resources.ResourcesTab_SparseModeEnabled : Properties.Resources.ResourcesTab_SparseModeDisabled;
+            MemoryDisplay = CpuDisplay = SwapDisplay = "—";
         }
         catch (Exception ex)
         {
@@ -122,10 +92,14 @@ public partial class ResourcesTabViewModel : ObservableObject
         _instance.IsBusy = true;
         try
         {
-            await _wslManager.SetSparseModeAsync(_instance.Name, newValue);
-            SparseMode = newValue;
+            var preview = await _moduleClient.GetInstanceSparsePreviewAsync(_instance.Name, newValue);
+            if (!await _dialogService.ShowConfirmAsync(Properties.Resources.ResourcesTab_SparseMode, string.Join(Environment.NewLine, preview.Effects))) return;
+            var result = await _moduleClient.SetInstanceSparseModeAsync(preview.PreviewToken);
+            if (!result.Succeeded) throw new InvalidOperationException(result.OutcomeCode);
+            var snapshot = await _moduleClient.GetInstanceResourcesAsync(_instance.Name);
+            SparseMode = snapshot.SparseMode;
             SparseModeIndeterminate = false;
-            SparseModeStatus = newValue
+            SparseModeStatus = snapshot.SparseMode
                 ? Properties.Resources.ResourcesTab_SparseModeEnabled
                 : Properties.Resources.ResourcesTab_SparseModeDisabled;
         }

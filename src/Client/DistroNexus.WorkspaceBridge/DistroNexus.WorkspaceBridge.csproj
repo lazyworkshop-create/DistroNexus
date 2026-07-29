@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DistroNexus.Core\DistroNexus.Core.csproj" />
+    <ProjectReference Include="..\DistroNexus.WorkspaceWorker\DistroNexus.WorkspaceWorker.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\DistroNexus.TemplateWorker\DistroNexus.TemplateWorker.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+  <Target Name="CopyWorkspaceWorker" AfterTargets="Build">
+    <ItemGroup><WorkspaceWorkerFiles Include="..\DistroNexus.WorkspaceWorker\bin\$(Configuration)\net10.0\**\*" /></ItemGroup>
+    <Copy SourceFiles="@(WorkspaceWorkerFiles)" DestinationFolder="$(OutputPath)WorkspaceWorker\%(WorkspaceWorkerFiles.RecursiveDir)" SkipUnchangedFiles="true" />
+  </Target>
+  <Target Name="CopyTemplateWorker" AfterTargets="Build">
+    <ItemGroup><TemplateWorkerFiles Include="..\DistroNexus.TemplateWorker\bin\$(Configuration)\net10.0\**\*" /></ItemGroup>
+    <Copy SourceFiles="@(TemplateWorkerFiles)" DestinationFolder="$(OutputPath)TemplateWorker\%(TemplateWorkerFiles.RecursiveDir)" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

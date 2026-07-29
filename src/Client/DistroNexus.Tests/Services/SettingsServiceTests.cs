@@ -149,4 +149,28 @@ public class SettingsServiceTests : IDisposable
         Assert.Equal(@"C:\WSL", settings.DefaultInstallPath);
         Assert.Equal("root", settings.DefaultUsername);
     }
+
+    [Fact]
+    public void LegacySettings_AreReadAndMigratedOnNextWrite()
+    {
+        File.WriteAllText(_settingsPath, """{"DefaultInstallPath":"Z:\\Legacy","DefaultUsername":"legacy"}""");
+        var service = new SettingsService(_mockLogger.Object);
+        var settings = service.LoadSettings();
+        Assert.Equal(@"Z:\Legacy", settings.DefaultInstallPath);
+        service.SaveSettings(settings);
+        var json = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(_settingsPath))!;
+        Assert.Equal(1, json["schemaVersion"]!.GetValue<int>());
+        Assert.Equal("legacy", json["value"]!["DefaultUsername"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public void NewerSchema_IsExplicitlyRejectedWithoutOverwritingIt()
+    {
+        var json = """{"schemaVersion":99,"revision":1,"updatedAt":"2026-01-01T00:00:00Z","value":{}}""";
+        File.WriteAllText(_settingsPath, json);
+        var exception = Assert.Throws<DistroNexus.Core.Exceptions.WslOperationFailedException>(() =>
+            new SettingsService(_mockLogger.Object).LoadSettings());
+        Assert.Equal(DistroNexus.Core.Exceptions.DistroNexusErrorCode.StoreSchemaUnsupported, exception.Code);
+        Assert.Equal(json, File.ReadAllText(_settingsPath));
+    }
 }

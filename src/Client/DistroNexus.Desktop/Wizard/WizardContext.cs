@@ -34,12 +34,6 @@ public partial class WizardContext : ObservableObject
     private string _username = string.Empty;
 
     [ObservableProperty]
-    private string _password = string.Empty;
-
-    [ObservableProperty]
-    private string _confirmPassword = string.Empty;
-
-    [ObservableProperty]
     private bool _createUser;
 
     [ObservableProperty]
@@ -83,17 +77,12 @@ public partial class WizardContext : ObservableObject
     private string _resultMessage = string.Empty;
 
     [ObservableProperty]
-    private string _logFilePath = string.Empty;
-
-    [ObservableProperty]
     private string _startupWarningMessage = string.Empty;
 
     [ObservableProperty]
     private Dictionary<string, string> _templateVariableSelections = new();
 
-    /// <summary>
-    /// Creates InstallOptions from the current context.
-    /// </summary>
+    /// <summary>Creates the non-secret modeled install options from the current context.</summary>
     public InstallOptions ToInstallOptions()
     {
         return new InstallOptions
@@ -102,7 +91,6 @@ public partial class WizardContext : ObservableObject
             Package = SelectedDistribution,
             InstallPath = InstallPath,
             Username = CreateUser ? Username : "root",
-            Password = CreateUser ? Password : null,
             WslVersion = WslVersion,
             SetAsDefault = SetAsDefault,
             LaunchAfterInstall = LaunchAfterInstall,
@@ -121,8 +109,6 @@ public partial class WizardContext : ObservableObject
         IsPathValid = false;
         PathValidationMessage = string.Empty;
         Username = string.Empty;
-        Password = string.Empty;
-        ConfirmPassword = string.Empty;
         CreateUser = false;
         WslVersion = 2;
         SelectedTemplate = null;
@@ -136,8 +122,8 @@ public partial class WizardContext : ObservableObject
         InstallFailed = false;
         ErrorMessage = string.Empty;
         ResultMessage = string.Empty;
-        LogFilePath = string.Empty;
         StartupWarningMessage = string.Empty;
         TemplateVariableSelections = new Dictionary<string, string>();
     }
+
 }

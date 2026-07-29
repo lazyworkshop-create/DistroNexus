@@ -25,4 +25,13 @@ public class PortMapping
 
     /// <summary>The WSL instance's IP address at the time of the query.</summary>
     public string? InstanceIpAddress { get; set; }
+
+    /// <summary>Address family as reported by the Linux listener (IPv4 or IPv6).</summary>
+    public string AddressFamily { get; set; } = string.Empty;
+
+    /// <summary>Whether Windows currently owns a colliding listener on the same protocol and port.</summary>
+    public bool HasWindowsCollision { get; set; }
+
+    /// <summary>Human-readable, copyable remediation for a collision when known.</summary>
+    public string? ConflictGuidance { get; set; }
 }

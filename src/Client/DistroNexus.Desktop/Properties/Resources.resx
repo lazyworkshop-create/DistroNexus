@@ -1552,13 +1552,23 @@ This will start the installation process.</value>
     <value>Networking Mode</value>
   </data>
   <data name="WslConfig_SaveAndRestart" xml:space="preserve">
-    <value>Save &amp; Restart WSL</value>
+    <value>Save &amp; Mark WSL Restart Pending</value>
+  </data>
+  <data name="MarketplaceSourcePlaceholder" xml:space="preserve"><value>https://catalog.example/templates.json</value></data>
+  <data name="MarketplaceTrust" xml:space="preserve"><value>Trust</value></data>
+  <data name="MarketplaceRevoke" xml:space="preserve"><value>Revoke</value></data>
+  <data name="MarketplaceDownload" xml:space="preserve"><value>Download</value></data>
+  <data name="MarketplaceReview" xml:space="preserve"><value>Review update</value></data>
+  <data name="MarketplaceRollback" xml:space="preserve"><value>Rollback selected version</value></data>
+  <data name="MarketplaceApprove" xml:space="preserve"><value>Approve reviewed candidate</value></data>
+  <data name="WslConfig_SaveAndMarkPendingRestart" xml:space="preserve">
+    <value>Save &amp; Mark WSL Restart Pending</value>
   </data>
   <data name="WslConfig_OpenRawFile" xml:space="preserve">
     <value>Open Raw File</value>
   </data>
   <data name="WslConfig_RestartConfirm" xml:space="preserve">
-    <value>Run wsl --shutdown now to apply the changes? All running WSL instances will be stopped.</value>
+    <value>Changes are saved, but a full WSL shutdown is required before they take effect. Running WSL instances remain running.</value>
   </data>
   <data name="WslConfig_MemoryWarning" xml:space="preserve">
     <value>Memory limit exceeds 80% of host RAM. This may cause system instability.</value>
@@ -1573,7 +1583,10 @@ This will start the installation process.</value>
     <value>Invalid swap value. Use 0 to disable, or a number with GB/MB suffix.</value>
   </data>
   <data name="WslConfig_SaveComplete" xml:space="preserve">
-    <value>Configuration saved successfully.</value>
+    <value>Configuration saved. A WSL restart is pending.</value>
+  </data>
+  <data name="WslConfig_SavePendingRestartComplete" xml:space="preserve">
+    <value>Configuration saved. A full WSL shutdown is pending before the changes take effect.</value>
   </data>
   <data name="ManageTags_SectionTitle" xml:space="preserve">
     <value>Manage Tags</value>
@@ -1749,6 +1762,57 @@ This will start the installation process.</value>
   <data name="BackupTab_SelectDestinationTitle" xml:space="preserve">
     <value>Select Backup Destination Folder</value>
   </data>
+  <data name="Recovery_Title" xml:space="preserve"><value>Recovery Points</value></data>
+  <data name="Recovery_Create" xml:space="preserve"><value>Create Recovery Point</value></data>
+  <data name="Recovery_Tags" xml:space="preserve"><value>Tags (comma-separated)</value></data>
+  <data name="Recovery_StopAndRestart" xml:space="preserve"><value>Stop for a consistent export, then restart</value></data>
+  <data name="Recovery_Verify" xml:space="preserve"><value>Verify</value></data>
+  <data name="Recovery_Reveal" xml:space="preserve"><value>Reveal</value></data>
+  <data name="Recovery_Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="Recovery_TargetInstance" xml:space="preserve"><value>New instance name</value></data>
+  <data name="Recovery_TargetLocation" xml:space="preserve"><value>New instance location</value></data>
+  <data name="Recovery_Restore" xml:space="preserve"><value>Restore</value></data>
+  <data name="Recovery_ImportInPlace" xml:space="preserve"><value>Use VHDX import-in-place when supported</value></data>
+  <data name="Recovery_ImportInPlaceUnmanaged" xml:space="preserve"><value>Import-in-place lets WSL manage the registration location. The target location field is not used.</value></data>
+  <data name="Recovery_OfferConfiguration" xml:space="preserve"><value>A recovery point is available before this configuration change. DistroNexus will not create one automatically. Create it from the Backups tab and restart this operation, or continue without a recovery point.</value></data>
+  <data name="Recovery_OfferTemplate" xml:space="preserve"><value>A recovery point is available before template application. DistroNexus will not create one automatically. Create it from the Backups tab and restart this operation, or continue without a recovery point.</value></data>
+  <data name="Recovery_OfferRepair" xml:space="preserve"><value>A recovery point is available before this repair. DistroNexus will not create one automatically. Create it from the Backups tab and rerun the repair, or choose Cancel to stop.</value></data>
+  <data name="Recovery_OfferTitle" xml:space="preserve"><value>Optional recovery point</value></data>
+  <data name="Recovery_Pin" xml:space="preserve"><value>Pin selected point</value></data>
+  <data name="Recovery_SaveNotes" xml:space="preserve"><value>Save notes</value></data>
+  <data name="Recovery_Clone" xml:space="preserve"><value>Clone</value></data>
+  <data name="Recovery_CreateTitle" xml:space="preserve"><value>Create recovery point</value></data>
+  <data name="Recovery_CreateConfirm" xml:space="preserve"><value>Create the recovery point with the selected options?</value></data>
+  <data name="Recovery_VerifyTitle" xml:space="preserve"><value>Recovery point verification</value></data>
+  <data name="Recovery_DeleteTitle" xml:space="preserve"><value>Delete recovery point</value></data>
+  <data name="Recovery_DeleteConfirm" xml:space="preserve"><value>Delete the selected recovery point and its payload? This cannot be undone.</value></data>
+  <data name="Recovery_RestoreTitle" xml:space="preserve"><value>Restore recovery point</value></data>
+  <data name="Recovery_RestoreComplete" xml:space="preserve"><value>The new instance was restored and passed its boot check.</value></data>
+  <data name="Recovery_CloneTitle" xml:space="preserve"><value>Clone instance</value></data>
+  <data name="Recovery_Retention" xml:space="preserve"><value>Retention</value></data>
+  <data name="Recovery_ApplyRetention" xml:space="preserve"><value>Apply retention</value></data>
+  <data name="Recovery_VhdxUnavailable" xml:space="preserve"><value>VHDX recovery requires supported WSL 2 export/import capabilities.</value></data>
+  <data name="Recovery_ColumnName" xml:space="preserve"><value>Name</value></data>
+  <data name="Recovery_ColumnCreated" xml:space="preserve"><value>Created</value></data>
+  <data name="Recovery_ColumnVerification" xml:space="preserve"><value>Verification</value></data>
+  <data name="Recovery_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Recovery_CreatePreparing" xml:space="preserve"><value>Preparing recovery point creation…</value></data>
+  <data name="Recovery_RestorePreparing" xml:space="preserve"><value>Preparing recovery restore…</value></data>
+  <data name="Recovery_ClonePreparing" xml:space="preserve"><value>Preparing instance clone…</value></data>
+  <data name="Recovery_Status_Validating" xml:space="preserve"><value>Validating recovery operation…</value></data>
+  <data name="Recovery_Status_Exporting" xml:space="preserve"><value>Exporting recovery payload…</value></data>
+  <data name="Recovery_Status_Verifying" xml:space="preserve"><value>Verifying recovery payload…</value></data>
+  <data name="Recovery_Status_ReservingTarget" xml:space="preserve"><value>Reserving restore target…</value></data>
+  <data name="Recovery_Status_Importing" xml:space="preserve"><value>Importing recovery payload…</value></data>
+  <data name="Recovery_Status_Completed" xml:space="preserve"><value>Recovery operation completed.</value></data>
+  <data name="Recovery_Status_CreatingPayload" xml:space="preserve"><value>Creating clone payload…</value></data>
+  <data name="Recovery_Cancelled" xml:space="preserve"><value>Recovery operation cancelled. If an import began, diagnostic evidence was retained for manual reconciliation.</value></data>
+  <data name="Recovery_Failed" xml:space="preserve"><value>Recovery operation failed. The diagnostic code is shown below.</value></data>
+  <data name="Recovery_ManualRecoveryRequired" xml:space="preserve"><value>Recovery may have left a registered instance. Automatic cleanup was not attempted; use the diagnostic evidence to reconcile it manually.</value></data>
+  <data name="Recovery_CopyDiagnostic" xml:space="preserve"><value>Copy diagnostic</value></data>
+  <data name="Recovery_DefaultName" xml:space="preserve"><value>Manual recovery point</value></data>
+  <data name="Recovery_HistoryPoint" xml:space="preserve"><value>Recovery point</value></data>
+  <data name="Recovery_HistoryScheduled" xml:space="preserve"><value>Scheduled backup</value></data>
   <data name="Remove_DeleteTask" xml:space="preserve">
     <value>Also remove the associated Task Scheduler task for this backup schedule?</value>
   </data>
@@ -1793,4 +1857,424 @@ This will start the installation process.</value>
 
 Please select the directory that contains the PowerShell module manifest file.</value>
   </data>
+  <data name="Capability.Status.Supported" xml:space="preserve"><value>Available</value></data>
+  <data name="Capability.Status.Unsupported" xml:space="preserve"><value>Not supported</value></data>
+  <data name="Capability.Status.Unavailable" xml:space="preserve"><value>Prerequisite unavailable</value></data>
+  <data name="Capability.Status.RequiresUpdate" xml:space="preserve"><value>Update required</value></data>
+  <data name="Capability.Status.RequiresElevation" xml:space="preserve"><value>Administrator permission required</value></data>
+  <data name="Capability.Status.Unknown" xml:space="preserve"><value>Availability unknown</value></data>
+  <data name="Capability.State.Available" xml:space="preserve"><value>Available</value></data>
+  <data name="Capability.Action.None" xml:space="preserve"><value>No action required.</value></data>
+  <data name="Capability.Action.RunElevated" xml:space="preserve"><value>Retry the action with administrator approval.</value></data>
+  <data name="Capability.Action.UpdateWsl" xml:space="preserve"><value>Review and install an approved WSL update.</value></data>
+  <data name="Capability.Action.InstallPrerequisite" xml:space="preserve"><value>Install the named prerequisite, then refresh. DistroNexus will not install it automatically.</value></data>
+  <data name="Capability.Action.ReviewRequirements" xml:space="preserve"><value>Review the feature requirements for this host or distribution.</value></data>
+  <data name="Capability.Action.RetryProbe" xml:space="preserve"><value>Check the diagnostic details and retry the capability probe.</value></data>
+  <data name="Capability.Reason.Supported" xml:space="preserve"><value>The required capability is available.</value></data>
+  <data name="Capability.Reason.Unsupported" xml:space="preserve"><value>This host or distribution does not support the required capability.</value></data>
+  <data name="Capability.Reason.Unavailable" xml:space="preserve"><value>A required component or runtime is not available.</value></data>
+  <data name="Capability.Reason.RequiresUpdate" xml:space="preserve"><value>The detected component is older than the required version.</value></data>
+  <data name="Capability.Reason.RequiresElevation" xml:space="preserve"><value>The capability check or action requires administrator approval.</value></data>
+  <data name="Capability.Reason.Unknown" xml:space="preserve"><value>The capability could not be determined safely from the probe result.</value></data>
+  <data name="Capability.Dependency.NotInstalled" xml:space="preserve"><value>The optional dependency is not installed.</value></data>
+  <data name="Capability.Dependency.ProbeUnavailable" xml:space="preserve"><value>Dependency discovery is unavailable.</value></data>
+  <data name="Capability.Dependency.RequiresElevation" xml:space="preserve"><value>Dependency discovery requires administrator permission.</value></data>
+  <data name="Capability.Dependency.VersionDetected" xml:space="preserve"><value>The product and version were detected.</value></data>
+  <data name="Capability.Dependency.VersionMalformed" xml:space="preserve"><value>The product returned an unrecognized version.</value></data>
+  <data name="Capability.Dependency.VersionProbeFailed" xml:space="preserve"><value>The product version probe failed.</value></data>
+  <data name="Capability.Feature.CliSupported" xml:space="preserve"><value>The installed WSL CLI advertises this feature.</value></data>
+  <data name="Capability.Feature.MalformedHelp" xml:space="preserve"><value>WSL returned unrecognized help output.</value></data>
+  <data name="Capability.Feature.NotAdvertisedByCli" xml:space="preserve"><value>The installed WSL CLI does not advertise this feature.</value></data>
+  <data name="Capability.Feature.WslUnavailable" xml:space="preserve"><value>WSL is unavailable or requires attention.</value></data>
+  <data name="Capability.Gpu.RequiresRuntimeProbe" xml:space="preserve"><value>GPU support requires runtime validation.</value></data>
+  <data name="Capability.Instance.DistributionAbsent" xml:space="preserve"><value>The selected distribution was not found.</value></data>
+  <data name="Capability.Instance.IdentityDetected" xml:space="preserve"><value>The distribution identity was detected.</value></data>
+  <data name="Capability.Instance.SystemdDisabled" xml:space="preserve"><value>This distribution was not booted with systemd.</value></data>
+  <data name="Capability.Instance.SystemdMalformed" xml:space="preserve"><value>systemd returned an unrecognized empty state.</value></data>
+  <data name="Capability.Instance.SystemdNotRunning" xml:space="preserve"><value>systemd is available but is not currently running.</value></data>
+  <data name="Capability.Instance.SystemdPermissionDenied" xml:space="preserve"><value>The systemd probe requires additional permission.</value></data>
+  <data name="Capability.Instance.SystemdProbeFailed" xml:space="preserve"><value>The systemd state could not be determined safely.</value></data>
+  <data name="Capability.Instance.SystemdRunning" xml:space="preserve"><value>systemd is running.</value></data>
+  <data name="Capability.Instance.SystemdUnavailable" xml:space="preserve"><value>systemctl is unavailable in this distribution.</value></data>
+  <data name="Capability.Instance.VersionDetected" xml:space="preserve"><value>The instance WSL version was detected.</value></data>
+  <data name="Capability.Instance.VersionMalformed" xml:space="preserve"><value>The instance WSL version could not be parsed.</value></data>
+  <data name="Capability.MirroredNetworking.RequiresVersionMatrix" xml:space="preserve"><value>Mirrored networking requires supported-version validation.</value></data>
+  <data name="Capability.Probe.Cancelled" xml:space="preserve"><value>The capability probe was cancelled.</value></data>
+  <data name="Capability.Probe.ExecutableMissing" xml:space="preserve"><value>The required executable is unavailable.</value></data>
+  <data name="Capability.Probe.Failed" xml:space="preserve"><value>The capability probe failed.</value></data>
+  <data name="Capability.Probe.RequiresElevation" xml:space="preserve"><value>The capability probe requires administrator permission.</value></data>
+  <data name="Capability.Probe.Supported" xml:space="preserve"><value>The capability probe succeeded.</value></data>
+  <data name="Capability.Probe.TimedOut" xml:space="preserve"><value>The capability probe timed out.</value></data>
+  <data name="Capability.Probe.UnexpectedFailure" xml:space="preserve"><value>The capability probe encountered an unexpected failure.</value></data>
+  <data name="Capability.Systemd.RequiresInstanceProbe" xml:space="preserve"><value>systemd support must be checked per distribution.</value></data>
+  <data name="Capability.Systemd.EnablementSupported" xml:space="preserve"><value>This WSL version supports enabling systemd.</value></data>
+  <data name="Capability.Systemd.VersionTooLow" xml:space="preserve"><value>This WSL version is too old to enable systemd.</value></data>
+  <data name="Capability.Systemd.VersionUnknown" xml:space="preserve"><value>The WSL version could not be determined, so systemd enablement is unavailable.</value></data>
+  <data name="Capability.Systemd.WslUnavailable" xml:space="preserve"><value>WSL is unavailable, so systemd enablement is unavailable.</value></data>
+  <data name="Capability.TaskScheduler.Available" xml:space="preserve"><value>Windows Task Scheduler is available.</value></data>
+  <data name="Capability.UsbIpd.VersionRequiresValidation" xml:space="preserve"><value>The usbipd version requires compatibility validation.</value></data>
+  <data name="Capability.Wsl.UpdateAvailable" xml:space="preserve"><value>The WSL CLI reports that an update is available.</value></data>
+  <data name="Capability.Wslg.NotReported" xml:space="preserve"><value>The WSL CLI did not report a WSLg version.</value></data>
+  <data name="Capability.Wslg.Supported" xml:space="preserve"><value>The WSL CLI reported a WSLg version.</value></data>
+  <data name="Tab_Configuration" xml:space="preserve"><value>Configuration</value></data>
+  <data name="ConfigurationTab_BootUser" xml:space="preserve"><value>Boot and user</value></data>
+  <data name="ConfigurationTab_Systemd" xml:space="preserve"><value>Enable systemd</value></data>
+  <data name="ConfigurationTab_BootCommand" xml:space="preserve"><value>Boot command</value></data>
+  <data name="ConfigurationTab_DefaultUser" xml:space="preserve"><value>Default user</value></data>
+  <data name="ConfigurationTab_Automount" xml:space="preserve"><value>Automount</value></data>
+  <data name="ConfigurationTab_Enabled" xml:space="preserve"><value>Enabled</value></data>
+  <data name="ConfigurationTab_Fstab" xml:space="preserve"><value>Process fstab</value></data>
+  <data name="ConfigurationTab_Root" xml:space="preserve"><value>Root</value></data>
+  <data name="ConfigurationTab_Options" xml:space="preserve"><value>Options</value></data>
+  <data name="ConfigurationTab_InteropNetwork" xml:space="preserve"><value>Windows interoperability and network</value></data>
+  <data name="ConfigurationTab_Interop" xml:space="preserve"><value>Enable interoperability</value></data>
+  <data name="ConfigurationTab_WindowsPath" xml:space="preserve"><value>Append Windows PATH</value></data>
+  <data name="ConfigurationTab_Hostname" xml:space="preserve"><value>Hostname</value></data>
+  <data name="ConfigurationTab_GenerateHosts" xml:space="preserve"><value>Generate hosts</value></data>
+  <data name="ConfigurationTab_GenerateResolv" xml:space="preserve"><value>Generate resolv.conf</value></data>
+  <data name="ConfigurationTab_RawPreview" xml:space="preserve"><value>Raw preview (read only)</value></data>
+  <data name="ConfigurationTab_Save" xml:space="preserve"><value>Save configuration</value></data>
+  <data name="Configuration_PendingWslRestart" xml:space="preserve"><value>Changes require a full WSL shutdown.</value></data>
+  <data name="Configuration_UnsupportedReason" xml:space="preserve"><value>Unavailable with the detected WSL capabilities.</value></data>
+  <data name="Configuration_SavePreview" xml:space="preserve"><value>Changed settings: {0}&#xA;Affected running distributions: {1}&#xA;&#xA;Desired file:&#xA;{2}</value></data>
+  <data name="Configuration_NoRunningInstances" xml:space="preserve"><value>None</value></data>
+  <data name="Configuration_CurrentRaw" xml:space="preserve"><value>Current raw configuration</value></data>
+  <data name="Configuration_DesiredRaw" xml:space="preserve"><value>Desired raw configuration</value></data>
+  <data name="ConfigurationTab_Metadata" xml:space="preserve"><value>Enable metadata</value></data>
+  <data name="ConfigurationTab_Umask" xml:space="preserve"><value>umask</value></data>
+  <data name="ConfigurationTab_Case" xml:space="preserve"><value>Case sensitivity (off, dir, force)</value></data>
+  <data name="Configuration_InstanceRestart" xml:space="preserve"><value>Terminate this distribution to apply changes.</value></data>
+  <data name="Configuration_LineDiagnostic" xml:space="preserve"><value>Line {0}: {1}</value></data>
+  <data name="Configuration_SaveCompleteWithBackup" xml:space="preserve"><value>Saved with backup {0}. {1}</value></data>
+  <data name="Configuration_Conflict" xml:space="preserve"><value>Configuration conflict</value></data>
+  <data name="Configuration_Experimental" xml:space="preserve"><value>Experimental</value></data>
+  <data name="Configuration_InvalidValue" xml:space="preserve"><value>The setting value is invalid.</value></data>
+  <data name="Configuration_Malformed" xml:space="preserve"><value>The configuration contains an invalid line.</value></data>
+  <data name="Configuration_InvalidUser" xml:space="preserve"><value>The default Linux user name is invalid.</value></data>
+  <data name="Configuration_UserNotFound" xml:space="preserve"><value>The default Linux user does not exist in this distribution.</value></data>
+  <data name="Configuration_TransportError" xml:space="preserve"><value>Could not update the distribution configuration: {0}</value></data>
+  <data name="Health_Title" xml:space="preserve"><value>Health</value></data>
+  <data name="Health_Rescan" xml:space="preserve"><value>Rescan</value></data>
+  <data name="Health_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Health_DiagnosticPreview" xml:space="preserve"><value>Diagnostic preview</value></data>
+  <data name="Health_Severity" xml:space="preserve"><value>Severity:</value></data>
+  <data name="Health_Repair" xml:space="preserve"><value>Repair</value></data>
+  <data name="Health_Ready" xml:space="preserve"><value>Ready</value></data>
+  <data name="Health_Scanning" xml:space="preserve"><value>Scanning…</value></data>
+  <data name="Health_Cancelled" xml:space="preserve"><value>Scan cancelled</value></data>
+  <data name="Health_Complete" xml:space="preserve"><value>Scan complete: {0} findings</value></data>
+  <data name="Health_RepairPreviewUnavailable" xml:space="preserve"><value>Repair preview was unavailable.</value></data>
+  <data name="Health_RepairFailed" xml:space="preserve"><value>Repair failed</value></data>
+  <data name="Health_DiagnosticGenerated" xml:space="preserve"><value>Diagnostic preview generated ({0} characters, redacted).</value></data>
+  <data name="Health_SaveDiagnostic" xml:space="preserve"><value>Save diagnostic report</value></data>
+  <data name="Health_IncludeLogs" xml:space="preserve"><value>Include available application logs:</value></data>
+  <data name="Health_RedactDiagnostic" xml:space="preserve"><value>Redact paths and user names in the diagnostic report</value></data>
+  <data name="Health_CopyCode" xml:space="preserve"><value>Copy code</value></data>
+  <data name="Health_CancelReport" xml:space="preserve"><value>Cancel report</value></data>
+  <data name="Health_CheckingCapabilities" xml:space="preserve"><value>Checking Health prerequisites…</value></data>
+  <data name="Health_PrerequisiteUnavailable" xml:space="preserve"><value>Health scanning is unavailable: {0}</value></data>
+  <data name="Health_WslNotDetected" xml:space="preserve"><value>WSL was not detected.</value></data>
+  <data name="Health_ScanPhase" xml:space="preserve"><value>Running health checks…</value></data>
+  <data name="Health_ScanFindingPhase" xml:space="preserve"><value>Evaluating: {0}</value></data>
+  <data name="Health_ReportPreviewPhase" xml:space="preserve"><value>Preparing redacted diagnostic preview…</value></data>
+  <data name="Health_ReportExportPhase" xml:space="preserve"><value>Saving redacted diagnostic report…</value></data>
+  <data name="Health_ReportCancelled" xml:space="preserve"><value>Diagnostic report operation cancelled.</value></data>
+  <data name="Health_DiagnosticSaved" xml:space="preserve"><value>Diagnostic report saved: {0}</value></data>
+  <data name="Health_DiagnosticDetail" xml:space="preserve"><value>Diagnostic detail</value></data>
+  <data name="Health_CopyDetail" xml:space="preserve"><value>Copy redacted detail</value></data>
+  <data name="Health_FindingWslTitle" xml:space="preserve"><value>WSL version</value></data>
+  <data name="Health_FindingWslDetail" xml:space="preserve"><value>WSL runtime version and update status were evaluated.</value></data>
+  <data name="Health_FindingKernelTitle" xml:space="preserve"><value>WSL kernel</value></data>
+  <data name="Health_FindingKernelDetail" xml:space="preserve"><value>WSL kernel version and availability were evaluated.</value></data>
+  <data name="Health_FindingWslgTitle" xml:space="preserve"><value>WSLg version</value></data>
+  <data name="Health_FindingWslgDetail" xml:space="preserve"><value>WSLg availability and version were evaluated.</value></data>
+  <data name="Health_FindingNetworkTitle" xml:space="preserve"><value>WSL networking</value></data>
+  <data name="Health_FindingNetworkDetail" xml:space="preserve"><value>Network mode and WSL connectivity were evaluated.</value></data>
+  <data name="Health_FindingProxyTitle" xml:space="preserve"><value>Proxy configuration</value></data>
+  <data name="Health_FindingProxyDetail" xml:space="preserve"><value>Proxy configuration was evaluated without exporting credentials.</value></data>
+  <data name="Health_FindingVpnTitle" xml:space="preserve"><value>VPN connectivity</value></data>
+  <data name="Health_FindingVpnDetail" xml:space="preserve"><value>VPN-related routing and connectivity were evaluated.</value></data>
+  <data name="Health_FindingTemplateTitle" xml:space="preserve"><value>Template health</value></data>
+  <data name="Health_FindingTemplateDetail" xml:space="preserve"><value>Recorded template declarations and post-install checks were evaluated.</value></data>
+  <data name="Health_FindingWindowsTitle" xml:space="preserve"><value>Windows prerequisites</value></data>
+  <data name="Health_FindingWindowsDetail" xml:space="preserve"><value>Windows optional features and virtualization prerequisites were evaluated.</value></data>
+  <data name="Health_FindingConfigurationTitle" xml:space="preserve"><value>WSL configuration</value></data>
+  <data name="Health_FindingConfigurationDetail" xml:space="preserve"><value>Managed WSL configuration values were evaluated.</value></data>
+  <data name="Health_FindingUnknownTitle" xml:space="preserve"><value>Health finding</value></data>
+  <data name="Health_FindingUnknownDetail" xml:space="preserve"><value>No additional diagnostic detail is available.</value></data>
+  <data name="Health_ScopeHost" xml:space="preserve"><value>Host</value></data>
+  <data name="Health_ScopeInstance" xml:space="preserve"><value>Instance: {0}</value></data>
+  <data name="Health_RepairPostconditionUnverified" xml:space="preserve"><value>Repair completed, but its postcondition could not be verified automatically. Rescan Health Center.</value></data>
+  <data name="Health_ErrorFallback" xml:space="preserve"><value>DN-7005: Health operation failed.</value></data>
+  <data name="Health_Error_DN7001" xml:space="preserve"><value>DN-7001: This Health operation is unavailable.</value></data>
+  <data name="Health_Error_DN7002" xml:space="preserve"><value>DN-7002: The repair preview is no longer valid. Generate a new preview.</value></data>
+  <data name="Health_Error_DN7003" xml:space="preserve"><value>DN-7003: Explicit repair confirmation is required.</value></data>
+  <data name="Health_Error_DN7004" xml:space="preserve"><value>DN-7004: Elevation consent is required for this repair.</value></data>
+  <data name="Health_Error_DN7005" xml:space="preserve"><value>DN-7005: Health operation failed.</value></data>
+  <data name="Health_Error_DN7006" xml:space="preserve"><value>DN-7006: The repair postcondition was not satisfied.</value></data>
+  <data name="Health_Error_DN7007" xml:space="preserve"><value>DN-7007: The diagnostic export request is invalid.</value></data>
+  <data name="Tab_Services" xml:space="preserve"><value>Services</value></data>
+  <data name="ServicesTab_Refresh" xml:space="preserve"><value>Refresh</value></data>
+  <data name="ServicesTab_Name" xml:space="preserve"><value>Name</value></data>
+  <data name="ServicesTab_State" xml:space="preserve"><value>State</value></data>
+  <data name="ServicesTab_Description" xml:space="preserve"><value>Description</value></data>
+  <data name="ServicesTab_SubState" xml:space="preserve"><value>Substate</value></data>
+  <data name="ServicesTab_FailureState" xml:space="preserve"><value>Failure state</value></data>
+  <data name="ServicesTab_Enabled" xml:space="preserve"><value>Enabled</value></data>
+  <data name="ServicesTab_Actions" xml:space="preserve"><value>Actions</value></data>
+  <data name="ServicesTab_Start" xml:space="preserve"><value>Start</value></data>
+  <data name="ServicesTab_Stop" xml:space="preserve"><value>Stop</value></data>
+  <data name="ServicesTab_Restart" xml:space="preserve"><value>Restart</value></data>
+  <data name="ServicesTab_Running" xml:space="preserve"><value>Running</value></data>
+  <data name="ServicesTab_Stopped" xml:space="preserve"><value>Stopped</value></data>
+  <data name="ServicesTab_Failed" xml:space="preserve"><value>Failed</value></data>
+  <data name="ServicesTab_User" xml:space="preserve"><value>User</value></data>
+  <data name="ServicesTab_Enable" xml:space="preserve"><value>Enable</value></data>
+  <data name="ServicesTab_Disable" xml:space="preserve"><value>Disable</value></data>
+  <data name="ServicesTab_Reload" xml:space="preserve"><value>Reload</value></data>
+  <data name="ServicesTab_Details" xml:space="preserve"><value>Details</value></data>
+  <data name="ServicesTab_Journal" xml:space="preserve"><value>Journal</value></data>
+  <data name="ServicesTab_Severity" xml:space="preserve"><value>Severity</value></data>
+  <data name="ServicesTab_Message" xml:space="preserve"><value>Message</value></data>
+  <data name="ServicesTab_CopyJournal" xml:space="preserve"><value>Copy journal</value></data>
+  <data name="ServicesTab_ConfirmActionTitle" xml:space="preserve"><value>Confirm service action</value></data>
+  <data name="ServicesTab_ActionFailedTitle" xml:space="preserve"><value>Service action failed</value></data>
+  <data name="ServicesTab_JournalAll" xml:space="preserve"><value>All</value></data>
+  <data name="ServicesTab_JournalInfo" xml:space="preserve"><value>Info</value></data>
+  <data name="ServicesTab_JournalWarning" xml:space="preserve"><value>Warning</value></data>
+  <data name="ServicesTab_JournalError" xml:space="preserve"><value>Error</value></data>
+  <data name="Network_Mode" xml:space="preserve"><value>Networking mode</value></data>
+  <data name="Network_PreviewApply" xml:space="preserve"><value>Preview and apply</value></data>
+  <data name="Network_Settings" xml:space="preserve"><value>Network settings</value></data>
+  <data name="Network_DnsTunneling" xml:space="preserve"><value>DNS tunneling</value></data>
+  <data name="Network_BestEffortDnsParsing" xml:space="preserve"><value>Best-effort DNS parsing</value></data>
+  <data name="Network_AutoProxy" xml:space="preserve"><value>Auto proxy</value></data>
+  <data name="Network_Firewall" xml:space="preserve"><value>Firewall</value></data>
+  <data name="Network_HostAddressLoopback" xml:space="preserve"><value>Host address loopback</value></data>
+  <data name="Network_IgnoredPorts" xml:space="preserve"><value>Ignored ports</value></data>
+  <data name="Network_ConnectivityDiagnostic" xml:space="preserve"><value>Connectivity diagnostic</value></data>
+  <data name="Network_RunProbe" xml:space="preserve"><value>Run probe</value></data>
+  <data name="Network_FirewallPreview" xml:space="preserve"><value>Firewall preview</value></data>
+  <data name="Network_AddressFamily" xml:space="preserve"><value>Family</value></data>
+  <data name="Network_Collision" xml:space="preserve"><value>Collision</value></data>
+  <data name="Network_Open" xml:space="preserve"><value>Open</value></data>
+  <data name="Network_ConfirmModeTitle" xml:space="preserve"><value>Confirm networking mode</value></data>
+  <data name="Network_ConfirmSettingsTitle" xml:space="preserve"><value>Confirm network settings</value></data>
+  <data name="Network_ConfirmFirewallTitle" xml:space="preserve"><value>Confirm firewall preview</value></data>
+  <data name="Network_ConfirmFirewallRemovalTitle" xml:space="preserve"><value>Confirm firewall removal</value></data>
+  <data name="Network_OwnedFirewallRules" xml:space="preserve"><value>DistroNexus-owned firewall rules</value></data>
+  <data name="Network_PreviewRemoveFirewall" xml:space="preserve"><value>Preview removal</value></data>
+  <data name="Network_RestartRequired" xml:space="preserve"><value>WSL restart is required after this change.</value></data>
+  <data name="Network_NoRestartRequired" xml:space="preserve"><value>No WSL restart is required.</value></data>
+  <data name="Network_ModeApplied" xml:space="preserve"><value>Networking mode applied.</value></data>
+  <data name="Network_SettingsApplied" xml:space="preserve"><value>Network settings applied.</value></data>
+  <data name="Network_SettingsAppliedRestart" xml:space="preserve"><value>Network settings applied; restart WSL to finish.</value></data>
+  <data name="Network_ErrorUnsafeBrowserAddress" xml:space="preserve"><value>Only loopback HTTP(S) addresses can be opened in a browser.</value></data>
+  <data name="MonitorTab_RefreshInterval" xml:space="preserve"><value>Refresh interval</value></data>
+  <data name="MonitorTab_Seconds" xml:space="preserve"><value>seconds</value></data>
+  <data name="MonitorTab_Refresh" xml:space="preserve"><value>Refresh</value></data>
+  <data name="MonitorTab_WarningThresholds" xml:space="preserve"><value>Warning thresholds (%)</value></data>
+  <data name="MonitorTab_Cpu" xml:space="preserve"><value>CPU</value></data>
+  <data name="MonitorTab_Memory" xml:space="preserve"><value>Memory</value></data>
+  <data name="MonitorTab_Filesystem" xml:space="preserve"><value>Filesystem</value></data>
+  <data name="MonitorTab_Pid" xml:space="preserve"><value>PID</value></data>
+  <data name="MonitorTab_User" xml:space="preserve"><value>User</value></data>
+  <data name="MonitorTab_Command" xml:space="preserve"><value>Command</value></data>
+  <data name="MonitorTab_Actions" xml:space="preserve"><value>Actions</value></data>
+  <data name="MonitorTab_Terminate" xml:space="preserve"><value>Terminate</value></data>
+  <data name="MonitorTab_Kill" xml:space="preserve"><value>Kill after TERM timeout</value></data>
+  <data name="MonitorTab_LowerPriority" xml:space="preserve"><value>Lower priority</value></data>
+  <data name="Tab_Monitor" xml:space="preserve"><value>Monitor</value></data>
+  <data name="MonitorTab_Unavailable" xml:space="preserve"><value>Unavailable</value></data>
+  <data name="MonitorTab_CpuDisplay" xml:space="preserve"><value>{0:F1}% CPU</value></data>
+  <data name="MonitorTab_BytesMemoryDisplay" xml:space="preserve"><value>{0:N0} bytes memory</value></data>
+  <data name="MonitorTab_BytesSwapDisplay" xml:space="preserve"><value>{0:N0} bytes swap</value></data>
+  <data name="MonitorTab_FilesystemUsageDisplay" xml:space="preserve"><value>Linux filesystem: {0:N0} / {1:N0} bytes used</value></data>
+  <data name="MonitorTab_DiskIoDisplay" xml:space="preserve"><value>Disk I/O: {0:N0}/{1:N0} B/s</value></data>
+  <data name="MonitorTab_NetworkDisplay" xml:space="preserve"><value>Network: {0:N0}/{1:N0} B/s</value></data>
+  <data name="MonitorTab_VhdxDisplay" xml:space="preserve"><value>{0:N0} bytes VHDX</value></data>
+  <data name="MonitorTab_ReclaimDisplay" xml:space="preserve"><value>{0:N0} bytes reclaimable</value></data>
+  <data name="MonitorTab_LimitsDisplay" xml:space="preserve"><value>Limits: memory {0}; swap {1}; processors {2}</value></data>
+  <data name="MonitorTab_SomeMetricsUnavailable" xml:space="preserve"><value>Some metrics are unavailable.</value></data>
+  <data name="MonitorTab_PrivilegedWarning" xml:space="preserve"><value> This is a privileged or system process.</value></data>
+  <data name="MonitorTab_ConfirmAction" xml:space="preserve"><value>Confirm process action</value></data>
+  <data name="MonitorTab_ActionFailed" xml:space="preserve"><value>Process action failed</value></data>
+  <data name="MonitorTab_Protocol" xml:space="preserve"><value>Protocol</value></data>
+  <data name="MonitorTab_Address" xml:space="preserve"><value>Listening address</value></data>
+  <data name="MonitorTab_Port" xml:space="preserve"><value>Port</value></data>
+  <data name="MonitorTab_ListenPorts" xml:space="preserve"><value>Listening ports</value></data>
+  <data name="Devices_Title" xml:space="preserve"><value>Devices</value></data>
+  <data name="Devices_Refresh" xml:space="preserve"><value>Refresh</value></data>
+  <data name="Devices_Bind" xml:space="preserve"><value>Bind</value></data>
+  <data name="Devices_Unbind" xml:space="preserve"><value>Unbind</value></data>
+  <data name="Devices_Attach" xml:space="preserve"><value>Attach to WSL</value></data>
+  <data name="Devices_Detach" xml:space="preserve"><value>Detach</value></data>
+  <data name="Devices_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Devices_Ready" xml:space="preserve"><value>{0} USB device(s) discovered.</value></data>
+  <data name="Devices_Cancelled" xml:space="preserve"><value>Operation cancelled.</value></data>
+  <data name="Devices_ConfirmTitle" xml:space="preserve"><value>Confirm USB operation</value></data>
+  <data name="Devices_Succeeded" xml:space="preserve"><value>USB operation completed.</value></data>
+  <data name="Devices_DistributionToolTip" xml:space="preserve"><value>WSL distribution used only for the attach operation.</value></data>
+  <data name="Devices_BusIdHeader" xml:space="preserve"><value>Bus ID</value></data>
+  <data name="Devices_HardwareHeader" xml:space="preserve"><value>Hardware ID</value></data>
+  <data name="Devices_DescriptionHeader" xml:space="preserve"><value>Description</value></data>
+  <data name="Devices_StateHeader" xml:space="preserve"><value>State</value></data>
+  <data name="Devices_AttachmentHeader" xml:space="preserve"><value>WSL VM attachment</value></data>
+  <data name="Devices_CopyDiagnostic" xml:space="preserve"><value>Copy diagnostic</value></data>
+  <data name="Devices_Unavailable" xml:space="preserve"><value>usbipd-win is unavailable. Install or repair it before managing USB devices.</value></data>
+  <data name="Devices_ServiceStopped" xml:space="preserve"><value>The usbipd service is stopped. Start its Windows service, then refresh.</value></data>
+  <data name="Devices_VersionMalformed" xml:space="preserve"><value>usbipd-win reported an unrecognized version. Discovery may be shown, but device operations are disabled.</value></data>
+  <data name="Devices_UnsupportedVersion" xml:space="preserve"><value>This usbipd-win version is not approved for device operations.</value></data>
+  <data name="Devices_GuidanceSerial" xml:space="preserve"><value>Serial devices may need Linux group permissions. DistroNexus does not change udev rules; follow your distribution's documented serial-device guidance.</value></data>
+  <data name="Devices_GuidanceArduino" xml:space="preserve"><value>Arduino access may require serial group permissions in the selected distribution. DistroNexus does not install packages or modify udev rules.</value></data>
+  <data name="Devices_GuidanceAndroid" xml:space="preserve"><value>For Android debugging, run adb in the selected distribution after attaching. DistroNexus does not install platform tools or configure device rules.</value></data>
+  <data name="Devices_GuidanceSmartcard" xml:space="preserve"><value>Smart-card middleware and access policy remain your responsibility. Do not attach a token to an untrusted distribution.</value></data>
+  <data name="Devices_GuidanceStorage" xml:space="preserve"><value>This device appears to be USB storage. Attaching it exposes the device to the WSL VM; confirm backups and ownership before proceeding. DistroNexus does not mount, format, or modify storage.</value></data>
+  <data name="Workspace_Create" xml:space="preserve"><value>Create</value></data>
+  <data name="Workspace_Duplicate" xml:space="preserve"><value>Duplicate</value></data>
+  <data name="Workspace_Remove" xml:space="preserve"><value>Remove</value></data>
+  <data name="Workspace_Refresh" xml:space="preserve"><value>Refresh</value></data>
+  <data name="Workspace_Preview" xml:space="preserve"><value>Preview</value></data>
+  <data name="Workspace_ApproveTrust" xml:space="preserve"><value>Approve trust</value></data>
+  <data name="Workspace_Launch" xml:space="preserve"><value>Launch</value></data>
+  <data name="Workspace_Close" xml:space="preserve"><value>Close</value></data>
+  <data name="Workspace_Shortcut" xml:space="preserve"><value>Create shortcut</value></data>
+  <data name="Workspace_Export" xml:space="preserve"><value>Export</value></data>
+  <data name="Workspace_Import" xml:space="preserve"><value>Import</value></data>
+  <data name="Workspace_Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Workspace_Retry" xml:space="preserve"><value>Retry failed action</value></data>
+  <data name="Workspace_Name" xml:space="preserve"><value>Name</value></data>
+  <data name="Workspace_Instance" xml:space="preserve"><value>Instance</value></data>
+  <data name="Workspace_Trust" xml:space="preserve"><value>Trust</value></data>
+  <data name="Workspace_Title" xml:space="preserve"><value>Workspaces</value></data>
+  <data name="Workspace_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Workspace_EditDefinition" xml:space="preserve"><value>Edit full definition</value></data>
+  <data name="Workspace_SaveDefinition" xml:space="preserve"><value>Save full definition</value></data>
+  <data name="Workspace_StructuredEditor" xml:space="preserve"><value>Workspace editor</value></data>
+  <data name="Workspace_StatusEditorLoaded" xml:space="preserve"><value>Workspace definition loaded for editing.</value></data>
+  <data name="Workspace_StatusSaved" xml:space="preserve"><value>Workspace definition saved.</value></data>
+  <data name="Workspace_StatusNotFound" xml:space="preserve"><value>Requested workspace was not found.</value></data>
+  <data name="Workspace_StatusTrustApproved" xml:space="preserve"><value>Workspace trust approved.</value></data>
+  <data name="Workspace_StatusCreated" xml:space="preserve"><value>Workspace created.</value></data>
+  <data name="Workspace_StatusDuplicated" xml:space="preserve"><value>Workspace duplicated.</value></data>
+  <data name="Workspace_StatusRemoved" xml:space="preserve"><value>Workspace removed.</value></data>
+  <data name="Workspace_StatusTrustRequired" xml:space="preserve"><value>Explicit trust is required before this workspace can run commands.</value></data>
+  <data name="Workspace_StatusPreviewReady" xml:space="preserve"><value>Launch preview ready.</value></data>
+  <data name="Workspace_StatusExportReady" xml:space="preserve"><value>Export content ready for review and saving.</value></data>
+  <data name="Workspace_StatusImportPreview" xml:space="preserve"><value>Import preview ready; imported commands remain untrusted.</value></data>
+  <data name="Workspace_StatusImported" xml:space="preserve"><value>Workspace imported as untrusted.</value></data>
+  <data name="Workspace_ConfirmClose" xml:space="preserve"><value>Confirm workspace close</value></data>
+  <data name="Workspace_StatusClosed" xml:space="preserve"><value>Workspace close policy completed.</value></data>
+  <data name="Workspace_StatusShortcut" xml:space="preserve"><value>Shortcut created: {0}</value></data>
+  <data name="Workspace_ConfirmRetry" xml:space="preserve"><value>Confirm workspace retry</value></data><data name="Workspace_ConfirmLaunch" xml:space="preserve"><value>Confirm workspace launch</value></data><data name="Workspace_StatusLaunchNotConfirmed" xml:space="preserve"><value>Workspace launch was not confirmed.</value></data><data name="Workspace_ProgressAction" xml:space="preserve"><value>{0}: {1}</value></data><data name="Workspace_StatusLaunchCompleted" xml:space="preserve"><value>Workspace launch completed.</value></data><data name="Workspace_StatusLaunchCancelled" xml:space="preserve"><value>Workspace launch cancelled.</value></data><data name="Workspace_StatusLaunchFailed" xml:space="preserve"><value>One or more workspace actions failed.</value></data>
+  <data name="Workspace_Add" xml:space="preserve"><value>Add</value></data><data name="Workspace_RemoveItem" xml:space="preserve"><value>Remove</value></data><data name="Workspace_MoveUp" xml:space="preserve"><value>Move up</value></data><data name="Workspace_Parallel" xml:space="preserve"><value>Parallel</value></data><data name="Workspace_Apply" xml:space="preserve"><value>Apply</value></data><data name="Workspace_Required" xml:space="preserve"><value>Required</value></data><data name="Workspace_AddPreflight" xml:space="preserve"><value>Add preflight</value></data>
+  <data name="Workspace_Status" xml:space="preserve"><value>Status</value></data><data name="Workspace_Progress" xml:space="preserve"><value>Progress</value></data><data name="Workspace_Validation" xml:space="preserve"><value>Validation error</value></data><data name="Workspace_ImportContent" xml:space="preserve"><value>Workspace definition to import</value></data><data name="Workspace_Groups" xml:space="preserve"><value>Action groups</value></data><data name="Workspace_Actions" xml:space="preserve"><value>Actions</value></data><data name="Workspace_ActionName" xml:space="preserve"><value>Action name</value></data><data name="Workspace_ActionType" xml:space="preserve"><value>Action type</value></data><data name="Workspace_ActionArguments" xml:space="preserve"><value>Arguments (separate with |)</value></data><data name="Workspace_ActionDependencies" xml:space="preserve"><value>Dependencies (action IDs, separate with commas)</value></data><data name="Workspace_ActionTimeout" xml:space="preserve"><value>Timeout (seconds)</value></data><data name="Workspace_ActionFailurePolicy" xml:space="preserve"><value>Failure policy</value></data><data name="Workspace_ProjectPath" xml:space="preserve"><value>Project path</value></data><data name="Workspace_MissingRemediation" xml:space="preserve"><value>Missing instance remediation</value></data><data name="Workspace_CloseMode" xml:space="preserve"><value>Close mode</value></data><data name="Workspace_CloseServices" xml:space="preserve"><value>Services to stop (separate with commas)</value></data><data name="Workspace_PreflightKind" xml:space="preserve"><value>Preflight kind</value></data><data name="Workspace_PreflightValue" xml:space="preserve"><value>Preflight value</value></data><data name="Workspace_Preflights" xml:space="preserve"><value>Preflight checks</value></data>
+  <data name="Workspace_FullDefinition" xml:space="preserve"><value>Full workspace definition (JSON)</value></data><data name="Workspace_ConfirmRemove" xml:space="preserve"><value>Confirm workspace removal</value></data><data name="Workspace_RemovePreview" xml:space="preserve"><value>Remove workspace '{0}'. This cannot be undone.</value></data>
+  <data name="Applications_Title" xml:space="preserve"><value>Applications</value></data>
+  <data name="Applications_Distribution" xml:space="preserve"><value>WSL distribution</value></data>
+  <data name="Applications_Search" xml:space="preserve"><value>Search applications</value></data>
+  <data name="Applications_Refresh" xml:space="preserve"><value>Refresh</value></data>
+  <data name="Applications_Launch" xml:space="preserve"><value>Launch</value></data>
+  <data name="Applications_Pin" xml:space="preserve"><value>Pin / unpin</value></data>
+  <data name="Applications_Copy" xml:space="preserve"><value>Copy command</value></data>
+  <data name="Applications_Reveal" xml:space="preserve"><value>Reveal entry</value></data>
+  <data name="Applications_Unavailable" xml:space="preserve"><value>WSLg is unavailable for this distribution.</value></data>
+  <data name="Applications_SelectDistribution" xml:space="preserve"><value>Select a WSL distribution to discover applications.</value></data>
+  <data name="Applications_Discovered" xml:space="preserve"><value>{0} applications discovered.</value></data>
+  <data name="Health_WslgWaylandTitle" xml:space="preserve"><value>WSLg Wayland display</value></data><data name="Health_WslgWaylandDetail" xml:space="preserve"><value>Wayland display environment was evaluated for this instance.</value></data>
+  <data name="Health_WslgDisplayTitle" xml:space="preserve"><value>WSLg display</value></data><data name="Health_WslgDisplayDetail" xml:space="preserve"><value>Display environment was evaluated for this instance.</value></data>
+  <data name="Health_WslgAudioTitle" xml:space="preserve"><value>WSLg audio</value></data><data name="Health_WslgAudioDetail" xml:space="preserve"><value>Audio environment was evaluated for this instance.</value></data>
+  <data name="Health_WslgStaleShortcutTitle" xml:space="preserve"><value>Possible stale WSLg shortcut</value></data><data name="Health_WslgStaleShortcutDetail" xml:space="preserve"><value>The distribution state can make existing WSLg shortcuts unavailable.</value></data>
+  <data name="IntegrationsTab_ContainerTitle" xml:space="preserve"><value>Container runtimes</value></data>
+  <data name="IntegrationsTab_ContainerReadOnly" xml:space="preserve"><value>Container, image, and Compose diagnostics are read-only. Podman service and socket controls require a separate preview and confirmation.</value></data>
+  <data name="IntegrationsTab_StartSocket" xml:space="preserve"><value>Start socket</value></data><data name="IntegrationsTab_StopSocket" xml:space="preserve"><value>Stop socket</value></data><data name="IntegrationsTab_StartService" xml:space="preserve"><value>Start service</value></data><data name="IntegrationsTab_StopService" xml:space="preserve"><value>Stop service</value></data>
+  <data name="IntegrationsTab_ConfigureConnection" xml:space="preserve"><value>Configure connection</value></data><data name="IntegrationsTab_ConfirmConnection" xml:space="preserve"><value>Confirm Podman connection</value></data>
+  <data name="IntegrationsTab_ConfirmPodmanAction" xml:space="preserve"><value>Confirm Podman action</value></data>
+  <data name="IntegrationsTab_RuntimeSummary" xml:space="preserve"><value>{0}: {1} ({2})</value></data>
+  <data name="IntegrationsTab_RuntimeFailure" xml:space="preserve"><value>{0}: {1}</value></data>
+  <data name="IntegrationsTab_RuntimeInventorySummary" xml:space="preserve"><value>{0}: {1} containers, {2} images, {3} Compose projects</value></data>
+  <data name="IntegrationsTab_ContainerRow" xml:space="preserve"><value>  Container {0}: {1} ({2})</value></data>
+  <data name="IntegrationsTab_ImageRow" xml:space="preserve"><value>  Image {0}:{1}</value></data>
+  <data name="IntegrationsTab_ComposeRow" xml:space="preserve"><value>  Compose {0}: {1} ({2})</value></data>
+  <data name="IntegrationsTab_ContainerSummaryAutomationName" xml:space="preserve"><value>Container runtime diagnostic summary</value></data>
+  <data name="IntegrationsTab_ConnectionNameAutomationName" xml:space="preserve"><value>Podman connection name</value></data>
+  <data name="IntegrationsTab_ConnectionEndpointAutomationName" xml:space="preserve"><value>Podman connection endpoint</value></data>
+  <data name="IntegrationsTab_Runtime_DockerDesktop" xml:space="preserve"><value>Docker Desktop</value></data>
+  <data name="IntegrationsTab_Runtime_PodmanWsl" xml:space="preserve"><value>Podman in WSL</value></data>
+  <data name="IntegrationsTab_Runtime_PodmanDesktop" xml:space="preserve"><value>Podman Desktop</value></data>
+  <data name="IntegrationsTab_Availability_Available" xml:space="preserve"><value>Available</value></data>
+  <data name="IntegrationsTab_Availability_Unavailable" xml:space="preserve"><value>Unavailable</value></data>
+  <data name="IntegrationsTab_Availability_Degraded" xml:space="preserve"><value>Degraded</value></data>
+  <data name="IntegrationsTab_Health_healthy" xml:space="preserve"><value>Healthy</value></data>
+  <data name="IntegrationsTab_Health_degraded" xml:space="preserve"><value>Degraded</value></data>
+  <data name="IntegrationsTab_Health_unavailable" xml:space="preserve"><value>Unavailable</value></data>
+  <data name="IntegrationsTab_Health_unknown" xml:space="preserve"><value>Unknown</value></data>
+  <data name="IntegrationsTab_Preview_PodmanUserUnitChange" xml:space="preserve"><value>{0} Podman {1}</value></data>
+  <data name="IntegrationsTab_Preview_SystemdUserScopeRequired" xml:space="preserve"><value>A systemd user scope is required.</value></data>
+  <data name="IntegrationsTab_Preview_PodmanConnectionChange" xml:space="preserve"><value>{0} Podman connection {1} at {2}</value></data>
+  <data name="IntegrationsTab_Preview_PodmanReachable" xml:space="preserve"><value>Podman was probed successfully.</value></data>
+  <data name="IntegrationsTab_Preview_NoContainerStorageChange" xml:space="preserve"><value>No container storage or machine state will change.</value></data>
+  <data name="IntegrationsTab_RuntimeDetails" xml:space="preserve"><value>Version: {0}; socket: {1}; service: {2}; endpoint: {3}</value></data>
+  <data name="IntegrationsTab_ValueUnavailable" xml:space="preserve"><value>Unavailable</value></data>
+  <data name="IntegrationsTab_State_active" xml:space="preserve"><value>Active</value></data>
+  <data name="IntegrationsTab_State_inactive" xml:space="preserve"><value>Inactive</value></data>
+  <data name="IntegrationsTab_State_unknown" xml:space="preserve"><value>Unknown</value></data>
+  <data name="IntegrationsTab_State_unavailable" xml:space="preserve"><value>Unavailable</value></data>
+  <data name="IntegrationsTab_PodmanUnavailableWsl2" xml:space="preserve"><value>Podman controls require a WSL 2 distribution.</value></data>
+  <data name="IntegrationsTab_PodmanUnavailableRuntime" xml:space="preserve"><value>Podman controls are unavailable because Podman in WSL is not installed or reachable.</value></data>
+  <data name="IntegrationsTab_PodmanUnavailableSystemd" xml:space="preserve"><value>Podman service and socket controls require systemd enabled for this distribution. Connection configuration remains available.</value></data>
+  <data name="IntegrationsTab_PodmanUnavailableService" xml:space="preserve"><value>Podman controls are unavailable because the container runtime service is not configured.</value></data>
+  <data name="MarketplaceEnable" xml:space="preserve"><value>Enable</value></data>
+  <data name="MarketplaceDisable" xml:space="preserve"><value>Disable</value></data>
+  <data name="MarketplaceRemove" xml:space="preserve"><value>Remove source</value></data>
+  <data name="MarketplaceDetails" xml:space="preserve"><value>Review details</value></data>
+  <data name="MarketplaceVersion" xml:space="preserve"><value>Version</value></data>
+  <data name="MarketplaceCapabilities" xml:space="preserve"><value>Capabilities</value></data>
+  <data name="MarketplaceScripts" xml:space="preserve"><value>Script hashes</value></data>
+  <data name="MarketplaceCompatibility" xml:space="preserve"><value>Compatibility</value></data>
+  <data name="MarketplaceHealth" xml:space="preserve"><value>Health checks</value></data>
+  <data name="MarketplaceUnsafeSourceTitle" xml:space="preserve"><value>Confirm development marketplace source</value></data>
+  <data name="MarketplaceUnsafeSourceConfirmation" xml:space="preserve"><value>Add '{0}' as a development-only marketplace source? Non-HTTPS or local sources can be altered outside DistroNexus and must not be used for production trust.</value></data>
+  <data name="MarketplaceSourceDeclined" xml:space="preserve"><value>Marketplace source was not added.</value></data>
+  <data name="MarketplaceReviewTitle" xml:space="preserve"><value>Confirm marketplace review</value></data>
+  <data name="MarketplaceReviewConfirmation" xml:space="preserve"><value>Approve one verified candidate execution only after reviewing this bounded diff? Added scripts: {0}; removed scripts: {1}; changed scripts: {2}; normalized old/new text: {3}; diff status: {4}; capabilities: {5}; script hashes: {6}; compatibility: {7}; health checks: {8}.</value></data>
+  <data name="MarketplaceChecksum" xml:space="preserve"><value>Artifact checksum</value></data>
+  <data name="MarketplaceSignature" xml:space="preserve"><value>Publisher signature</value></data>
+  <data name="MarketplaceUpdated" xml:space="preserve"><value>Last updated</value></data>
+  <data name="MarketplaceSourcesLoaded" xml:space="preserve"><value>{0} marketplace source(s) loaded.</value></data>
+  <data name="MarketplaceSourcesUnavailable" xml:space="preserve"><value>Marketplace sources are unavailable.</value></data>
+  <data name="MarketplaceLifecycleTitle" xml:space="preserve"><value>Confirm marketplace source change</value></data>
+  <data name="MarketplaceEnableConfirmation" xml:space="preserve"><value>Enable this marketplace source?</value></data>
+  <data name="MarketplaceDisableConfirmation" xml:space="preserve"><value>Disable this marketplace source? Its reviewed candidates cannot execute while disabled.</value></data>
+  <data name="MarketplaceRemoveTitle" xml:space="preserve"><value>Confirm marketplace source removal</value></data>
+  <data name="MarketplaceRemoveConfirmation" xml:space="preserve"><value>Remove this marketplace source and its trust relationship? Retained artifacts are not deleted.</value></data>
+  <data name="MarketplaceOperationDeclined" xml:space="preserve"><value>Marketplace operation was not confirmed.</value></data>
+  <data name="MarketplaceArtifactVerified" xml:space="preserve"><value>Marketplace artifact was downloaded and verified.</value></data>
+  <data name="MarketplaceNoKnownGoodVersion" xml:space="preserve"><value>No known-good version is available for update comparison.</value></data>
+  <data name="MarketplaceReviewRequired" xml:space="preserve"><value>Review required. Scripts changed: {0}; publisher changed: {1}; requested capabilities: {2}.</value></data>
+  <data name="MarketplaceNoMaterialChanges" xml:space="preserve"><value>No material marketplace changes were detected.</value></data>
+  <data name="MarketplaceCandidateApproved" xml:space="preserve"><value>Marketplace candidate was explicitly approved for one verified execution.</value></data>
+  <data name="MarketplaceRollbackTitle" xml:space="preserve"><value>Confirm marketplace rollback</value></data>
+  <data name="MarketplaceRollbackConfirmation" xml:space="preserve"><value>Restore verified marketplace artifact {0} as the known-good version?</value></data>
+  <data name="MarketplaceRollbackComplete" xml:space="preserve"><value>Marketplace rollback completed.</value></data>
+  <data name="MarketplaceScriptDiff" xml:space="preserve"><value>Bounded script diff</value></data>
+  <data name="MarketplaceDiffAdded" xml:space="preserve"><value>Added</value></data>
+  <data name="MarketplaceDiffRemoved" xml:space="preserve"><value>Removed</value></data>
+  <data name="MarketplaceDiffChanged" xml:space="preserve"><value>Changed</value></data>
+  <data name="MarketplaceYes" xml:space="preserve"><value>Yes</value></data>
+  <data name="MarketplaceNo" xml:space="preserve"><value>No</value></data>
+  <data name="MarketplaceOperationFailed" xml:space="preserve"><value>Marketplace operation failed. Review error code {0}.</value></data>
+  <data name="MarketplaceOperationFailedGeneric" xml:space="preserve"><value>Marketplace operation failed. Review the application log for safe diagnostics.</value></data>
+  <data name="MarketplaceSignatureStatus" xml:space="preserve"><value>Signature status</value></data>
+  <data name="MarketplaceSignatureVerified" xml:space="preserve"><value>Verified</value></data>
+  <data name="MarketplaceSignatureNotPresent" xml:space="preserve"><value>Not supplied</value></data>
+  <data name="MarketplaceSignatureInvalid" xml:space="preserve"><value>Invalid</value></data>
+  <data name="MarketplaceTrustState" xml:space="preserve"><value>Trust state</value></data>
+  <data name="MarketplaceTrustReviewRequired" xml:space="preserve"><value>Review required</value></data>
+  <data name="MarketplaceTrustApproved" xml:space="preserve"><value>Approved</value></data>
+  <data name="MarketplaceTrustUnavailable" xml:space="preserve"><value>Unavailable</value></data>
+  <data name="MarketplaceDiffTruncated" xml:space="preserve"><value>Truncated to the safe review limit</value></data>
+  <data name="MarketplaceDiffComplete" xml:space="preserve"><value>Complete within the safe review limit</value></data>
+  <data name="MarketplaceRemoteSource" xml:space="preserve"><value>Remote (HTTPS)</value></data>
+  <data name="MarketplaceUserLocalSource" xml:space="preserve"><value>User-local file</value></data>
 </root>

@@ -5,6 +5,7 @@ using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using DistroNexus.Desktop.Wizard;
 using DistroNexus.Desktop.Views;
+using DistroNexus.Desktop.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
@@ -25,17 +26,9 @@ namespace DistroNexus.Desktop.ViewModels;
 /// </summary>
 public partial class MainViewModel : ObservableObject, IDisposable
 {
-    private readonly IWslManagerService _wslManager;
-    private readonly ISettingsService _settingsService;
-    private readonly INavigationService _navigationService;
-    private readonly ITerminalService _terminalService;
-    private readonly IDownloadTaskManager _downloadTaskManager;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<MainViewModel> _logger;
-    private readonly IWslEventWatcher _wslEventWatcher;
-    private readonly ITagService _tagService;
-    private readonly IBackupService _backupService;
-    private readonly IDockerIntegrationService _dockerIntegrationService;
+    private readonly IPowerShellModuleClient _moduleClient;
     private readonly IDialogService _dialogService;
 
     [ObservableProperty]
@@ -65,18 +58,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private bool _isOnDashboard = true;
 
+    [ObservableProperty] private bool _isApplicationsNavigationAvailable;
+    [ObservableProperty] private string _applicationsNavigationReason = "Checking WSLg availability...";
+
     [ObservableProperty]
     private string _currentTheme = "Dark";
 
     [ObservableProperty]
     private string _currentLanguage = "en-US";
-
-    [ObservableProperty]
-    private bool _isDownloadPanelVisible;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ActiveDownloadsDisplayText))]
-    private int _activeDownloadsCount;
 
     // ── Multi-select mode (P1-8) ──────────────────────────────────────────
 
@@ -91,55 +80,30 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private bool _isAutoRefreshing;
 
-    public string ActiveDownloadsDisplayText => 
-        string.Format(Properties.Resources.ActiveDownloadsFormat, ActiveDownloadsCount);
+    [ObservableProperty]
+    private bool _isDownloadPanelVisible;
 
-    /// <summary>
-    /// Gets the collection of download tasks for data binding.
-    /// </summary>
-    public ObservableCollection<DownloadTask> DownloadTasks => _downloadTaskManager.Tasks;
+    public ObservableCollection<PackageDownloadJob> DownloadJobs { get; } = [];
+    public int ActiveDownloadsCount => DownloadJobs.Count(job => job.State is "Queued" or "Running");
+    public string ActiveDownloadsDisplayText => string.Format(Properties.Resources.ActiveDownloadsFormat, ActiveDownloadsCount);
 
-    public MainViewModel(
-        IWslManagerService wslManager,
-        ISettingsService settingsService,
-        INavigationService navigationService,
-        ITerminalService terminalService,
-        IDownloadTaskManager downloadTaskManager,
-        IServiceProvider serviceProvider,
-        ILogger<MainViewModel> logger,
-        IWslEventWatcher wslEventWatcher,
-        ITagService tagService,
-        IBackupService backupService,
-        IDockerIntegrationService dockerIntegrationService,
-        IDialogService dialogService)
+    public MainViewModel(IServiceProvider serviceProvider, ILogger<MainViewModel> logger, IPowerShellModuleClient moduleClient, IDialogService dialogService)
     {
-        _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
-        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
-        _navigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
-        _terminalService = terminalService ?? throw new ArgumentNullException(nameof(terminalService));
-        _downloadTaskManager = downloadTaskManager ?? throw new ArgumentNullException(nameof(downloadTaskManager));
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _wslEventWatcher = wslEventWatcher ?? throw new ArgumentNullException(nameof(wslEventWatcher));
-        _tagService = tagService ?? throw new ArgumentNullException(nameof(tagService));
-        _backupService = backupService ?? throw new ArgumentNullException(nameof(backupService));
-        _dockerIntegrationService = dockerIntegrationService ?? throw new ArgumentNullException(nameof(dockerIntegrationService));
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
 
         // ICollectionView for filtering/grouping (Design Review #4)
         InstancesView = CollectionViewSource.GetDefaultView(_instances);
 
-        // Subscribe to download task status changes
-        _downloadTaskManager.TaskStatusChanged += OnDownloadTaskStatusChanged;
-
-        // Subscribe to cache invalidation for auto-refresh (E-07-3)
-        _wslEventWatcher.CacheInvalidationRequested += OnCacheInvalidated;
-
         // NOTE: LoadUserPreferencesAsync is now called explicitly from MainWindow.OnLoaded
         // to avoid async operations in constructor which can block DI resolution
 
-        // Update active downloads count initially
-        UpdateActiveDownloadsCount();
+        // The Core Health Center requests navigation through an abstraction.  Attach it to the
+        // actual shell while it is alive rather than leaving repairs at a no-op sink.
+        if (_serviceProvider.GetService<DesktopHealthNavigationBroker>() is { } healthNavigation)
+            healthNavigation.RequestHandler = (_, _) => ShowSettings();
     }
 
     /// <summary>
@@ -152,55 +116,32 @@ public partial class MainViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Reads and displays any backup failure notifications persisted by backup-runner.ps1 (E-04-1).
+    /// Reads and displays pending backup failure notifications through the typed module route.
     /// Deletes the notification file after displaying to prevent repeat display.
     /// </summary>
     private async Task ShowPendingBackupNotificationsAsync()
     {
-        var notifPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "DistroNexus", "pending-notifications.json");
-        if (!File.Exists(notifPath))
-            return;
-
         try
         {
-            var json = await File.ReadAllTextAsync(notifPath);
-            var doc = System.Text.Json.JsonDocument.Parse(json);
-            if (!doc.RootElement.TryGetProperty("notifications", out var notifs))
+            foreach (var notification in await _moduleClient.ConsumeBackupNotificationsAsync())
             {
-                // corrupt or unexpected file format — still deleted by finally
-                return;
-            }
-            foreach (var n in notifs.EnumerateArray())
-            {
-                var msg = n.TryGetProperty("message", out var msgEl) ? msgEl.GetString() : "Unknown error";
-                var inst = n.TryGetProperty("instance", out var instEl) ? instEl.GetString() : "Unknown instance";
-                await ShowAlert(Properties.Resources.TitleBackupFailure, string.Format(Properties.Resources.ErrorBackupFailedForInstance, inst, msg));
+                await ShowAlert(Properties.Resources.TitleBackupFailure, string.Format(Properties.Resources.ErrorBackupFailedForInstance, notification.InstanceName, notification.Message));
             }
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to read or display pending backup notifications");
         }
-        finally
-        {
-            try { File.Delete(notifPath); }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to delete pending-notifications.json after display");
-            }
-        }
     }
 
     /// <summary>
     /// Loads user preferences from settings.
     /// </summary>
-    private Task LoadUserPreferencesAsync()
+    private async Task LoadUserPreferencesAsync()
     {
         try
         {
-            var settings = _settingsService.LoadSettings();
+            var settings = await _moduleClient.GetSettingsAsync();
             CurrentTheme = settings.Theme ?? "Dark";
             CurrentLanguage = settings.Language ?? "en-US";
 
@@ -211,8 +152,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             _logger.LogWarning(ex, "Failed to load user preferences, using defaults");
         }
-
-        return Task.CompletedTask;
     }
 
     private static readonly System.Text.RegularExpressions.Regex _errorCodePattern =
@@ -280,14 +219,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
             using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
-            var instances = await _wslManager.GetInstancesAsync(combinedCts.Token);
+            var instances = await _moduleClient.GetInstancesAsync(combinedCts.Token);
+            var settings = await _moduleClient.GetSettingsAsync(combinedCts.Token);
             
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 Instances.Clear();
                 foreach (var instance in instances)
                 {
-                    var vm = new WslInstanceViewModel(instance, _wslManager, _terminalService, _settingsService, _logger, _tagService, _backupService, _serviceProvider);
+                    var vm = new WslInstanceViewModel(instance, _logger, _moduleClient, _dialogService);
                     vm.RefreshRequested += (s, e) => _ = RefreshAsync();
                     vm.TagsChanged += (s, e) => _ = RefreshAvailableTagsAsync();
                     Instances.Add(vm);
@@ -296,7 +236,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 // Check for default distro setting and select it if no selection exists
                 if (SelectedInstance == null)
                 {
-                    var settings = _settingsService.LoadSettings();
                     if (!string.IsNullOrEmpty(settings.DefaultDistributionId))
                     {
                         var defaultInstance = Instances.FirstOrDefault(i => i.Name == settings.DefaultDistributionId);
@@ -342,7 +281,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 if (ct.IsCancellationRequested) return;
                 try
                 {
-                    var tags = await _tagService.GetTagsAsync(vm.Name);
+                    var tags = (await _moduleClient.GetInstanceTagsAsync(vm.Name)).SingleOrDefault()?.Tags ?? [];
                     await Application.Current.Dispatcher.InvokeAsync(() =>
                     {
                         vm.Tags.Clear();
@@ -371,7 +310,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         try
         {
-            var allTags = await _tagService.GetAllTagsAsync();
+            var allTags = (await _moduleClient.GetInstanceTagsAsync())
+                .SelectMany(result => result.Tags)
+                .Distinct(StringComparer.OrdinalIgnoreCase);
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 // Preserve selection of currently selected tags
@@ -461,9 +402,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         try
         {
-            bool isInstalled = await _dockerIntegrationService.IsDockerDesktopInstalledAsync(ct);
-            if (!isInstalled) return;
-
             foreach (var vm in snapshot)
             {
                 if (ct.IsCancellationRequested) return;
@@ -474,8 +412,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
                 try
                 {
-                    var status = await _dockerIntegrationService.GetIntegrationStatusAsync(name, ct);
-                    vm.DockerIntegrationEnabled = status == Core.Services.DockerIntegrationStatus.Enabled;
+                    var status = await _moduleClient.GetDockerIntegrationAsync(name, ct);
+                    vm.DockerIntegrationEnabled = status.Status == "Enabled";
                 }
                 catch (Exception ex)
                 {
@@ -505,21 +443,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 
                 // Use ForceRefreshInstanceAsync for each running instance
                 // This will calculate disk size and update configuration
-                foreach (var instance in runningInstances)
-                {
-                    try
-                    {
-                        var refreshedInstance = await _wslManager.ForceRefreshInstanceAsync(instance.Name);
-                        if (refreshedInstance != null)
-                        {
-                            instance.UpdateDiskSize(refreshedInstance.Size);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to refresh instance {Name}", instance.Name);
-                    }
-                }
+                // The module list contract owns refresh and returns a bounded projection. Do not
+                // force an instance-specific disk probe from the presentation layer.
+                _logger.LogInformation("Instance refresh completed through the module contract.");
             }
         }
         catch (Exception ex)
@@ -547,51 +473,93 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _logger.LogInformation("Navigated to settings");
     }
 
-    /// <summary>
-    /// Toggles the download panel visibility.
-    /// </summary>
+
     [RelayCommand]
-    private void ToggleDownloadPanel()
+    private async Task ToggleDownloadPanelAsync()
     {
         IsDownloadPanelVisible = !IsDownloadPanelVisible;
-        _logger.LogInformation("Download panel visibility: {IsVisible}", IsDownloadPanelVisible);
+        if (IsDownloadPanelVisible) await RefreshDownloadJobsAsync();
     }
 
-    /// <summary>
-    /// Clears all completed download tasks.
-    /// </summary>
     [RelayCommand]
-    private void ClearCompletedDownloads()
+    private async Task CancelDownloadAsync(string? jobId) => await ExecuteDownloadActionAsync(jobId, "cancel");
+
+    [RelayCommand]
+    private async Task RetryDownloadAsync(string? jobId) => await ExecuteDownloadActionAsync(jobId, "retry");
+
+    [RelayCommand]
+    private async Task ClearCompletedDownloadsAsync()
     {
-        _downloadTaskManager.ClearCompletedTasks();
-        UpdateActiveDownloadsCount();
-        _logger.LogInformation("Cleared completed downloads");
+        foreach (var job in DownloadJobs.Where(job => job.State is "Completed" or "Failed" or "Cancelled" or "Interrupted").ToArray())
+            await ExecuteDownloadActionAsync(job.JobId, "clear");
     }
 
-    /// <summary>
-    /// Cancels a specific download task.
-    /// </summary>
-    [RelayCommand]
-    private async Task CancelDownloadAsync(Guid? taskId)
+    private async Task ExecuteDownloadActionAsync(string? jobId, string action)
     {
-        if (taskId.HasValue)
+        if (string.IsNullOrWhiteSpace(jobId)) return;
+        var preview = await _moduleClient.PreviewPackageDownloadJobActionAsync(jobId, action);
+        if (string.IsNullOrWhiteSpace(preview.PreviewToken)) throw new InvalidOperationException(preview.OutcomeCode);
+        await _moduleClient.ExecutePackageDownloadJobActionAsync(preview.PreviewToken);
+        await RefreshDownloadJobsAsync();
+    }
+
+    private async Task RefreshDownloadJobsAsync()
+    {
+        var jobs = await _moduleClient.GetPackageDownloadJobsAsync();
+        DownloadJobs.Clear();
+        foreach (var job in jobs) DownloadJobs.Add(job);
+        OnPropertyChanged(nameof(ActiveDownloadsCount));
+        OnPropertyChanged(nameof(ActiveDownloadsDisplayText));
+    }
+
+    [RelayCommand]
+    private void ShowHealth()
+    {
+        CurrentPage = _serviceProvider.GetRequiredService<HealthCenterPage>();
+        IsOnDashboard = false;
+    }
+
+    [RelayCommand]
+    private void ShowDevices()
+    {
+        CurrentPage = _serviceProvider.GetRequiredService<UsbDevicesPage>();
+        IsOnDashboard = false;
+    }
+
+    [RelayCommand]
+    private void ShowWorkspaces()
+    {
+        CurrentPage = _serviceProvider.GetRequiredService<WorkspacesPage>();
+        IsOnDashboard = false;
+    }
+
+    [RelayCommand]
+    private async Task ShowApplicationsAsync()
+    {
+        var moduleClient = _serviceProvider.GetService<IPowerShellModuleClient>();
+        if (moduleClient is not null)
         {
-            await _downloadTaskManager.CancelTaskAsync(taskId.Value);
-            UpdateActiveDownloadsCount();
+            var snapshot = await moduleClient.GetHostCapabilitiesAsync();
+            if (!snapshot.Capabilities.TryGetValue(CapabilityId.Wslg, out var wslg) || !wslg.IsSupported)
+            {
+                IsApplicationsNavigationAvailable = false;
+                ApplicationsNavigationReason = Properties.Resources.ResourceManager.GetString("Applications_Unavailable") ?? "WSLg is unavailable.";
+                StatusMessage = ApplicationsNavigationReason;
+                return;
+            }
         }
+        IsApplicationsNavigationAvailable = true; ApplicationsNavigationReason = string.Empty;
+        CurrentPage = _serviceProvider.GetRequiredService<ApplicationsPage>();
+        IsOnDashboard = false;
     }
 
-    /// <summary>
-    /// Retries a failed download task.
-    /// </summary>
-    [RelayCommand]
-    private async Task RetryDownloadAsync(Guid? taskId)
+    public async Task RefreshApplicationsNavigationAsync()
     {
-        if (taskId.HasValue)
-        {
-            await _downloadTaskManager.RetryTaskAsync(taskId.Value);
-            UpdateActiveDownloadsCount();
-        }
+        var moduleClient = _serviceProvider.GetService<IPowerShellModuleClient>();
+        if (moduleClient is null) { IsApplicationsNavigationAvailable = true; ApplicationsNavigationReason = string.Empty; return; }
+        var snapshot = await moduleClient.GetHostCapabilitiesAsync();
+        IsApplicationsNavigationAvailable = snapshot.Capabilities.TryGetValue(CapabilityId.Wslg, out var wslg) && wslg.IsSupported;
+        ApplicationsNavigationReason = IsApplicationsNavigationAvailable ? string.Empty : Properties.Resources.ResourceManager.GetString("Applications_Unavailable") ?? "WSLg is unavailable.";
     }
 
     /// <summary>
@@ -611,28 +579,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 IsAutoRefreshing = false;
             }
         });
-    }
-
-    private void OnDownloadTaskStatusChanged(object? sender, DownloadTask task)
-    {
-        Application.Current.Dispatcher.Invoke(() =>
-        {
-            UpdateActiveDownloadsCount();
-            
-            // Optionally show notification for completed downloads
-            if (task.Status == DownloadStatus.Completed)
-            {
-                _logger.LogInformation("Download completed: {PackageName}", task.PackageName);
-            }
-        });
-    }
-
-    /// <summary>
-    /// Updates the active downloads count.
-    /// </summary>
-    private void UpdateActiveDownloadsCount()
-    {
-        ActiveDownloadsCount = _downloadTaskManager.GetActiveTasksCount();
     }
 
     [RelayCommand]
@@ -692,7 +638,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// Toggles between light and dark theme.
     /// </summary>
     [RelayCommand]
-    private void ToggleTheme()
+    private async Task ToggleThemeAsync()
     {
         try
         {
@@ -706,9 +652,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             app.ApplyThemeFromSettings(CurrentTheme);
 
             // Save theme preference
-            var settings = _settingsService.LoadSettings();
-            settings.Theme = CurrentTheme;
-            _settingsService.SaveSettings(settings);
+            await _moduleClient.SaveSettingsAsync(new DistroNexusSettingsUpdate(Theme: CurrentTheme));
 
             StatusMessage = string.Format(Properties.Resources.StatusThemeChanged, CurrentTheme);
             _logger.LogInformation("Theme changed to {Theme}", CurrentTheme);
@@ -724,7 +668,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// Toggles between English and Chinese language.
     /// </summary>
     [RelayCommand]
-    private void ToggleLanguage()
+    private async Task ToggleLanguageAsync()
     {
         try
         {
@@ -740,9 +684,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             Thread.CurrentThread.CurrentUICulture = culture;
 
             // Save language preference
-            var settings = _settingsService.LoadSettings();
-            settings.Language = CurrentLanguage;
-            _settingsService.SaveSettings(settings);
+            await _moduleClient.SaveSettingsAsync(new DistroNexusSettingsUpdate(Language: CurrentLanguage));
 
             StatusMessage = Properties.Resources.LanguageChangedTitle;
 
@@ -766,17 +708,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
             _logger.LogInformation("Generating PowerShell diagnostics");
             StatusMessage = Properties.Resources.StatusGeneratingDiagnostics;
 
-            var powerShellService = _serviceProvider.GetService(typeof(IPowerShellService)) as IPowerShellService;
-            if (powerShellService == null)
-            {
-                await ShowAlert(Properties.Resources.DiagnosticsErrorTitle, Properties.Resources.DiagnosticsServiceUnavailable);
-                return;
-            }
-
-            var diagnostics = await powerShellService.GetDiagnosticInfoAsync();
+            var diagnostics = await _moduleClient.GetDiagnosticSnapshotAsync();
 
             _logger.LogInformation("Diagnostics generated successfully");
-            _logger.LogInformation(diagnostics);
+            _logger.LogInformation("Diagnostic snapshot {OutcomeCode} / {WslState}", diagnostics.OutcomeCode, diagnostics.WslState);
 
             // Show in a message box
             var window = new Window
@@ -790,7 +725,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 {
                     Content = new System.Windows.Controls.TextBox
                     {
-                        Text = diagnostics,
+                        Text = string.Join(Environment.NewLine, new[] { $"Module: {diagnostics.ModuleState}", $"WSL: {diagnostics.WslState}", $"Bridge: {diagnostics.BridgeState}" }.Concat(diagnostics.Notices.Select(n => $"{n.Severity} {n.Code}: {n.Message}"))),
                         IsReadOnly = true,
                         TextWrapping = TextWrapping.Wrap,
                         VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto,
@@ -814,8 +749,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        _wslEventWatcher.CacheInvalidationRequested -= OnCacheInvalidated;
-        _wslEventWatcher.Stop();
     }
 
     /// <summary>
@@ -824,15 +757,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// </summary>
     public void StartEventWatcherAfterLoad()
     {
-        try
-        {
-            _wslEventWatcher.Start();
-            _logger.LogInformation("WSL event watcher started after initial load");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to start WSL event watcher; proactive cache invalidation unavailable");
-        }
+        _logger.LogDebug("Module-backed refresh is active after initial load.");
     }
 
     // ── Multi-select commands (P1-8) ─────────────────────────────────────
@@ -863,11 +788,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
         var selected = Instances.Where(i => i.IsSelected && i.IsWslV2).ToList();
         if (selected.Count == 0) return;
 
-        var confirmed = await _dialogService.ShowConfirmAsync(
-            Properties.Resources.BulkCompact_ConfirmTitle,
-            string.Format(Properties.Resources.BulkCompact_ConfirmMessage, selected.Count));
-        if (!confirmed) return;
-
         IsBulkCompacting = true;
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         _bulkCompactCts = cts;
@@ -882,7 +802,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 BulkCompactProgressText = string.Format(
                     Properties.Resources.BulkCompact_Counter, i + 1, selected.Count, inst.Name);
 
-                var diskVm = new ViewModels.Tabs.DiskTabViewModel(inst, _wslManager, _dialogService);
+                var diskVm = new ViewModels.Tabs.DiskTabViewModel(inst, _moduleClient, _dialogService);
                 await diskVm.RunCompactionAsync(cts.Token);
             }
         }
@@ -906,7 +826,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private async Task ImportInstanceAsync()
     {
         var existingNames = Instances.Select(i => i.Name).ToList();
-        var vm = new ImportInstanceViewModel(existingNames);
+        var vm = new ImportInstanceViewModel(existingNames, _moduleClient);
         var dialog = new ImportInstanceDialog(vm) { Owner = Application.Current.MainWindow };
         dialog.ShowDialog();
 
@@ -915,10 +835,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
         IsLoading = true;
         try
         {
-            await _wslManager.ImportInstanceAsync(
-                vm.InstanceName.Trim(),
-                vm.SourcePath.Trim(),
-                vm.InstallPath.Trim());
+            var preview = vm.ImportPreview ?? throw new InvalidOperationException("An import preview is required.");
+            var outcome = await _moduleClient.ExecuteLifecycleOperationAsync(preview.PreviewToken);
+            if (!outcome.Succeeded) throw new InvalidOperationException(outcome.OutcomeCode);
 
             await LoadInstancesAsync();
 

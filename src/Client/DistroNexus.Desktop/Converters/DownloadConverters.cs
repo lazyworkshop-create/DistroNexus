@@ -42,11 +42,7 @@ public class DownloadingToVisibilityConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        if (value is DownloadStatus status)
-        {
-            return status == DownloadStatus.Downloading ? Visibility.Visible : Visibility.Collapsed;
-        }
-        return Visibility.Collapsed;
+        return value is DownloadStatus.Downloading or "Running" ? Visibility.Visible : Visibility.Collapsed;
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
@@ -128,13 +124,7 @@ public class DownloadStatusToActionVisibilityConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        if (value is DownloadStatus status)
-        {
-            // Show cancel button for active states (pending, downloading)
-            return (status == DownloadStatus.Pending || status == DownloadStatus.Downloading) 
-                ? Visibility.Visible : Visibility.Collapsed;
-        }
-        return Visibility.Collapsed;
+        return value is DownloadStatus.Pending or DownloadStatus.Downloading or "Queued" or "Running" ? Visibility.Visible : Visibility.Collapsed;
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
@@ -150,12 +140,7 @@ public class DownloadStatusToRetryVisibilityConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        if (value is DownloadStatus status)
-        {
-            // Show retry button for failed state only
-            return status == DownloadStatus.Failed ? Visibility.Visible : Visibility.Collapsed;
-        }
-        return Visibility.Collapsed;
+        return value is DownloadStatus.Failed or "Failed" or "Cancelled" or "Interrupted" ? Visibility.Visible : Visibility.Collapsed;
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

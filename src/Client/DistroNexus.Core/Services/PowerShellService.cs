@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using System.Management.Automation;
+using System.Security;
 using System.Text.RegularExpressions;
 using DistroNexus.Core.Exceptions;
 using DistroNexus.Core.Interfaces;
@@ -20,51 +22,17 @@ public class PowerShellService : IPowerShellService, IDisposable
     private readonly string? _moduleBasePath;
     private bool _disposed;
 
-    public PowerShellService(ILogger<PowerShellService> logger, string? customModulePath = null)
+    public PowerShellService(ILogger<PowerShellService> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         // Find the PowerShell executable (prefer pwsh.exe for PowerShell Core, fallback to powershell.exe)
         _powerShellPath = FindPowerShellPath();
 
-        // 1. Try configuration first
-        if (!string.IsNullOrWhiteSpace(customModulePath))
-        {
-            var manifestPath = Path.Combine(customModulePath, "DistroNexus.psd1");
-            if (File.Exists(manifestPath))
-            {
-                _moduleBasePath = customModulePath;
-                _logger.LogInformation("Using configured PowerShell module path: {Path}", customModulePath);
-            }
-            else
-            {
-                _logger.LogWarning("Configured PowerShell module not found at: {Path}", manifestPath);
-            }
-        }
-
-        // 2. Auto-detection if not found yet
-        if (string.IsNullOrEmpty(_moduleBasePath))
-        {
-            _moduleBasePath = FindModulePath();
-            if (!string.IsNullOrEmpty(_moduleBasePath))
-            {
-                _logger.LogInformation("Auto-detected PowerShell module at: {Path}", _moduleBasePath);
-            }
-            else
-            {
-                _logger.LogWarning("PowerShell module path could not be determined. Functionality may be limited.");
-            }
-        }
+        _moduleBasePath = new ProductModuleLocator().Resolve();
+        if (string.IsNullOrEmpty(_moduleBasePath)) _logger.LogWarning("DistroNexus module bootstrap is unavailable.");
 
         _logger.LogInformation("PowerShell service initialized using: {PowerShellPath}", _powerShellPath);
-    }
-
-    private string? FindModulePath()
-    {
-        return AppResourcePathResolver.FindDirectoryWithFileInBaseOrParents(
-            AppContext.BaseDirectory,
-            "PowerShell",
-            "DistroNexus.psd1");
     }
 
     private static string FindPowerShellPath()
@@ -497,6 +465,8 @@ public class PowerShellService : IPowerShellService, IDisposable
         ModuleCallOptions? options = null,
         CancellationToken cancellationToken = default)
     {
+        if (parameters?.Values.Any(value => value is SecureString) == true)
+            throw new ArgumentException("SecureString values require the dedicated secure module invocation API.", nameof(parameters));
         ArgumentNullException.ThrowIfNull(cmdletName);
 
         options ??= new ModuleCallOptions();
@@ -508,16 +478,7 @@ public class PowerShellService : IPowerShellService, IDisposable
         // Check if module is available
         if (_moduleBasePath == null)
         {
-            _logger.LogError("DistroNexus PowerShell module path not configured");
-
-            var settingsPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "DistroNexus",
-                "settings.json");
-
-            _logger.LogError("Please configure PowerShellModulePath in settings file located at: {SettingsPath}", settingsPath);
-
-            var errorMessage = $"PowerShell module path not configured. Please set PowerShellModulePath in settings: {settingsPath}";
+            const string errorMessage = "DistroNexus.ModuleBootstrapUnavailable";
 
             return new PowerShellScriptResult
             {
@@ -565,14 +526,18 @@ public class PowerShellService : IPowerShellService, IDisposable
             {
                 foreach (var param in parameters)
                 {
-                    // Handle switch parameters (boolean true) - don't add value
+                    // Preserve the existing switch form for true while still transmitting an
+                    // explicit false value to cmdlets with Boolean parameters.
                     if (param.Value is bool boolValue)
                     {
                         if (boolValue)
                         {
                             scriptBuilder.Append($" -{param.Key}");
                         }
-                        // If false, don't add the parameter at all
+                        else
+                        {
+                            scriptBuilder.Append($" -{param.Key}:$false");
+                        }
                     }
                     else
                     {
@@ -696,6 +661,39 @@ public class PowerShellService : IPowerShellService, IDisposable
                 Exception = ex
             };
         }
+    }
+
+    public async Task<PowerShellScriptResult> ExecuteModuleCmdletWithSecureStringAsync(
+        string cmdletName,
+        IReadOnlyDictionary<string, object> parameters,
+        string secureParameterName,
+        SecureString secret,
+        ModuleCallOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(cmdletName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(secureParameterName);
+        ArgumentNullException.ThrowIfNull(parameters);
+        ArgumentNullException.ThrowIfNull(secret);
+        if (_moduleBasePath is null) return new PowerShellScriptResult { ExitCode = 1, Error = "DistroNexus PowerShell module path not configured." };
+
+        try
+        {
+            var manifest = Path.Combine(_moduleBasePath, "DistroNexus.psd1");
+            if (!File.Exists(manifest)) return new PowerShellScriptResult { ExitCode = 1, Error = "DistroNexus PowerShell module files are missing." };
+            using var powerShell = PowerShell.Create();
+            powerShell.AddCommand("Import-Module").AddParameter("Name", manifest).AddParameter("Force").AddParameter("ErrorAction", ActionPreference.Stop);
+            await Task.Run(() => powerShell.Invoke(), cancellationToken).ConfigureAwait(false);
+            if (powerShell.HadErrors) return new PowerShellScriptResult { ExitCode = 1, Error = "DistroNexus module import failed." };
+            powerShell.Commands.Clear();
+            powerShell.AddCommand(cmdletName).AddParameters(new Dictionary<string, object>(parameters)).AddParameter(secureParameterName, secret).AddParameter("ErrorAction", ActionPreference.Stop);
+            if (options?.ParseAsJson == true) powerShell.AddCommand("ConvertTo-Json").AddParameter("Depth", 10).AddParameter("Compress");
+            var output = await Task.Run(() => powerShell.Invoke(), cancellationToken).ConfigureAwait(false);
+            if (powerShell.HadErrors) return new PowerShellScriptResult { ExitCode = 1, Error = "Secure module operation failed.", UsedModule = true };
+            return new PowerShellScriptResult { ExitCode = 0, Output = string.Join(Environment.NewLine, output.Select(item => item?.ToString())), UsedModule = true };
+        }
+        catch (OperationCanceledException) { return new PowerShellScriptResult { ExitCode = 1, Error = "Secure module operation cancelled.", UsedModule = true }; }
+        catch { return new PowerShellScriptResult { ExitCode = 1, Error = "Secure module operation failed.", UsedModule = true }; }
     }
 
     /// <summary>

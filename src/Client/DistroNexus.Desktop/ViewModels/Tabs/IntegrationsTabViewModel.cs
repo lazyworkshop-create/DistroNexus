@@ -1,7 +1,9 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DistroNexus.Core.Interfaces;
+using DistroNexus.Core.Models;
 using DistroNexus.Core.Services;
+using DistroNexus.Desktop.Services;
 
 namespace DistroNexus.Desktop.ViewModels.Tabs;
 
@@ -12,12 +14,16 @@ namespace DistroNexus.Desktop.ViewModels.Tabs;
 public partial class IntegrationsTabViewModel : ObservableObject
 {
     private readonly WslInstanceViewModel _instance;
-    private readonly IDockerIntegrationService _dockerIntegrationService;
     private readonly IDialogService _dialogService;
+    private readonly IPowerShellModuleClient? _powerShellModuleClient;
+    private readonly IBrowserLauncher _browserLauncher;
 
     private bool _initialized;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsContainerActionsEnabled))]
+    [NotifyPropertyChangedFor(nameof(IsPodmanServiceControlsEnabled))]
+    [NotifyPropertyChangedFor(nameof(IsPodmanConnectionEnabled))]
     private bool _isLoading;
 
     [ObservableProperty]
@@ -33,6 +39,23 @@ public partial class IntegrationsTabViewModel : ObservableObject
     [ObservableProperty]
     private bool _showRestartBanner;
 
+    [ObservableProperty]
+    private string _containerRuntimeSummary = string.Empty;
+    [ObservableProperty]
+    private string _containerRuntimeInventory = string.Empty;
+    [ObservableProperty] private string _podmanConnectionName = "local";
+    [ObservableProperty] private string _podmanConnectionEndpoint = "unix:///run/user/1000/podman/podman.sock";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsPodmanServiceControlsEnabled))]
+    private bool _isInstanceSystemdSupported;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsContainerActionsEnabled))]
+    [NotifyPropertyChangedFor(nameof(IsPodmanServiceControlsEnabled))]
+    [NotifyPropertyChangedFor(nameof(IsPodmanConnectionEnabled))]
+    private bool _isPodmanWslAvailable;
+    [ObservableProperty]
+    private string _podmanPrerequisiteMessage = string.Empty;
+
     public WslInstanceViewModel Instance => _instance;
 
     /// <summary>Tab should be hidden for docker-desktop / docker-desktop-data instances.</summary>
@@ -47,18 +70,22 @@ public partial class IntegrationsTabViewModel : ObservableObject
 
     // True when toggle should be interactive.
     public bool IsToggleEnabled => IsDockerInstalled && Instance.IsWslV2 && !IsLoading;
+    public bool IsContainerActionsEnabled => IsPodmanServiceControlsEnabled || IsPodmanConnectionEnabled;
+    public bool IsPodmanServiceControlsEnabled => _powerShellModuleClient is not null && Instance.IsWslV2 && IsInstanceSystemdSupported && IsPodmanWslAvailable && !IsLoading;
+    public bool IsPodmanConnectionEnabled => _powerShellModuleClient is not null && Instance.IsWslV2 && IsPodmanWslAvailable && !IsLoading;
 
     // WSL v1 guard message
     public bool ShowWslV1Message => !Instance.IsWslV2;
 
     public IntegrationsTabViewModel(
         WslInstanceViewModel instance,
-        IDockerIntegrationService dockerIntegrationService,
-        IDialogService dialogService)
+        IDialogService dialogService,
+        IPowerShellModuleClient powerShellModuleClient, IBrowserLauncher? browserLauncher = null)
     {
         _instance = instance ?? throw new ArgumentNullException(nameof(instance));
-        _dockerIntegrationService = dockerIntegrationService ?? throw new ArgumentNullException(nameof(dockerIntegrationService));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
+        _powerShellModuleClient = powerShellModuleClient ?? throw new ArgumentNullException(nameof(powerShellModuleClient));
+        _browserLauncher = browserLauncher ?? new BrowserLauncher();
     }
 
     public async Task InitializeAsync()
@@ -72,12 +99,48 @@ public partial class IntegrationsTabViewModel : ObservableObject
         _instance.IsBusy = true;
         try
         {
-            IsDockerInstalled = await _dockerIntegrationService.IsDockerDesktopInstalledAsync();
-
-            if (IsDockerInstalled && Instance.IsWslV2)
+            var capabilities = await _powerShellModuleClient.GetInstanceCapabilitiesAsync(_instance.Name);
+            IsInstanceSystemdSupported = capabilities.Capabilities.TryGetValue(CapabilityId.InstanceSystemd, out var systemd) && systemd.IsSupported;
+            try
             {
-                DockerStatus = await _dockerIntegrationService.GetIntegrationStatusAsync(_instance.Name);
-                IsDockerEnabled = DockerStatus == DockerIntegrationStatus.Enabled;
+                var docker = await _powerShellModuleClient.GetDockerIntegrationAsync(_instance.Name);
+                IsDockerInstalled = docker.IsAvailable;
+
+                if (IsDockerInstalled && Instance.IsWslV2)
+                {
+                    DockerStatus = docker.Status == "Enabled" ? DockerIntegrationStatus.Enabled : docker.Status == "Disabled" ? DockerIntegrationStatus.Disabled : DockerIntegrationStatus.Unavailable;
+                    IsDockerEnabled = DockerStatus == DockerIntegrationStatus.Enabled;
+                }
+            }
+            catch (Exception ex)
+            {
+                await _dialogService.ShowAlertAsync(
+                    Properties.Resources.ErrorTitle,
+                    string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
+            }
+            if (_powerShellModuleClient is not null)
+            {
+                var snapshot = await _powerShellModuleClient.GetContainerRuntimeStatusAsync(_instance.Name);
+                IsPodmanWslAvailable = snapshot.Runtimes.Any(x => x.Kind == ContainerRuntimeKind.PodmanWsl && x.Availability == ContainerRuntimeAvailability.Available);
+                PodmanPrerequisiteMessage = PodmanPrerequisiteExplanation();
+                ContainerRuntimeSummary = string.Join("; ", snapshot.Runtimes.Select(x => string.Format(R("IntegrationsTab_RuntimeSummary"), RuntimeLabel(x.Kind), AvailabilityLabel(x.Availability), HealthLabel(x.Health))));
+                ContainerRuntimeInventory = string.Join(Environment.NewLine, snapshot.Runtimes.Select(x =>
+                {
+                    var containers = snapshot.Containers.GetValueOrDefault(x.Kind)?.Count ?? 0;
+                    var images = snapshot.Images.GetValueOrDefault(x.Kind)?.Count ?? 0;
+                    var projects = snapshot.Projects.GetValueOrDefault(x.Kind)?.Count ?? 0;
+                    if (snapshot.Failures.TryGetValue(x.Kind, out var failure)) return string.Format(R("IntegrationsTab_RuntimeFailure"), RuntimeLabel(x.Kind), failure);
+                    var states = PodmanStates(x.ServiceState);
+                    var rows = new List<string> { string.Format(R("IntegrationsTab_RuntimeInventorySummary"), RuntimeLabel(x.Kind), containers, images, projects), string.Format(R("IntegrationsTab_RuntimeDetails"), SafeVersion(x.Version) ?? R("IntegrationsTab_ValueUnavailable"), StateLabel(states.Socket), StateLabel(states.Service), x.Endpoint ?? R("IntegrationsTab_ValueUnavailable")) };
+                    rows.AddRange(snapshot.Containers.GetValueOrDefault(x.Kind)?.Take(10).Select(c => string.Format(R("IntegrationsTab_ContainerRow"), c.Name, c.Image, c.State)) ?? []);
+                    rows.AddRange(snapshot.Images.GetValueOrDefault(x.Kind)?.Take(10).Select(i => string.Format(R("IntegrationsTab_ImageRow"), i.Repository, i.Tag)) ?? []);
+                    rows.AddRange(snapshot.Projects.GetValueOrDefault(x.Kind)?.Take(10).Select(p => string.Format(R("IntegrationsTab_ComposeRow"), p.Name, p.Status, p.ServiceCount)) ?? []);
+                    return string.Join(Environment.NewLine, rows);
+                }));
+            }
+            else
+            {
+                PodmanPrerequisiteMessage = R("IntegrationsTab_PodmanUnavailableService");
             }
         }
         catch (Exception ex)
@@ -106,10 +169,11 @@ public partial class IntegrationsTabViewModel : ObservableObject
         try
         {
             bool target = !IsDockerEnabled;
-            await _dockerIntegrationService.SetIntegrationAsync(_instance.Name, target);
-            IsDockerEnabled = target;
-            DockerStatus = target ? DockerIntegrationStatus.Enabled : DockerIntegrationStatus.Disabled;
-            ShowRestartBanner = true;
+            var preview = await _powerShellModuleClient.GetDockerIntegrationPreviewAsync(_instance.Name, target);
+            if (!await _dialogService.ShowConfirmAsync(R("IntegrationsTab_DockerIntegration"), FormatPreview(preview.Effects))) return;
+            var result = await _powerShellModuleClient.SetDockerIntegrationAsync(_instance.Name, target, preview.Token);
+            if (!result.Succeeded) { await _dialogService.ShowAlertAsync(Properties.Resources.ErrorTitle, result.Guidance ?? result.OutcomeCode); return; }
+            IsDockerEnabled = target; DockerStatus = target ? DockerIntegrationStatus.Enabled : DockerIntegrationStatus.Disabled; ShowRestartBanner = result.RestartRequired;
         }
         catch (Exception ex)
         {
@@ -128,7 +192,88 @@ public partial class IntegrationsTabViewModel : ObservableObject
     [RelayCommand]
     private void DismissRestartBanner() => ShowRestartBanner = false;
 
+    [RelayCommand]
+    private async Task OpenDockerInstallAsync()
+    {
+        try
+        {
+            var target = await _powerShellModuleClient.GetDockerDesktopInstallUriAsync();
+            _browserLauncher.LaunchDockerInstall(target.Uri);
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowAlertAsync(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
+        }
+    }
+
+    [RelayCommand]
+    private Task StartPodmanSocketAsync() => RunPodmanUnitAsync(PodmanUserUnit.Socket, SystemdAction.Start);
+    [RelayCommand]
+    private Task StopPodmanSocketAsync() => RunPodmanUnitAsync(PodmanUserUnit.Socket, SystemdAction.Stop);
+    [RelayCommand]
+    private Task StartPodmanServiceAsync() => RunPodmanUnitAsync(PodmanUserUnit.Service, SystemdAction.Start);
+    [RelayCommand]
+    private Task StopPodmanServiceAsync() => RunPodmanUnitAsync(PodmanUserUnit.Service, SystemdAction.Stop);
+
+    private async Task RunPodmanUnitAsync(PodmanUserUnit unit, SystemdAction action)
+    {
+        var powerShellModuleClient = _powerShellModuleClient;
+        if (!IsPodmanServiceControlsEnabled || powerShellModuleClient is null) return;
+        IsLoading = true;
+        try
+        {
+            var preview = await powerShellModuleClient.GetPodmanUserUnitPreviewAsync(_instance.Name, unit, action);
+            if (!await _dialogService.ShowConfirmAsync(R("IntegrationsTab_ConfirmPodmanAction"), FormatPreview(preview.Effects))) return;
+            var result = await powerShellModuleClient.InvokePodmanUserUnitAsync(preview);
+            if (!result.Succeeded) await _dialogService.ShowAlertAsync(Properties.Resources.ErrorTitle, result.Guidance ?? result.OutcomeCode);
+            _initialized = false;
+            await InitializeAsync();
+        }
+        finally { IsLoading = false; OnPropertyChanged(nameof(IsToggleEnabled)); }
+    }
+    [RelayCommand]
+    private async Task ConfigurePodmanConnectionAsync()
+    {
+        var powerShellModuleClient = _powerShellModuleClient;
+        if (!IsPodmanConnectionEnabled || powerShellModuleClient is null) return;
+        IsLoading = true;
+        try
+        {
+            var preview = await powerShellModuleClient.GetPodmanConnectionPreviewAsync(_instance.Name, new PodmanConnectionRequest(PodmanConnectionName, new Uri(PodmanConnectionEndpoint, UriKind.Absolute)));
+            if (!await _dialogService.ShowConfirmAsync(R("IntegrationsTab_ConfirmConnection"), FormatPreview(preview.Effects))) return;
+            var result = await powerShellModuleClient.InvokePodmanConnectionAsync(preview);
+            if (!result.Succeeded) await _dialogService.ShowAlertAsync(Properties.Resources.ErrorTitle, result.Guidance ?? result.OutcomeCode);
+        }
+        catch (Exception ex) { await _dialogService.ShowAlertAsync(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex))); }
+        finally { IsLoading = false; }
+    }
+
     private static bool IsDockerSystemInstance(string name) =>
         name.Equals("docker-desktop", StringComparison.OrdinalIgnoreCase) ||
         name.Equals("docker-desktop-data", StringComparison.OrdinalIgnoreCase);
+    private static string R(string key) => Properties.Resources.ResourceManager.GetString(key) ?? key;
+    private static string RuntimeLabel(ContainerRuntimeKind kind) => R($"IntegrationsTab_Runtime_{kind}");
+    private static string AvailabilityLabel(ContainerRuntimeAvailability availability) => R($"IntegrationsTab_Availability_{availability}");
+    private static string HealthLabel(string health) => Properties.Resources.ResourceManager.GetString($"IntegrationsTab_Health_{health}") ?? health;
+    private static string FormatPreview(IReadOnlyList<string>? effects) => string.Join(Environment.NewLine, effects ?? []);
+    private static string? SafeVersion(string? value) => VersionSafety.Normalize(value);
+    private static (string Socket, string Service) PodmanStates(string value)
+    {
+        const string unavailable = "unavailable";
+        var parts = value.Split(';', StringSplitOptions.None);
+        if (parts.Length != 2 || !parts[0].StartsWith("socket=", StringComparison.Ordinal) || !parts[1].StartsWith("service=", StringComparison.Ordinal)) return (unavailable, unavailable);
+        var socket = parts[0]["socket=".Length..];
+        var service = parts[1]["service=".Length..];
+        return (SafeState(socket), SafeState(service));
+    }
+
+    private static string SafeState(string value) => value is "active" or "inactive" or "unknown" or "unavailable" ? value : "unavailable";
+    private static string StateLabel(string state) => R($"IntegrationsTab_State_{state}");
+    private string PodmanPrerequisiteExplanation()
+    {
+        if (!Instance.IsWslV2) return R("IntegrationsTab_PodmanUnavailableWsl2");
+        if (!IsPodmanWslAvailable) return R("IntegrationsTab_PodmanUnavailableRuntime");
+        if (!IsInstanceSystemdSupported) return R("IntegrationsTab_PodmanUnavailableSystemd");
+        return string.Empty;
+    }
 }

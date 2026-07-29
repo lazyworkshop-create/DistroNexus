@@ -27,59 +27,26 @@
                            Margin="0,0,0,16"
                            Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}"/>
 
-                <!-- High memory warning -->
-                <ui:InfoBar Title="{lex:Loc WslConfig_MemoryWarning}"
-                            Severity="Warning"
-                            IsOpen="{Binding ShowHighMemoryWarning}"
-                            IsClosable="False"
-                            Margin="0,0,0,12"/>
-
-                <!-- Memory -->
-                <TextBlock Text="{lex:Loc WslConfig_Memory}" Margin="0,0,0,4"/>
-                <ui:TextBox Text="{Binding Memory, UpdateSourceTrigger=PropertyChanged}"
-                            PlaceholderText="e.g. 4GB"
-                            Margin="0,0,0,4"/>
-                <TextBlock Text="{Binding MemoryError}"
-                           Foreground="{DynamicResource SystemFillColorCriticalBrush}"
-                           FontSize="11"
-                           Margin="0,0,0,12"
-                           Visibility="{Binding HasMemoryError, Converter={StaticResource BoolToVisibilityConverter}}"/>
-
-                <!-- Processors -->
-                <TextBlock Text="{lex:Loc WslConfig_Processors}" Margin="0,0,0,4"/>
-                <ui:TextBox Text="{Binding Processors, UpdateSourceTrigger=PropertyChanged}"
-                            PlaceholderText="e.g. 4"
-                            Margin="0,0,0,4"/>
-                <TextBlock Text="{Binding ProcessorsError}"
-                           Foreground="{DynamicResource SystemFillColorCriticalBrush}"
-                           FontSize="11"
-                           Margin="0,0,0,12"
-                           Visibility="{Binding HasProcessorsError, Converter={StaticResource BoolToVisibilityConverter}}"/>
-
-                <!-- Swap -->
-                <TextBlock Text="{lex:Loc WslConfig_Swap}" Margin="0,0,0,4"/>
-                <ui:TextBox Text="{Binding Swap, UpdateSourceTrigger=PropertyChanged}"
-                            PlaceholderText="e.g. 2GB (0 = disabled)"
-                            Margin="0,0,0,4"/>
-                <TextBlock Text="{Binding SwapError}"
-                           Foreground="{DynamicResource SystemFillColorCriticalBrush}"
-                           FontSize="11"
-                           Margin="0,0,0,12"
-                           Visibility="{Binding HasSwapError, Converter={StaticResource BoolToVisibilityConverter}}"/>
-
-                <!-- Localhost Forwarding -->
-                <ui:ToggleSwitch Content="{lex:Loc WslConfig_LocalhostForwarding}"
-                                 IsChecked="{Binding LocalhostForwarding}"
-                                 Margin="0,0,0,12"/>
-
-                <!-- Networking Mode -->
-                <TextBlock Text="{lex:Loc WslConfig_NetworkingMode}" Margin="0,0,0,4"/>
-                <ComboBox SelectedItem="{Binding NetworkingMode}" Margin="0,0,0,16">
-                    <ComboBoxItem Content="NAT"/>
-                    <ComboBoxItem Content="mirrored"/>
-                    <ComboBoxItem Content="bridged"/>
-                    <ComboBoxItem Content="virtiofs"/>
-                </ComboBox>
+                <TextBlock Text="{Binding PendingRestart}" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                <ItemsControl ItemsSource="{Binding Fields}">
+                    <ItemsControl.Resources>
+                        <DataTemplate x:Key="TextSetting"><TextBox Text="{Binding Desired, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsSupported}"/></DataTemplate>
+                        <DataTemplate x:Key="BooleanSetting"><ComboBox SelectedValue="{Binding Desired, UpdateSourceTrigger=PropertyChanged}" SelectedValuePath="Content" IsEnabled="{Binding IsSupported}"><ComboBoxItem Content="true"/><ComboBoxItem Content="false"/></ComboBox></DataTemplate>
+                        <DataTemplate x:Key="EnumSetting"><ComboBox ItemsSource="{Binding Definition.AllowedValues}" SelectedItem="{Binding Desired, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsSupported}"/></DataTemplate>
+                        <Style x:Key="SettingEditor" TargetType="ContentControl"><Setter Property="ContentTemplate" Value="{StaticResource TextSetting}"/><Style.Triggers>
+                            <DataTrigger Binding="{Binding Definition.Type}" Value="Boolean"><Setter Property="ContentTemplate" Value="{StaticResource BooleanSetting}"/></DataTrigger>
+                            <DataTrigger Binding="{Binding Definition.Type}" Value="Enum"><Setter Property="ContentTemplate" Value="{StaticResource EnumSetting}"/></DataTrigger>
+                        </Style.Triggers></Style>
+                    </ItemsControl.Resources>
+                    <ItemsControl.ItemTemplate><DataTemplate><StackPanel Margin="0,2"><Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="180"/><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
+                        <ContentControl Grid.Column="1" Content="{Binding}" Style="{StaticResource SettingEditor}"/>
+                        <TextBlock Grid.Column="2" Text="{Binding UnsupportedReason}" Foreground="DarkOrange" TextWrapping="Wrap" Margin="8,0,0,0"/>
+                    </Grid><TextBlock Text="{Binding ValidationError}" Foreground="OrangeRed"/></StackPanel></DataTemplate></ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Expander Header="{lex:Loc Configuration_CurrentRaw}" Margin="0,8,0,0"><TextBox Text="{Binding CurrentRaw}" IsReadOnly="True" AcceptsReturn="True" FontFamily="Consolas" MinHeight="100"/></Expander>
+                <Expander Header="{lex:Loc Configuration_DesiredRaw}" Margin="0,4,0,12"><TextBox Text="{Binding DesiredRaw}" IsReadOnly="True" AcceptsReturn="True" FontFamily="Consolas" MinHeight="100"/></Expander>
 
                 <!-- Action buttons -->
                 <Grid>
@@ -89,15 +56,11 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <ui:Button Grid.Column="0"
-                               Content="{lex:Loc WslConfig_SaveAndRestart}"
+                               Content="{lex:Loc WslConfig_SaveAndMarkPendingRestart}"
                                Icon="{ui:SymbolIcon Symbol=Save20}"
                                Appearance="Primary"
-                               Command="{Binding SaveAndRestartCommand}"
+                               Command="{Binding SaveAndMarkPendingRestartCommand}"
                                Margin="0,0,10,0"/>
-                    <ui:Button Grid.Column="1"
-                               Content="{lex:Loc WslConfig_OpenRawFile}"
-                               Icon="{ui:SymbolIcon Symbol=Open20}"
-                               Command="{Binding OpenRawFileCommand}"/>
                 </Grid>
 
             </StackPanel>

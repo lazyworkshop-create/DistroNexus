@@ -32,7 +32,7 @@ public class UpdateService : IUpdateService
     }
 
     /// <inheritdoc/>
-    public async Task<UpdateInfo?> CheckForUpdatesAsync(CancellationToken cancellationToken = default)
+    public async Task<UpdateInfo?> CheckForUpdatesAsync(CancellationToken cancellationToken = default, bool includePrerelease = false)
     {
         try
         {
@@ -44,7 +44,7 @@ public class UpdateService : IUpdateService
 
             _logger.LogInformation("Checking for updates from GitHub");
 
-            var response = await _httpClient.GetAsync(GitHubReleasesApiUrl, cancellationToken);
+            var response = await _httpClient.GetAsync(includePrerelease ? "https://api.github.com/repos/LazyWorkshopCreate/DistroNexus/releases" : GitHubReleasesApiUrl, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -52,7 +52,13 @@ public class UpdateService : IUpdateService
                 return null;
             }
 
-            var release = await response.Content.ReadFromJsonAsync<GitHubRelease>(cancellationToken);
+            var release = includePrerelease
+                ? (await response.Content.ReadFromJsonAsync<List<GitHubRelease>>(cancellationToken))?
+                    .Where(candidate => !candidate.Draft)
+                    .Aggregate((best, candidate) => CompareVersions(
+                        candidate.TagName?.TrimStart('v', 'V') ?? "0.0.0",
+                        best.TagName?.TrimStart('v', 'V') ?? "0.0.0") > 0 ? candidate : best)
+                : await response.Content.ReadFromJsonAsync<GitHubRelease>(cancellationToken);
 
             if (release == null)
             {
@@ -102,7 +108,7 @@ public class UpdateService : IUpdateService
     }
 
     /// <inheritdoc/>
-    public string GetCurrentVersion()
+    public virtual string GetCurrentVersion()
     {
         var assembly = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
         var version = assembly.GetName().Version;
@@ -155,7 +161,23 @@ public class UpdateService : IUpdateService
                 return v1Part.CompareTo(v2Part);
             }
         }
-
+        var firstPreRelease = version1.Contains('-', StringComparison.Ordinal);
+        var secondPreRelease = version2.Contains('-', StringComparison.Ordinal);
+        if (firstPreRelease != secondPreRelease) return firstPreRelease ? -1 : 1;
+        if (!firstPreRelease) return 0;
+        var left = version1[(version1.IndexOf('-') + 1)..].Split('.');
+        var right = version2[(version2.IndexOf('-') + 1)..].Split('.');
+        for (var index = 0; index < Math.Max(left.Length, right.Length); index++)
+        {
+            if (index == left.Length) return -1;
+            if (index == right.Length) return 1;
+            var leftNumeric = int.TryParse(left[index], out var leftNumber);
+            var rightNumeric = int.TryParse(right[index], out var rightNumber);
+            if (leftNumeric && rightNumeric && leftNumber != rightNumber) return leftNumber.CompareTo(rightNumber);
+            if (leftNumeric != rightNumeric) return leftNumeric ? -1 : 1;
+            var comparison = string.CompareOrdinal(left[index], right[index]);
+            if (comparison != 0) return comparison;
+        }
         return 0;
     }
 
@@ -192,6 +214,9 @@ public class UpdateService : IUpdateService
 
         [JsonPropertyName("prerelease")]
         public bool Prerelease { get; set; }
+
+        [JsonPropertyName("draft")]
+        public bool Draft { get; set; }
 
         [JsonPropertyName("assets")]
         public List<GitHubAsset>? Assets { get; set; }

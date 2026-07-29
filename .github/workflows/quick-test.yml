@@ -36,42 +36,29 @@ jobs:
       run: |
         $PSVersionTable.PSVersion
 
-    - name: Install Pester
-      shell: pwsh
-      run: |
-        Install-Module -Name Pester -Repository PSGallery -Force -MinimumVersion 5.0
-
-    - name: Run Quick PowerShell Tests
-      shell: pwsh
-      working-directory: ./tests/PowerShell
-      run: |
-        # Run quick metadata-selected unit scope
-        $quickTestConfig = @{
-          Run = @{
-            Path = './Unit'
-          }
-          Filter = @{
-            Tag = @('Unit')
-            ExcludeTag = @('Integration', 'Slow', 'WSL2')
-          }
-          TestResult = @{
-            Enabled = $true
-            OutputPath = '../test-results/quick-pester-results.xml'
-            OutputFormat = 'NUnitXml'
-          }
-        }
-        
-        $result = Invoke-Pester -Configuration $quickTestConfig
-        
-        if ($result.FailedCount -gt 0) {
-          exit 1
-        }
-
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: ${{ env.DOTNET_SDK_VERSION }}
         dotnet-quality: ${{ env.DOTNET_SDK_QUALITY }}
+
+    # The module intentionally fails closed if its Core-owned bridge is absent.
+    # Build it before importing the module in the PowerShell test process.
+    - name: Build WorkspaceBridge for PowerShell tests
+      run: dotnet build src/Client/DistroNexus.WorkspaceBridge/DistroNexus.WorkspaceBridge.csproj --configuration Debug
+
+    - name: Install Pester
+      shell: pwsh
+      run: |
+        Install-Module -Name Pester -Repository PSGallery -Force -Scope CurrentUser -RequiredVersion 5.7.1 -AllowClobber
+
+    - name: Run Quick PowerShell Tests
+      shell: pwsh
+      working-directory: ./tests/PowerShell
+      run: |
+        # Keep the quick lane on the repository's canonical Pester bootstrap.
+        # It sets the required Pester runtime options for test child scopes.
+        ./TestRunner.ps1 -TestType Unit -CI -OutputPath 'TestResults'
 
     - name: Build C# solution
       run: dotnet build src/Client/DistroNexus.slnx --configuration Debug
@@ -94,6 +81,6 @@ jobs:
       with:
         files: |
           test-results/*.trx
-          tests/test-results/*.xml
+          TestResults/powershell-results.xml
         check_name: 'Quick Validation Tests'
         compare_to_earlier_commit: true

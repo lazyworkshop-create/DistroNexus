@@ -14,8 +14,7 @@ namespace DistroNexus.Desktop.Wizard.Steps;
 /// </summary>
 public partial class InstallPathStep : WizardStepBase
 {
-    private readonly ISettingsService _settingsService;
-    private readonly IWslManagerService _wslManager;
+    private readonly IPowerShellModuleClient _moduleClient;
     private readonly ILogger _logger;
     private CancellationTokenSource? _validationCts;
     private System.Threading.Timer? _debounceTimer;
@@ -46,10 +45,9 @@ public partial class InstallPathStep : WizardStepBase
     [ObservableProperty]
     private bool _isValidating;
 
-    public InstallPathStep(ISettingsService settingsService, IWslManagerService wslManager, ILogger logger)
+    public InstallPathStep(IPowerShellModuleClient moduleClient, ILogger logger)
     {
-        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
-        _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -63,8 +61,11 @@ public partial class InstallPathStep : WizardStepBase
         // Load default path from settings if not already set
         if (Context != null && string.IsNullOrEmpty(Context.InstallPath))
         {
-            var settings = _settingsService.LoadSettings();
-            Context.InstallPath = settings.DefaultInstallPath;
+            // A typed module call may legitimately return no settings in lightweight
+            // workflow hosts. Keep the selected-path field empty in that case so the
+            // normal target-preview validation owns the eligibility decision.
+            var settings = await _moduleClient.GetSettingsAsync();
+            Context.InstallPath = settings?.DefaultInstallPath ?? string.Empty;
         }
 
         // Generate recommended instance name from distribution name
@@ -181,57 +182,6 @@ public partial class InstallPathStep : WizardStepBase
 
         try
         {
-            var fullPath = Path.GetFullPath(Context.InstallPath);
-            var instancePath = Path.Combine(fullPath, Context.InstanceName);
-
-            // Check if directory already exists
-            if (Directory.Exists(instancePath))
-            {
-                Context.IsPathValid = false;
-                Context.PathValidationMessage = "A directory already exists at this location.";
-                UpdateValidationVisuals(false);
-                return;
-            }
-
-            // Check if parent directory exists or can be created
-            var parentDir = Path.GetDirectoryName(fullPath);
-            if (!string.IsNullOrEmpty(parentDir) && !Directory.Exists(parentDir))
-            {
-                try
-                {
-                    var testPath = Path.Combine(parentDir, ".distronexus_test_" + Guid.NewGuid().ToString("N")[..8]);
-                    Directory.CreateDirectory(testPath);
-                    Directory.Delete(testPath);
-                }
-                catch
-                {
-                    Context.IsPathValid = false;
-                    Context.PathValidationMessage = "Cannot create directory at this location. Check permissions.";
-                    UpdateValidationVisuals(false);
-                    return;
-                }
-            }
-
-            // Check disk space
-            try
-            {
-                var driveInfo = new DriveInfo(Path.GetPathRoot(fullPath) ?? fullPath);
-                const long minimumFreeSpace = 2L * 1024 * 1024 * 1024; // 2GB
-                
-                if (driveInfo.AvailableFreeSpace < minimumFreeSpace)
-                {
-                    Context.IsPathValid = false;
-                    Context.PathValidationMessage = $"Insufficient disk space. Available: {driveInfo.AvailableFreeSpace / (1024.0 * 1024 * 1024):F2}GB, Required: 2GB";
-                    UpdateValidationVisuals(false);
-                    return;
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Could not check disk space");
-                // Don't fail validation if we can't check disk space
-            }
-
             // If instance name exists, mark as invalid
             if (InstanceNameChecked && InstanceNameExists)
             {
@@ -243,7 +193,7 @@ public partial class InstallPathStep : WizardStepBase
 
             // Basic validation passed - full validation happens on Next button click
             Context.IsPathValid = true;
-            Context.PathValidationMessage = $"Instance will be installed to: {instancePath}";
+            Context.PathValidationMessage = "The installation target will be validated before installation.";
             UpdateValidationVisuals(true);
         }
         catch (Exception ex)
@@ -265,7 +215,7 @@ public partial class InstallPathStep : WizardStepBase
 
         try
         {
-            var instances = await _wslManager.GetInstancesAsync();
+            var instances = await _moduleClient.GetInstancesAsync();
             return instances.Any(i => 
                 string.Equals(i.Name, Context.InstanceName, StringComparison.OrdinalIgnoreCase));
         }
@@ -490,7 +440,7 @@ public partial class InstallPathStep : WizardStepBase
             return;
 
         // Load default path from settings
-        var settings = _settingsService.LoadSettings();
+        var settings = await _moduleClient.GetSettingsAsync();
         Context.InstallPath = settings.DefaultInstallPath;
 
         // Generate a unique instance name based on the selected distribution
@@ -501,7 +451,7 @@ public partial class InstallPathStep : WizardStepBase
         // Check for existing instances and find a unique name
         try
         {
-            var instances = await _wslManager.GetInstancesAsync();
+            var instances = await _moduleClient.GetInstancesAsync();
             while (instances.Any(i => string.Equals(i.Name, instanceName, StringComparison.OrdinalIgnoreCase)))
             {
                 instanceName = $"{baseName}-{counter}";

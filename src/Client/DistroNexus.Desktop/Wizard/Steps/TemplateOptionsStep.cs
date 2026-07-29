@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows.Controls;
+using DistroNexus.Core.Interfaces;
+using DistroNexus.Core.Models;
 using DistroNexus.Desktop.Wizard;
 
 namespace DistroNexus.Desktop.Wizard.Steps;
@@ -9,36 +11,48 @@ namespace DistroNexus.Desktop.Wizard.Steps;
 /// </summary>
 public partial class TemplateOptionsStep : WizardStepBase
 {
+    private readonly IPowerShellModuleClient _moduleClient;
     public override string StepId => "template-options";
     public override string Title => Properties.Resources.TemplateAdvancedOptions;
     public override string Description => Properties.Resources.TemplateVersionOptions;
 
     public override bool ShouldSkip(WizardContext context)
     {
-        return context.SelectedTemplate == null ||
-               !context.ApplyTemplateAfterInstall ||
-               context.SelectedTemplate.VersionOptions.Count == 0;
+        return context.SelectedTemplate == null || !context.ApplyTemplateAfterInstall;
     }
 
     public ObservableCollection<TemplateVersionSelectionItem> VersionSelections { get; private set; } = new();
+
+    public TemplateOptionsStep(IPowerShellModuleClient moduleClient)
+    {
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
+    }
 
     protected override UserControl CreateContent()
     {
         return new TemplateOptionsStepView { DataContext = this };
     }
 
-    public override Task OnEnterAsync()
+    public override async Task OnEnterAsync()
     {
         if (Context == null || Context.SelectedTemplate == null)
         {
             VersionSelections = new ObservableCollection<TemplateVersionSelectionItem>();
             OnPropertyChanged(nameof(VersionSelections));
-            return Task.CompletedTask;
+            return;
         }
 
-        BuildSelections(Context.SelectedTemplate);
-        ErrorMessage = string.Empty;
-        return Task.CompletedTask;
+        try
+        {
+            BuildSelections(await _moduleClient.GetTemplateOptionsAsync(Context.SelectedTemplate.Id));
+            ErrorMessage = string.Empty;
+        }
+        catch
+        {
+            VersionSelections = new ObservableCollection<TemplateVersionSelectionItem>();
+            OnPropertyChanged(nameof(VersionSelections));
+            ErrorMessage = Properties.Resources.ErrorTemplateLoadFailed;
+        }
     }
 
     public override bool Validate()
@@ -73,7 +87,7 @@ public partial class TemplateOptionsStep : WizardStepBase
         return Task.CompletedTask;
     }
 
-    private void BuildSelections(Core.Models.Template template)
+    private void BuildSelections(IReadOnlyList<TemplateOptionDisplay> options)
     {
         if (Context == null)
         {
@@ -85,7 +99,7 @@ public partial class TemplateOptionsStep : WizardStepBase
         var contextSelections = Context.TemplateVariableSelections;
         var selectionItems = new List<TemplateVersionSelectionItem>();
 
-        foreach (var option in template.VersionOptions)
+        foreach (var option in options)
         {
             string? selectedValue = null;
 
@@ -93,17 +107,13 @@ public partial class TemplateOptionsStep : WizardStepBase
             {
                 selectedValue = existingValue;
             }
-            else if (template.DefaultSelections.TryGetValue(option.Key, out var templateDefaultValue))
-            {
-                selectedValue = templateDefaultValue;
-            }
             else if (!string.IsNullOrWhiteSpace(option.DefaultValue))
             {
                 selectedValue = option.DefaultValue;
             }
             else
             {
-                selectedValue = option.Options.FirstOrDefault()?.Value;
+                selectedValue = option.Values.FirstOrDefault()?.Value;
             }
 
             selectionItems.Add(new TemplateVersionSelectionItem(option, selectedValue));

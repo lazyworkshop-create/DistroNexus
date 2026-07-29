@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.0-rc] - 2026-07-23
+
+### Added
+
+- Health, recovery, monitoring, systemd/networking, USB, workspace, WSLg, container runtime, and trusted-template capability surfaces.
+- Core-backed PowerShell capability and systemd service automation, including `-WhatIf` previews for mutations.
+
+### Notes
+
+- This is a repository release candidate, not a published release. Windows/WSL, optional dependency, signed package, Store, and hardware acceptance remain external gates.
+
 ## [2.2.1] - 2026-03-22
 
 ### Added

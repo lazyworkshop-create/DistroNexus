@@ -12,10 +12,7 @@ namespace DistroNexus.Desktop.Wizard;
 /// </summary>
 public partial class InstallWizardWorkflowViewModel : ObservableObject
 {
-    private readonly ICatalogService _catalogService;
-    private readonly IWslManagerService _wslManager;
-    private readonly ISettingsService _settingsService;
-    private readonly ITemplateService _templateService;
+    private readonly IPowerShellModuleClient _moduleClient;
     private readonly ILogger<InstallWizardWorkflowViewModel> _logger;
     private InstallWizardStartupRequest? _startupRequest;
 
@@ -28,16 +25,10 @@ public partial class InstallWizardWorkflowViewModel : ObservableObject
     public event EventHandler<bool>? WizardCompleted;
 
     public InstallWizardWorkflowViewModel(
-        ICatalogService catalogService,
-        IWslManagerService wslManager,
-        ISettingsService settingsService,
-        ITemplateService templateService,
+        IPowerShellModuleClient moduleClient,
         ILogger<InstallWizardWorkflowViewModel> logger)
     {
-        _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
-        _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
-        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
-        _templateService = templateService ?? throw new ArgumentNullException(nameof(templateService));
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         _workflow = CreateWorkflow();
@@ -51,14 +42,14 @@ public partial class InstallWizardWorkflowViewModel : ObservableObject
         workflow.Completed += OnWorkflowCompleted;
 
         // Add steps in order
-        workflow.AddStep(new SelectDistributionStep(_catalogService, _templateService, _logger));
-        workflow.AddStep(new InstallPathStep(_settingsService, _wslManager, _logger));
-        workflow.AddStep(new UserConfigurationStep(_settingsService, _logger));
-        workflow.AddStep(new SelectTemplateStep(_templateService, _logger));
-        workflow.AddStep(new TemplateOptionsStep());
-        workflow.AddStep(new ReviewStep());
-        workflow.AddStep(new ProgressStep(_wslManager, _logger));
-        workflow.AddStep(new TemplateApplyStep(_templateService, _logger));
+        workflow.AddStep(new SelectDistributionStep(_moduleClient, _logger));
+        workflow.AddStep(new InstallPathStep(_moduleClient, _logger));
+        workflow.AddStep(new UserConfigurationStep(_moduleClient, _logger));
+        workflow.AddStep(new SelectTemplateStep(_moduleClient, _logger));
+        workflow.AddStep(new TemplateOptionsStep(_moduleClient));
+        workflow.AddStep(new ReviewStep(_moduleClient));
+        workflow.AddStep(new ProgressStep(_moduleClient, _logger));
+        workflow.AddStep(new TemplateApplyStep(_moduleClient, _logger));
         workflow.AddStep(new ResultStep());
 
         return workflow;
@@ -111,7 +102,7 @@ public partial class InstallWizardWorkflowViewModel : ObservableObject
         {
             try
             {
-                var packages = await _catalogService.LoadCatalogAsync();
+                var packages = await _moduleClient.GetPackagesAsync();
                 var selectedDistribution = packages.FirstOrDefault(package =>
                     string.Equals(package.Id, _startupRequest.SelectedDistributionId, StringComparison.OrdinalIgnoreCase));
 
@@ -134,10 +125,10 @@ public partial class InstallWizardWorkflowViewModel : ObservableObject
         {
             try
             {
-                var template = await _templateService.GetTemplateByIdAsync(_startupRequest.TemplateId);
+                var template = await _moduleClient.GetTemplateAsync(_startupRequest.TemplateId);
                 if (template != null)
                 {
-                    Workflow.Context.SelectedTemplate = template;
+                    Workflow.Context.SelectedTemplate = TemplatePresentationMapper.ToTemplate(template);
                     Workflow.Context.ApplyTemplateAfterInstall = true;
                 }
                 else

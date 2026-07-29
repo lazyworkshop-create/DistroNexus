@@ -1,104 +1,25 @@
+using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using DistroNexus.Desktop.Wizard;
 using DistroNexus.Desktop.Wizard.Steps;
+using Moq;
 
 namespace DistroNexus.Tests.ViewModels;
 
-public class TemplateOptionsStepTests
+public sealed class TemplateOptionsStepTests
 {
     [Fact]
-    public void ShouldSkip_ReturnsTrue_WhenNoAdvancedOptions()
+    public async Task OnEnterAsync_UsesBoundedOptionsFromModuleClient()
     {
-        var step = new TemplateOptionsStep();
-        var context = new WizardContext
-        {
-            ApplyTemplateAfterInstall = true,
-            SelectedTemplate = new Template
-            {
-                Id = "template-a",
-                Name = "Template A"
-            }
-        };
-
-        var skip = step.ShouldSkip(context);
-
-        Assert.True(skip);
-    }
-
-    [Fact]
-    public async Task Validate_Fails_WhenRequiredOptionIsMissing()
-    {
-        var step = new TemplateOptionsStep
-        {
-            Context = new WizardContext
-            {
-                ApplyTemplateAfterInstall = true,
-                SelectedTemplate = new Template
-                {
-                    Id = "template-a",
-                    Name = "Template A",
-                    VersionOptions =
-                    [
-                        new TemplateVersionOption
-                        {
-                            Key = "dotnet_version",
-                            Label = "Dotnet Version",
-                            Required = true,
-                            Options =
-                            [
-                                new TemplateOptionValue { Value = "", Label = "Select" },
-                                new TemplateOptionValue { Value = "8.0", Label = "8.0" }
-                            ]
-                        }
-                    ]
-                }
-            }
-        };
+        var client = new Mock<IPowerShellModuleClient>();
+        client.Setup(x => x.GetTemplateOptionsAsync("t1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new TemplateOptionDisplay("runtime", "Runtime", "", TemplateOptionType.Select, true, "20", [new TemplateOptionValueDisplay("20", "20", "")])]);
+        var step = new TemplateOptionsStep(client.Object) { Context = new WizardContext { ApplyTemplateAfterInstall = true, SelectedTemplate = new Template { Id = "t1" } } };
 
         await step.OnEnterAsync();
-        step.VersionSelections[0].SelectedValue = string.Empty;
 
-        var isValid = step.Validate();
-
-        Assert.False(isValid);
-        Assert.False(string.IsNullOrWhiteSpace(step.ErrorMessage));
-    }
-
-    [Fact]
-    public async Task OnExitAsync_PersistsSelectedVariables()
-    {
-        var step = new TemplateOptionsStep
-        {
-            Context = new WizardContext
-            {
-                ApplyTemplateAfterInstall = true,
-                SelectedTemplate = new Template
-                {
-                    Id = "template-a",
-                    Name = "Template A",
-                    VersionOptions =
-                    [
-                        new TemplateVersionOption
-                        {
-                            Key = "dotnet_version",
-                            Label = "Dotnet Version",
-                            DefaultValue = "8.0",
-                            Options =
-                            [
-                                new TemplateOptionValue { Value = "8.0", Label = "8.0" },
-                                new TemplateOptionValue { Value = "9.0", Label = "9.0" }
-                            ]
-                        }
-                    ]
-                }
-            }
-        };
-
-        await step.OnEnterAsync();
-        step.VersionSelections[0].SelectedValue = "9.0";
-        await step.OnExitAsync();
-
-        Assert.True(step.Context.TemplateVariableSelections.ContainsKey("dotnet_version"));
-        Assert.Equal("9.0", step.Context.TemplateVariableSelections["dotnet_version"]);
+        Assert.Single(step.VersionSelections);
+        Assert.Equal("20", step.VersionSelections[0].SelectedValue);
+        Assert.True(step.Validate());
     }
 }

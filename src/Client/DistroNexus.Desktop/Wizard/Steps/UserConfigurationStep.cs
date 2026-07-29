@@ -10,7 +10,7 @@ namespace DistroNexus.Desktop.Wizard.Steps;
 /// </summary>
 public partial class UserConfigurationStep : WizardStepBase
 {
-    private readonly ISettingsService _settingsService;
+    private readonly IPowerShellModuleClient _moduleClient;
     private readonly ILogger _logger;
 
     public override string StepId => "user-configuration";
@@ -32,9 +32,9 @@ public partial class UserConfigurationStep : WizardStepBase
         }
     }
 
-    public UserConfigurationStep(ISettingsService settingsService, ILogger logger)
+    public UserConfigurationStep(IPowerShellModuleClient moduleClient, ILogger logger)
     {
-        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -48,7 +48,7 @@ public partial class UserConfigurationStep : WizardStepBase
         // Load default settings if username not set
         if (Context != null && string.IsNullOrEmpty(Context.Username))
         {
-            var settings = _settingsService.LoadSettings();
+            var settings = await _moduleClient.GetSettingsAsync();
             Context.Username = settings.DefaultUsername;
             Context.WslVersion = settings.DefaultWslVersion;
             OnPropertyChanged(nameof(WslVersionIndex));
@@ -57,6 +57,12 @@ public partial class UserConfigurationStep : WizardStepBase
 
     public override bool Validate()
     {
+        if (Content is UserConfigurationStepView view && !view.ValidatePassword(out var passwordError))
+        {
+            ErrorMessage = passwordError ?? Properties.Resources.ErrorPasswordMismatch;
+            return false;
+        }
+
         if (Context?.CreateUser == true)
         {
             if (string.IsNullOrWhiteSpace(Context.Username))
@@ -72,26 +78,6 @@ public partial class UserConfigurationStep : WizardStepBase
                 return false;
             }
 
-            // Check password strength if provided
-            if (!string.IsNullOrWhiteSpace(Context.Password))
-            {
-                if (Context.Password.Length < 4)
-                {
-                    ErrorMessage = Properties.Resources.ErrorPasswordMinLength;
-                    return false;
-                }
-
-                if (Context.Password != Context.ConfirmPassword)
-                {
-                    ErrorMessage = Properties.Resources.ErrorPasswordMismatch;
-                    return false;
-                }
-            }
-            else if (!string.IsNullOrWhiteSpace(Context.ConfirmPassword))
-            {
-                ErrorMessage = Properties.Resources.ErrorPasswordMismatch;
-                return false;
-            }
         }
 
         // Validate WSL version
@@ -127,16 +113,20 @@ public partial class UserConfigurationStep : WizardStepBase
             return;
 
         // Load default settings
-        var settings = _settingsService.LoadSettings();
+        var settings = await _moduleClient.GetSettingsAsync();
 
         // Use root user for quick install (no password needed)
         Context.Username = "root";
-        Context.Password = string.Empty;
-        Context.ConfirmPassword = string.Empty;
         Context.CreateUser = false;
         Context.WslVersion = settings.DefaultWslVersion;
 
         _logger.LogInformation("Applied quick install user defaults: Username=root, WSL Version={Version}", 
             Context.WslVersion);
+    }
+
+    public override Task OnExitAsync()
+    {
+        if (Content is UserConfigurationStepView view) view.ClearPassword();
+        return Task.CompletedTask;
     }
 }

@@ -5,7 +5,6 @@ using DistroNexus.Core.Models;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -17,12 +16,10 @@ namespace DistroNexus.Desktop.ViewModels;
 /// </summary>
 public partial class InstallWizardViewModel : ObservableObject
 {
-    private readonly ICatalogService _catalogService;
-    private readonly IWslManagerService _wslManager;
-    private readonly ITerminalService _terminalService;
-    private readonly ISettingsService _settingsService;
+    private readonly IPowerShellModuleClient _moduleClient;
     private readonly ILogger<InstallWizardViewModel> _logger;
     private CancellationTokenSource? _installCts;
+    private string _defaultInstallPath = string.Empty;
 
     #region Observable Properties
 
@@ -86,11 +83,6 @@ public partial class InstallWizardViewModel : ObservableObject
     [ObservableProperty]
     private string _username = string.Empty;
 
-    [ObservableProperty]
-    private string _password = string.Empty;
-
-    [ObservableProperty]
-    private string _confirmPassword = string.Empty;
 
     [ObservableProperty]
     private bool _createUser = true;
@@ -119,16 +111,10 @@ public partial class InstallWizardViewModel : ObservableObject
     public event EventHandler<bool>? WizardCompleted;
 
     public InstallWizardViewModel(
-        ICatalogService catalogService,
-        IWslManagerService wslManager,
-        ITerminalService terminalService,
-        ISettingsService settingsService,
+        IPowerShellModuleClient moduleClient,
         ILogger<InstallWizardViewModel> logger)
     {
-        _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
-        _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
-        _terminalService = terminalService ?? throw new ArgumentNullException(nameof(terminalService));
-        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -140,13 +126,14 @@ public partial class InstallWizardViewModel : ObservableObject
             _logger.LogInformation("Initializing install wizard");
 
             // Load default settings
-            var settings = _settingsService.LoadSettings();
-            InstallPath = settings.DefaultInstallPath;
+            var settings = await _moduleClient.GetSettingsAsync();
+            _defaultInstallPath = settings.DefaultInstallPath;
+            InstallPath = _defaultInstallPath;
             WslVersion = settings.DefaultWslVersion;
             Username = settings.DefaultUsername;
 
             // Load available distributions
-            var packages = await _catalogService.LoadCatalogAsync();
+            var packages = await _moduleClient.GetPackagesAsync();
             AvailableDistributions.Clear();
             foreach (var package in packages)
             {
@@ -213,33 +200,21 @@ public partial class InstallWizardViewModel : ObservableObject
             _logger.LogInformation("Starting installation of {DistroName} to {Path}", 
                 SelectedDistribution?.Name, InstallPath);
 
-            var options = new InstallOptions
-            {
-                InstanceName = InstanceName,
-                Package = SelectedDistribution,
-                InstallPath = InstallPath,
-                Username = CreateUser ? Username : "root",
-                Password = CreateUser ? Password : null,
-                WslVersion = WslVersion,
-                SetAsDefault = SetAsDefault,
-                LaunchAfterInstall = LaunchAfterInstall,
-                UseLocalCache = UseLocalCache,
-                InitCommands = GetInitializationCommands()
-            };
-
             // Clear previous logs
             InstallLogs.Clear();
             AddInstallLog(Properties.Resources.LogStartingInstall);
 
-            // Progress callback
-            var progress = new Progress<(double percentage, string message)>(p =>
-            {
-                InstallProgress = p.percentage;
-                InstallStatusMessage = p.message;
-                AddInstallLog($"[{p.percentage:F1}%] {p.message}");
-            });
-
-            await _wslManager.InstallInstanceAsync(options, progress, _installCts.Token);
+            var packageId = SelectedDistribution?.Id ?? throw new InvalidOperationException("A package is required.");
+            InstallProgress = 15;
+            var source = await _moduleClient.ResolveInstallSourceAsync(packageId, _installCts.Token);
+            InstallProgress = 30;
+            var preview = await _moduleClient.PreviewPackageAcquisitionAsync(source.PackageId, _installCts.Token);
+            var package = await _moduleClient.AcquirePackageAsync(preview.PreviewToken, _installCts.Token);
+            InstallProgress = 55;
+            var target = await _moduleClient.PreviewInstallTargetAsync(InstallPath, _installCts.Token);
+            if (!target.IsEligible) throw new InvalidOperationException(target.OutcomeCode);
+            var result = await _moduleClient.InstallVerifiedInstanceWithTargetAsync(package.PackageReference, InstanceName, target.PreviewToken, CreateUser ? Username : "root", "bash", null, SetAsDefault, cancellationToken: _installCts.Token);
+            if (!result.Succeeded) throw new InvalidOperationException(result.OutcomeCode);
 
             InstallProgress = 100;
             InstallStatusMessage = Properties.Resources.InstallSuccessLabel;
@@ -342,9 +317,8 @@ public partial class InstallWizardViewModel : ObservableObject
             // Set default values for quick mode
             if (IsQuickMode)
             {
-                InstallPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DistroNexus", "Instances");
+                InstallPath = _defaultInstallPath;
                 Username = "user";
-                Password = "password";
                 CreateUser = true;
                 SetAsDefault = false;
                 UseLocalCache = true;
@@ -395,16 +369,6 @@ public partial class InstallWizardViewModel : ObservableObject
                         ErrorMessage = Properties.Resources.ValMsgEnterUsername;
                         return false;
                     }
-                    if (string.IsNullOrWhiteSpace(Password))
-                    {
-                        ErrorMessage = Properties.Resources.ValMsgEnterPassword;
-                        return false;
-                    }
-                    if (Password != ConfirmPassword)
-                    {
-                        ErrorMessage = Properties.Resources.ValMsgPasswordsNoMatch;
-                        return false;
-                    }
                 }
                 break;
 
@@ -415,11 +379,6 @@ public partial class InstallWizardViewModel : ObservableObject
                     if (string.IsNullOrWhiteSpace(Username))
                     {
                         ErrorMessage = Properties.Resources.ValMsgEnterUsername;
-                        return false;
-                    }
-                    if (Password != ConfirmPassword)
-                    {
-                        ErrorMessage = Properties.Resources.ValMsgPasswordsNoMatch;
                         return false;
                     }
                 }
@@ -515,37 +474,8 @@ public partial class InstallWizardViewModel : ObservableObject
 
         try
         {
-            var fullPath = Path.GetFullPath(InstallPath);
-            var instancePath = Path.Combine(fullPath, InstanceName);
-
-            if (Directory.Exists(instancePath))
-            {
-                IsPathValid = false;
-                PathValidationMessage = Properties.Resources.ValMsgDirExists;
-                return;
-            }
-
-            // Check if parent directory exists or can be created
-            var parentDir = Path.GetDirectoryName(fullPath);
-            if (!string.IsNullOrEmpty(parentDir) && !Directory.Exists(parentDir))
-            {
-                // Check if we can create it
-                try
-                {
-                    var testPath = Path.Combine(parentDir, ".distronexus_test");
-                    Directory.CreateDirectory(testPath);
-                    Directory.Delete(testPath);
-                }
-                catch
-                {
-                    IsPathValid = false;
-                    PathValidationMessage = Properties.Resources.ValMsgCannotCreateDir;
-                    return;
-                }
-            }
-
             IsPathValid = true;
-            PathValidationMessage = string.Format(Properties.Resources.ValMsgInstallTarget, instancePath);
+            PathValidationMessage = "The installation target will be validated before installation.";
         }
         catch (Exception ex)
         {

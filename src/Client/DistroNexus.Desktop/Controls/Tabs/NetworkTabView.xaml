@@ -27,6 +27,18 @@
             <StackPanel Visibility="{Binding ShowStoppedPlaceholder, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
 
                 <!-- IP address + Refresh row -->
+                <StackPanel Margin="0,0,0,12">
+                    <TextBlock Text="{lex:Loc Network_Mode}" FontWeight="SemiBold"/>
+                    <StackPanel Orientation="Horizontal"><ComboBox ItemsSource="{Binding AvailableModes}" SelectedItem="{Binding SelectedNetworkingMode}" Width="130" IsEnabled="{Binding IsNetworkingModeAvailable}"/><ui:Button Content="{lex:Loc Network_PreviewApply}" Command="{Binding PreviewAndApplyNetworkingModeCommand}" IsEnabled="{Binding IsNetworkingModeAvailable}" Margin="4,0"/></StackPanel>
+                    <TextBlock Text="{Binding NetworkingModeRestartImpact}"/><TextBlock Text="{Binding NetworkingModeEvidence}" TextWrapping="Wrap"/>
+                    <TextBlock Text="{lex:Loc Network_Settings}" FontWeight="SemiBold" Margin="0,8,0,0"/>
+                    <WrapPanel IsEnabled="{Binding IsNetworkSettingsAvailable}"><CheckBox Content="{lex:Loc Network_DnsTunneling}" IsThreeState="True" IsChecked="{Binding DnsTunnelingEnabled}"/><CheckBox Content="{lex:Loc Network_AutoProxy}" IsThreeState="True" IsChecked="{Binding AutoProxyEnabled}" Margin="8,0"/><CheckBox Content="{lex:Loc Network_Firewall}" IsThreeState="True" IsChecked="{Binding FirewallEnabled}" Margin="8,0"/><CheckBox Content="{lex:Loc Network_HostAddressLoopback}" IsThreeState="True" IsChecked="{Binding HostAddressLoopbackEnabled}" Margin="8,0"/><CheckBox Content="{lex:Loc Network_BestEffortDnsParsing}" IsThreeState="True" IsChecked="{Binding BestEffortDnsParsingEnabled}" Margin="8,0"/></WrapPanel>
+                    <StackPanel Orientation="Horizontal" IsEnabled="{Binding IsNetworkSettingsAvailable}"><TextBlock Text="{lex:Loc Network_IgnoredPorts}" VerticalAlignment="Center"/><TextBox Text="{Binding IgnoredPorts, UpdateSourceTrigger=PropertyChanged}" Width="160" Margin="4,0"/><ui:Button Content="{lex:Loc Network_PreviewApply}" Command="{Binding PreviewAndApplyNetworkSettingsCommand}" Margin="4,0"/></StackPanel>
+                    <TextBlock Text="{Binding NetworkSettingsEvidence}" TextWrapping="Wrap"/>
+                    <TextBlock Text="{lex:Loc Network_ConnectivityDiagnostic}" FontWeight="SemiBold" Margin="0,8,0,0"/>
+                    <StackPanel Orientation="Horizontal"><ComboBox ItemsSource="{Binding ProbeKinds}" SelectedItem="{Binding ProbeKind}" Width="120"/><TextBox Text="{Binding ProbeHost, UpdateSourceTrigger=PropertyChanged}" Width="170"/><TextBox Text="{Binding ProbePort}" Width="70" Margin="4,0"/><ui:Button Content="{lex:Loc Network_RunProbe}" Command="{Binding RunProbeCommand}"/><ui:Button Content="{lex:Loc Network_FirewallPreview}" Command="{Binding PreviewFirewallCommand}" Margin="4,0"/></StackPanel>
+                    <TextBlock Text="{Binding ProbeResult}"/><TextBlock Text="{Binding FirewallStatus}" TextWrapping="Wrap"/><TextBlock Text="{Binding CollisionStatus}" TextWrapping="Wrap"/><TextBlock Text="{lex:Loc Network_OwnedFirewallRules}" FontWeight="SemiBold"/><TextBlock Text="{Binding OwnedFirewallRules}" TextWrapping="Wrap"/><StackPanel Orientation="Horizontal"><TextBox Text="{Binding FirewallRuleId, UpdateSourceTrigger=PropertyChanged}" Width="220"/><ui:Button Content="{lex:Loc Network_PreviewRemoveFirewall}" Command="{Binding PreviewRemoveFirewallCommand}" Margin="4,0"/></StackPanel><TextBlock Text="{Binding FirewallResult}" TextWrapping="Wrap"/>
+                </StackPanel>
                 <Grid Margin="0,0,0,12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -63,10 +75,12 @@
                                             Binding="{Binding Protocol}" Width="60"/>
                         <DataGridTextColumn Header="{lex:Loc NetworkTab_LocalAddress}"
                                             Binding="{Binding LocalAddress}" Width="120"/>
+                        <DataGridTextColumn Header="{lex:Loc Network_AddressFamily}" Binding="{Binding AddressFamily}" Width="70"/>
                         <DataGridTextColumn Header="{lex:Loc NetworkTab_Port}"
                                             Binding="{Binding Port}" Width="60"/>
                         <DataGridTextColumn Header="{lex:Loc NetworkTab_Process}"
                                             Binding="{Binding ProcessName}" Width="*"/>
+                        <DataGridTextColumn Header="{lex:Loc Network_Collision}" Binding="{Binding ConflictGuidance}" Width="150"/>
                         <DataGridTemplateColumn Header="{lex:Loc NetworkTab_WindowsProxy}" Width="90">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
@@ -90,6 +104,7 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="" Width="60"><DataGridTemplateColumn.CellTemplate><DataTemplate><ui:Button Content="{lex:Loc Network_Open}" Command="{Binding DataContext.OpenInBrowserCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
                     </DataGrid.Columns>
                 </DataGrid>
 

@@ -1,163 +1,31 @@
-# Invoke-DistroNexusBackup.Tests.ps1
-# Unit tests for E-04 — On-demand backup invocation
-
+# Public contract tests for the constrained manual backup facade.
 BeforeAll {
     $rootPath = Resolve-Path "$PSScriptRoot/../../../.."
-    $modulePath = Join-Path $rootPath "src\PowerShell"
-    Import-Module (Join-Path $modulePath "DistroNexus.psd1") -Force
-
-    $helpersPath = Join-Path $PSScriptRoot "..\..\Helpers"
-    . (Join-Path $helpersPath "MockHelpers.ps1")
-    . (Join-Path $helpersPath "TestData.ps1")
-
-    $script:originalAppData = $env:APPDATA
+    Import-Module (Join-Path $rootPath 'src\PowerShell\DistroNexus.psd1') -Force
 }
 
-AfterAll {
-    $env:APPDATA = $script:originalAppData
-}
-
-Describe "Invoke-DistroNexusBackup" -Tag 'Unit', 'Public', 'Backup' {
-
-    BeforeEach {
-        $env:APPDATA = $TestDrive
-        $distroNexusPath = Join-Path $env:APPDATA "DistroNexus"
-        New-Item -Path $distroNexusPath -ItemType Directory -Force | Out-Null
-    }
-
-    Context "Parameter validation" {
-        It "Should require -Name parameter" {
-            { Invoke-DistroNexusBackup -Destination "C:\Backups" -RetentionCount 5 } | Should -Throw
-        }
-
-        It "Should require -Destination parameter" {
-            { Invoke-DistroNexusBackup -Name "Ubuntu-22.04" -RetentionCount 5 } | Should -Throw
-        }
-
-        It "Should require -RetentionCount parameter" {
-            { Invoke-DistroNexusBackup -Name "Ubuntu-22.04" -Destination "C:\Backups" } | Should -Throw
+Describe 'Invoke-DistroNexusBackup fixed route' -Tag 'Unit', 'Public', 'Backup' {
+    It 'uses the manual preview and a token-only execute payload' {
+        InModuleScope DistroNexus {
+            Mock Invoke-DistroNexusWorkspaceBridge {
+                if ($Operation -eq 'backup.manual.preview.v1') { return [pscustomobject]@{ Token=('c' * 32) } }
+                [pscustomobject]@{ Succeeded=$true; OutcomeCode='Completed' }
+            }
+            Invoke-DistroNexusBackup -Name Ubuntu -Destination 'C:\Backups' -RetentionCount 3 -Confirm:$false | Out-Null
+            Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -ParameterFilter { $Operation -eq 'backup.manual.preview.v1' -and $Payload.Destination -eq 'C:\Backups' } -Times 1 -Exactly
+            Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -ParameterFilter { $Operation -eq 'backup.execute.v1' -and @($Payload.Keys) -eq @('PreviewToken') -and $Payload.PreviewToken -eq ('c' * 32) } -Times 1 -Exactly
         }
     }
 
-    Context "Backup filename pattern" {
-        It "Should use Name-backup-yyyyMMdd-HHmmss.tar pattern" {
-            InModuleScope DistroNexus {
-                Mock Get-DistroNexusInstance {
-                    return [PSCustomObject]@{ Name = "Ubuntu-22.04"; State = "Stopped"; Version = 2 }
-                } -ModuleName DistroNexus
-
-                Mock Export-DistroNexusInstance { return $null } -ModuleName DistroNexus
-
-                $backupDir = Join-Path $TestDrive "Backups"
-                New-Item -Path $backupDir -ItemType Directory -Force | Out-Null
-
-                # Verify parameters
-                (Get-Command Invoke-DistroNexusBackup).Parameters.ContainsKey('Name')           | Should -Be $true
-                (Get-Command Invoke-DistroNexusBackup).Parameters.ContainsKey('Destination')    | Should -Be $true
-                (Get-Command Invoke-DistroNexusBackup).Parameters.ContainsKey('RetentionCount') | Should -Be $true
-            }
-        }
+    It 'rejects missing required typed fields before reaching the bridge' {
+        { Invoke-DistroNexusBackup -Name Ubuntu } | Should -Throw
     }
 
-    Context "Instance lifecycle" {
-        It "Should stop running instance before backup and restart after" {
-            InModuleScope DistroNexus {
-                $script:stopCalled    = $false
-                $script:startCalled   = $false
-                $script:exportCalled  = $false
-
-                Mock Get-DistroNexusInstance {
-                    return [PSCustomObject]@{ Name = "Ubuntu-22.04"; State = "Running"; Version = 2 }
-                } -ModuleName DistroNexus
-
-                Mock Stop-DistroNexusInstance {
-                    $script:stopCalled = $true
-                } -ModuleName DistroNexus
-
-                Mock Start-DistroNexusInstance {
-                    $script:startCalled = $true
-                } -ModuleName DistroNexus
-
-                Mock Export-DistroNexusInstance {
-                    $script:exportCalled = $true
-                } -ModuleName DistroNexus
-
-                $backupDir = Join-Path $TestDrive "BackupsLifecycle"
-                New-Item -Path $backupDir -ItemType Directory -Force | Out-Null
-
-                Invoke-DistroNexusBackup -Name "Ubuntu-22.04" -Destination $backupDir -RetentionCount 3
-
-                $script:stopCalled   | Should -Be $true
-                $script:exportCalled | Should -Be $true
-                $script:startCalled  | Should -Be $true
-            }
-        }
-
-        It "Should not restart a stopped instance after backup" {
-            InModuleScope DistroNexus {
-                $script:startCalled = $false
-
-                Mock Get-DistroNexusInstance {
-                    return [PSCustomObject]@{ Name = "Debian"; State = "Stopped"; Version = 2 }
-                } -ModuleName DistroNexus
-
-                Mock Export-DistroNexusInstance { } -ModuleName DistroNexus
-
-                Mock Start-DistroNexusInstance {
-                    $script:startCalled = $true
-                } -ModuleName DistroNexus
-
-                $backupDir = Join-Path $TestDrive "BackupsStopped"
-                New-Item -Path $backupDir -ItemType Directory -Force | Out-Null
-
-                Invoke-DistroNexusBackup -Name "Debian" -Destination $backupDir -RetentionCount 3
-
-                $script:startCalled | Should -Be $false
-            }
-        }
-    }
-
-    Context "Retention enforcement" {
-        It "Should delete oldest backup files when count exceeds RetentionCount" {
-            InModuleScope DistroNexus {
-                Mock Get-DistroNexusInstance {
-                    return [PSCustomObject]@{ Name = "Ubuntu-22.04"; State = "Stopped"; Version = 2 }
-                } -ModuleName DistroNexus
-
-                Mock Export-DistroNexusInstance { } -ModuleName DistroNexus
-
-                $backupDir = Join-Path $TestDrive "BackupsRetention"
-                New-Item -Path $backupDir -ItemType Directory -Force | Out-Null
-
-                # Create 5 existing "old" backup files
-                1..5 | ForEach-Object {
-                    $dt = (Get-Date).AddDays(-$_).ToString("yyyyMMdd-HHmmss")
-                    $null = New-Item -Path (Join-Path $backupDir "Ubuntu-22.04-backup-$dt.tar") -ItemType File -Force
-                }
-
-                Invoke-DistroNexusBackup -Name "Ubuntu-22.04" -Destination $backupDir -RetentionCount 3
-
-                $remaining = Get-ChildItem $backupDir -Filter "Ubuntu-22.04-backup-*.tar" | Measure-Object
-                $remaining.Count | Should -BeLessOrEqual 3
-            }
-        }
-    }
-
-    Context "When instance does not exist" {
-        It "Should write error" {
-            InModuleScope DistroNexus {
-                Mock Get-DistroNexusInstance { return $null } -ModuleName DistroNexus
-
-                $backupDir = Join-Path $TestDrive "BackupsNotFound"
-                New-Item -Path $backupDir -ItemType Directory -Force | Out-Null
-
-                $errorRecord = $null
-                Invoke-DistroNexusBackup -Name "NonExistent" -Destination $backupDir `
-                    -RetentionCount 5 `
-                    -ErrorVariable errorRecord -ErrorAction SilentlyContinue
-
-                $errorRecord | Should -Not -BeNullOrEmpty
-            }
+    It 'does not issue a preview or execute under WhatIf' {
+        InModuleScope DistroNexus {
+            Mock Invoke-DistroNexusWorkspaceBridge { throw 'must not run' }
+            (Invoke-DistroNexusBackup -Name Ubuntu -RetentionCount 3 -WhatIf).OutcomeCode | Should -Be 'WhatIf'
+            Assert-MockCalled Invoke-DistroNexusWorkspaceBridge -Times 0
         }
     }
 }

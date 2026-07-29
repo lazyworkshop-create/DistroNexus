@@ -19,10 +19,7 @@ namespace DistroNexus.Desktop.ViewModels;
 /// </summary>
 public partial class SettingsViewModel : ObservableObject
 {
-    private readonly ISettingsService _settingsService;
-    private readonly ICatalogService _catalogService;
-    private readonly ITerminalService _terminalService;
-    private readonly IStoreComplianceModeService _storeComplianceModeService;
+    private readonly IPowerShellModuleClient _moduleClient;
     private readonly ILogger<SettingsViewModel> _logger;
     private System.Timers.Timer? _autoSaveTimer;
 
@@ -52,9 +49,6 @@ public partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _enableLogging = true;
-
-    [ObservableProperty]
-    private string _logPath = string.Empty;
 
     [ObservableProperty]
     private bool _checkUpdatesOnStartup = true;
@@ -114,9 +108,6 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private ObservableCollection<CachedPackageInfo> _cachedPackages = [];
 
-    [ObservableProperty]
-    private string? _powerShellModulePath;
-
     /// <summary>WSL Global Configuration editor section (E-01).</summary>
     public WslConfigSectionViewModel WslConfigSection { get; }
 
@@ -124,23 +115,14 @@ public partial class SettingsViewModel : ObservableObject
     public ManageTagsViewModel ManageTags { get; }
 
     public SettingsViewModel(
-        ISettingsService settingsService, 
-        ICatalogService catalogService,
-        ITerminalService terminalService,
-        IStoreComplianceModeService storeComplianceModeService,
         ILogger<SettingsViewModel> logger,
-        IWslConfigService wslConfigService,
-        IWslManagerService wslManagerService,
-        ITagService tagService,
+        IPowerShellModuleClient moduleClient,
         IDialogService dialogService)
     {
-        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
-        _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
-        _terminalService = terminalService ?? throw new ArgumentNullException(nameof(terminalService));
-        _storeComplianceModeService = storeComplianceModeService ?? throw new ArgumentNullException(nameof(storeComplianceModeService));
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        WslConfigSection = new WslConfigSectionViewModel(wslConfigService, wslManagerService, dialogService);
-        ManageTags = new ManageTagsViewModel(tagService, wslManagerService, dialogService);
+        WslConfigSection = new WslConfigSectionViewModel(moduleClient, dialogService);
+        ManageTags = new ManageTagsViewModel(moduleClient, dialogService);
         
         // Initialize auto-save timer
         SetupAutoSaveTimer();
@@ -166,8 +148,9 @@ public partial class SettingsViewModel : ObservableObject
         {
             _logger.LogInformation("Loading settings");
 
-            var settings = _settingsService.LoadSettings();
-            var isStoreComplianceMode = _storeComplianceModeService.IsStoreComplianceModeEnabled();
+            var bootstrap = await _moduleClient.GetBootstrapSettingsAsync();
+            var settings = bootstrap.Settings;
+            var isStoreComplianceMode = (await _moduleClient.GetStoreComplianceStatusAsync()).IsStoreManaged;
 
             DefaultInstallPath = settings.DefaultInstallPath;
             PackageCachePath = settings.PackageCachePath;
@@ -175,7 +158,6 @@ public partial class SettingsViewModel : ObservableObject
             DefaultWslVersion = settings.DefaultWslVersion;
             DefaultUsername = settings.DefaultUsername;
             EnableLogging = settings.EnableLogging;
-            LogPath = settings.LogPath;
             CheckUpdatesOnStartup = settings.CheckUpdatesOnStartup;
             IsUpdateCheckOnStartupAvailable = !isStoreComplianceMode;
 
@@ -192,7 +174,6 @@ public partial class SettingsViewModel : ObservableObject
             MaxRetryAttempts = settings.MaxRetryAttempts;
             AutoSaveEnabled = settings.AutoSaveEnabled;
             AutoSaveInterval = settings.AutoSaveInterval;
-            PowerShellModulePath = settings.PowerShellModulePath;
 
             // Load available distributions for default selection
             await LoadDistributionsAsync();
@@ -214,7 +195,7 @@ public partial class SettingsViewModel : ObservableObject
     {
         try
         {
-            var distributions = await _catalogService.LoadCatalogAsync();
+            var distributions = await _moduleClient.GetPackagesAsync();
             AvailableDistributions.Clear();
             foreach (var distro in distributions)
             {
@@ -234,30 +215,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             _logger.LogInformation("Saving settings");
 
-            var settings = new GlobalSettings
-            {
-                DefaultInstallPath = DefaultInstallPath,
-                PackageCachePath = PackageCachePath,
-                TerminalStartPath = TerminalStartPath,
-                DefaultWslVersion = DefaultWslVersion,
-                DefaultUsername = DefaultUsername,
-                DefaultDistributionId = DefaultDistribution?.Id ?? string.Empty,
-                EnableLogging = EnableLogging,
-                LogPath = LogPath,
-                CheckUpdatesOnStartup = IsUpdateCheckOnStartupAvailable && CheckUpdatesOnStartup,
-                CatalogUrl = CatalogUrl,
-                Theme = Theme,
-                Language = Language,
-                ShowConfirmationDialogs = ShowConfirmationDialogs,
-                MaxConcurrentDownloads = MaxConcurrentDownloads,
-                AutoRetryDownloads = AutoRetryDownloads,
-                MaxRetryAttempts = MaxRetryAttempts,
-                AutoSaveEnabled = AutoSaveEnabled,
-                AutoSaveInterval = AutoSaveInterval,
-                PowerShellModulePath = PowerShellModulePath
-            };
-
-            _settingsService.SaveSettings(settings);
+            await _moduleClient.SaveSettingsAsync(CreateSettingsUpdate());
 
             // Apply theme immediately
             await ApplyThemeAsync(Theme);
@@ -307,7 +265,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             _logger.LogInformation("Resetting settings to defaults");
 
-            _settingsService.ResetSettings();
+            await _moduleClient.ResetSettingsAsync();
             await LoadSettingsAsync();
 
             await ShowAlert(Properties.Resources.Success, Properties.Resources.StatusSettingsReset);
@@ -374,22 +332,6 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void BrowseLogPath()
-    {
-        var dialog = new Microsoft.Win32.OpenFolderDialog
-        {
-            Title = "Select log file path",
-            InitialDirectory = LogPath
-        };
-
-        if (dialog.ShowDialog() == true)
-        {
-            LogPath = dialog.FolderName;
-            IsDirty = true;
-        }
-    }
-
-    [RelayCommand]
     private void BrowseTerminalPath()
     {
         var dialog = new Microsoft.Win32.OpenFolderDialog
@@ -405,45 +347,6 @@ public partial class SettingsViewModel : ObservableObject
             TerminalStartPath = dialog.FolderName;
             IsDirty = true;
         }
-    }
-
-    [RelayCommand]
-    private async Task BrowsePowerShellModulePath()
-    {
-        var dialog = new Microsoft.Win32.OpenFolderDialog
-        {
-            Title = "Select PowerShell Module Directory (containing DistroNexus.psd1)",
-            InitialDirectory = !string.IsNullOrEmpty(PowerShellModulePath) && Directory.Exists(PowerShellModulePath)
-                ? PowerShellModulePath
-                : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
-        };
-
-        if (dialog.ShowDialog() == true)
-        {
-            var selectedPath = dialog.FolderName;
-
-            // Validate that the directory contains DistroNexus.psd1
-            var manifestPath = Path.Combine(selectedPath, "DistroNexus.psd1");
-            if (File.Exists(manifestPath))
-            {
-                PowerShellModulePath = selectedPath;
-                IsDirty = true;
-                _logger.LogInformation("PowerShell module path set to: {Path}", selectedPath);
-            }
-            else
-            {
-                await ShowAlert(Properties.Resources.TitleInvalidModulePath, Properties.Resources.ErrorInvalidModulePath);
-                _logger.LogWarning("Invalid PowerShell module path selected: {Path}", selectedPath);
-            }
-        }
-    }
-
-    [RelayCommand]
-    private void ClearPowerShellModulePath()
-    {
-        PowerShellModulePath = null;
-        IsDirty = true;
-        _logger.LogInformation("PowerShell module path cleared. Will use auto-detection.");
     }
 
     partial void OnDefaultInstallPathChanged(string value) => IsDirty = true;
@@ -474,7 +377,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             _logger.LogInformation("Refreshing cache info");
 
-            var cacheInfo = await _catalogService.GetCacheUsageAsync();
+            var cacheInfo = await _moduleClient.GetPackageCacheUsageAsync();
 
             CachePath = cacheInfo.CachePath;
             CachedPackageCount = cacheInfo.PackageCount;
@@ -513,7 +416,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             _logger.LogInformation("Clearing cache");
 
-            var deletedCount = await _catalogService.ClearAllCacheAsync();
+            var deletedCount = (await _moduleClient.ClearPackageCacheAsync()).DeletedCount;
 
             await RefreshCacheInfoAsync();
 
@@ -549,8 +452,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             _logger.LogInformation("Deleting cached package: {PackageId}", package.PackageId);
 
-            // Use catalog service to delete the package
-            await _catalogService.DeleteCachedPackageAsync(package.PackageId);
+            await _moduleClient.DeletePackageCacheEntryAsync(package.CacheEntryId);
 
             await RefreshCacheInfoAsync();
 
@@ -571,21 +473,8 @@ public partial class SettingsViewModel : ObservableObject
     {
         try
         {
-            var cachePath = _catalogService.GetPackageCachePath();
-
-            if (!string.IsNullOrEmpty(cachePath))
-            {
-                var success = await _terminalService.OpenFileExplorerAsync(cachePath);
-                
-                if (!success)
-                {
-                    await ShowAlert(Properties.Resources.ErrorTitle, Properties.Resources.OpenCacheFolderError);
-                }
-            }
-            else
-            {
-                await ShowAlert(Properties.Resources.InformationTitle, Properties.Resources.CachePathNotConfigured);
-            }
+            if (!(await _moduleClient.OpenPackageCacheFolderAsync()).Succeeded)
+                await ShowAlert(Properties.Resources.ErrorTitle, Properties.Resources.OpenCacheFolderError);
         }
         catch (Exception ex)
         {
@@ -648,29 +537,7 @@ public partial class SettingsViewModel : ObservableObject
             {
                 _logger.LogInformation("Auto-saving settings");
                 
-                var settings = new GlobalSettings
-                {
-                    DefaultInstallPath = DefaultInstallPath,
-                    PackageCachePath = PackageCachePath,
-                    TerminalStartPath = TerminalStartPath,
-                    DefaultWslVersion = DefaultWslVersion,
-                    DefaultUsername = DefaultUsername,
-                    DefaultDistributionId = DefaultDistribution?.Id ?? string.Empty,
-                    EnableLogging = EnableLogging,
-                    LogPath = LogPath,
-                    CheckUpdatesOnStartup = IsUpdateCheckOnStartupAvailable && CheckUpdatesOnStartup,
-                    CatalogUrl = CatalogUrl,
-                    Theme = Theme,
-                    Language = Language,
-                    ShowConfirmationDialogs = ShowConfirmationDialogs,
-                    MaxConcurrentDownloads = MaxConcurrentDownloads,
-                    AutoRetryDownloads = AutoRetryDownloads,
-                    MaxRetryAttempts = MaxRetryAttempts,
-                    AutoSaveEnabled = AutoSaveEnabled,
-                    AutoSaveInterval = AutoSaveInterval
-                };
-
-                _settingsService.SaveSettings(settings);
+                await _moduleClient.SaveSettingsAsync(CreateSettingsUpdate());
 
                 IsDirty = false;
                 AutoSaveStatus = $"Last auto-saved: {DateTime.Now:HH:mm:ss}";
@@ -694,4 +561,25 @@ public partial class SettingsViewModel : ObservableObject
         _autoSaveTimer?.Dispose();
         _autoSaveTimer = null;
     }
+
+
+    private DistroNexusSettingsUpdate CreateSettingsUpdate() => new(
+        DefaultInstallPath,
+        PackageCachePath,
+        TerminalStartPath,
+        DefaultWslVersion,
+        DefaultUsername,
+        DefaultDistribution?.Id ?? string.Empty,
+        EnableLogging,
+        null,
+        IsUpdateCheckOnStartupAvailable && CheckUpdatesOnStartup,
+        CatalogUrl,
+        Theme,
+        Language,
+        ShowConfirmationDialogs,
+        MaxConcurrentDownloads,
+        AutoRetryDownloads,
+        MaxRetryAttempts,
+        AutoSaveEnabled,
+        AutoSaveInterval);
 }

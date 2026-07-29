@@ -152,6 +152,7 @@
                 <StackPanel>
                     <TextBlock Text="{lex:Loc BackupTab_HistoryTitle}"
                                FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                    <ComboBox ItemsSource="{Binding HistoryFilters}" SelectedItem="{Binding SelectedHistoryFilter}" Margin="0,0,0,8" Width="160" HorizontalAlignment="Right"/>
 
                     <!-- Empty state -->
                     <TextBlock Text="{lex:Loc BackupTab_NoHistory}"
@@ -203,6 +204,63 @@
                             </DataGridTemplateColumn>
                         </DataGrid.Columns>
                     </DataGrid>
+                </StackPanel>
+            </ui:Card>
+
+            <!-- Recovery points use Core-generated previews and never overwrite an instance. -->
+            <ui:Card Padding="16" Margin="0,12,0,0">
+                <StackPanel>
+                    <TextBlock Text="{lex:Loc Recovery_Title}" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                    <Grid Margin="0,0,0,8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBox Grid.Column="0" Text="{Binding RecoveryName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,0"/>
+                        <TextBox Grid.Column="1" Text="{Binding RecoveryDescription, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,0"/>
+                        <ui:Button Grid.Column="2" Content="{lex:Loc Recovery_Create}" Command="{Binding CreateRecoveryPointCommand}"/>
+                    </Grid>
+                    <Grid Margin="0,0,0,8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <ui:TextBox Grid.Column="0" Text="{Binding RecoveryTags, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="{lex:Loc Recovery_Tags}" Margin="0,0,8,0"/>
+                        <ComboBox Grid.Column="1" ItemsSource="{Binding RecoveryFormats}" SelectedItem="{Binding RecoveryFormat}" Margin="0,0,12,0">
+                            <ComboBox.Style><Style TargetType="ComboBox"><Style.Triggers><DataTrigger Binding="{Binding CanUseVhdx}" Value="False"><Setter Property="ToolTip" Value="{lex:Loc Recovery_VhdxUnavailable}"/></DataTrigger></Style.Triggers></Style></ComboBox.Style>
+                        </ComboBox>
+                        <CheckBox Grid.Column="2" Content="{lex:Loc Recovery_StopAndRestart}" IsChecked="{Binding StopAndRestartForRecovery}"/>
+                    </Grid>
+                    <DataGrid ItemsSource="{Binding RecoveryPoints}" SelectedItem="{Binding SelectedRecoveryPoint}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" MinHeight="100">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="{lex:Loc Recovery_ColumnName}" Binding="{Binding Manifest.Name}" Width="*"/>
+                            <DataGridTextColumn Header="{lex:Loc Recovery_ColumnCreated}" Binding="{Binding Manifest.CreatedAt, StringFormat='yyyy-MM-dd HH:mm'}" Width="160"/>
+                            <DataGridTextColumn Header="{lex:Loc Recovery_ColumnVerification}" Binding="{Binding Verification}" Width="120"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+                        <ui:Button Content="{lex:Loc Recovery_Verify}" Command="{Binding VerifyRecoveryPointCommand}" Margin="0,0,8,0"/>
+                        <ui:Button Content="{lex:Loc Recovery_Reveal}" Command="{Binding RevealRecoveryPointCommand}" Margin="0,0,8,0"/>
+                        <ui:Button Content="{lex:Loc Recovery_Delete}" Command="{Binding DeleteRecoveryPointCommand}"/>
+                    </StackPanel>
+                    <Grid Margin="0,8,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <ui:TextBox Grid.Column="0" Text="{Binding RecoveryTargetInstance, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="{lex:Loc Recovery_TargetInstance}" Margin="0,0,8,0"/>
+                        <ui:TextBox Grid.Column="1" Text="{Binding RecoveryTargetDirectory, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="{lex:Loc Recovery_TargetLocation}" IsEnabled="{Binding CanManageTargetDirectory}" Margin="0,0,8,0"/>
+                        <ui:Button Grid.Column="2" Content="{lex:Loc Recovery_Restore}" Command="{Binding RestoreRecoveryPointCommand}" IsEnabled="{Binding CanRestoreSelectedRecoveryPoint}"/>
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <CheckBox Content="{lex:Loc Recovery_ImportInPlace}" IsChecked="{Binding RecoveryImportInPlace}" IsEnabled="{Binding CanImportInPlace}" Margin="0,0,8,0"/>
+                        <CheckBox Content="{lex:Loc Recovery_Pin}" IsChecked="{Binding RecoveryPinned}" Margin="0,0,8,0"/>
+                        <ui:Button Content="{lex:Loc Recovery_SaveNotes}" Command="{Binding SaveRecoveryNotesCommand}" Margin="0,0,8,0"/>
+                        <ui:Button Content="{lex:Loc Recovery_Clone}" Command="{Binding CloneRecoveryPointCommand}" IsEnabled="{Binding CanRestoreSelectedRecoveryPoint}"/>
+                    </StackPanel>
+                    <TextBlock Text="{lex:Loc Recovery_ImportInPlaceUnmanaged}" TextWrapping="Wrap" Foreground="{DynamicResource SystemFillColorCautionBrush}" Visibility="{Binding RecoveryImportInPlace, Converter={StaticResource BoolToVisibilityConverter}}" Margin="0,4,0,0"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+                        <TextBlock Text="{lex:Loc Recovery_Retention}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <ui:NumberBox Value="{Binding RecoveryRetention}" Minimum="1" Maximum="100" Width="80" Margin="0,0,8,0"/>
+                        <ui:Button Content="{lex:Loc Recovery_ApplyRetention}" Command="{Binding ApplyRecoveryRetentionCommand}"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0" Visibility="{Binding IsRecovering, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <ui:ProgressRing IsIndeterminate="True" Width="18" Height="18" Margin="0,0,8,0"/>
+                        <TextBlock Text="{Binding RecoveryOperationStatus}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <ui:Button Content="{lex:Loc Recovery_Cancel}" Command="{Binding CancelRecoveryOperationCommand}"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding RecoveryDiagnosticDetails.Length, Converter={StaticResource IntToVisibilityConverter}}">
+                        <TextBlock Text="{Binding RecoveryDiagnosticDetails}" TextWrapping="Wrap" Foreground="{DynamicResource SystemFillColorCriticalBrush}" VerticalAlignment="Center"/>
+                        <ui:Button Content="{lex:Loc Recovery_CopyDiagnostic}" Command="{Binding CopyRecoveryDiagnosticCommand}" Margin="8,0,0,0"/>
+                    </StackPanel>
                 </StackPanel>
             </ui:Card>
 

@@ -65,6 +65,30 @@ public class BackupServiceTests
         Assert.Equal("Ubuntu-22.04", result[0].Name);
     }
 
+    [Fact]
+    public async Task LegacySchedules_AreReadAndMigratedOnNextWrite()
+    {
+        var path = Path.Combine(_tempDir, "backup-schedules.json");
+        await File.WriteAllTextAsync(path, """[{"Name":"Legacy","Destination":"C:\\Backup","Frequency":"Daily","RetentionCount":2,"Time":"02:00:00"}]""");
+        var schedules = await _service.GetSchedulesAsync();
+        Assert.Single(schedules);
+        await _service.SaveScheduleAsync(schedules[0]);
+        var root = System.Text.Json.Nodes.JsonNode.Parse(await File.ReadAllTextAsync(path))!;
+        Assert.Equal(1, root["schemaVersion"]!.GetValue<int>());
+        Assert.Equal("Legacy", root["value"]![0]!["Name"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task NewerSchema_IsExplicitlyRejectedWithoutOverwritingIt()
+    {
+        var path = Path.Combine(_tempDir, "backup-schedules.json");
+        var json = """{"schemaVersion":99,"revision":1,"updatedAt":"2026-01-01T00:00:00Z","value":[]}""";
+        await File.WriteAllTextAsync(path, json);
+        var exception = await Assert.ThrowsAsync<WslOperationFailedException>(() => _service.GetSchedulesAsync());
+        Assert.Equal(DistroNexusErrorCode.StoreSchemaUnsupported, exception.Code);
+        Assert.Equal(json, await File.ReadAllTextAsync(path));
+    }
+
     // -----------------------------------------------------------------------
     // SaveScheduleAsync
     // -----------------------------------------------------------------------

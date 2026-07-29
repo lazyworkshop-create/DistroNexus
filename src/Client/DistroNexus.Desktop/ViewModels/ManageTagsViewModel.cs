@@ -39,8 +39,7 @@ public partial class TagItemViewModel : ObservableObject
 /// </summary>
 public partial class ManageTagsViewModel : ObservableObject
 {
-    private readonly ITagService _tagService;
-    private readonly IWslManagerService _wslManager;
+    private readonly IPowerShellModuleClient _moduleClient;
     private readonly IDialogService _dialogService;
     private bool _initialized;
 
@@ -51,12 +50,10 @@ public partial class ManageTagsViewModel : ObservableObject
     private ObservableCollection<TagItemViewModel> _tags = [];
 
     public ManageTagsViewModel(
-        ITagService tagService,
-        IWslManagerService wslManager,
+        IPowerShellModuleClient moduleClient,
         IDialogService dialogService)
     {
-        _tagService = tagService ?? throw new ArgumentNullException(nameof(tagService));
-        _wslManager = wslManager ?? throw new ArgumentNullException(nameof(wslManager));
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
     }
 
@@ -73,8 +70,9 @@ public partial class ManageTagsViewModel : ObservableObject
         IsLoading = true;
         try
         {
-            var instances = await _wslManager.GetInstancesAsync();
-            var allTags = await _tagService.GetAllTagsAsync();
+            var instances = await _moduleClient.GetInstancesAsync();
+            var tagResults = await _moduleClient.GetInstanceTagsAsync();
+            var allTags = tagResults.SelectMany(result => result.Tags).Distinct(StringComparer.OrdinalIgnoreCase);
 
             // Count usage per tag
             var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
@@ -82,7 +80,7 @@ public partial class ManageTagsViewModel : ObservableObject
 
             foreach (var inst in instances)
             {
-                var instTags = await _tagService.GetTagsAsync(inst.Name);
+                var instTags = (await _moduleClient.GetInstanceTagsAsync(inst.Name)).SingleOrDefault()?.Tags ?? [];
                 foreach (var t in instTags)
                     if (counts.ContainsKey(t)) counts[t]++;
             }
@@ -119,16 +117,16 @@ public partial class ManageTagsViewModel : ObservableObject
         IsLoading = true;
         try
         {
-            var instances = await _wslManager.GetInstancesAsync();
+            var instances = await _moduleClient.GetInstancesAsync();
             foreach (var inst in instances)
             {
-                var currentTags = await _tagService.GetTagsAsync(inst.Name);
+                var currentTags = (await _moduleClient.GetInstanceTagsAsync(inst.Name)).SingleOrDefault()?.Tags ?? [];
                 if (currentTags.Any(t => t.Equals(oldName, StringComparison.OrdinalIgnoreCase)))
                 {
                     var updated = currentTags
                         .Select(t => t.Equals(oldName, StringComparison.OrdinalIgnoreCase) ? newName : t)
                         .ToList();
-                    await _tagService.SetTagsAsync(inst.Name, updated);
+                    await _moduleClient.SetInstanceTagsAsync(inst.Name, updated);
                 }
             }
 
@@ -163,10 +161,10 @@ public partial class ManageTagsViewModel : ObservableObject
         IsLoading = true;
         try
         {
-            var instances = await _wslManager.GetInstancesAsync();
+            var instances = await _moduleClient.GetInstancesAsync();
             foreach (var inst in instances)
             {
-                await _tagService.RemoveTagAsync(inst.Name, item.Name);
+                await _moduleClient.RemoveInstanceTagAsync(inst.Name, item.Name);
             }
 
             Tags.Remove(item);
@@ -197,11 +195,11 @@ public partial class ManageTagsViewModel : ObservableObject
         IsLoading = true;
         try
         {
-            var instances = await _wslManager.GetInstancesAsync();
+            var instances = await _moduleClient.GetInstancesAsync();
             foreach (var item in selected)
             {
                 foreach (var inst in instances)
-                    await _tagService.RemoveTagAsync(inst.Name, item.Name);
+                    await _moduleClient.RemoveInstanceTagAsync(inst.Name, item.Name);
                 Tags.Remove(item);
             }
         }

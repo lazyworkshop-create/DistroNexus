@@ -1,0 +1,37 @@
+<Page x:Class="DistroNexus.Desktop.Views.HealthCenterPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:lex="http://wpflocalizeextension.codeplex.com"
+      lex:ResxLocalizationProvider.DefaultAssembly="DistroNexus.Desktop"
+      lex:ResxLocalizationProvider.DefaultDictionary="Properties.Resources"
+      xmlns:vm="clr-namespace:DistroNexus.Desktop.ViewModels">
+    <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <StackPanel>
+            <TextBlock Text="{Binding HealthAvailabilityReason}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                <ui:Button Content="{lex:Loc Health_Rescan}" Command="{Binding RescanCommand}" IsEnabled="{Binding CanRunHealthActions}" Appearance="Primary" Margin="0,0,8,0"/>
+                <ui:Button Content="{lex:Loc Health_Cancel}" Command="{Binding CancelScanCommand}" IsEnabled="{Binding IsScanning}" Margin="0,0,8,0"/>
+                <ui:Button Content="{lex:Loc Health_DiagnosticPreview}" Command="{Binding ExportDiagnosticsCommand}" IsEnabled="{Binding CanRunHealthActions}"/>
+                <ui:Button Content="{lex:Loc Health_SaveDiagnostic}" Command="{Binding SaveDiagnosticsCommand}" IsEnabled="{Binding CanRunHealthActions}" Margin="8,0,0,0"/>
+                <ui:Button Content="{lex:Loc Health_CancelReport}" Command="{Binding CancelReportCommand}" IsEnabled="{Binding IsReporting}" Margin="8,0,0,0"/>
+            </StackPanel>
+            <ProgressBar Height="4" IsIndeterminate="{Binding IsBusy}"/>
+            <TextBlock Text="{Binding OperationPhase}" Margin="0,4,0,8"/>
+        </StackPanel>
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,12">
+            <TextBlock Text="{lex:Loc Health_Severity}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+            <ComboBox Width="150" ItemsSource="{Binding Severities}" SelectedItem="{Binding SelectedSeverity}"/>
+            <TextBlock Text="{Binding Status}" VerticalAlignment="Center" Margin="16,0,0,0"/>
+            <ui:Button Content="{lex:Loc Health_CopyCode}" Command="{Binding CopyStatusCodeCommand}" IsEnabled="{Binding HasStatusCode}" Margin="8,0,0,0"/>
+            <TextBlock Text="{Binding LastRun, StringFormat={}{0:G}}" VerticalAlignment="Center" Margin="16,0,0,0"/>
+        </StackPanel>
+        <Grid Grid.Row="2"><Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="100"/><RowDefinition Height="160"/></Grid.RowDefinitions>
+            <ListView ItemsSource="{Binding VisibleFindings}"><ListView.ItemTemplate><DataTemplate DataType="{x:Type vm:HealthFindingViewModel}"><ui:Card Margin="0,0,0,8"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="110"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="{Binding Severity}" FontWeight="Bold"/><StackPanel Grid.Column="1"><TextBlock Text="{Binding Title}" FontWeight="SemiBold"/><TextBlock Text="{Binding Detail}" TextWrapping="Wrap"/><TextBlock Text="{Binding Scope}" Opacity=".7"/><Expander Header="{lex:Loc Health_DiagnosticDetail}"><StackPanel><TextBox Text="{Binding Detail}" IsReadOnly="True" TextWrapping="Wrap"/><ui:Button Content="{lex:Loc Health_CopyDetail}" Command="{Binding DataContext.CopyDiagnosticDetailCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding Detail}"/></StackPanel></Expander></StackPanel><ui:Button Grid.Column="2" Content="{lex:Loc Health_Repair}" Command="{Binding DataContext.RepairCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding}" IsEnabled="{Binding CanRepair}"/></Grid></ui:Card></DataTemplate></ListView.ItemTemplate></ListView>
+            <StackPanel Grid.Row="1" Margin="0,8,0,0"><CheckBox Content="{lex:Loc Health_RedactDiagnostic}" IsChecked="{Binding RedactDiagnostic}"/><TextBlock Text="{lex:Loc Health_IncludeLogs}"/><ItemsControl ItemsSource="{Binding DiagnosticLogs}"><ItemsControl.ItemTemplate><DataTemplate><CheckBox Content="{Binding Id}" IsChecked="{Binding IsSelected}" Command="{Binding DataContext.ToggleDiagnosticLogCommand, RelativeSource={RelativeSource AncestorType=Page}}" CommandParameter="{Binding Id}"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel>
+            <Grid Grid.Row="2" Margin="0,8,0,0"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions><ui:Button Content="{lex:Loc Health_Cancel}" Command="{Binding CancelRepairCommand}" IsEnabled="{Binding IsRepairing}" HorizontalAlignment="Left"/><TextBox Grid.Row="1" Text="{Binding RepairDetails}" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/></Grid>
+            <TextBox Grid.Row="3" Text="{Binding DiagnosticPreview}" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Margin="0,12,0,0"/>
+        </Grid>
+    </Grid>
+</Page>

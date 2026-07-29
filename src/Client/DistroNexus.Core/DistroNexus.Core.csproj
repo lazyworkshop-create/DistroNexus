@@ -7,12 +7,27 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!-- Release packaging supplies the SHA-1 Authenticode signer thumbprint; an empty development value fails closed. -->
+  <PropertyGroup>
+    <UsbElevatedHelperPublisherThumbprint Condition="'$(UsbElevatedHelperPublisherThumbprint)' == ''"></UsbElevatedHelperPublisherThumbprint>
+    <!-- Release packaging also pins usbipd-win's Authenticode signer. An empty value intentionally disables elevated launch. -->
+    <UsbIpdPublisherThumbprint Condition="'$(UsbIpdPublisherThumbprint)' == ''"></UsbIpdPublisherThumbprint>
+  </PropertyGroup>
+  <ItemGroup>
+    <AssemblyMetadata Include="DistroNexus.UsbElevatedHelperPublisherThumbprint" Value="$(UsbElevatedHelperPublisherThumbprint)" />
+    <AssemblyMetadata Include="DistroNexus.UsbIpdPublisherThumbprint" Value="$(UsbIpdPublisherThumbprint)" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.2" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
-    <!-- Removed System.Management.Automation - using process-based PowerShell execution instead -->
-    <PackageReference Include="System.Management" Version="9.0.0" />
+    <!-- Required only for the closed, secret-bearing cmdlet invocation path. -->
+    <PackageReference Include="System.Management.Automation" Version="7.5.4" />
+    <PackageReference Include="System.Management" Version="9.0.10" />
+    <PackageReference Include="System.Drawing.Common" Version="9.0.10" />
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.4.0" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
   </ItemGroup>
 
 </Project>

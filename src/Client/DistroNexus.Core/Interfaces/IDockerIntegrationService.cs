@@ -1,6 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using DistroNexus.Core.Services;
+using DistroNexus.Core.Models;
 
 namespace DistroNexus.Core.Interfaces;
 
@@ -9,6 +10,9 @@ namespace DistroNexus.Core.Interfaces;
 /// </summary>
 public interface IDockerIntegrationService
 {
+    Task<DockerIntegrationSnapshot> GetSnapshotAsync(string instanceName, CancellationToken ct = default);
+    Task<DockerIntegrationPreview> PreviewSetAsync(string instanceName, bool enabled, CancellationToken ct = default);
+    Task<DockerIntegrationResult> SetFromPreviewAsync(string previewToken, string instanceName, bool enabled, CancellationToken ct = default);
     /// <summary>
     /// Checks whether Docker Desktop is installed on the system.
     /// </summary>
@@ -20,12 +24,6 @@ public interface IDockerIntegrationService
     /// or the instance name is a reserved Docker distro (docker-desktop, docker-desktop-data).
     /// </summary>
     Task<DockerIntegrationStatus> GetIntegrationStatusAsync(string instanceName, CancellationToken ct = default);
-
-    /// <summary>
-    /// Enables or disables Docker Desktop integration for a WSL instance by writing
-    /// the <c>integratedWslDistros</c> array in Docker's settings JSON.
-    /// </summary>
-    Task SetIntegrationAsync(string instanceName, bool enabled, CancellationToken ct = default);
 
     /// <summary>
     /// Gets the version of Docker Desktop from the installed executable.

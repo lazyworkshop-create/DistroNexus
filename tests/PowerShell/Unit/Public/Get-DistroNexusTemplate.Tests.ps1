@@ -1,72 +1,18 @@
-# Get-DistroNexusTemplate.Tests.ps1
-
-Describe "Get-DistroNexusTemplate" -Tag 'Unit', 'Public' {
-
-    BeforeAll {
-    # Import the module
-    # Path: tests/PowerShell/Unit/Public -> Root
-    $rootPath = Resolve-Path "$PSScriptRoot/../../../.."
-    $modulePath = Join-Path $rootPath "src\PowerShell"
-    Import-Module (Join-Path $modulePath "DistroNexus.psd1") -Force
+BeforeAll {
+    $modulePath = Join-Path $PSScriptRoot '..\..\..\..\src\PowerShell\DistroNexus.psd1'
+    Import-Module $modulePath -Force
 }
-    
-    Context "Template Loading" {
-        
-        It "Should return templates from config" {
-            InModuleScope DistroNexus {
-                # Mock Test-Path to simulate finding the config file
-                Mock Test-Path { return $true } -ParameterFilter { $Path -match "templates.json" }
 
-                # Mock content
-                $jsonContent = '[
-                    {"Id": "tpl-1", "Name": "Template 1", "Category": "Dev"},
-                    {"Id": "tpl-2", "Name": "Template 2", "Category": "Ops"}
-                ]'
-                Mock Get-Content { return $jsonContent }
+Describe 'Get-DistroNexusTemplate' -Tag 'Unit', 'Public' {
+    It 'exports the catalog command from the module manifest' {
+        Get-Command Get-DistroNexusTemplate -ErrorAction Stop | Should -Not -BeNullOrEmpty
+    }
 
-                $result = Get-DistroNexusTemplate
-                
-                $result.Count | Should -Be 2
-                $result[0].Id | Should -Be "tpl-1"
-            }
-        }
-
-        It "Should filter by Id" {
-             InModuleScope DistroNexus {
-                # Mock Test-Path to simulate finding the config file
-                Mock Test-Path { return $true } -ParameterFilter { $Path -match "templates.json" }
-
-                # Mock content
-                $jsonContent = '[
-                    {"Id": "tpl-1", "Name": "Template 1", "Category": "Dev"},
-                    {"Id": "tpl-2", "Name": "Template 2", "Category": "Ops"}
-                ]'
-                Mock Get-Content { return $jsonContent }
-
-                $result = Get-DistroNexusTemplate -Id "tpl-2"
-                
-                $result.Count | Should -Be 1
-                $result.Name | Should -Be "Template 2"
-             }
-        }
-
-        It "Should filter by Category" {
-             InModuleScope DistroNexus {
-                # Mock Test-Path to simulate finding the config file
-                Mock Test-Path { return $true } -ParameterFilter { $Path -match "templates.json" }
-
-                # Mock content
-                $jsonContent = '[
-                    {"Id": "tpl-1", "Name": "Template 1", "Category": "Dev"},
-                    {"Id": "tpl-2", "Name": "Template 2", "Category": "Ops"}
-                ]'
-                Mock Get-Content { return $jsonContent }
-
-                $result = Get-DistroNexusTemplate -Category "Dev"
-                
-                $result.Count | Should -Be 1
-                $result.Id | Should -Be "tpl-1"
-             }
-        }
+    It 'uses only the fixed catalog list and get Bridge routes' {
+        $path = Join-Path $PSScriptRoot '..\..\..\..\src\PowerShell\Public\Get-DistroNexusTemplate.ps1'
+        $content = Get-Content $path -Raw
+        $content | Should -Match "template\.catalog\.get\.v1"
+        $content | Should -Match "template\.catalog\.list\.v1"
+        $content | Should -Not -Match 'Get-Content|ConvertFrom-Json|templates\.json'
     }
 }

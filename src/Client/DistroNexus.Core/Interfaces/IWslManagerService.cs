@@ -76,9 +76,9 @@ public interface IWslManagerService
     /// </summary>
     /// <param name="instanceName">The name of the instance.</param>
     /// <param name="username">The username.</param>
-    /// <param name="password">The password.</param>
+    /// <param name="password">The credential supplied through a secure UI transport.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
-    Task SetCredentialsAsync(string instanceName, string username, string password, CancellationToken cancellationToken = default);
+    Task SetCredentialsAsync(string instanceName, string username, System.Security.SecureString password, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets the disk size of a WSL instance by reading the VHDX file.
@@ -97,16 +97,6 @@ public interface IWslManagerService
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>The refreshed instance information, or null if the operation failed.</returns>
     Task<WslInstance?> ForceRefreshInstanceAsync(string instanceName, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Compacts the VHDX disk of a WSL instance to reclaim unused space.
-    /// Runs fstrim inside the instance, then compacts the VHDX file using Optimize-VHD or diskpart.
-    /// </summary>
-    /// <param name="instanceName">The name of the instance to compact.</param>
-    /// <param name="progress">Optional progress reporter receiving (percentage, phase message).</param>
-    /// <param name="whatIf">If true, report estimated savings without performing compaction.</param>
-    /// <param name="cancellationToken">Token to cancel the operation.</param>
-    Task CompactInstanceAsync(string instanceName, IProgress<(double Percentage, string Message)>? progress = null, bool whatIf = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Exports a WSL instance to a TAR file.

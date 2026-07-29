@@ -1,8 +1,9 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using DistroNexus.Core.Interfaces;
+using DistroNexus.Core.Models;
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Windows.Forms;
 
 namespace DistroNexus.Desktop.ViewModels;
@@ -13,6 +14,8 @@ namespace DistroNexus.Desktop.ViewModels;
 public partial class ImportInstanceViewModel : ObservableObject
 {
     private readonly IReadOnlyCollection<string> _existingNames;
+    private readonly IPowerShellModuleClient _moduleClient;
+    private string? _sourcePreviewError;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(NameError))]
@@ -34,6 +37,9 @@ public partial class ImportInstanceViewModel : ObservableObject
 
     /// <summary>Set to true when the user confirms the dialog.</summary>
     public bool Confirmed { get; private set; }
+
+    /// <summary>Gets the lifecycle preview obtained during confirmation.</summary>
+    public LifecycleOperationPreview? ImportPreview { get; private set; }
 
     public string? NameError
     {
@@ -63,9 +69,7 @@ public partial class ImportInstanceViewModel : ObservableObject
         {
             if (string.IsNullOrWhiteSpace(SourcePath))
                 return Properties.Resources.Import_SourceRequired;
-            if (!File.Exists(SourcePath))
-                return Properties.Resources.Import_SourceNotFound;
-            return null;
+            return _sourcePreviewError;
         }
     }
 
@@ -79,9 +83,10 @@ public partial class ImportInstanceViewModel : ObservableObject
     /// <summary>Event raised when dialog should close.</summary>
     public event EventHandler? CloseRequested;
 
-    public ImportInstanceViewModel(IEnumerable<string> existingNames)
+    public ImportInstanceViewModel(IEnumerable<string> existingNames, IPowerShellModuleClient moduleClient)
     {
         _existingNames = existingNames.ToList();
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
     }
 
     [RelayCommand]
@@ -111,10 +116,29 @@ public partial class ImportInstanceViewModel : ObservableObject
     }
 
     [RelayCommand(CanExecute = nameof(CanImport))]
-    private void Confirm()
+    private async Task ConfirmAsync()
     {
-        Confirmed = true;
-        CloseRequested?.Invoke(this, EventArgs.Empty);
+        _sourcePreviewError = null;
+        OnPropertyChanged(nameof(SourcePathError));
+        OnPropertyChanged(nameof(HasSourcePathError));
+
+        try
+        {
+            ImportPreview = await _moduleClient.PreviewImportInstanceAsync(
+                InstanceName.Trim(),
+                SourcePath.Trim(),
+                InstallPath.Trim());
+            Confirmed = true;
+            CloseRequested?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception)
+        {
+            ImportPreview = null;
+            _sourcePreviewError = Properties.Resources.Import_SourceNotFound;
+            OnPropertyChanged(nameof(SourcePathError));
+            OnPropertyChanged(nameof(HasSourcePathError));
+            OnPropertyChanged(nameof(CanImport));
+        }
     }
 
     [RelayCommand]
@@ -122,5 +146,14 @@ public partial class ImportInstanceViewModel : ObservableObject
     {
         Confirmed = false;
         CloseRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    partial void OnSourcePathChanged(string value)
+    {
+        ImportPreview = null;
+        _sourcePreviewError = null;
+        OnPropertyChanged(nameof(SourcePathError));
+        OnPropertyChanged(nameof(HasSourcePathError));
+        OnPropertyChanged(nameof(CanImport));
     }
 }

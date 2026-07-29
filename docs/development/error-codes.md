@@ -1,7 +1,8 @@
 # DistroNexus Error Code Reference
 
-All structured error codes used by DistroNexus are defined in `DistroNexusErrorCode` (C#) and surfaced
-in PowerShell via `-ErrorId "DistroNexus.<CodeName>"` on `Write-Error` calls.
+All structured error codes used by DistroNexus are defined in `DistroNexusErrorCode` (C#).
+PowerShell bridges structured failures using `DistroNexus.<CodeName>` error IDs where an operation
+maps to a PowerShell error record; not every Core code is necessarily emitted by every host.
 
 ## Code Ranges
 
@@ -13,6 +14,8 @@ in PowerShell via `-ErrorId "DistroNexus.<CodeName>"` on `Write-Error` calls.
 | 4xxx   | Backup / Export / Import |
 | 5xxx   | Configuration          |
 | 6xxx   | Templates              |
+| 7xxx   | Health / diagnostics    |
+| 8xxx   | systemd / networking    |
 | 9xxx   | System / Unknown       |
 
 ---
@@ -64,6 +67,10 @@ in PowerShell via `-ErrorId "DistroNexus.<CodeName>"` on `Write-Error` calls.
 | 4006 | `BackupFailed`          | Backup invocation failed after validation, including export or retention failures |
 | 4007 | `InvalidFrequency`      | Backup schedule frequency format is invalid |
 | 4008 | `InstallFailed`         | WSL instance installation failed |
+| 4009 | `RecoveryPointInvalid` | A recovery point is malformed, unsafe, or cannot be verified |
+| 4010 | `RecoveryTargetReserved` | A recovery restore target is already reserved or exists |
+| 4011 | `RecoveryOperationFailed` | A recovery create, restore, or remove operation failed |
+| 4012 | `RecoveryManualRecoveryRequired` | Recovery detected a partial operation that requires documented manual recovery |
 
 ---
 
@@ -83,6 +90,36 @@ in PowerShell via `-ErrorId "DistroNexus.<CodeName>"` on `Write-Error` calls.
 |------|-----------------------|-------------|
 | 6001 | `TemplateNotFound`    | Requested template ID does not exist in the template catalog |
 | 6002 | `TemplateScriptFailed`| The template's post-install script exited with a non-zero code or threw an exception |
+| 6003 | `TemplateManifestInvalid` | A remote template manifest is invalid or unsupported |
+| 6004 | `TemplateArtifactIntegrityFailed` | Downloaded artifact hash verification failed |
+| 6005 | `TemplateTrustRequired` | A remote template has not completed explicit review/trust |
+| 6006 | `TemplateArtifactUnsafe` | Archive, path, size, link, or executable-file validation rejected an artifact |
+
+---
+
+## 7xxx — Health and Diagnostics
+
+| Code | Name | When thrown |
+|------|------|-------------|
+| 7001 | `HealthCheckUnavailable` | A check prerequisite is unavailable |
+| 7002 | `HealthRepairPreviewInvalid` | A repair preview is stale or invalid |
+| 7003 | `HealthRepairConfirmationRequired` | A repair requires explicit confirmation |
+| 7004 | `HealthRepairElevationRequired` | A repair requires a reviewed elevation flow |
+| 7005 | `HealthRepairFailed` | A repair did not complete |
+| 7006 | `HealthRepairPostconditionFailed` | A repair completed but did not meet its verification condition |
+| 7007 | `DiagnosticExportInvalid` | A diagnostic export request failed validation |
+
+---
+
+## 8xxx — systemd and Networking
+
+| Code | Name | When thrown |
+|------|------|-------------|
+| 8001 | `SystemdUnavailable` | systemd is not available for the selected instance |
+| 8002 | `LinuxPrivilegeRequired` | A Linux-side operation needs privilege not available to the request |
+| 8003 | `FirewallElevationRequired` | A Windows firewall operation needs the bounded elevation path |
+| 8004 | `NetworkProbeFailed` | A read-only network probe failed |
+| 8005 | `FirewallOwnershipDenied` | The requested firewall rule is not owned by DistroNexus |
 
 ---
 
@@ -94,6 +131,13 @@ in PowerShell via `-ErrorId "DistroNexus.<CodeName>"` on `Write-Error` calls.
 | 9002 | `WslVersionTooLow`| Installed WSL version is below the minimum required |
 | 9003 | `OperationTimeout`            | A WSL operation exceeded its timeout; thrown by `WslOperationTimeoutException` |
 | 9004 | `PowerShellModuleUnavailable` | PowerShell execution failed, or the DistroNexus PowerShell module could not be loaded/resolved |
+| 9101 | `ProcessStartFailed` | A reviewed local process could not be started |
+| 9102 | `ProcessOutputLimitExceeded` | Process output exceeded the bounded capture limit |
+| 9201 | `StoreRevisionConflict` | A persisted document changed after the caller's expected revision |
+| 9202 | `StoreSchemaUnsupported` | A persisted document uses a newer unsupported schema |
+| 9203 | `StoreDocumentInvalid` | A persisted document could not be parsed or validated |
+| 9204 | `StoreWriteFailed` | A persisted document could not be written atomically |
+| 9301 | `ValidationFailed` | Input or persisted data failed a required validation rule |
 | 9999 | `UnknownError`                | Catch-all for unexpected exceptions; check inner exception |
 
 ---

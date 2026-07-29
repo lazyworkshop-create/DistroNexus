@@ -50,6 +50,7 @@ public partial class MainWindow : FluentWindow
 
             // Small delay to ensure loading overlay is rendered
             await Task.Delay(50);
+            await _viewModel.RefreshApplicationsNavigationAsync();
 
             // Initialize ViewModel (loads user preferences including theme)
             System.Diagnostics.Debug.WriteLine("Initializing ViewModel...");
