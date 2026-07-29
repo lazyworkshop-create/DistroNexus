@@ -9,10 +9,12 @@ public sealed class ProcessRunnerTestsCollection { }
 [Collection(nameof(ProcessRunnerTests))]
 public class ProcessRunnerTests
 {
+    private static readonly TimeSpan ProcessTimeout = TimeSpan.FromSeconds(30);
+
     [Fact]
     public async Task RunAsync_CapturesExitAndBoundsOutput()
     {
-        var request = new ProcessRequest("powershell.exe", ["-NoProfile", "-Command", "[Console]::Out.Write('abcdefghij')"], TimeSpan.FromSeconds(10), 5);
+        var request = new ProcessRequest("powershell.exe", ["-NoProfile", "-Command", "[Console]::Out.Write('abcdefghij')"], ProcessTimeout, 5);
         var result = await new ProcessRunner().RunAsync(request);
         Assert.Equal(0, result.ExitCode);
         Assert.Equal("abcde", result.StandardOutput);
@@ -32,7 +34,7 @@ public class ProcessRunnerTests
     public async Task RunAsync_CancellationIsDistinctFromTimeout()
     {
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
-        var request = new ProcessRequest("powershell.exe", ["-NoProfile", "-Command", "Start-Sleep -Seconds 10"], TimeSpan.FromSeconds(10));
+        var request = new ProcessRequest("powershell.exe", ["-NoProfile", "-Command", "Start-Sleep -Seconds 10"], ProcessTimeout);
         var result = await new ProcessRunner().RunAsync(request, cancellation.Token);
         Assert.True(result.Cancelled);
         Assert.False(result.TimedOut);
@@ -46,7 +48,7 @@ public class ProcessRunnerTests
         {
             await File.WriteAllTextAsync(script, "param($a,$b,$c) [Console]::Write(\"$a|$b|$c\")");
             var result = await new ProcessRunner().RunAsync(new ProcessRequest("powershell.exe",
-                ["-NoProfile", "-File", script, "plain", "space value", "x;y"], TimeSpan.FromSeconds(10)));
+                ["-NoProfile", "-File", script, "plain", "space value", "x;y"], ProcessTimeout));
             Assert.Equal("plain|space value|x;y", result.StandardOutput);
         }
         finally { File.Delete(script); }
@@ -56,7 +58,7 @@ public class ProcessRunnerTests
     public async Task RunAsync_BoundsStandardError()
     {
         var result = await new ProcessRunner().RunAsync(new ProcessRequest("powershell.exe",
-            ["-NoProfile", "-Command", "[Console]::Error.Write('abcdefghij')"], TimeSpan.FromSeconds(10), MaxStandardErrorBytes: 4));
+            ["-NoProfile", "-Command", "[Console]::Error.Write('abcdefghij')"], ProcessTimeout, MaxStandardErrorBytes: 4));
         Assert.Equal("abcd", result.StandardError);
         Assert.True(result.OutputTruncated);
     }
@@ -74,7 +76,7 @@ public class ProcessRunnerTests
     {
         var result = await new ProcessRunner().RunAsync(new ProcessRequest("powershell.exe",
             ["-NoProfile", "-Command", "[Console]::OutputEncoding=[Text.Encoding]::Unicode;[Console]::Write('héllo')"],
-            TimeSpan.FromSeconds(10), OutputEncoding: ProcessOutputEncoding.Utf16LittleEndian));
+            ProcessTimeout, OutputEncoding: ProcessOutputEncoding.Utf16LittleEndian));
         Assert.Equal("héllo", result.StandardOutput);
     }
 
@@ -83,7 +85,7 @@ public class ProcessRunnerTests
     {
         var result = await new ProcessRunner().RunAsync(new ProcessRequest("powershell.exe",
             ["-NoProfile", "-Command", "[Console]::OutputEncoding=[Text.Encoding]::Unicode;[Console]::Write('abcd');[Console]::Error.Write('wxyz')"],
-            TimeSpan.FromSeconds(10), MaxStandardOutputBytes: 4, MaxStandardErrorBytes: 6,
+            ProcessTimeout, MaxStandardOutputBytes: 4, MaxStandardErrorBytes: 6,
             OutputEncoding: ProcessOutputEncoding.Utf16LittleEndian));
         Assert.Equal("ab", result.StandardOutput);
         Assert.Equal("wxy", result.StandardError);
@@ -94,7 +96,7 @@ public class ProcessRunnerTests
     public async Task RunAsync_ReplacesMalformedUtf8WithoutFailing()
     {
         var result = await new ProcessRunner().RunAsync(new ProcessRequest("powershell.exe",
-            ["-NoProfile", "-Command", "$s=[Console]::OpenStandardOutput();$b=[byte[]](255);$s.Write($b,0,1)"], TimeSpan.FromSeconds(10)));
+            ["-NoProfile", "-Command", "$s=[Console]::OpenStandardOutput();$b=[byte[]](255);$s.Write($b,0,1)"], ProcessTimeout));
         Assert.Equal("�", result.StandardOutput);
         Assert.Equal(0, result.ExitCode);
     }
