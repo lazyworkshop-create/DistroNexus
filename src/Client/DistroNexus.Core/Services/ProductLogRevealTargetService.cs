@@ -5,16 +5,16 @@ namespace DistroNexus.Core.Services;
 /// <summary>Resolves and creates the product log directory without disclosing host paths to Desktop.</summary>
 public sealed class ProductLogRevealTargetService
 {
-    private readonly SettingsService _settings;
+    private readonly SettingsService? _settings;
     private readonly Func<string>? _configuredPath;
-    public ProductLogRevealTargetService(SettingsService settings) => _settings = settings;
+    public ProductLogRevealTargetService(SettingsService settings) => _settings = settings ?? throw new ArgumentNullException(nameof(settings));
     public ProductLogRevealTargetService(Func<string> configuredPath) => _configuredPath = configuredPath ?? throw new ArgumentNullException(nameof(configuredPath));
 
     public ProductLogRevealTarget GetRevealTarget()
     {
         try
         {
-            var configured = _configuredPath?.Invoke() ?? _settings.LoadSettings().LogPath;
+            var configured = _configuredPath?.Invoke() ?? _settings?.LoadSettings().LogPath;
             var candidate = string.IsNullOrWhiteSpace(configured)
                 ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DistroNexus", "Logs")
                 : configured;
