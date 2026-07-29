@@ -59,9 +59,6 @@ public sealed class S13DesktopCompositionAndLocalizationTests
 
         var expectedInventory = new HashSet<string>(StringComparer.Ordinal)
         {
-            "ViewModels/InstallWizardViewModel.cs",
-            "Wizard/Steps/ReviewStep.cs",
-            "ViewModels/ImportInstanceViewModel.cs",
             "Services/WorkspaceShortcutWriter.cs"
         };
         var productIo = new Regex(@"\b(?:File\.(?:Read|Write|Exists)|Path\.(?:Combine|GetDirectoryName|GetFullPath|IsPathFullyQualified)|Directory\.(?:CreateDirectory|Delete|Exists)|Process\.Start)\b", RegexOptions.CultureInvariant);
@@ -69,9 +66,12 @@ public sealed class S13DesktopCompositionAndLocalizationTests
             .Select(entry => entry.Key).ToHashSet(StringComparer.Ordinal);
         Assert.Equal(expectedInventory.OrderBy(value => value), actualInventory.OrderBy(value => value));
 
-        Assert.Contains("InstallPath = Path.Combine", files["ViewModels/InstallWizardViewModel.cs"], StringComparison.Ordinal);
-        Assert.Contains("Path.Combine(Context.InstallPath, Context.InstanceName)", files["Wizard/Steps/ReviewStep.cs"], StringComparison.Ordinal);
-        Assert.Contains("File.Exists(SourcePath)", files["ViewModels/ImportInstanceViewModel.cs"], StringComparison.Ordinal);
+        Assert.Contains("GetSettingsAsync", files["ViewModels/InstallWizardViewModel.cs"], StringComparison.Ordinal);
+        Assert.DoesNotContain("Path.Combine", files["ViewModels/InstallWizardViewModel.cs"], StringComparison.Ordinal);
+        Assert.Contains("PreviewInstallTargetAsync", files["Wizard/Steps/ReviewStep.cs"], StringComparison.Ordinal);
+        Assert.DoesNotContain("Path.Combine", files["Wizard/Steps/ReviewStep.cs"], StringComparison.Ordinal);
+        Assert.Contains("PreviewImportInstanceAsync", files["ViewModels/ImportInstanceViewModel.cs"], StringComparison.Ordinal);
+        Assert.DoesNotContain("File.Exists", files["ViewModels/ImportInstanceViewModel.cs"], StringComparison.Ordinal);
         Assert.Contains("CreateShortcut", files["Services/WorkspaceShortcutWriter.cs"], StringComparison.Ordinal);
 
         var coreBusinessInterfaces = new[] { "IWslManagerService", "ICatalogService", "IWslConfigService", "INetworkService", "ISystemdService", "INetworkDiagnosticsService", "IFirewallOperationBroker", "INetworkConfigurationService", "IUsbDeviceService", "IUsbDeviceChangeWatcher", "IDistributionConfigurationService", "ISettingsService", "IUpdateService", "IStoreComplianceModeService" };

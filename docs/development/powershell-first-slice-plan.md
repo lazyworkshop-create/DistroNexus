@@ -2992,7 +2992,7 @@ Workspace shortcut creation, USB action/broker work, generic execution, release/
 
 ### Status
 
-Planned
+Committed
 
 ### Objective
 
@@ -3008,7 +3008,7 @@ S46b.
 
 ### Allowed Paths
 
-`docs/specs/powershell-first-remaining-boundaries-requirements.md`, `docs/specs/powershell-first-remaining-boundaries-design.md`, this plan; `src/Client/DistroNexus.Core/Interfaces/IPowerShellModuleClient.cs`, `src/Client/DistroNexus.Core/Services/PowerShellModuleClient.cs`, `src/Client/DistroNexus.Desktop/ViewModels/InstallWizardViewModel.cs`, `src/Client/DistroNexus.Desktop/ViewModels/ImportInstanceViewModel.cs`, `src/Client/DistroNexus.Desktop/Wizard/Steps/ReviewStep.cs`, `src/Client/DistroNexus.Desktop/Wizard/InstallWizardWorkflowViewModel.cs`, `src/Client/DistroNexus.Tests/Architecture/S13DesktopCompositionAndLocalizationTests.cs`, `src/Client/DistroNexus.Tests/ViewModels/InstallWizardViewModelTests.cs`, `src/Client/DistroNexus.Tests/ViewModels/ImportInstanceViewModelTests.cs`, and `src/Client/DistroNexus.Tests/Wizard/ReviewStepTests.cs`.
+`docs/specs/powershell-first-remaining-boundaries-requirements.md`, `docs/specs/powershell-first-remaining-boundaries-design.md`, this plan; `src/Client/DistroNexus.Core/Interfaces/IPowerShellModuleClient.cs`, `src/Client/DistroNexus.Core/Services/PowerShellModuleClient.cs`, `src/Client/DistroNexus.Desktop/ViewModels/MainViewModel.cs`, `src/Client/DistroNexus.Desktop/ViewModels/InstallWizardViewModel.cs`, `src/Client/DistroNexus.Desktop/ViewModels/ImportInstanceViewModel.cs`, `src/Client/DistroNexus.Desktop/Wizard/Steps/ReviewStep.cs`, `src/Client/DistroNexus.Desktop/Wizard/InstallWizardWorkflowViewModel.cs`, `src/Client/DistroNexus.Tests/Architecture/S13DesktopCompositionAndLocalizationTests.cs`, `src/Client/DistroNexus.Tests/ViewModels/InstallWizardViewModelTests.cs`, `src/Client/DistroNexus.Tests/ViewModels/ImportInstanceViewModelTests.cs`, `src/Client/DistroNexus.Tests/ViewModels/MainViewModelTests.cs`, and `src/Client/DistroNexus.Tests/Wizard/ReviewStepTests.cs`.
 
 ### Excluded Paths
 

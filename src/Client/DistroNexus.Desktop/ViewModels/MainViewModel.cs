@@ -826,7 +826,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private async Task ImportInstanceAsync()
     {
         var existingNames = Instances.Select(i => i.Name).ToList();
-        var vm = new ImportInstanceViewModel(existingNames);
+        var vm = new ImportInstanceViewModel(existingNames, _moduleClient);
         var dialog = new ImportInstanceDialog(vm) { Owner = Application.Current.MainWindow };
         dialog.ShowDialog();
 
@@ -835,7 +835,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         IsLoading = true;
         try
         {
-            var preview = await _moduleClient.PreviewImportInstanceAsync(vm.InstanceName.Trim(), vm.SourcePath.Trim(), vm.InstallPath.Trim());
+            var preview = vm.ImportPreview ?? throw new InvalidOperationException("An import preview is required.");
             var outcome = await _moduleClient.ExecuteLifecycleOperationAsync(preview.PreviewToken);
             if (!outcome.Succeeded) throw new InvalidOperationException(outcome.OutcomeCode);
 

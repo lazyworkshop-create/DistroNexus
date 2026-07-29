@@ -5,7 +5,6 @@ using DistroNexus.Core.Models;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -20,6 +19,7 @@ public partial class InstallWizardViewModel : ObservableObject
     private readonly IPowerShellModuleClient _moduleClient;
     private readonly ILogger<InstallWizardViewModel> _logger;
     private CancellationTokenSource? _installCts;
+    private string _defaultInstallPath = string.Empty;
 
     #region Observable Properties
 
@@ -127,7 +127,8 @@ public partial class InstallWizardViewModel : ObservableObject
 
             // Load default settings
             var settings = await _moduleClient.GetSettingsAsync();
-            InstallPath = settings.DefaultInstallPath;
+            _defaultInstallPath = settings.DefaultInstallPath;
+            InstallPath = _defaultInstallPath;
             WslVersion = settings.DefaultWslVersion;
             Username = settings.DefaultUsername;
 
@@ -316,7 +317,7 @@ public partial class InstallWizardViewModel : ObservableObject
             // Set default values for quick mode
             if (IsQuickMode)
             {
-                InstallPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DistroNexus", "Instances");
+                InstallPath = _defaultInstallPath;
                 Username = "user";
                 CreateUser = true;
                 SetAsDefault = false;

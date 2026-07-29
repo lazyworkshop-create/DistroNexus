@@ -47,7 +47,7 @@ public partial class InstallWizardWorkflowViewModel : ObservableObject
         workflow.AddStep(new UserConfigurationStep(_moduleClient, _logger));
         workflow.AddStep(new SelectTemplateStep(_moduleClient, _logger));
         workflow.AddStep(new TemplateOptionsStep(_moduleClient));
-        workflow.AddStep(new ReviewStep());
+        workflow.AddStep(new ReviewStep(_moduleClient));
         workflow.AddStep(new ProgressStep(_moduleClient, _logger));
         workflow.AddStep(new TemplateApplyStep(_moduleClient, _logger));
         workflow.AddStep(new ResultStep());

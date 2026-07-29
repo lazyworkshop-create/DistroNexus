@@ -1,6 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using System.IO;
+using DistroNexus.Core.Interfaces;
 using System.Windows.Controls;
 
 namespace DistroNexus.Desktop.Wizard.Steps;
@@ -10,16 +10,16 @@ namespace DistroNexus.Desktop.Wizard.Steps;
 /// </summary>
 public partial class ReviewStep : WizardStepBase
 {
+    private readonly IPowerShellModuleClient _moduleClient;
+
     public override string StepId => "review";
     public override string Title => Properties.Resources.ReviewInstallTitle;
     public override string Description => Properties.Resources.ReviewInstallDescription;
 
     /// <summary>
-    /// Gets the full installation path including instance name.
+    /// Gets the display-safe install target returned by the module preview.
     /// </summary>
-    public string FullInstallPath => Context != null 
-        ? Path.Combine(Context.InstallPath, Context.InstanceName) 
-        : string.Empty;
+    public string FullInstallPath { get; private set; } = string.Empty;
 
     /// <summary>
     /// Gets the display username.
@@ -63,8 +63,9 @@ public partial class ReviewStep : WizardStepBase
         }
     }
 
-    public ReviewStep()
+    public ReviewStep(IPowerShellModuleClient moduleClient)
     {
+        _moduleClient = moduleClient ?? throw new ArgumentNullException(nameof(moduleClient));
     }
 
     protected override UserControl CreateContent()
@@ -94,12 +95,15 @@ public partial class ReviewStep : WizardStepBase
         ];
     }
 
-    public override Task OnEnterAsync()
+    public override async Task OnEnterAsync()
     {
         if (Context != null)
         {
             Context.SetAsDefault = false;
             Context.LaunchAfterInstall = false;
+
+            var target = await _moduleClient.PreviewInstallTargetAsync(Context.InstallPath);
+            FullInstallPath = target.DisplayName;
         }
 
         // Refresh computed properties
@@ -110,7 +114,6 @@ public partial class ReviewStep : WizardStepBase
         OnPropertyChanged(nameof(TemplateNameDisplay));
         OnPropertyChanged(nameof(TemplateCategoryDisplay));
         OnPropertyChanged(nameof(TemplateDescriptorDisplay));
-        return Task.CompletedTask;
     }
 
     /// <summary>
