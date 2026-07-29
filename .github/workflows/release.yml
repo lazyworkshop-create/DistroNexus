@@ -81,6 +81,13 @@ jobs:
              exit 1
         }
 
+        # 5. Check Store package identity (MSIX requires a fourth version component).
+        $manifestContent = Get-Content src/DistroNexus.Package/Package.appxmanifest -Raw
+        if ($manifestContent -notmatch "<Identity[\s\S]*?Version=`"$EscapedVersion\.0`"") {
+            Write-Error "Version check failed: src/DistroNexus.Package/Package.appxmanifest does not contain Store version $Version.0."
+            exit 1
+        }
+
         Write-Host "All version checks passed."
 
     - name: Restore dependencies
