@@ -58,8 +58,17 @@ public sealed class S13DesktopCompositionAndLocalizationTests
             .ToDictionary(path => Path.GetRelativePath(desktop, path).Replace('\\', '/'), File.ReadAllText, StringComparer.Ordinal);
 
         var expectedInventory = new HashSet<string>(StringComparer.Ordinal);
-        var productIo = new Regex(@"\b(?:File\.(?:Read|Write|Exists)|Path\.(?:Combine|GetDirectoryName|GetFullPath|IsPathFullyQualified)|Directory\.(?:CreateDirectory|Delete|Exists)|Process\.Start)\b", RegexOptions.CultureInvariant);
-        var actualInventory = files.Where(entry => productIo.IsMatch(entry.Value) && entry.Key != "Services/BrowserLauncher.cs")
+        var productIo = new Regex(@"\b(?:(?:System\.IO\.)?(?:File|Directory|Path)\.|Process\.Start)", RegexOptions.CultureInvariant);
+        const string permittedPickerFilenameExtraction = "System.IO.Path.GetFileName(dialog.FileName)";
+        const string healthCenterPath = "ViewModels/HealthCenterViewModel.cs";
+        Assert.Equal(1, CountOccurrences(files[healthCenterPath], permittedPickerFilenameExtraction));
+        var scannedFiles = files.ToDictionary(
+            entry => entry.Key,
+            entry => entry.Key == healthCenterPath
+                ? entry.Value.Replace(permittedPickerFilenameExtraction, string.Empty, StringComparison.Ordinal)
+                : entry.Value,
+            StringComparer.Ordinal);
+        var actualInventory = scannedFiles.Where(entry => productIo.IsMatch(entry.Value) && entry.Key != "Services/BrowserLauncher.cs")
             .Select(entry => entry.Key).ToHashSet(StringComparer.Ordinal);
         Assert.Equal(expectedInventory.OrderBy(value => value), actualInventory.OrderBy(value => value));
 
