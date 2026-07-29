@@ -594,6 +594,7 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.GetDiagnosticLogOptionsAsync),
                 nameof(IPowerShellModuleClient.GetDiagnosticReportPreviewAsync),
                 nameof(IPowerShellModuleClient.GetDiagnosticSnapshotAsync),
+                nameof(IPowerShellModuleClient.GetDockerDesktopInstallUriAsync),
                 nameof(IPowerShellModuleClient.GetFirewallCreatePreviewAsync),
                 nameof(IPowerShellModuleClient.GetFirewallRemovePreviewAsync),
                 nameof(IPowerShellModuleClient.GetFirewallRulesAsync),
@@ -629,6 +630,7 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.GetPodmanConnectionPreviewAsync),
                 nameof(IPowerShellModuleClient.GetPodmanUserUnitPreviewAsync),
                 nameof(IPowerShellModuleClient.GetPortMappingsAsync),
+                nameof(IPowerShellModuleClient.GetProductLogRevealTargetAsync),
                 nameof(IPowerShellModuleClient.GetRecoveryClonePreviewAsync),
                 nameof(IPowerShellModuleClient.GetRecoveryCreatePreviewAsync),
                 nameof(IPowerShellModuleClient.GetRecoveryHistoryAsync),
@@ -660,6 +662,7 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.OpenWslConfigFileAsync),
                 nameof(IPowerShellModuleClient.PreviewExportInstanceAsync),
                 nameof(IPowerShellModuleClient.PreviewImportInstanceAsync),
+                nameof(IPowerShellModuleClient.PreviewTemplateImportFileAsync),
                 nameof(IPowerShellModuleClient.PreviewMoveInstanceAsync),
                 nameof(IPowerShellModuleClient.PreviewRemoveInstanceAsync),
                 nameof(IPowerShellModuleClient.PreviewRenameInstanceAsync),
@@ -1043,6 +1046,37 @@ public sealed class PowerShellModuleClientTests
         Assert.False((await client.GetUpdateStatusAsync(false)).IsPreRelease);
         Assert.True((await client.GetUpdateStatusAsync(true)).IsPreRelease);
         service.VerifyAll();
+    }
+
+    [Fact]
+    public async Task RemainingHostIoOperations_UseFixedCmdletsAndRejectUnsafeTargets()
+    {
+        var service = new Mock<IPowerShellService>(MockBehavior.Strict);
+        service.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusTemplateImportFilePreview", It.Is<Dictionary<string, object>>(p => p.Count == 1 && (string)p["SourcePath"] == "C:\\picked.json"), It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"PreviewToken\":\"" + new string('a', 64) + "\",\"Operation\":\"Import\",\"TemplateId\":\"sample\",\"ExpiresAt\":\"2026-07-29T00:00:00Z\"}" });
+        service.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusProductLogRevealTarget", It.Is<Dictionary<string, object>>(p => p.Count == 0), It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"RevealUri\":\"file:///C:/Users/test/AppData/Roaming/DistroNexus/Logs/\",\"OutcomeCode\":\"ProductLog.Ready\"}" });
+        service.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusDockerDesktopInstallUri", It.Is<Dictionary<string, object>>(p => p.Count == 0), It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"Uri\":\"https://www.docker.com/products/docker-desktop/\",\"OutcomeCode\":\"ExternalUri.Ready\"}" });
+        var client = new PowerShellModuleClient(service.Object);
+        Assert.Equal("sample", (await client.PreviewTemplateImportFileAsync("C:\\picked.json")).TemplateId);
+        Assert.Equal("ProductLog.Ready", (await client.GetProductLogRevealTargetAsync()).OutcomeCode);
+        Assert.Equal("https://www.docker.com/products/docker-desktop/", (await client.GetDockerDesktopInstallUriAsync()).Uri.AbsoluteUri);
+        await Assert.ThrowsAsync<ArgumentException>(() => client.PreviewTemplateImportFileAsync("bad\npath"));
+        service.VerifyAll();
+    }
+
+    [Theory]
+    [InlineData("file://server/share/Logs/")]
+    [InlineData("file:///C:/")]
+    [InlineData("file:///C:/safe/Logs/", "Unexpected")]
+    public async Task ProductLogRevealTarget_RejectsUnsafeOrUnknownModuleResponses(string revealUri, string? unknown = null)
+    {
+        var service = new Mock<IPowerShellService>(MockBehavior.Strict);
+        var suffix = unknown is null ? string.Empty : ",\"Unexpected\":true";
+        service.Setup(x => x.ExecuteModuleCmdletAsync("Get-DistroNexusProductLogRevealTarget", It.IsAny<Dictionary<string, object>>(), It.IsAny<ModuleCallOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"RevealUri\":\"" + revealUri + "\",\"OutcomeCode\":\"ProductLog.Ready\"" + suffix + "}" });
+        await Assert.ThrowsAsync<JsonException>(() => new PowerShellModuleClient(service.Object).GetProductLogRevealTargetAsync());
     }
 
     [Fact]

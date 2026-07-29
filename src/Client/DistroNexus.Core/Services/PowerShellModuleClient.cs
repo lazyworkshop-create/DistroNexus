@@ -173,6 +173,9 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string GetTemplateOptionsCommand = "Get-DistroNexusTemplateOption";
     private const string TestTemplateCompatibilityCommand = "Test-DistroNexusTemplateCompatibility";
     private const string ImportTemplatePreviewCommand = "Get-DistroNexusTemplateImportPreview";
+    private const string ImportTemplateFilePreviewCommand = "Get-DistroNexusTemplateImportFilePreview";
+    private const string GetProductLogRevealTargetCommand = "Get-DistroNexusProductLogRevealTarget";
+    private const string GetDockerDesktopInstallUriCommand = "Get-DistroNexusDockerDesktopInstallUri";
     private const string ImportTemplateCommand = "Import-DistroNexusTemplate";
     private const string ExportTemplatePreviewCommand = "Get-DistroNexusTemplateExportPreview";
     private const string ExportTemplateCommand = "Export-DistroNexusTemplate";
@@ -259,6 +262,22 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     public Task<TemplateApplyCancelResult> CancelTemplateApplyAsync(string operationId, CancellationToken cancellationToken = default) => ExecuteJsonAsync<TemplateApplyCancelResult>(StopTemplateApplyCommand, new() { ["OperationId"] = ValidateHexToken(operationId, nameof(operationId)), ["Confirm"] = false }, cancellationToken);
     public Task<TemplateLocalPreview> PreviewTemplateImportAsync(string content, CancellationToken cancellationToken = default)
     { ValidateTemplateContent(content); return ExecuteJsonAsync<TemplateLocalPreview>(ImportTemplatePreviewCommand, new() { ["Content"] = content }, cancellationToken); }
+    public Task<TemplateLocalPreview> PreviewTemplateImportFileAsync(string sourcePath, CancellationToken cancellationToken = default)
+    { ValidateTemplateSourcePath(sourcePath); return ExecuteJsonAsync<TemplateLocalPreview>(ImportTemplateFilePreviewCommand, new() { ["SourcePath"] = sourcePath }, cancellationToken); }
+    public async Task<ProductLogRevealTarget> GetProductLogRevealTargetAsync(CancellationToken cancellationToken = default)
+    {
+        var target = await ExecuteStrictS46bAsync<ProductLogRevealTarget>(GetProductLogRevealTargetCommand, [], ["RevealUri", "OutcomeCode"], cancellationToken);
+        if (target.OutcomeCode is not ("ProductLog.Ready" or "ProductLog.Unavailable" or "ProductLog.Declined") ||
+            (target.OutcomeCode == "ProductLog.Ready" && !IsSafeFileUri(target.RevealUri)) ||
+            (target.OutcomeCode != "ProductLog.Ready" && target.RevealUri is not null)) throw new JsonException("Invalid product log target.");
+        return target;
+    }
+    public async Task<ExternalLaunchTarget> GetDockerDesktopInstallUriAsync(CancellationToken cancellationToken = default)
+    {
+        var target = await ExecuteStrictS46bAsync<ExternalLaunchTarget>(GetDockerDesktopInstallUriCommand, [], ["Uri", "OutcomeCode"], cancellationToken);
+        if (target.OutcomeCode != "ExternalUri.Ready" || target.Uri.AbsoluteUri != "https://www.docker.com/products/docker-desktop/") throw new JsonException("Invalid Docker target.");
+        return target;
+    }
     public Task<TemplateLocalMutationResult> ImportTemplateAsync(string previewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<TemplateLocalMutationResult>(ImportTemplateCommand, TokenParameters(previewToken), cancellationToken);
     public Task<TemplateLocalPreview> PreviewTemplateExportAsync(string templateId, CancellationToken cancellationToken = default)
     { ValidateTemplateIdentifier(templateId, nameof(templateId)); return ExecuteJsonAsync<TemplateLocalPreview>(ExportTemplatePreviewCommand, new() { ["TemplateId"] = templateId }, cancellationToken); }
@@ -1008,6 +1027,14 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
         return JsonSerializer.Deserialize<T>(result.Output, JsonOptions)
             ?? throw new InvalidOperationException("The DistroNexus module returned an invalid result.");
     }
+    private async Task<T> ExecuteStrictS46bAsync<T>(string command, Dictionary<string, object> parameters, string[] fields, CancellationToken cancellationToken)
+    {
+        var result = await _powerShellService.ExecuteModuleCmdletAsync(command, parameters, new ModuleCallOptions { ParseAsJson = true }, cancellationToken);
+        ThrowIfFailed(result);
+        using var document = JsonDocument.Parse(result.Output);
+        if (document.RootElement.ValueKind != JsonValueKind.Object || document.RootElement.EnumerateObject().Any(property => !fields.Contains(property.Name, StringComparer.Ordinal))) throw new JsonException("The module returned unknown S46b result fields.");
+        return JsonSerializer.Deserialize<T>(result.Output, StrictJsonOptions) ?? throw new JsonException("Invalid S46b result.");
+    }
     private async Task<T> ExecuteS44JsonAsync<T>(string command, Dictionary<string, object> parameters, string[] fields, CancellationToken cancellationToken)
     {
         var result = await _powerShellService.ExecuteModuleCmdletAsync(command, parameters, new ModuleCallOptions { ParseAsJson = true }, cancellationToken); ThrowIfFailed(result);
@@ -1087,6 +1114,18 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private static void ValidateTemplateContent(string content)
     {
         if (string.IsNullOrWhiteSpace(content) || System.Text.Encoding.UTF8.GetByteCount(content) > 1024 * 1024) throw new ArgumentException("Template content must be non-empty and at most 1 MiB.", nameof(content));
+    }
+    private static void ValidateTemplateSourcePath(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length > 2048 || value.Any(char.IsControl)) throw new ArgumentException("Template source path is invalid.", nameof(value));
+    }
+    private static bool IsSafeFileUri(Uri? uri)
+    {
+        if (uri is not { IsAbsoluteUri: true, IsFile: true } || uri.AbsoluteUri.Length > 2048 || uri.IsUnc || !string.IsNullOrEmpty(uri.Host)) return false;
+        var path = uri.LocalPath;
+        return !string.IsNullOrWhiteSpace(path) && Path.IsPathFullyQualified(path) &&
+            !path.StartsWith("\\\\", StringComparison.Ordinal) && !path.StartsWith("\\\\?\\", StringComparison.Ordinal) &&
+            !string.Equals(Path.GetPathRoot(path), path, StringComparison.OrdinalIgnoreCase);
     }
 
     private static void ValidateName(string value, string parameterName)

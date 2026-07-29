@@ -2,7 +2,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DistroNexus.Core.Interfaces;
 using Microsoft.Extensions.Logging;
-using System.IO;
 using System.Windows.Controls;
 using System.Security;
 using System.Windows;
@@ -53,9 +52,6 @@ public partial class ProgressStep : WizardStepBase
             return;
 
         ErrorMessage = string.Empty;
-
-        var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        Context.LogFilePath = Path.Combine(appDataPath, "DistroNexus", "logs", "distronexus.log");
 
         Context.IsInstalling = true;
         Context.InstallProgress = 0;
@@ -164,7 +160,7 @@ public partial class ProgressStep : WizardStepBase
         var sb = new System.Text.StringBuilder();
         sb.AppendLine($"Instance Name: {Context.InstanceName}");
         sb.AppendLine($"Distribution: {Context.SelectedDistribution?.Name ?? "N/A"} {Context.SelectedDistribution?.Version ?? ""}".Trim());
-        sb.AppendLine($"Install Path: {MaskPath(Context.InstallPath)}");
+        sb.AppendLine("Install Path: (redacted)");
         sb.AppendLine($"WSL Version: {Context.WslVersion}");
         return sb.ToString().TrimEnd();
     }
@@ -177,30 +173,8 @@ public partial class ProgressStep : WizardStepBase
         var sb = new System.Text.StringBuilder();
         sb.AppendLine($"Instance Name: {Context.InstanceName}");
         sb.AppendLine($"Distribution: {Context.SelectedDistribution?.Name ?? "N/A"} {Context.SelectedDistribution?.Version ?? ""}".Trim());
-        sb.AppendLine($"Install Path: {MaskPath(Context.InstallPath)}");
+        sb.AppendLine("Install Path: (redacted)");
         return sb.ToString().TrimEnd();
-    }
-
-    private static string MaskPath(string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-            return "(none)";
-
-        try
-        {
-            var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            if (!string.IsNullOrEmpty(userProfile) && path.Contains(userProfile, StringComparison.OrdinalIgnoreCase))
-            {
-                var username = Path.GetFileName(userProfile);
-                return path.Replace(username, "***", StringComparison.OrdinalIgnoreCase);
-            }
-
-            return path;
-        }
-        catch
-        {
-            return path;
-        }
     }
 
     [RelayCommand]

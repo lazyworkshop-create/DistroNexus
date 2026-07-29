@@ -77,9 +77,6 @@ public partial class WizardContext : ObservableObject
     private string _resultMessage = string.Empty;
 
     [ObservableProperty]
-    private string _logFilePath = string.Empty;
-
-    [ObservableProperty]
     private string _startupWarningMessage = string.Empty;
 
     [ObservableProperty]
@@ -125,7 +122,6 @@ public partial class WizardContext : ObservableObject
         InstallFailed = false;
         ErrorMessage = string.Empty;
         ResultMessage = string.Empty;
-        LogFilePath = string.Empty;
         StartupWarningMessage = string.Empty;
         TemplateVariableSelections = new Dictionary<string, string>();
     }

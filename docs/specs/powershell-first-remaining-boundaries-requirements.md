@@ -71,6 +71,8 @@ Desktop must not register, resolve, or retain Core business-service interfaces u
 
 Acceptance: each supported Desktop business operation maps to one typed `IPowerShellModuleClient` method and exported command family; stale constructor dependencies and DI registrations are removed; the inventory documents and tests every remaining exception. Permitted exceptions are WPF rendering/navigation/dialog/clipboard, picker selection without product parsing, browser/Explorer launch of a module-returned display-safe target, and composition-only construction of `IPowerShellService` for `PowerShellModuleClient`. Direct product settings file reads, module imports, raw diagnostic execution, Core business-service resolution, product-directory creation, and raw process execution are not exceptions.
 
+Template import file content, product log reveal targets, and Docker Desktop installation URIs must be resolved by fixed typed module operations. Desktop may pass a picker-selected candidate path to the template import-file preview but must not read it; it may launch only the returned display-safe `file:`/HTTPS target through a narrow launcher. The structural inventory must also cover instance default-root construction, review target composition, import-source existence validation, and workspace-shortcut creation. Each retained source must be explicitly assigned to a closure slice; the final global-program boundary test must have no outstanding direct product host-I/O or raw launch violation.
+
 ## Non-Functional Requirements
 
 - Security/authorization: closed versioned requests; no generic dispatch; mutation consent and existing grants remain mandatory; no secrets or sensitive paths in public results.

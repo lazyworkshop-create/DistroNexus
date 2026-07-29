@@ -2961,7 +2961,7 @@ Template file-import content, product log target reveal/creation, USB actions, r
 
 ### Status
 
-Planned
+Committed
 
 ### Objective
 
@@ -2977,13 +2977,99 @@ S46a.
 
 ### Allowed Paths
 
-`docs/specs/powershell-first-remaining-boundaries-requirements.md`, `docs/specs/powershell-first-remaining-boundaries-design.md`, this plan; typed local-template import and product-log target Core models/interfaces/services, `src/Client/DistroNexus.Core/Interfaces/IPowerShellModuleClient.cs`, `src/Client/DistroNexus.Core/Services/PowerShellModuleClient.cs`, `src/Client/DistroNexus.WorkspaceBridge/Program.cs`, `src/PowerShell/DistroNexus.psd1`, exact new public commands; `src/Client/DistroNexus.Desktop/ViewModels/TemplatesViewModel.cs`, `src/Client/DistroNexus.Desktop/Wizard/Steps/ResultStep.cs`, `src/Client/DistroNexus.Desktop/Wizard/Steps/ProgressStep.cs`, `src/Client/DistroNexus.Desktop/Controls/Tabs/IntegrationsTabView.xaml.cs`, the exact UI launcher/picker adapter; and `src/Client/DistroNexus.Tests/Architecture/PowerShellFirstGlobalBoundaryTests.cs` with focused module/client/protocol/view-model tests.
+`docs/specs/powershell-first-remaining-boundaries-requirements.md`, `docs/specs/powershell-first-remaining-boundaries-design.md`, this plan; `src/Client/DistroNexus.Core/Interfaces/IPowerShellModuleClient.cs`, `src/Client/DistroNexus.Core/Models/TemplateImportFilePreviewModels.cs`, `src/Client/DistroNexus.Core/Models/ProductLogRevealTargetModels.cs`, `src/Client/DistroNexus.Core/Services/TemplateImportFilePreviewService.cs`, `src/Client/DistroNexus.Core/Services/ProductLogRevealTargetService.cs`, `src/Client/DistroNexus.Core/Services/PowerShellModuleClient.cs`, `src/Client/DistroNexus.WorkspaceBridge/Program.cs`, `src/PowerShell/DistroNexus.psd1`, `src/PowerShell/Public/Get-DistroNexusTemplateImportFilePreview.ps1`, `src/PowerShell/Public/Get-DistroNexusProductLogRevealTarget.ps1`, `src/PowerShell/Public/Get-DistroNexusDockerDesktopInstallUri.ps1`; `src/Client/DistroNexus.Desktop/ViewModels/TemplatesViewModel.cs`, `src/Client/DistroNexus.Desktop/ViewModels/Tabs/IntegrationsTabViewModel.cs`, `src/Client/DistroNexus.Desktop/Wizard/WizardContext.cs`, `src/Client/DistroNexus.Desktop/Wizard/Steps/ResultStep.cs`, `src/Client/DistroNexus.Desktop/Wizard/Steps/ProgressStep.cs`, `src/Client/DistroNexus.Desktop/Controls/Tabs/IntegrationsTabView.xaml`, `src/Client/DistroNexus.Desktop/Controls/Tabs/IntegrationsTabView.xaml.cs`, `src/Client/DistroNexus.Desktop/App.xaml.cs`, `src/Client/DistroNexus.Desktop/Services/BrowserLauncher.cs`; `src/Client/DistroNexus.Tests/Architecture/S13DesktopCompositionAndLocalizationTests.cs`, `src/Client/DistroNexus.Tests/Architecture/PowerShellFirstGlobalBoundaryTests.cs`, `src/Client/DistroNexus.Tests/Services/PowerShellModuleClientTests.cs`, `src/Client/DistroNexus.Tests/Services/WorkspaceBridgeProtocolTests.cs`, `src/Client/DistroNexus.Tests/Services/TemplateImportFilePreviewServiceTests.cs`, `src/Client/DistroNexus.Tests/Services/ProductLogRevealTargetServiceTests.cs`, `src/Client/DistroNexus.Tests/ViewModels/TemplatesViewModelTests.cs`, `src/Client/DistroNexus.Tests/ViewModels/IntegrationsTabViewModelTests.cs`, `src/Client/DistroNexus.Tests/Wizard/ResultStepTests.cs`, `tests/PowerShell/Unit/Public/TemplateImportFileCommands.Tests.ps1`, `tests/PowerShell/Unit/Public/ProductLogRevealTargetCommands.Tests.ps1`, and `tests/PowerShell/Unit/Public/ExternalDockerInstallUriCommands.Tests.ps1`.
+
+### Excluded Paths
+
+Workspace shortcut creation, USB action/broker work, generic execution, release/publishing, and live host mutation.
+
+### Acceptance Criteria
+
+- The global structural test has exactly four asserted outstanding entries: `InstallWizardViewModel.cs`, `ReviewStep.cs`, and `ImportInstanceViewModel.cs` for S46c, plus `WorkspaceShortcutWriter.cs` for S46d; no other direct product host-I/O or Core business-service violation remains.
+- Every S46b product path is validated/owned by a fixed typed module route; UI invokes only a returned display-safe target.
+
+## Slice S46c: Instance-path desktop host-I/O closure
+
+### Status
+
+Planned
+
+### Objective
+
+Remove Desktop default-root construction, install-target composition, and import-source existence validation using existing typed module settings, install-target preview, and lifecycle-preview routes.
+
+### Sources
+
+FR-105 and FR-107; design Remaining host-I/O closure; S46b inventory.
+
+### Dependencies
+
+S46b.
+
+### Allowed Paths
+
+`docs/specs/powershell-first-remaining-boundaries-requirements.md`, `docs/specs/powershell-first-remaining-boundaries-design.md`, this plan; `src/Client/DistroNexus.Core/Interfaces/IPowerShellModuleClient.cs`, `src/Client/DistroNexus.Core/Services/PowerShellModuleClient.cs`, `src/Client/DistroNexus.Desktop/ViewModels/InstallWizardViewModel.cs`, `src/Client/DistroNexus.Desktop/ViewModels/ImportInstanceViewModel.cs`, `src/Client/DistroNexus.Desktop/Wizard/Steps/ReviewStep.cs`, `src/Client/DistroNexus.Desktop/Wizard/InstallWizardWorkflowViewModel.cs`, `src/Client/DistroNexus.Tests/Architecture/S13DesktopCompositionAndLocalizationTests.cs`, `src/Client/DistroNexus.Tests/ViewModels/InstallWizardViewModelTests.cs`, `src/Client/DistroNexus.Tests/ViewModels/ImportInstanceViewModelTests.cs`, and `src/Client/DistroNexus.Tests/Wizard/ReviewStepTests.cs`.
+
+### Excluded Paths
+
+Workspace shortcut creation, USB action/broker work, generic execution, release/publishing, and live host mutation.
+
+### Acceptance Criteria
+
+- Desktop has no default-root construction, install-target composition, or import-source filesystem validation.
+- The structural inventory retains exactly one S46d entry: `WorkspaceShortcutWriter.cs`.
+
+## Slice S46d: Workspace shortcut host-I/O closure
+
+### Status
+
+Planned
+
+### Objective
+
+Move product shortcut creation out of Desktop and make the global boundary inventory empty.
+
+### Sources
+
+FR-107; design Remaining host-I/O closure; S46c inventory.
+
+### Dependencies
+
+S46c.
+
+### Allowed Paths
+
+`docs/specs/powershell-first-remaining-boundaries-requirements.md`, `docs/specs/powershell-first-remaining-boundaries-design.md`, this plan; `src/Client/DistroNexus.Core/Interfaces/IPowerShellModuleClient.cs`, `src/Client/DistroNexus.Core/Models/WorkspaceShortcutModels.cs`, `src/Client/DistroNexus.Core/Services/WorkspaceShortcutService.cs`, `src/Client/DistroNexus.Core/Services/PowerShellModuleClient.cs`, `src/Client/DistroNexus.WorkspaceBridge/Program.cs`, `src/PowerShell/DistroNexus.psd1`, `src/PowerShell/Public/New-DistroNexusWorkspaceShortcut.ps1`, `src/Client/DistroNexus.Desktop/Services/WorkspaceShortcutWriter.cs`, `src/Client/DistroNexus.Desktop/ViewModels/WorkspacesViewModel.cs`, `src/Client/DistroNexus.Tests/Architecture/S13DesktopCompositionAndLocalizationTests.cs`, `src/Client/DistroNexus.Tests/Services/WorkspaceShortcutServiceTests.cs`, `src/Client/DistroNexus.Tests/Services/PowerShellModuleClientTests.cs`, `src/Client/DistroNexus.Tests/Services/WorkspaceBridgeProtocolTests.cs`, and `tests/PowerShell/Unit/Public/WorkspaceShortcutCommands.Tests.ps1`.
 
 ### Excluded Paths
 
 USB action/broker work, generic execution, release/publishing, and live host mutation.
 
+### Contract and Documentation
+
+Use the fixed `workspace.shortcut.create.v1` operation and exported `New-DistroNexusWorkspaceShortcut`; the module owns modeled target validation and shell-link writes and returns only a bounded result.
+
+### Implementation Scope
+
+Replace Desktop shortcut filesystem ownership with the typed client result and delete the direct writer behavior.
+
+### Test Scope
+
+Add route, client, service, module-command, and final global-boundary tests.
+
 ### Acceptance Criteria
 
-- The global structural test has no outstanding direct product host-I/O or Core business-service violation.
-- Every remaining product path is validated/owned by a fixed typed module route; UI invokes only a returned display-safe target.
+- Desktop has no product shortcut filesystem write.
+- The global inventory is empty and structurally enforced.
+
+### Verification Commands
+
+Run focused C# route/boundary tests, PowerShell unit tests, and the Debug build.
+
+### Commit Boundary
+
+One accepted S46d implementation commit after independent review.
+
+### Out of Scope
+
+USB action/broker work, generic execution, release/publishing, and live host mutation.

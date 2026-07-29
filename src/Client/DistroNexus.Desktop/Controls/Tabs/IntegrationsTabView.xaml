@@ -35,12 +35,7 @@
                                 Visibility="{Binding IsDockerInstalled, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
                         <ui:SymbolIcon Symbol="Warning20" Foreground="{DynamicResource InfoBarWarningSeverityIconBackground}"
                                        Margin="0,0,6,0"/>
-                        <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   VerticalAlignment="Center">
-                            <Hyperlink NavigateUri="https://www.docker.com/products/docker-desktop/" RequestNavigate="OnOpenDockerLink">
-                                <TextBlock Text="{lex:Loc IntegrationsTab_DockerInstallLink}"/>
-                            </Hyperlink>
-                        </TextBlock>
+                        <Button Content="{lex:Loc IntegrationsTab_DockerInstallLink}" Command="{Binding OpenDockerInstallCommand}"/>
                     </StackPanel>
 
                     <!-- Toggle row -->

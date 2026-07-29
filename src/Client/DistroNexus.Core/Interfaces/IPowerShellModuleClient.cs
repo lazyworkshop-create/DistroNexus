@@ -234,7 +234,10 @@ public interface IPowerShellModuleClient
     Task<TemplateApplyOperationStatus> GetTemplateApplyOperationStatusAsync(string operationId, CancellationToken cancellationToken = default);
     Task<TemplateApplyCancelResult> CancelTemplateApplyAsync(string operationId, CancellationToken cancellationToken = default);
     Task<TemplateLocalPreview> PreviewTemplateImportAsync(string content, CancellationToken cancellationToken = default);
+    Task<TemplateLocalPreview> PreviewTemplateImportFileAsync(string sourcePath, CancellationToken cancellationToken = default);
     Task<TemplateLocalMutationResult> ImportTemplateAsync(string previewToken, CancellationToken cancellationToken = default);
+    Task<ProductLogRevealTarget> GetProductLogRevealTargetAsync(CancellationToken cancellationToken = default);
+    Task<ExternalLaunchTarget> GetDockerDesktopInstallUriAsync(CancellationToken cancellationToken = default);
     Task<TemplateLocalPreview> PreviewTemplateExportAsync(string templateId, CancellationToken cancellationToken = default);
     Task<TemplateExportResult> ExportTemplateAsync(string previewToken, CancellationToken cancellationToken = default);
     Task<TemplateLocalPreview> PreviewTemplateRemoveAsync(string templateId, CancellationToken cancellationToken = default);

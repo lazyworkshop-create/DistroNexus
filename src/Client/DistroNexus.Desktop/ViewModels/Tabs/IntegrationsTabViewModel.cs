@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using DistroNexus.Core.Interfaces;
 using DistroNexus.Core.Models;
 using DistroNexus.Core.Services;
+using DistroNexus.Desktop.Services;
 
 namespace DistroNexus.Desktop.ViewModels.Tabs;
 
@@ -15,6 +16,7 @@ public partial class IntegrationsTabViewModel : ObservableObject
     private readonly WslInstanceViewModel _instance;
     private readonly IDialogService _dialogService;
     private readonly IPowerShellModuleClient? _powerShellModuleClient;
+    private readonly IBrowserLauncher _browserLauncher;
 
     private bool _initialized;
 
@@ -78,11 +80,12 @@ public partial class IntegrationsTabViewModel : ObservableObject
     public IntegrationsTabViewModel(
         WslInstanceViewModel instance,
         IDialogService dialogService,
-        IPowerShellModuleClient powerShellModuleClient)
+        IPowerShellModuleClient powerShellModuleClient, IBrowserLauncher? browserLauncher = null)
     {
         _instance = instance ?? throw new ArgumentNullException(nameof(instance));
         _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
         _powerShellModuleClient = powerShellModuleClient ?? throw new ArgumentNullException(nameof(powerShellModuleClient));
+        _browserLauncher = browserLauncher ?? new BrowserLauncher();
     }
 
     public async Task InitializeAsync()
@@ -188,6 +191,20 @@ public partial class IntegrationsTabViewModel : ObservableObject
 
     [RelayCommand]
     private void DismissRestartBanner() => ShowRestartBanner = false;
+
+    [RelayCommand]
+    private async Task OpenDockerInstallAsync()
+    {
+        try
+        {
+            var target = await _powerShellModuleClient.GetDockerDesktopInstallUriAsync();
+            _browserLauncher.LaunchDockerInstall(target.Uri);
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowAlertAsync(Properties.Resources.ErrorTitle, string.Format(Properties.Resources.ErrorGenericOperation, MainViewModel.FormatAlertMessage(ex)));
+        }
+    }
 
     [RelayCommand]
     private Task StartPodmanSocketAsync() => RunPodmanUnitAsync(PodmanUserUnit.Socket, SystemdAction.Start);

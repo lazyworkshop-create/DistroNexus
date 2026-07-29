@@ -77,6 +77,8 @@ var templateApplyStagingRoot = Path.Combine(applicationRoot, "template-operation
 var templateApplyOperations = new TemplateApplyOperationStore(Path.Combine(applicationRoot, "template-operations"), templateApplyStagingRoot);
 var templateApply = new TemplateApplyService(templates, templateApplyGrants, templateApplyOperations, new FixedTemplateGrantedExecutionRuntime(templateApplyOperations), templateApplyStagingRoot, marketplace);
 var templateLocalPreviews = new TemplateLocalPreviewStore(applicationRoot);
+var templateImportFilePreview = new TemplateImportFilePreviewService(templates, templateLocalPreviews);
+var productLogRevealTarget = new ProductLogRevealTargetService(settings);
 var monitoringWarnings = new MonitoringWarningRegistry();
 var healthRuntime = new HealthRuntimeAdapter(processes, globalConfiguration);
 var healthProbe = new DefaultHealthProbe(new BackupHealthSource(backups), templates, healthRuntime);
@@ -254,11 +256,14 @@ while ((line = Console.ReadLine()) is not null)
             "template.marketplace.history.v1" => await TemplateMarketplaceHistoryV1Async(request),
             "template.marketplace.rollback.v1" => await TemplateMarketplaceRollbackV1Async(request),
             "template.local.import-preview.v1" => await TemplateLocalImportPreviewV1Async(request),
+            "template.local.import-file-preview.v1" => await TemplateLocalImportFilePreviewV1Async(request),
             "template.local.import-execute.v1" => await TemplateLocalImportExecuteV1Async(request),
             "template.local.export-preview.v1" => await TemplateLocalExportPreviewV1Async(request),
             "template.local.export-execute.v1" => await TemplateLocalExportExecuteV1Async(request),
             "template.local.remove-preview.v1" => await TemplateLocalRemovePreviewV1Async(request),
             "template.local.remove-execute.v1" => await TemplateLocalRemoveExecuteV1Async(request),
+            "product.log.reveal-target.v1" => ProductLogRevealTargetV1(request),
+            "external.docker-desktop-install-uri.v1" => DockerDesktopInstallUriV1(request),
             "instance.list.v1" => await instances.GetInstanceDetailsAsync(ParseInstanceListOptions(request)),
             "instance.start.v1" => await StartInstanceV1Async(request),
             "instance.stop.v1" => await StopInstanceV1Async(request),
@@ -1237,6 +1242,9 @@ async Task<TemplateArtifactDisplay> TemplateMarketplaceDownloadV1Async(BridgeReq
 async Task<IReadOnlyList<TemplateArtifactHistoryDisplay>> TemplateMarketplaceHistoryV1Async(BridgeRequest request) { ValidatePayload(request,["TemplateId"],["TemplateId"]); return (await marketplace.GetArtifactHistoryAsync(ParsePayload<MarketplaceTemplatePayload>(request).TemplateId)).Take(500).Select(ToArtifactHistoryDisplay).ToArray(); }
 async Task<object> TemplateMarketplaceRollbackV1Async(BridgeRequest request) { ValidatePayload(request,["TemplateId","ArtifactSha256"],["TemplateId","ArtifactSha256"]); var p=ParsePayload<TemplateMarketplaceRollbackPayload>(request); await marketplace.RollbackAsync(p.TemplateId,p.ArtifactSha256); return new { Changed=true }; }
 async Task<TemplateLocalPreview> TemplateLocalImportPreviewV1Async(BridgeRequest request) { ValidatePayload(request,["Content"],["Content"]); var content=ParsePayload<TemplateLocalContentPayload>(request).Content; if(string.IsNullOrWhiteSpace(content) || System.Text.Encoding.UTF8.GetByteCount(content)>1024*1024) throw new ArgumentException("Template content is invalid."); Template template; try { template=JsonSerializer.Deserialize<Template>(content,options) ?? throw new ArgumentException("Template content is invalid."); } catch (JsonException) { throw new ArgumentException("Template content is invalid."); } var validation=await templates.ValidateTemplateAsync(template); if(!validation.IsValid) throw new ArgumentException("Template content is invalid."); var token=await templateLocalPreviews.IssueAsync("import",content,default); return new TemplateLocalPreview(token,"Import",template.Id,DateTimeOffset.UtcNow.AddMinutes(5)); }
+async Task<TemplateLocalPreview> TemplateLocalImportFilePreviewV1Async(BridgeRequest request) { ValidatePayload(request,["SourcePath"],["SourcePath"]); return await templateImportFilePreview.PreviewAsync(ParsePayload<TemplateImportFilePayload>(request).SourcePath); }
+ProductLogRevealTarget ProductLogRevealTargetV1(BridgeRequest request) { ValidatePayload(request,[],[]); return productLogRevealTarget.GetRevealTarget(); }
+ExternalLaunchTarget DockerDesktopInstallUriV1(BridgeRequest request) { ValidatePayload(request,[],[]); return new ExternalLaunchTarget(new Uri("https://www.docker.com/products/docker-desktop/"), "ExternalUri.Ready"); }
 async Task<TemplateLocalMutationResult> TemplateLocalImportExecuteV1Async(BridgeRequest request) { ValidatePayload(request,["PreviewToken"],["PreviewToken"]); var grant=await templateLocalPreviews.ConsumeAsync(ParsePayload<WorkspaceTokenPayload>(request).PreviewToken,"import",default); var path=Path.Combine(applicationRoot,"template-local-previews",Guid.NewGuid().ToString("N")+".json"); try { Directory.CreateDirectory(Path.GetDirectoryName(path)!); await File.WriteAllTextAsync(path,grant.Value); var template=await templates.ImportTemplateAsync(path) ?? throw new InvalidOperationException("Template import failed."); return new TemplateLocalMutationResult(ToTemplateDisplay(template)); } finally { try { File.Delete(path); } catch {} } }
 async Task<TemplateLocalPreview> TemplateLocalExportPreviewV1Async(BridgeRequest request) { ValidatePayload(request,["TemplateId"],["TemplateId"]); var id=ParsePayload<MarketplaceTemplatePayload>(request).TemplateId; if(await templates.GetTemplateByIdAsync(id) is null) throw new ArgumentException("Template was not found."); var token=await templateLocalPreviews.IssueAsync("export",id,default); return new TemplateLocalPreview(token,"Export",id,DateTimeOffset.UtcNow.AddMinutes(5)); }
 async Task<TemplateExportResult> TemplateLocalExportExecuteV1Async(BridgeRequest request) { ValidatePayload(request,["PreviewToken"],["PreviewToken"]); var grant=await templateLocalPreviews.ConsumeAsync(ParsePayload<WorkspaceTokenPayload>(request).PreviewToken,"export",default); var template=await templates.GetTemplateByIdAsync(grant.Value) ?? throw new InvalidOperationException("Template was not found."); var content=JsonSerializer.Serialize(template,options); if(System.Text.Encoding.UTF8.GetByteCount(content)>1024*1024) throw new InvalidOperationException("Template export exceeds the supported limit."); return new TemplateExportResult(content); }
@@ -1576,6 +1584,7 @@ public sealed record PackageJobStartPayload(string PackageId);
 public sealed record PackageJobExecutePayload(string PreviewToken);
 public sealed record PackageJobActionPayload(string JobId);
 public sealed record TemplateLocalContentPayload(string Content);
+public sealed record TemplateImportFilePayload(string SourcePath);
 public sealed record BridgeResponse(bool Succeeded, object? Value, string? ErrorCode, string? ErrorMessage, string Frame = "result");
 /// <summary>Only the five reviewed lifecycle shapes are executable from the bridge.</summary>
 public sealed class BridgeProgress(Action<BridgeResponse> write) : IProgress<WorkspaceActionResult>

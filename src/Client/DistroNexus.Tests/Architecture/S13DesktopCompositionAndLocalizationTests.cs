@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using System.Text.RegularExpressions;
 
 namespace DistroNexus.Tests.Architecture;
 
@@ -44,23 +45,44 @@ public sealed class S13DesktopCompositionAndLocalizationTests
             foreach (var prohibited in forbidden)
             {
                 if (path == "App.xaml.cs" && prohibited == "IPowerShellService") continue;
+                if (path == "App.xaml.cs" && prohibited == "IBrowserLauncher") continue;
                 Assert.DoesNotContain(prohibited, source, StringComparison.Ordinal);
             }
             Assert.DoesNotContain("GetDiagnosticInfoAsync", source, StringComparison.Ordinal);
             Assert.DoesNotContain("catch {", source, StringComparison.Ordinal);
         }
 
-        var outstanding = new Dictionary<string, string>
+        var desktop = Path.Combine(root, "src", "Client", "DistroNexus.Desktop");
+        var files = Directory.EnumerateFiles(desktop, "*", SearchOption.AllDirectories)
+            .Where(path => path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".xaml", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase))
+            .ToDictionary(path => Path.GetRelativePath(desktop, path).Replace('\\', '/'), File.ReadAllText, StringComparer.Ordinal);
+
+        var expectedInventory = new HashSet<string>(StringComparer.Ordinal)
         {
-            ["ViewModels/TemplatesViewModel.cs"] = "File.ReadAllTextAsync(dialog.FileName)",
-            ["Wizard/Steps/ProgressStep.cs"] = "Context.LogFilePath = Path.Combine",
-            ["Wizard/Steps/ResultStep.cs"] = "Directory.CreateDirectory(logFolder)",
-            ["Controls/Tabs/IntegrationsTabView.xaml.cs"] = "Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri)"
+            "ViewModels/InstallWizardViewModel.cs",
+            "Wizard/Steps/ReviewStep.cs",
+            "ViewModels/ImportInstanceViewModel.cs",
+            "Services/WorkspaceShortcutWriter.cs"
         };
-        foreach (var (path, exactPattern) in outstanding)
+        var productIo = new Regex(@"\b(?:File\.(?:Read|Write|Exists)|Path\.(?:Combine|GetDirectoryName|GetFullPath|IsPathFullyQualified)|Directory\.(?:CreateDirectory|Delete|Exists)|Process\.Start)\b", RegexOptions.CultureInvariant);
+        var actualInventory = files.Where(entry => productIo.IsMatch(entry.Value) && entry.Key != "Services/BrowserLauncher.cs")
+            .Select(entry => entry.Key).ToHashSet(StringComparer.Ordinal);
+        Assert.Equal(expectedInventory.OrderBy(value => value), actualInventory.OrderBy(value => value));
+
+        Assert.Contains("InstallPath = Path.Combine", files["ViewModels/InstallWizardViewModel.cs"], StringComparison.Ordinal);
+        Assert.Contains("Path.Combine(Context.InstallPath, Context.InstanceName)", files["Wizard/Steps/ReviewStep.cs"], StringComparison.Ordinal);
+        Assert.Contains("File.Exists(SourcePath)", files["ViewModels/ImportInstanceViewModel.cs"], StringComparison.Ordinal);
+        Assert.Contains("CreateShortcut", files["Services/WorkspaceShortcutWriter.cs"], StringComparison.Ordinal);
+
+        var coreBusinessInterfaces = new[] { "IWslManagerService", "ICatalogService", "IWslConfigService", "INetworkService", "ISystemdService", "INetworkDiagnosticsService", "IFirewallOperationBroker", "INetworkConfigurationService", "IUsbDeviceService", "IUsbDeviceChangeWatcher", "IDistributionConfigurationService", "ISettingsService", "IUpdateService", "IStoreComplianceModeService" };
+        foreach (var (path, source) in files)
         {
-            var source = File.ReadAllText(Path.Combine(root, "src", "Client", "DistroNexus.Desktop", path));
-            Assert.Contains(exactPattern, source, StringComparison.Ordinal);
+            Assert.DoesNotContain("WorkspaceBridge", source, StringComparison.Ordinal);
+            Assert.DoesNotContain(".v1", source, StringComparison.Ordinal);
+            Assert.DoesNotContain("File.Read", source, StringComparison.Ordinal);
+            if (path != "Services/BrowserLauncher.cs") Assert.DoesNotContain("Process.Start", source, StringComparison.Ordinal);
+            if (path != "App.xaml.cs") Assert.DoesNotContain("IPowerShellService", source, StringComparison.Ordinal);
+            foreach (var service in coreBusinessInterfaces) Assert.DoesNotContain(service, source, StringComparison.Ordinal);
         }
     }
 

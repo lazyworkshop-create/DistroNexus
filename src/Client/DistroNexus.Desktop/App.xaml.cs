@@ -22,6 +22,7 @@ namespace DistroNexus.Desktop;
 /// </summary>
 public partial class App : System.Windows.Application
 {
+    internal static IServiceProvider? ServiceProvider { get; private set; }
     public App()
     {
         try 
@@ -64,6 +65,7 @@ public partial class App : System.Windows.Application
 
                     services.AddSingleton<IPowerShellService>(sp => new PowerShellService(sp.GetRequiredService<ILogger<PowerShellService>>()));
                     services.AddSingleton<IPowerShellModuleClient, PowerShellModuleClient>();
+                    services.AddSingleton<IBrowserLauncher, BrowserLauncher>();
 
                     services.AddSingleton<INavigationService, NavigationService>();
                     services.AddSingleton<WorkspaceStartupRequest>();
@@ -106,6 +108,7 @@ public partial class App : System.Windows.Application
                     });
                 })
                 .Build();
+            ServiceProvider = _host.Services;
 
             System.Diagnostics.Debug.WriteLine("DI container built successfully");
 
@@ -280,7 +283,7 @@ public partial class App : System.Windows.Application
                     if (result == Wpf.Ui.Controls.MessageBoxResult.Primary)
                     {
                         if (updateInfo.ReleaseUri is not null)
-                            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo { FileName = updateInfo.ReleaseUri.AbsoluteUri, UseShellExecute = true });
+                            new BrowserLauncher().LaunchUpdateRelease(updateInfo.ReleaseUri);
                     }
                 });
             }

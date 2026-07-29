@@ -14,6 +14,20 @@ namespace DistroNexus.Tests.Services;
 public sealed class WorkspaceBridgeProtocolTests
 {
     [Fact]
+    public async Task S46bRoutes_RejectUnexpectedPayloadFieldsAndKeepDockerTargetFixed()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        foreach (var operation in new[] { "product.log.reveal-target.v1", "external.docker-desktop-install-uri.v1" })
+        {
+            var response = await bridge.SendAsync(operation, payload: JsonSerializer.SerializeToElement(new { Unexpected = true }));
+            Assert.False(response.GetProperty("Succeeded").GetBoolean());
+        }
+        var docker = await bridge.SendAsync("external.docker-desktop-install-uri.v1", payload: JsonSerializer.SerializeToElement(new { }));
+        Assert.True(docker.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("https://www.docker.com/products/docker-desktop/", docker.GetProperty("Value").GetProperty("Uri").GetString());
+    }
+
+    [Fact]
     public async Task UsbReadRoutes_RejectPayloadsAndExposeNoActionContract()
     {
         await using var bridge = await BridgeProcess.StartAsync();
