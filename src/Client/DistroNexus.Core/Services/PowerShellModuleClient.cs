@@ -19,7 +19,7 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
         "Get-DistroNexusWorkspaceImportPreview", "Import-DistroNexusWorkspace", "Get-DistroNexusWorkspaceExportPreview", "Export-DistroNexusWorkspace",
         "Get-DistroNexusWorkspaceTrustPreview", "Approve-DistroNexusWorkspaceTrust", "Get-DistroNexusWorkspaceLaunchPreview", "Invoke-DistroNexusWorkspace",
         "Get-DistroNexusWorkspaceRetryPreview", "Retry-DistroNexusWorkspaceAction", "Get-DistroNexusWorkspaceClosePreview", "Close-DistroNexusWorkspace",
-        "Get-DistroNexusWorkspaceOperation", "Stop-DistroNexusWorkspaceOperation"
+        "Get-DistroNexusWorkspaceOperation", "Stop-DistroNexusWorkspaceOperation", "New-DistroNexusWorkspaceShortcut"
     };
     private const string GetInstanceTagsCommand = "Get-DistroNexusInstanceTag";
     private const string AddInstanceTagCommand = "Add-DistroNexusInstanceTag";
@@ -169,6 +169,7 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     private const string CloseWorkspaceCommand = "Close-DistroNexusWorkspace";
     private const string GetWorkspaceOperationCommand = "Get-DistroNexusWorkspaceOperation";
     private const string StopWorkspaceOperationCommand = "Stop-DistroNexusWorkspaceOperation";
+    private const string CreateWorkspaceShortcutCommand = "New-DistroNexusWorkspaceShortcut";
     private const string GetTemplateCommand = "Get-DistroNexusTemplate";
     private const string GetTemplateOptionsCommand = "Get-DistroNexusTemplateOption";
     private const string TestTemplateCompatibilityCommand = "Test-DistroNexusTemplateCompatibility";
@@ -230,6 +231,14 @@ public sealed class PowerShellModuleClient : IPowerShellModuleClient
     public Task<WorkspaceActionResult> CloseWorkspaceAsync(string previewToken, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceActionResult>(CloseWorkspaceCommand, TokenParameters(previewToken), cancellationToken);
     public Task<WorkspaceOperationStatus> GetWorkspaceOperationStatusAsync(string operationId, CancellationToken cancellationToken = default) => ExecuteJsonAsync<WorkspaceOperationStatus>(GetWorkspaceOperationCommand, new() { ["OperationId"] = operationId }, cancellationToken);
     public async Task StopWorkspaceOperationAsync(string operationId, CancellationToken cancellationToken = default) => await ExecuteJsonAsync<object>(StopWorkspaceOperationCommand, new() { ["OperationId"] = operationId, ["Confirm"] = false }, cancellationToken);
+    public async Task<WorkspaceShortcutResult> CreateWorkspaceShortcutAsync(Guid workspaceId, CancellationToken cancellationToken = default)
+    {
+        if (workspaceId == Guid.Empty) throw new ArgumentException("A workspace id is required.", nameof(workspaceId));
+        var result = await ExecuteStrictS46bAsync<WorkspaceShortcutResult>(CreateWorkspaceShortcutCommand, new() { ["WorkspaceId"] = workspaceId, ["Confirm"] = false }, ["OutcomeCode"], cancellationToken);
+        if (result.OutcomeCode is not ("Workspace.ShortcutCreated" or "Workspace.ShortcutInvalid" or "Workspace.ShortcutNotFound" or "Workspace.ShortcutUnavailable"))
+            throw new JsonException("Invalid workspace shortcut result.");
+        return result;
+    }
 
     public async Task<IReadOnlyList<TemplateDisplay>> GetTemplatesAsync(bool forceRefresh = false, string? query = null, string? category = null, CancellationToken cancellationToken = default)
     {

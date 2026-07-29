@@ -199,6 +199,7 @@
         ,'Close-DistroNexusWorkspace'
         ,'Get-DistroNexusWorkspaceOperation'
         ,'Stop-DistroNexusWorkspaceOperation'
+        ,'New-DistroNexusWorkspaceShortcut'
         ,'Get-DistroNexusTemplateSource'
         ,'Add-DistroNexusTemplateSource'
         ,'Set-DistroNexusTemplateSource'

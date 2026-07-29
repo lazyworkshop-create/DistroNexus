@@ -14,6 +14,17 @@ namespace DistroNexus.Tests.Services;
 public sealed class WorkspaceBridgeProtocolTests
 {
     [Fact]
+    public async Task WorkspaceShortcutRoute_UsesOnlyItsClosedWorkspaceIdPayload()
+    {
+        await using var bridge = await BridgeProcess.StartAsync();
+        var invalid = await bridge.SendAsync("workspace.shortcut.create.v1", payload: JsonSerializer.SerializeToElement(new { WorkspaceId = Guid.Empty, Unexpected = true }));
+        var empty = await bridge.SendAsync("workspace.shortcut.create.v1", payload: JsonSerializer.SerializeToElement(new { WorkspaceId = Guid.Empty }));
+        Assert.False(invalid.GetProperty("Succeeded").GetBoolean());
+        Assert.True(empty.GetProperty("Succeeded").GetBoolean());
+        Assert.Equal("Workspace.ShortcutInvalid", empty.GetProperty("Value").GetProperty("OutcomeCode").GetString());
+    }
+
+    [Fact]
     public async Task S46bRoutes_RejectUnexpectedPayloadFieldsAndKeepDockerTargetFixed()
     {
         await using var bridge = await BridgeProcess.StartAsync();

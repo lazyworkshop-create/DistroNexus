@@ -224,6 +224,7 @@ public interface IPowerShellModuleClient
     Task<WorkspaceActionResult> CloseWorkspaceAsync(string previewToken, CancellationToken cancellationToken = default);
     Task<WorkspaceOperationStatus> GetWorkspaceOperationStatusAsync(string operationId, CancellationToken cancellationToken = default);
     Task StopWorkspaceOperationAsync(string operationId, CancellationToken cancellationToken = default);
+    Task<WorkspaceShortcutResult> CreateWorkspaceShortcutAsync(Guid workspaceId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<TemplateDisplay>> GetTemplatesAsync(bool forceRefresh = false, string? query = null, string? category = null, CancellationToken cancellationToken = default);
     Task<TemplateDisplay?> GetTemplateAsync(string templateId, CancellationToken cancellationToken = default);

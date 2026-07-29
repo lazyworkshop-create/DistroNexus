@@ -10,6 +10,26 @@ namespace DistroNexus.Tests.Services;
 public sealed class PowerShellModuleClientTests
 {
     [Fact]
+    public async Task WorkspaceShortcut_UsesTheFixedCommandAndRejectsUnknownResults()
+    {
+        var id = Guid.NewGuid();
+        var service = new Mock<IPowerShellService>(MockBehavior.Strict);
+        service.Setup(x => x.ExecuteModuleCmdletAsync("New-DistroNexusWorkspaceShortcut",
+                It.Is<Dictionary<string, object>>(p => p.Count == 2 && (Guid)p["WorkspaceId"] == id && (bool)p["Confirm"] == false),
+                It.Is<ModuleCallOptions>(o => o.ParseAsJson), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"OutcomeCode\":\"Workspace.ShortcutCreated\"}" });
+        var client = new PowerShellModuleClient(service.Object);
+        Assert.Equal("Workspace.ShortcutCreated", (await client.CreateWorkspaceShortcutAsync(id)).OutcomeCode);
+        await Assert.ThrowsAsync<ArgumentException>(() => client.CreateWorkspaceShortcutAsync(Guid.Empty));
+        service.VerifyAll();
+
+        var unknown = new Mock<IPowerShellService>(MockBehavior.Strict);
+        unknown.Setup(x => x.ExecuteModuleCmdletAsync("New-DistroNexusWorkspaceShortcut", It.IsAny<Dictionary<string, object>>(), It.IsAny<ModuleCallOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PowerShellScriptResult { ExitCode = 0, Output = "{\"OutcomeCode\":\"Workspace.ShortcutCreated\",\"Path\":\"C:\\\\secret\"}" });
+        await Assert.ThrowsAsync<JsonException>(() => new PowerShellModuleClient(unknown.Object).CreateWorkspaceShortcutAsync(id));
+    }
+
+    [Fact]
     public async Task UsbReads_UseClosedCommandsAndRejectUnexpectedDeviceFields()
     {
         var service = new Mock<IPowerShellService>(MockBehavior.Strict);
@@ -730,6 +750,7 @@ public sealed class PowerShellModuleClientTests
                 nameof(IPowerShellModuleClient.CloseWorkspaceAsync),
                 nameof(IPowerShellModuleClient.GetWorkspaceOperationStatusAsync),
                 nameof(IPowerShellModuleClient.StopWorkspaceOperationAsync),
+                nameof(IPowerShellModuleClient.CreateWorkspaceShortcutAsync),
                 nameof(IPowerShellModuleClient.GetTemplatesAsync),
                 nameof(IPowerShellModuleClient.GetTemplateAsync),
                 nameof(IPowerShellModuleClient.GetTemplateOptionsAsync),

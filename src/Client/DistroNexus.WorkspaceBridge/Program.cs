@@ -117,6 +117,7 @@ var handlers = Enum.GetValues<WorkspaceActionType>()
     .Select(type => (IWorkspaceActionHandler)new WorkspaceActionHandler(type, runtime, gate))
     .ToArray();
 var service = new WorkspaceService(runtime, root, handlers: handlers);
+var workspaceShortcuts = new WorkspaceShortcutService(service);
 var operationStore = new WorkspaceOperationStore(Path.Combine(root ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DistroNexus"), "workspace-operations"));
 if (args.Length == 2 && args[0] == "--run-workspace-operation" && args[1].Length == 64 && args[1].All(Uri.IsHexDigit))
 {
@@ -165,6 +166,7 @@ while ((line = Console.ReadLine()) is not null)
             "workspace.close.execute.v1" => await WorkspaceCloseV1Async(request),
             "workspace.operation.status.v1" => await WorkspaceStatusV1Async(request),
             "workspace.cancel.v1" => await WorkspaceCancelV1Async(request),
+            "workspace.shortcut.create.v1" => await WorkspaceShortcutCreateV1Async(request),
             "previewPodmanUnit" => await PreviewPodmanUnitAsync(request),
             "executePodmanUnit" => await ExecutePodmanUnitAsync(request),
             "previewPodmanConnection" => await PreviewPodmanConnectionAsync(request),
@@ -1363,6 +1365,7 @@ async Task<WorkspaceLaunchPreview> WorkspaceClosePreviewV1Async(BridgeRequest re
 async Task<WorkspaceActionResult> WorkspaceCloseV1Async(BridgeRequest request) => await service.CloseTokenAsync(WorkspaceToken(request).PreviewToken);
 async Task<WorkspaceOperationStatus> WorkspaceStatusV1Async(BridgeRequest request) { ValidatePayload(request,["OperationId"],["OperationId"]); var r=await operationStore.RecoverAsync(ParsePayload<WorkspaceOperationIdPayload>(request).OperationId); return new(r.Progress,r.IsTerminal,r.Result); }
 async Task<object> WorkspaceCancelV1Async(BridgeRequest request) { ValidatePayload(request,["OperationId"],["OperationId"]); await operationStore.RequestCancelAsync(ParsePayload<WorkspaceOperationIdPayload>(request).OperationId); return new { }; }
+async Task<WorkspaceShortcutResult> WorkspaceShortcutCreateV1Async(BridgeRequest request) { ValidatePayload(request,["WorkspaceId"],["WorkspaceId"]); return await workspaceShortcuts.CreateAsync(new(ParsePayload<WorkspaceShortcutPayload>(request).WorkspaceId)); }
 async Task StartWorkspaceWorkerAsync(string operationId)
 {
     var assembly=Path.Combine(AppContext.BaseDirectory,"WorkspaceWorker","DistroNexus.WorkspaceWorker.dll");
@@ -1383,6 +1386,7 @@ public sealed record WorkspaceImportPayload(string Content);
 public sealed record WorkspaceLaunchIdPayload(Guid Id);
 public sealed record WorkspaceRetryPayload(Guid Id, Guid ActionId);
 public sealed record WorkspaceOperationIdPayload(string OperationId);
+public sealed record WorkspaceShortcutPayload(Guid WorkspaceId);
 public sealed record InstanceNamePayload(string Name, bool KeepAlive = false);
 public sealed record InstanceResourcePayload(string Name);
 public sealed record InstanceSparsePayload(string Name, bool Enabled);

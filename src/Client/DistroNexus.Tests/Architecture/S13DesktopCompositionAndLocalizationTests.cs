@@ -57,10 +57,7 @@ public sealed class S13DesktopCompositionAndLocalizationTests
             .Where(path => path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".xaml", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase))
             .ToDictionary(path => Path.GetRelativePath(desktop, path).Replace('\\', '/'), File.ReadAllText, StringComparer.Ordinal);
 
-        var expectedInventory = new HashSet<string>(StringComparer.Ordinal)
-        {
-            "Services/WorkspaceShortcutWriter.cs"
-        };
+        var expectedInventory = new HashSet<string>(StringComparer.Ordinal);
         var productIo = new Regex(@"\b(?:File\.(?:Read|Write|Exists)|Path\.(?:Combine|GetDirectoryName|GetFullPath|IsPathFullyQualified)|Directory\.(?:CreateDirectory|Delete|Exists)|Process\.Start)\b", RegexOptions.CultureInvariant);
         var actualInventory = files.Where(entry => productIo.IsMatch(entry.Value) && entry.Key != "Services/BrowserLauncher.cs")
             .Select(entry => entry.Key).ToHashSet(StringComparer.Ordinal);
@@ -72,7 +69,7 @@ public sealed class S13DesktopCompositionAndLocalizationTests
         Assert.DoesNotContain("Path.Combine", files["Wizard/Steps/ReviewStep.cs"], StringComparison.Ordinal);
         Assert.Contains("PreviewImportInstanceAsync", files["ViewModels/ImportInstanceViewModel.cs"], StringComparison.Ordinal);
         Assert.DoesNotContain("File.Exists", files["ViewModels/ImportInstanceViewModel.cs"], StringComparison.Ordinal);
-        Assert.Contains("CreateShortcut", files["Services/WorkspaceShortcutWriter.cs"], StringComparison.Ordinal);
+        Assert.Contains("CreateWorkspaceShortcutAsync", files["ViewModels/WorkspacesViewModel.cs"], StringComparison.Ordinal);
 
         var coreBusinessInterfaces = new[] { "IWslManagerService", "ICatalogService", "IWslConfigService", "INetworkService", "ISystemdService", "INetworkDiagnosticsService", "IFirewallOperationBroker", "INetworkConfigurationService", "IUsbDeviceService", "IUsbDeviceChangeWatcher", "IDistributionConfigurationService", "ISettingsService", "IUpdateService", "IStoreComplianceModeService" };
         foreach (var (path, source) in files)
