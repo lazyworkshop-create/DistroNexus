@@ -96,7 +96,14 @@ public sealed class PackageDownloadJobService : IPackageDownloadJobService
     private static void Cleanup(GrantStore s) { var now = DateTimeOffset.UtcNow; foreach (var key in s.Active.Where(x => x.Value.ExpiresAt < now).Select(x => x.Key).ToArray()) s.Active.Remove(key); foreach (var key in s.Consumed.Where(x => x.Value < now).Select(x => x.Key).ToArray()) s.Consumed.Remove(key); }
     private static void Trim(GrantStore s) { while (s.Active.Count > MaxGrants) s.Active.Remove(s.Active.OrderBy(x => x.Value.ExpiresAt).First().Key); while (s.Consumed.Count > MaxGrants) s.Consumed.Remove(s.Consumed.OrderBy(x => x.Value).First().Key); }
     private static void TrimJobs(List<StoredJob> jobs) { if (jobs.Count > MaxJobs) jobs.RemoveRange(0, jobs.Count - MaxJobs); }
-    private static string GrantFailure(GrantStore s, string token) => IsToken(token) && s.Consumed.ContainsKey(token) ? "Package.JobGrantReplayed" : s.Active.TryGetValue(token, out var g) && g.ExpiresAt < DateTimeOffset.UtcNow ? "Package.JobGrantExpired" : "Package.JobGrantInvalid";
+    private static string GrantFailure(GrantStore s, string? token)
+    {
+        if (token is null || !IsToken(token)) return "Package.JobGrantInvalid";
+        if (s.Consumed.ContainsKey(token)) return "Package.JobGrantReplayed";
+        return s.Active.TryGetValue(token, out var grant) && grant.ExpiresAt < DateTimeOffset.UtcNow
+            ? "Package.JobGrantExpired"
+            : "Package.JobGrantInvalid";
+    }
     private static bool CanAction(StoredJob j, string a) => a == "cancel" ? j.State is "Queued" or "Running" : a == "retry" ? j.State is "Failed" or "Cancelled" or "Interrupted" : a == "clear" && j.State is not ("Queued" or "Running");
     private static bool IsId(string? s) => s?.Length == 32 && s.All(Uri.IsHexDigit); private static bool IsToken(string? s) => s?.Length == 64 && s.All(Uri.IsHexDigit); private static bool IsSha(string? s) => s?.Length == 64 && s.All(Uri.IsHexDigit);
     private static string Token(int chars) => Convert.ToHexString(RandomNumberGenerator.GetBytes(chars / 2)).ToLowerInvariant(); private static string Hash(string s) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(s)));

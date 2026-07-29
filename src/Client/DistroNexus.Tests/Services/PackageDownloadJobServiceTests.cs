@@ -30,6 +30,15 @@ public sealed class PackageDownloadJobServiceTests : IDisposable
         Assert.Equal("Package.JobStateChanged", result.OutcomeCode);
     }
 
+    [Fact]
+    public async Task ExecuteAction_RejectsMissingPreviewTokenWithoutThrowing()
+    {
+        var result = await New(new ControlledDownload()).ExecuteActionAsync(null!);
+
+        Assert.Equal(string.Empty, result.JobId);
+        Assert.Equal("Package.JobGrantInvalid", result.OutcomeCode);
+    }
+
     [Theory]
     [InlineData("id")]
     [InlineData("version")]
@@ -134,6 +143,7 @@ public sealed class PackageDownloadJobServiceTests : IDisposable
         var preview = await service.PreviewStartAsync("ubuntu");
         var started = await service.StartAsync(preview.PreviewToken!);
         await download.Finished.Task.WaitAsync(TimeSpan.FromSeconds(3));
+        await WaitForAsync(async () => (await service.ListAsync()).Single().State == "Failed");
 
         var retry = await service.PreviewActionAsync(started.JobId!, "retry");
         var retried = await service.ExecuteActionAsync(retry.PreviewToken!);
