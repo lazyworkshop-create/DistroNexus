@@ -3,6 +3,10 @@ using DistroNexus.Core.Services;
 
 namespace DistroNexus.Tests.Services;
 
+[CollectionDefinition(nameof(ProcessRunnerTests), DisableParallelization = true)]
+public sealed class ProcessRunnerTestsCollection { }
+
+[Collection(nameof(ProcessRunnerTests))]
 public class ProcessRunnerTests
 {
     [Fact]
